@@ -51,22 +51,9 @@ Retrieved lore is injected as narrator-only context in several AI tasks (charact
 
 Embeddings are 768-dimensional vectors for semantic search.
 
-**Auto-generation (recommended):**
+**Auto-generation:**
 - If `embeddingId` is omitted, embeddings are generated automatically
 - No action required from config authors
-
-**Pre-computed (rare):**
-```typescript
-worldLore: {
-  "ancient-history": {
-    text: "The kingdom fell 1000 years ago...",
-    embeddingId: "ancient-history-emb"
-  }
-},
-embeddings: {
-  "ancient-history-emb": [0.123, -0.456, ...]  // 768 numbers
-}
-```
 
 ## Region Filtering
 
