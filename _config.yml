@@ -2,6 +2,8 @@ remote_theme: just-the-docs/just-the-docs
 color_scheme: dark
 include: [".claude"]
 exclude:
+  - .claude/CLAUDE.md
+  - .claude/SETUP.md
   - .claude/rules
   - .claude/skills/orchestrator
   - .claude/skills/reflect
@@ -9,6 +11,10 @@ exclude:
   - .claude/skills/charts
   - .claude/skills/review-npcs
   - .claude/skills/npc-type-review
+  - .claude/skills/maps
+  - .claude/skills/count/SKILL.md
+  - .claude/skills/image-gen
+  - .claude/skills/canon-npcs
 
 title: World Puppeteer
 description: A full, human-readable, wiki-style version of World Puppteer
