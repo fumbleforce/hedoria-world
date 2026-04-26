@@ -16,12 +16,6 @@ exclude:
   - .claude/skills/image-gen
   - .claude/skills/canon-npcs
 
-title: World Puppeteer
-description: A full, human-readable, wiki-style version of World Puppteer
-
-back_to_top: true
-back_to_top_text: "↑ Top"
-
 aux_links:
   "GitHub":
     - "https://github.com/nikolaj-lat/World-Puppeteer"
