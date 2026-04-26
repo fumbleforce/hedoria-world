@@ -83,8 +83,6 @@ const DEFAULT_DAMAGE_TYPES = [
   'psychic',
 ];
 
-const VALID_ITEM_TIERS = ['weak', 'common', 'strong', 'epic', 'legendary'];
-
 const VALID_STRING_OPERATORS = ['equals', 'notEquals', 'contains', 'notContains', 'regex'];
 const VALID_NUMBER_OPERATORS = [
   'equals',
@@ -568,11 +566,6 @@ function validateReferenceIntegrity(config, errors) {
       // slot
       if (item.slot && validSlots.size > 0 && !validSlots.has(item.slot)) {
         errors.push(createError(`items.${itemId}.slot`, `Invalid item slot: ${item.slot}. Valid: ${[...validSlots].join(', ')}`));
-      }
-
-      // tier
-      if (item.tier && !VALID_ITEM_TIERS.includes(item.tier)) {
-        errors.push(createError(`items.${itemId}.tier`, `Invalid item tier: ${item.tier}. Valid: ${VALID_ITEM_TIERS.join(', ')}`));
       }
     }
   }
@@ -1731,7 +1724,7 @@ function validateLocationRequiredFields(config, errors) {
 
   // Required fields for locations
   const REQUIRED_LOCATION_FIELDS = ['basicInfo', 'complexityType', 'x', 'y', 'radius', 'region', 'detailType'];
-  const VALID_COMPLEXITY_TYPES = ['simple', 'complex'];
+  const VALID_COMPLEXITY_TYPES = ['simple', 'complex', 'wilderness'];
   const VALID_DETAIL_TYPES = ['basic', 'detailed'];
 
   for (const [locId, location] of Object.entries(config.locations)) {
