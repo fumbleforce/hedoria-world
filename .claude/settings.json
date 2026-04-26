@@ -10,6 +10,7 @@
       "WebFetch"
     ]
   },
+  "cleanupPeriodDays": 99999,
   "hooks": {
     "SessionStart": [
       {
