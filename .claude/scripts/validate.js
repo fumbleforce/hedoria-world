@@ -287,6 +287,18 @@ const LIMITS = {
 // VALIDATION FUNCTIONS
 // ============================================================================
 
+// Engine matches resource keys/names case-insensitively (NFC + toLowerCase + trim).
+// Reference checks against resource keys must use this same normalization.
+function normalizeText(value) {
+  return String(value ?? '').normalize('NFC').toLowerCase().trim();
+}
+
+function buildResourceKeySet(config) {
+  return config.resourceSettings
+    ? new Set(Object.keys(config.resourceSettings).map(normalizeText))
+    : new Set();
+}
+
 function createError(path, message, severity = 'error') {
   return { path, message, severity };
 }
@@ -386,7 +398,6 @@ function validateRequiredFields(config, errors) {
   // Two keys or names that normalize to the same value cause silent update failures —
   // so we enforce normalize-uniqueness rather than strict-lowercase here.
   if (config.resourceSettings) {
-    const normalizeText = (value) => String(value ?? '').normalize('NFC').toLowerCase().trim();
     const seenKeys = new Map();
     const seenNames = new Map();
     for (const [resourceId, resource] of Object.entries(config.resourceSettings)) {
@@ -573,7 +584,7 @@ function validateReferenceIntegrity(config, errors) {
   // Trait references
   if (config.traits) {
     const itemKeys = config.items ? new Set(Object.keys(config.items)) : new Set();
-    const resourceKeys = config.resourceSettings ? new Set(Object.keys(config.resourceSettings)) : new Set();
+    const resourceKeys = buildResourceKeySet(config);
     const attributeNames = config.attributeSettings?.attributeNames
       ? new Set(config.attributeSettings.attributeNames.map(a => a.toLowerCase()))
       : new Set();
@@ -627,8 +638,8 @@ function validateReferenceIntegrity(config, errors) {
       if (trait.resources && Array.isArray(trait.resources)) {
         trait.resources.forEach((resRef, idx) => {
           const resName = typeof resRef === 'string' ? resRef : resRef?.resource;
-          if (resName && !resourceKeys.has(resName)) {
-            errors.push(createError(`traits.${traitId}.resources[${idx}]`, `References non-existent resource: ${resName}. Valid: ${[...resourceKeys].join(', ') || 'none'}`));
+          if (resName && !resourceKeys.has(normalizeText(resName))) {
+            errors.push(createError(`traits.${traitId}.resources[${idx}]`, `References non-existent resource: ${resName}. Valid: ${Object.keys(config.resourceSettings || {}).join(', ') || 'none'}`));
           }
         });
       }
@@ -697,7 +708,7 @@ function validateReferenceIntegrity(config, errors) {
   // Note: both variable and amount are required on ALL requirement types
   if (config.abilities) {
     const traitKeys = config.traits ? new Set(Object.keys(config.traits)) : new Set();
-    const resourceKeys = config.resourceSettings ? new Set(Object.keys(config.resourceSettings)) : new Set();
+    const resourceKeys = buildResourceKeySet(config);
     const attributeNames = config.attributeSettings?.attributeNames
       ? new Set(config.attributeSettings.attributeNames.map(a => a.toLowerCase()))
       : new Set();
@@ -735,8 +746,8 @@ function validateReferenceIntegrity(config, errors) {
               errors.push(createError(`${reqPath}.variable`, `References non-existent trait: ${req.variable}`));
             }
           } else if (req.type === 'resource' && req.variable !== undefined) {
-            if (!resourceKeys.has(req.variable)) {
-              errors.push(createError(`${reqPath}.variable`, `References non-existent resource: ${req.variable}. Valid: ${[...resourceKeys].join(', ')}`));
+            if (!resourceKeys.has(normalizeText(req.variable))) {
+              errors.push(createError(`${reqPath}.variable`, `References non-existent resource: ${req.variable}. Valid: ${Object.keys(config.resourceSettings || {}).join(', ')}`));
             }
           } else if (req.type === 'attribute' && req.variable !== undefined) {
             if (!attributeNames.has(req.variable.toLowerCase())) {
@@ -753,7 +764,7 @@ function validateReferenceIntegrity(config, errors) {
     const attributeNames = config.attributeSettings?.attributeNames
       ? new Set(config.attributeSettings.attributeNames.map(a => a.toLowerCase()))
       : new Set();
-    const resourceKeys = config.resourceSettings ? new Set(Object.keys(config.resourceSettings)) : new Set();
+    const resourceKeys = buildResourceKeySet(config);
     const validBonusTypes = ['attribute', 'stat', 'resource', 'skill'];
     const validStatVariables = ['damage', 'armor', 'speed', 'health']; // common stat variables
 
@@ -777,8 +788,8 @@ function validateReferenceIntegrity(config, errors) {
                 errors.push(createError(`${bonusPath}.variable`, `Invalid attribute: ${bonus.variable}. Valid: ${config.attributeSettings?.attributeNames?.join(', ') || 'none'}`, 'warning'));
               }
             } else if (bonus.type === 'resource') {
-              if (!resourceKeys.has(bonus.variable)) {
-                errors.push(createError(`${bonusPath}.variable`, `Invalid resource: ${bonus.variable}. Valid: ${[...resourceKeys].join(', ') || 'none'}`, 'warning'));
+              if (!resourceKeys.has(normalizeText(bonus.variable))) {
+                errors.push(createError(`${bonusPath}.variable`, `Invalid resource: ${bonus.variable}. Valid: ${Object.keys(config.resourceSettings || {}).join(', ') || 'none'}`, 'warning'));
               }
             } else if (bonus.type === 'stat') {
               // For stat type, we just warn about potentially invalid variables
@@ -1169,6 +1180,7 @@ function validateTypeChecks(config, errors) {
     // String format is NOT accepted
     if (as.attributeStatModifiers && typeof as.attributeStatModifiers === 'object') {
       const validAttributeNames = as.attributeNames ? new Set(as.attributeNames.map(a => a.toLowerCase())) : new Set();
+      const validResourceKeys = buildResourceKeySet(config);
       const validResources = config.resourceSettings ? Object.keys(config.resourceSettings) : [];
 
       for (const [attrId, modifier] of Object.entries(as.attributeStatModifiers)) {
@@ -1199,7 +1211,7 @@ function validateTypeChecks(config, errors) {
             checkString(`attributeSettings.attributeStatModifiers.${attrId}.variable`, modifier.variable);
             // Validate that variable references a valid resourceSettings key
             if (typeof modifier.variable === 'string' && config.resourceSettings) {
-              if (!validResources.includes(modifier.variable.toLowerCase())) {
+              if (!validResourceKeys.has(normalizeText(modifier.variable))) {
                 errors.push(createError(
                   `attributeSettings.attributeStatModifiers.${attrId}.variable`,
                   `Invalid variable "${modifier.variable}" - must reference a valid resourceSettings key. Valid options: ${validResources.join(', ')}`
