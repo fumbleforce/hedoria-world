@@ -1,0 +1,46 @@
+{
+  "itemSettings": {
+    "itemSlots": [
+      {
+        "slot": "head",
+        "category": "Armor",
+        "quantity": 1
+      },
+      {
+        "slot": "body",
+        "category": "Armor",
+        "quantity": 1
+      },
+      {
+        "slot": "legs",
+        "category": "Armor",
+        "quantity": 1
+      },
+      {
+        "slot": "feet",
+        "category": "Armor",
+        "quantity": 1
+      },
+      {
+        "slot": "hands",
+        "category": "Armor",
+        "quantity": 1
+      },
+      {
+        "slot": "mainHand",
+        "category": "Weapon",
+        "quantity": 1
+      },
+      {
+        "slot": "offHand",
+        "category": "Weapon",
+        "quantity": 1
+      },
+      {
+        "slot": "trinket",
+        "category": "Tool",
+        "quantity": 2
+      }
+    ]
+  }
+}

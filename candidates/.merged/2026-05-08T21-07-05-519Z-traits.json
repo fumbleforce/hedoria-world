@@ -1,0 +1,244 @@
+{
+  "traits": {
+    "Brother of Telinor": null,
+    "Wizard": {
+      "name": "Wizard",
+      "description": "A male human with the spark — the rare biological capacity to generate mana from his own body. Training comes through the Brotherhood at Telinor (the formal path: agoge from boyhood, a decade of magical and martial drill, lifelong celibate doctrine, the dark uniform of the order) or through informal channels (hedge-tutoring, retired brothers gone unsanctioned, private masters paid in coin). Either way he works the four domains of staff-work — striking, bracing, warding, motion — and progresses through staves over his career: a training staff first, then field-issue, eventually a master's staff if rank or fortune carries him there. The Brotherhood claims most of the field and watches the rest.",
+      "skills": [
+        {
+          "skill": "staff-work",
+          "modifier": 12
+        },
+        {
+          "skill": "melee",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "mana",
+          "modifier": 30
+        }
+      ],
+      "quirk": "You think with the staff in hand — the small pool of mana measured against the working, the body's weight committed behind each strike. Without the staff you feel half-armed.",
+      "startingItems": [],
+      "abilities": [
+        "Standing Wall",
+        "Wind-Slow",
+        "Hardened Strike"
+      ],
+      "unlockedBy": [],
+      "excludedBy": [
+        "Witch",
+        "Hedge-Witch",
+        "Consort of the College"
+      ]
+    },
+    "Witch-Killer": {
+      "name": "Witch-Killer",
+      "description": "A Brotherhood specialist deployed for the quiet hunts the three kingdoms officially do not discuss. Travels in plain clothes, carries the staff broken-down in a long bundle. Trained additionally in tracking, suppression, and the herbal and social signatures of an active hedge-witch's practice. Does not arrest. Does not bring back for trial.",
+      "skills": [
+        {
+          "skill": "staff-work",
+          "modifier": 8
+        },
+        {
+          "skill": "investigation",
+          "modifier": 8
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "mana",
+          "modifier": 20
+        }
+      ],
+      "quirk": "You walk through a strange village reading it for the witch you are sure is there.",
+      "startingItems": [],
+      "abilities": [
+        "Standing Wall",
+        "Witch-Killer Tracker"
+      ],
+      "unlockedBy": [
+        "Wizard"
+      ],
+      "excludedBy": [
+        "Witch",
+        "Hedge-Witch",
+        "Consort of the College"
+      ]
+    },
+    "Hedge-Wizard": {
+      "name": "Hedge-Wizard",
+      "description": "A man with the spark who slipped through, was trained privately, or learned what he could from a retired brother gone unsanctioned. Independent, unsanctioned, watched. The Brotherhood absorbs him where it can; where it cannot, it pays attention. He carries whatever staff he can get — a homemade one, an inherited piece, a smith-bought instrument, occasionally something stolen or scavenged; he upgrades when he can afford to or when fortune brings him a better one.",
+      "skills": [
+        {
+          "skill": "staff-work",
+          "modifier": 8
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "mana",
+          "modifier": 20
+        }
+      ],
+      "quirk": "You watch the road behind you. The Brotherhood watches you back.",
+      "startingItems": [],
+      "abilities": [
+        "Standing Wall"
+      ],
+      "unlockedBy": [],
+      "excludedBy": [
+        "Wizard"
+      ]
+    },
+    "Witch of the College": null,
+    "Hedge-Witch": {
+      "name": "Hedge-Witch",
+      "description": "A village practitioner working in quiet violation of kingdom law (or openly in Avenor as a freelance outside the College). Helps with births, fevers, contraceptive draughts, locks, the small protective workings the local lord pretends not to notice. Modest reservoir filled where she can manage it — black-market potion, careful partner, rare beast-source. Lives in constant low-grade danger and has rehearsed the fire she will set in the cottage if the witch-killers come.",
+      "skills": [
+        {
+          "skill": "witchcraft",
+          "modifier": 8
+        },
+        {
+          "skill": "craft",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "reservoir",
+          "modifier": 30
+        }
+      ],
+      "quirk": "You read every visitor for what they are, especially the polite ones.",
+      "startingItems": [],
+      "abilities": [
+        "Hedge-Working",
+        "Apothecary's Touch"
+      ],
+      "unlockedBy": [],
+      "excludedBy": [
+        "Wizard",
+        "Witch-Killer",
+        "Consort of the College"
+      ]
+    },
+    "Consort of the College": {
+      "name": "Consort of the College",
+      "description": "A male wizard of Avenor, contracted under the Queen's College donor-line system as a partner to one or more witches. The original cooperative tradition the Brotherhood broke from. Honored, lawful in Avenor, doctrinally unthinkable in the three kingdoms. A consort generates mana like any wizard and donates it to his contracted witches; senior consorts work cooperatively in the field, multiplying the witch's range past anything the Brotherhood can match alone.",
+      "skills": [
+        {
+          "skill": "staff-work",
+          "modifier": 8
+        },
+        {
+          "skill": "persuasion",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "mana",
+          "modifier": 30
+        }
+      ],
+      "quirk": "You think of mana as something to give. The Brotherhood has a different word for what you are.",
+      "startingItems": [],
+      "abilities": [
+        "Standing Wall",
+        "Cooperative Filling"
+      ],
+      "unlockedBy": [],
+      "excludedBy": [
+        "Wizard",
+        "Witch-Killer",
+        "Witch",
+        "Hedge-Witch"
+      ]
+    },
+    "Pair-Bonded Brother": {
+      "name": "Pair-Bonded Brother",
+      "description": "The brother has formed a pair-bond with another from his agoge cohort — comrades across decades, deployed together by mutual choice. The order does not police these bonds. The pair reads each other's openings without speech.",
+      "skills": [],
+      "attributes": [],
+      "resources": [],
+      "quirk": "You think of yourself as half of a pair. The bond was the choice that defined you.",
+      "startingItems": [],
+      "abilities": [
+        "Pair-Bonded"
+      ],
+      "unlockedBy": [
+        "Wizard"
+      ],
+      "excludedBy": []
+    },
+    "Witch": {
+      "name": "Witch",
+      "description": "A trained witch — typically a human woman, occasionally a Draklid, Cephalen, Raknid, or freed Quell. Her power lives in a reservoir she fills with male essence and spends on workings: projection, glamour, sight, body, hand. Training comes through the Queen's College in Avenor (open practice, lawful, the consort-line system keeping her supplied at home) or through the hedge tradition (informal teaching, careful filling on what she can find, the practice concealed from neighbors). The five working domains are the same; only the access to consort-line resources and the legal protection differ. Outside Avenor every witch lives with the threat of arrest, exile, or quiet death — even the College-trained, when they cross borders.",
+      "skills": [
+        {
+          "skill": "witchcraft",
+          "modifier": 12
+        },
+        {
+          "skill": "investigation",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "reservoir",
+          "modifier": 60
+        }
+      ],
+      "quirk": "You think in mana — what each working will cost, when you can fill, who in the room is the spark and who is not.",
+      "startingItems": [],
+      "abilities": [
+        "Hedge-Working",
+        "Witchlight",
+        "Conjure Cold",
+        "Cooperative Filling"
+      ],
+      "unlockedBy": [],
+      "excludedBy": [
+        "Wizard",
+        "Witch-Killer",
+        "Consort of the College"
+      ]
+    }
+  },
+  "traitCategories": {
+    "Profession": {
+      "name": "Profession",
+      "maxSelections": 1,
+      "traits": [
+        "Soldier",
+        "Mercenary",
+        "Wizard",
+        "Witch-Killer",
+        "Hedge-Wizard",
+        "Witch",
+        "Hedge-Witch",
+        "Consort of the College",
+        "Mana-Hunter",
+        "Prime Ancestor-Mage",
+        "Prime Warden",
+        "Hold-Warrior",
+        "Hunter",
+        "Crafter",
+        "Healer",
+        "Apothecary",
+        "Drifter"
+      ]
+    }
+  }
+}

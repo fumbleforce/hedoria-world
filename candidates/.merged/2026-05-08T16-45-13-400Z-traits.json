@@ -1,0 +1,64 @@
+{
+  "traits": {
+    "Brother of Telinor": {
+      "name": "Brother of Telinor",
+      "description": "A full-trained brother of the High Forum at Telinor. Identified with the spark in boyhood, taken to the agoge at seven or eight, drilled physically and magically for a decade. The dark uniform is shared with every brother in the order. He progresses through Brotherhood-issued staves over his career — a training staff at the agoge, then field-issue staves, eventually a master's staff if he reaches that rank. Forbidden women by doctrine — the cooperative practice with witches is the line that keeps the order shut. Bonds between brothers are honored.",
+      "skills": [
+        {
+          "skill": "staff-work",
+          "modifier": 12
+        },
+        {
+          "skill": "melee",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "mana",
+          "modifier": 30
+        }
+      ],
+      "quirk": "You think in the Brotherhood's voice, even alone. The cooperative practice is unthinkable to you, and you suspect it in every witch you meet.",
+      "startingItems": [],
+      "abilities": [
+        "Standing Wall",
+        "Wind-Slow",
+        "Hardened Strike"
+      ],
+      "unlockedBy": [],
+      "excludedBy": [
+        "Witch of the College",
+        "Hedge-Witch",
+        "Consort of the College"
+      ]
+    },
+    "Hedge-Wizard": {
+      "name": "Hedge-Wizard",
+      "description": "A man with the spark who slipped through, was trained privately, or learned what he could from a retired brother gone unsanctioned. Independent, unsanctioned, watched. The Brotherhood absorbs him where it can; where it cannot, it pays attention. He carries whatever staff he can get — a homemade one, an inherited piece, a smith-bought instrument, occasionally something stolen or scavenged; he upgrades when he can afford to or when fortune brings him a better one.",
+      "skills": [
+        {
+          "skill": "staff-work",
+          "modifier": 8
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "mana",
+          "modifier": 20
+        }
+      ],
+      "quirk": "You watch the road behind you. The Brotherhood watches you back.",
+      "startingItems": [],
+      "abilities": [
+        "Standing Wall"
+      ],
+      "unlockedBy": [],
+      "excludedBy": [
+        "Brother of Telinor"
+      ]
+    }
+  }
+}

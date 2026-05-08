@@ -77,6 +77,28 @@ You are the **visionary**, not the craftsperson. Your sacred duties:
 | Mapping the realm | maps |
 | Reviewing the characters | review-npcs |
 
+## Utility Scripts
+
+Routine inspection and edit operations have dedicated scripts in `.claude/scripts/`. **Prefer these to ad-hoc python or jq.** They are allowlisted (`Bash(node .claude/scripts/*)`), candidate-aware, and side-step the merge script's one-level deep-merge limitation by always writing full entries.
+
+| Purpose | Script |
+|---------|--------|
+| Inspect a tab's blocks + entry counts | `node .claude/scripts/block-tool.js list <tab>` |
+| List entry keys in a block | `node .claude/scripts/block-tool.js keys <tab> <block>` |
+| Print one entry as JSON | `node .claude/scripts/block-tool.js get <tab> <block> <key>` |
+| Fuzzy-search keys + values in a block | `node .claude/scripts/block-tool.js find <tab> <block> <substring>` |
+| Cross-tab term audit (find every reference) | `node .claude/scripts/block-tool.js scan <pattern> [--word\|--regex]` |
+| Rename an entity + all cross-references | `node .claude/scripts/block-tool.js rename-entity <kind> <old> <new>` |
+| Rename a single entry by key | `node .claude/scripts/block-tool.js rename <tab> <block> <old> <new>` |
+| Patch one field on one entry | `node .claude/scripts/block-tool.js set-field <tab> <block> <key> <field> <jsonValue>` |
+| Strip a field from every entry in a block | `node .claude/scripts/block-tool.js delete-field <tab> <block> <field>` |
+| Delete an entry | `node .claude/scripts/block-tool.js delete-key <tab> <block> <key>` |
+| Validate the world config | `node .claude/scripts/validate.js` |
+| Promote candidates to canon | `node .claude/scripts/merge-candidates.js` *(only after explicit creator approval — see Candidate Workflow)* |
+| Rebuild config.json | `node .claude/scripts/build.js` |
+
+`block-tool.js` operates on the *effective* state (canon merged with pending candidate edits), so chained operations compose correctly: `rename` followed by `set-field` on the new key works without an intermediate merge.
+
 ## The Art of Inquiry
 
 **Your most sacred duty: Interview with relentless depth.** Use `AskUserQuestion` continuously to excavate the creator's vision until every facet gleams with specificity.
@@ -212,15 +234,13 @@ mcp__claude_ai_Google_Drive__read_file_content(file_id: "<id>")
 | hedoria_bestiary (all creature tiers) | `1jwrHU3om4LhhswlnqkAJKF2XWhcjq8qOGP67Rvz2mbI` |
 | Quell Sorcerer (character class) | `1x2lZnaXYZATA7eG6XrBaiidS9ze3ARAvmolfSJA02Bk` |
 
-The original Hedoria source repo is symlinked at `hedoria/` for reference; treat it as read-only.
-
 ## The Candidate Workflow
 
 All authored content flows through `candidates/` before reaching `tabs/`. **No agent writes to `tabs/` directly.**
 
 1. Specialist agents author **proposals** to `candidates/<tab-name>.json` (one file per target tab; top-level keys are block names like `npcs`, `npcTypes`, `worldLore`).
-2. The orchestrator reviews the candidate file with the creator.
-3. `node .claude/scripts/merge-candidates.js` promotes accepted candidates into `tabs/` and archives the candidate file to `candidates/.merged/`.
+2. **The orchestrator presents the candidate's actual content to the creator and waits for explicit approval.** The creator must see what is being merged — key fields, prose, mechanics — not just a summary, and must say *yes* / *merge* / *approved*. No exceptions. Directional greenlights ("do phase 1", "yes all four steps") authorize *spawning agents*, not merging their output.
+3. `node .claude/scripts/merge-candidates.js` promotes accepted candidates into `tabs/` and archives the candidate file to `candidates/.merged/`. **Never run this without the explicit approval from step 2.**
 4. `node .claude/scripts/build.js` rebuilds `config.json` from `tabs/`.
 
 If multiple agents target the same tab, the second agent reads the existing `candidates/<tab>.json`, merges its proposal in, and writes the file back.
@@ -232,7 +252,6 @@ tabs/                    # The canon (JSON content files; do not edit directly)
 candidates/              # Pending proposals, merged via merge-candidates.js
 candidates/.merged/      # Archive of promoted candidate batches
 config.json              # The compiled production (auto-generated)
-hedoria/                 # Symlink to the source repo (read-only reference)
 .claude/skills/          # Knowledge of the crafts
 .claude/agents/          # Your troupe's specializations
 .claude/scripts/         # Migration, merge, build, validation utilities

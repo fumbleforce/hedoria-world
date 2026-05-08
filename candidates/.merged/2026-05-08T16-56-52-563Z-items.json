@@ -1,0 +1,109 @@
+{
+  "items": {
+    "Ash Rod": {
+      "name": "Ash Rod",
+      "category": "Weapon",
+      "slot": "mainHand",
+      "description": "[Common] A rough-hewn staff of pale ash, barely worked and fitted with iron bands at neck and foot. Issued to freshly elevated Brothers as their first working staff, or sold to apprentice-mages by smiths and brotherhouses across the continent. The wood is straight-grained and honest, the fittings purely functional. In a wizard's hand it hums with modest power; in any other grasp it is merely a walking stick. This is the tool of training, of first mistakes, of learning the weight and balance that separates a staff-bearer from a fool with a stick.",
+      "bonuses": [
+        {
+          "type": "skill",
+          "variable": "staff-work",
+          "value": 1
+        }
+      ]
+    },
+    "Journeyman's Rod": {
+      "name": "Journeyman's Rod",
+      "category": "Weapon",
+      "slot": "mainHand",
+      "description": "[Uncommon] A solid staff of straight-grained oak, properly fitted and sealed with clear lacquer. Quartermasters issue these to Brothers posted beyond Telinor; most active field wizards carry one. The wood has been worked to a subtle taper, the grip wrapped in leather darkened by long use, the iron ferule worn at the point where strikes connect. The staff feels balanced in the hand, neither too light nor too heavy. Witches outside Avenor, Hedge-Wizards, and the Consort line carry equivalent staves, marking them as working mages who have passed their trials.",
+      "bonuses": [
+        {
+          "type": "skill",
+          "variable": "staff-work",
+          "value": 2
+        },
+        {
+          "type": "attribute",
+          "variable": "intelligence",
+          "value": 1
+        }
+      ]
+    },
+    "Master's Rod": {
+      "name": "Master's Rod",
+      "category": "Weapon",
+      "slot": "mainHand",
+      "description": "[Rare] A staff of heartwood cut from old-growth forests, its grain running true and deep. Hand-fitted by masters of the craft at Telinor or the Queen's College, cored and balanced to exacting standards. The wood is dark — aged to near-black in places — and the brass fittings are intricately worked. Only a senior Brother bearing rank, a full Consort of standing, or a witch of proven mastery carries such a staff. The working flows through it like breath through a living thing. Enemies who know Hedoria's ways see this staff and know they face someone who has fought a decade or more.",
+      "bonuses": [
+        {
+          "type": "skill",
+          "variable": "staff-work",
+          "value": 4
+        },
+        {
+          "type": "attribute",
+          "variable": "intelligence",
+          "value": 2
+        },
+        {
+          "type": "resource",
+          "variable": "mana",
+          "value": 5
+        }
+      ]
+    },
+    "Chapterhouse Staff": {
+      "name": "Chapterhouse Staff",
+      "category": "Weapon",
+      "slot": "mainHand",
+      "description": "[Epic] A staff of chapterwood — a dark, dense timber rare beyond the Brotherhood's holds and the Queen's College archives. The grain is almost invisible to sight, visible only to the hand passing over it. Wrought with brass and silver in patterns that catch the light, inlaid with silver wire in sigils that mark the bearer's rank and house. Fewer than a hundred exist outside Telinor and Avenor. To see one carried is to see a master of the order, someone who has shaped doctrine, trained generations, or stood at the high councils. The staff hums faintly, even in stillness — old magic in wood that remembers its crafting.",
+      "bonuses": [
+        {
+          "type": "skill",
+          "variable": "staff-work",
+          "value": 7
+        },
+        {
+          "type": "attribute",
+          "variable": "intelligence",
+          "value": 3
+        },
+        {
+          "type": "resource",
+          "variable": "mana",
+          "value": 10
+        }
+      ]
+    },
+    "Relic of the Before-Split": {
+      "name": "Relic of the Before-Split",
+      "category": "Weapon",
+      "slot": "mainHand",
+      "description": "[Legendary] A staff recovered from a pre-Ensoulment vault, its makers dead centuries and their methods lost to the wizard-witch divide. The wood is unknown — it does not splinter, does not age, and does not dull. The fittings are wrought in alloys no current smith can match, inscribed with workings in a script no living scholar reads. Men of knowledge believe it dates from the age when wizardry and the woman's craft flowed from the same spring, before Avenoria's working split them irrevocably. Each such staff carries a name in the tongues of the Before, and each one a story that predates nations. The working flows through it like starlight through water — clear, effortless, and ancient beyond measure. A wizard who bears one has touched the edge of something Hedoria no longer fully understands.",
+      "bonuses": [
+        {
+          "type": "skill",
+          "variable": "staff-work",
+          "value": 10
+        },
+        {
+          "type": "attribute",
+          "variable": "intelligence",
+          "value": 5
+        },
+        {
+          "type": "resource",
+          "variable": "mana",
+          "value": 15
+        },
+        {
+          "type": "stat",
+          "variable": "damage",
+          "value": 2
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "abilities": {
+    "Staff Through Plate": {
+      "name": "Staff Through Plate",
+      "description": "The senior brothers' working. The staff strike at full intent, magical and physical aligned, that drives wood through worn plate and the wearer behind it. Used at the close of a fight against an armored opponent, when the brother is committed and there will not be a second swing. Spends a heavy share of mana.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Wizard",
+          "amount": 1
+        },
+        {
+          "type": "skill",
+          "variable": "staff-work",
+          "amount": 18
+        }
+      ],
+      "bonus": 18,
+      "cooldown": 12
+    },
+    "Pair-Bonded": {
+      "name": "Pair-Bonded",
+      "description": "Brotherhood pair-discipline. The brother and his agoge-comrade have worked together for decades; in combat they coordinate without speech, the strikes interleave, the bracing covers each other's openings. Bonus while fighting alongside the bonded brother. The order does not enforce these bonds; it does not police them either.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Wizard",
+          "amount": 1
+        },
+        {
+          "type": "trait",
+          "variable": "Pair-Bonded Brother",
+          "amount": 1
+        }
+      ],
+      "bonus": 10,
+      "cooldown": 0
+    },
+    "Reservoir Spend": {
+      "name": "Reservoir Spend",
+      "description": "The College's signature — the working a trained witch builds toward when the moment justifies it. Empty most of the reservoir into a single act the world will remember: a wall of cold across a battlefield, a flame that swallows a war-band, a glamour that holds a city's eyes for an hour, a healing that brings someone back from the edge. The witch is spent afterward and will be a woman in unusual clothes hoping nobody notices until she fills again.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Witch",
+          "amount": 1
+        },
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 18
+        }
+      ],
+      "bonus": 25,
+      "cooldown": 60
+    },
+    "Cooperative Filling": {
+      "name": "Cooperative Filling",
+      "description": "The cooperative practice the Brotherhood was built to refuse. With a willing male partner who carries his own mana, the witch fills her reservoir directly through ingestion of his essence or being ejaculated into. A long downtime scene played out as intimacy; mechanically a meaningful refill of reservoir from the partner's mana, more than any potion can match. Avenor-legal and dignified through the Queen's College consort-line system. Doctrinally illegal everywhere else; a witch and a partner caught at it in a human kingdom outside Avenor face arrest and quiet disposal.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Witch",
+          "amount": 1
+        }
+      ],
+      "bonus": 0,
+      "cooldown": 0
+    },
+    "Co-Working": {
+      "name": "Co-Working",
+      "description": "The cooperative practice in action — a witch and a willing wizard partner pool their pools on a single working. The witch acts; the wizard's mana flows alongside her reservoir into the spell. Workings at the upper edge of either's solo reach become routine; workings beyond either's solo reach become possible. The doctrinal Avenorian war-mode.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Witch",
+          "amount": 1
+        }
+      ],
+      "bonus": 12,
+      "cooldown": 6
+    }
+  }
+}

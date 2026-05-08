@@ -15,7 +15,7 @@ Edit `tabs/items.json`.
 |-------|-------------|
 | `name` | Must match object key exactly |
 | `category` | Must be in itemSettings.itemCategories (armor, consumable, etc.) |
-| `description` | Brief flavor text describing the item's appearance and nature |
+| `description` | Brief flavor text describing the item's appearance and nature. **For equippable gear (Armor/Weapon/Tool with a slot), prefix with a rarity bracket: `[Common]`, `[Uncommon]`, `[Rare]`, `[Epic]`, or `[Legendary]`** — e.g. `"[Rare] A staff of heartwood..."`. Mirrors the `[Tier 1] [Common]` convention used in npc-types/bestiary entries. Consumables, Currency, and Readables omit the prefix. |
 | `bonuses` | Array of bonuses - use `[]` if item is not equipable |
 
 ## Conditional Fields
@@ -33,8 +33,17 @@ Omit these fields (calculated at runtime):
 ## Item Types
 
 ### Armor
-- `category: "Armor"`, slot must be one of: `"head"`, `"chest"`, `"shoulders"`, `"hands"`, `"waist"`, `"legs"`, `"feet"`
+- `category: "Armor"`, slot must be one of: `"head"`, `"body"`, `"legs"`, `"feet"`, `"hands"`
 - Use bonuses to define defensive stats
+
+### Weapon
+- `category: "Weapon"`, slot must be `"mainHand"` or `"offHand"`
+- Two-handed weapons (bows, two-handed swords, polearms) occupy `"mainHand"`; the description should state they require both hands and the off-hand stays empty
+- Use bonuses to define offensive stats and skill/attribute boosts
+
+### Tool
+- `category: "Tool"`, slot may be `"offHand"` (for kits, grimoires, foci held in hand) or `"trinket"` (for worn accessories: charms, bandoliers, relics, rings, amulets)
+- Trinket slot has quantity 2; up to two trinkets equipped simultaneously
 
 ### Consumables
 - `category: "Consumable"`, no slot

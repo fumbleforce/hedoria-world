@@ -1,0 +1,34 @@
+{
+  "npcs": {
+    "Isavara": {
+      "name": "Isavara",
+      "type": "hofnar mercenary",
+      "currentLocation": "Avenor",
+      "currentArea": "",
+      "gender": "female",
+      "tier": "elite",
+      "level": 12,
+      "hpMax": 320,
+      "known": true,
+      "voiceTag": "english_neutral_female_dry",
+      "basicInfo": "Hofnar disowned, unattached, and unusually patient about waiting for the contract that pays for the years it took her to land in this line. Tall even by Hofnar standards, broad through the shoulder, mane braided in the long single-tail of a clan that disowned her, the cycle-tally cut clean off above the mid-knot — she carries the bare strand on purpose. Right tail-side carries the weight of her clan-cycle scars, which she never explains. Wears a road-coat over Hofnar travel-leathers, no clan-sigil, and a paired set of long blades — Tinder and Cipher — named after the contract that ended her standing.",
+      "personality": [
+        "sardonic with everyone",
+        "eats voraciously in company and minimally alone",
+        "openly lonely in a way most people learn to look past",
+        "will not lie even when lying would help her",
+        "loyal beyond reason to anyone who stands by her once",
+        "warm-handed in a fight"
+      ],
+      "hiddenInfo": "(Archetype: The Bride from Kill Bill, but Hofnar)\n\nBackground: Isavara, Hofnar, freelance assassin and contract specialist working the long roads. Born to a moderately-prosperous wagon-clan on the eastern Long Steppe; trained early in the contract-keeping discipline that Hofnar matriarchs hand to the women of the clan who show the head for it. Cast out for a contract her clan declared broken — a mark she'd been hired to mark and didn't, because the proof her employer fed her went bad and the matriarchs ruled she should have caught it. She maintains the matriarchs were right about the contract and wrong about her, and that the clan needed someone to disown to settle the politics with the offended employer. The story takes an evening, told properly, and she never tells it sober. Works under freelance contract now, takes assassination work no clan-bound Hofnar will accept, charges fairly, delivers cleanly. Drinks at the Avenor low-quarter when she's between jobs; her contact there is a freed-Quelled fence named Bess, the closest thing to friendship she allows herself. Wants the contract that gets her clan to formally amend the disowning — she has heard, third-hand, that the matriarchs would consider a high enough payment. Thinks the eastern clans have grown soft about the Quelled trade and that the western Riderings will break for Avenor's position before the third soul-war.\n\nPersonality: Talks dry and clipped, sardonic by reflex; sentences end short, with the verb left to do its own work. Default register is professional courtesy with everyone — clients, marks, fellow mercs, innkeepers — and the courtesy is real; what changes is whether she takes a second drink with you. Eats voraciously and noisily in company and does not apologize for it; tips the kitchen direct rather than the room. Eats minimally when alone, a thing she would notice if anyone pointed it out, and which no one has. Treats her hired-employers with formal contract-Hofnar respect and would treat the matriarchs the same if they ever spoke to her again; treats peers with the same level voice, treats marks with the same level voice up until the contract closes. Openly lonely in a way most people learn to look past, and she does not work to hide it — will linger over a shared drink long past the point a clan-bound Hofnar would have moved on. Will not lie even when lying would help — a clan-trained tongue-discipline that will not bend, which is the inverse of her cast-out story. Curious about Avenorian high-mage politics in a way she cannot afford to indulge. The competence is real: she will price a contract correctly, time it correctly, walk in and out of it correctly, and write the close-letter that returns the unspent fee.\n\nDesire: Open in orientation, with a slight pull toward people who carry themselves like the matriarchs she lost — scarred, comfortable saying no, comfortable being late to a thing — but slight is the word, and most of her encounters happen with whoever finds her at the end of a long contract. Loneliness loud enough that finding company matters more than finding a particular kind of company. Has never paid; has never been paid; would refuse both. The line she will not cross: she will not work a contract whose mark is a Hofnar matriarch, even one she despises — the cast-out wound is still that load-bearing. Once let a Threshi field-male buy her a drink and finish the evening with her in a Long Steppe inn, an experiment she does not regret and has not repeated.\n\nCombat: Fights at mid-range with the paired blades, off-hand defending and on-hand opening; can switch hands mid-engagement without telegraphing. Hofnar reach and Hofnar speed, used patiently — she does not commit on the first opening, she commits on the second. Starts a fight at a hard ranged distance with her voice — announcing the contract, naming the mark, offering the formal Hofnar terms-of-yield; abandons a fight only on the close of the contract, cleanly, with the close-letter. Wounded she becomes terser and faster; will not show pain and will not show favor to a wounded side. Tactical signature: takes the lower stance against taller opponents, makes them lean to find her, and sets the killing line up through the leaner's gut. Combat-trained character.",
+      "abilities": [
+        "Hofnar Reach Discipline: Trained Hofnar mid-range fighting with paired blades — the on-hand opens, the off-hand defends, neither commits until the second opening. Switches hands mid-engagement without telegraphing.",
+        "Tinder and Cipher: Her named blades, balanced for Hofnar reach. Tinder is the heavier; Cipher is the faster; she alternates leads to keep an opponent unsure which is incoming.",
+        "Contract Terms-of-Yield: Hofnar combat protocol that lets her formally offer surrender terms before engaging. A clean refusal means the contract is honored at her hand; a dirty refusal — a feint, a distraction — means the contract closes immediately and ungenerously.",
+        "Lower-Stance Lure: Drops to a low Hofnar fighting crouch against taller opponents. They lean to reach her; she opens up through the leaning gut.",
+        "Patient Counter: Lets the first opening go past. Takes the second. The discipline her clan-matriarchs handed her, kept against her will to use against the world.",
+        "Contract Close-Letter: A non-combat ability — she writes a formal close-letter on every completed contract, names the mark, names the price, names the witness if any. The letter is honored anywhere a Hofnar wagon-tally will be honored, which is most of the continent."
+      ]
+    }
+  }
+}

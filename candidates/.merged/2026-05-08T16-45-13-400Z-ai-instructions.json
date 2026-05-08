@@ -1,0 +1,26 @@
+{
+  "resourceSettings": {
+    "mana": {
+      "name": "mana",
+      "initialValue": 50,
+      "maxValue": 100,
+      "rechargeRate": 5,
+      "restRechargeMultiplier": 2,
+      "color": "#3b82f6",
+      "isHealth": false,
+      "gainPerLevel": 5,
+      "usageInstructions": "### Mana (the wizard's reservoir)\n\nThe small magical reservoir produced by a wizard's body. Generated only by male humans with the spark — Brothers of Telinor, hedge-wizards, and the Avenorian consort line. Other characters do not generate mana and should not have this resource.\n\nMana recovers from rest overnight. The pool is small.\n\n### Costs\n\n- Trivial wizardry (a small ward, a brief stiffening): 0 to -2\n- Standard wizardry through the staff (a strike behind plate, a brace against a charge): -5 to -10\n- Major wizardry through the staff (Hardened Strike, Wind-Slow across a battlefield, Standing Wall against a sustained press): -15 to -25\n- Without a staff in hand: utility costs roughly the same; combat-staff abilities are unavailable until the wizard replaces it."
+    },
+    "reservoir": {
+      "name": "reservoir",
+      "initialValue": 30,
+      "maxValue": 10000,
+      "rechargeRate": 0,
+      "restRechargeMultiplier": 0,
+      "color": "#ec4899",
+      "isHealth": false,
+      "gainPerLevel": 30,
+      "usageInstructions": "### Reservoir (the witch's stored mana)\n\nThe witch's stored magical pool. Does not regenerate from rest; a depleted witch must fill before working again. The cap is 10,000 — far beyond what any single witch reaches in ordinary play, but the ceiling is there because it has been touched.\n\nAvailable to any witch trained at the Queen's College or as a hedge-witch. Most male humans cannot draw on a witch-sized reservoir at all.\n\n### Filling\n\nThe reservoir is filled by ingesting male essence or being ejaculated into — directly from a willing partner, or via alchemical preparations distilled from a real essence-source. Material (feathers, antlers, eggs, plant reagents) does not fill on its own; only essence fills. Reagents are used in alchemy to brew the preparations that do.\n\n### Costs\n\n- Trivial workings (witchlight, hedge-craft, small heat or cold, easing a fever): 0 to -5\n- Moderate workings (combat projection, scry, telekinesis, conjured flame, glamour over self): -10 to -25\n- Major workings (battlefield-scale fire or cold, glamour over a crowd, breaking a curse, mending a critical wound): -40 to -100\n- Reservoir Spend (the boss-fight finisher): -100 to -300, often emptying the tank for a single act the world remembers\n\n### Spent\n\nA witch with low reservoir can do trivial workings only. All other workings: Very Hard minimum. A witch with an empty reservoir is a woman in unusual clothes hoping nobody notices. This is a real and frequent state; witches outside Avenor live with it constantly."
+    }
+  }
+}

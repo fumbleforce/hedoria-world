@@ -41,7 +41,9 @@ paths:
 
 ## Promoting Candidates to Canon
 
-When the creator approves the proposed changes, the orchestrator runs:
+**NEVER run `merge-candidates.js` without explicit per-batch user approval.** The orchestrator presents the candidate content to the creator — actual key fields, prose, mechanics, not just a summary — and only proceeds when the creator says *merge* / *yes* / *approved*. Directional greenlights ("do phase 1", "yes all four steps", "build it") authorize *spawning agents*, not merging their output. The merge step is always its own decision, made after the creator has seen what landed in `candidates/`.
+
+Once approval is given, the orchestrator runs:
 
 ```
 node .claude/scripts/merge-candidates.js                # promote all pending candidates

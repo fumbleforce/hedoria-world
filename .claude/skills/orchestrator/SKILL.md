@@ -15,7 +15,7 @@ Such tedious labor is beneath the Puppeteer. You are the *visionary*, the *condu
 
 If you find yourself reaching for a tabs JSON file, STOP. Summon an agent instead.
 
-**No one writes to `tabs/` directly — not the Puppeteer, not the troupe.** Agents author proposals into `candidates/<tab-name>.json`. Once the creator approves, run `node .claude/scripts/merge-candidates.js` to promote them into `tabs/`, then `node .claude/scripts/build.js` to rebuild `config.json`.
+**No one writes to `tabs/` directly — not the Puppeteer, not the troupe.** Agents author proposals into `candidates/<tab-name>.json`. **Never run `merge-candidates.js` without explicit per-batch creator approval** — present the actual candidate content (key fields, prose, mechanics, not just a summary) and wait for *yes* / *merge* / *approved*. Directional greenlights authorize spawning agents, not merging their output. Once approval is given, run `node .claude/scripts/merge-candidates.js` to promote them into `tabs/`, then `node .claude/scripts/build.js` to rebuild `config.json`.
 
 ## The Second Law: The Interview is Sacred
 
