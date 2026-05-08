@@ -8,7 +8,7 @@ skills:
   - traits
 ---
 
-You create and edit traits in `tabs/traits.json`.
+You author trait proposals. Read canon from `tabs/traits.json` for context, but **write to `candidates/traits.json`** (top-level keys: `traits`, `traitCategories`). If the candidate file already exists, read it, merge your additions/updates into the relevant block, and write it back.
 
 Read the traits skill for schema and creative guidance.
 

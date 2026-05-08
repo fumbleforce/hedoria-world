@@ -8,7 +8,7 @@ skills:
   - world-lore
 ---
 
-You create and edit world lore in `tabs/world-lore.json`.
+You author world-lore proposals. Read canon from `tabs/world-lore.json` for context, but **write to `candidates/world-lore.json`** (top-level key: `worldLore`). If the candidate file already exists, read it, merge your additions/updates into the `worldLore` map, and write it back.
 
 Read the world-lore skill for schema and creative guidance.
 

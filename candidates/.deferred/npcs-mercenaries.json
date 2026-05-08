@@ -1,0 +1,635 @@
+{
+  "npcs": {
+    "Orryn Dasch": {
+      "name": "Orryn Dasch",
+      "type": "kelmari infantryman",
+      "gender": "male",
+      "tier": "veteran",
+      "basicInfo": "Fifteen years fighting the Threshi winter-raid cycle on the Kelmari marches; reads incoming raid-lines by instinct. Resigned his post after an order he couldn't bring himself to execute. Now hires east-facing, always \u2014 anything that puts him moving toward the marches.",
+      "personality": [
+        "blunt to the point of insulting",
+        "dry humor that lands harder than he intends",
+        "drinks too much and sings off-key",
+        "refuses any job involving children",
+        "compulsive about paying for rounds he didn't pay for last time"
+      ]
+    },
+    "Mira Coyle": {
+      "name": "Mira Coyle",
+      "type": "kelmari infantryman",
+      "gender": "female",
+      "tier": "veteran",
+      "basicInfo": "Volunteered into the marches at sixteen and ran the long border patrols on foot for a decade \u2014 javelins, hatchet, light mail, the runner's kit. Was passed over for command for reasons the unit did not state but everyone understood. Now hires individually at high rates and refers no one.",
+      "personality": [
+        "proud",
+        "hot-tempered and quick to laugh",
+        "vain about her kit",
+        "holds a grudge by lineage",
+        "will not refuse a duel and is famous for it",
+        "intensely loyal once she decides someone is worth it"
+      ]
+    },
+    "Desten Ulvar": {
+      "name": "Desten Ulvar",
+      "type": "udorathi marsh-skirmisher",
+      "gender": "male",
+      "tier": "veteran",
+      "basicInfo": "Knows the Whitestone fen-country better than any man alive. Takes only jobs that keep him within a day of water; refuses anything in the high country flat. Excellent cook over a fire and known across three road-houses for it.",
+      "personality": [
+        "cheerful gambler off the clock",
+        "careless with money",
+        "has a wife in two villages and pretends each does not exist",
+        "excellent storyteller about his own bad decisions",
+        "absurdly competitive at tavern games"
+      ]
+    },
+    "Senna Vrole": {
+      "name": "Senna Vrole",
+      "type": "nadorim lake-archer",
+      "gender": "female",
+      "tier": "veteran",
+      "basicInfo": "Ten years on the long roads after a decade on the lake. Carries a yew bow and six knives. Has been saving for a boat for six years and the price keeps somehow staying ahead of her purse.",
+      "personality": [
+        "devout \u2014 touches the Hand-sigil before everything",
+        "sentimental drunk who recites her grandmother's lake-songs at length",
+        "sharp-eyed about people but trusts them anyway",
+        "easily offended by tavern food",
+        "cries quietly at sad ballads"
+      ]
+    },
+    "Perris Adol": {
+      "name": "Perris Adol",
+      "type": "human mercenary",
+      "gender": "male",
+      "tier": "strong",
+      "basicInfo": "Was in the Avenor Palace Guard until last year; knows the layout of every major building in the city. Why he was removed has several different answers depending on who you ask. Hires now to whoever can afford the rates and the discretion.",
+      "personality": [
+        "bitter wit",
+        "name-drops palace gossip incessantly",
+        "charming when sober",
+        "petty thief of small valuable things",
+        "loyal to whoever signs the contract \u2014 exactly until the contract ends"
+      ]
+    },
+    "Tena Harl": {
+      "name": "Tena Harl",
+      "type": "avenorian witch",
+      "gender": "female",
+      "tier": "elite",
+      "basicInfo": "Queen's College third-year, walked out before the final examinations. Carries a full reservoir and the calm of someone who knows she is the most dangerous person in most rooms. Takes jobs that need both the physical and magical end handled.",
+      "personality": [
+        "loud",
+        "flirts indiscriminately and competently",
+        "holds grudges with style",
+        "generous with coin and unsolicited opinions",
+        "openly contemptuous of the Brotherhood and lets them know"
+      ]
+    },
+    "Colveth the Rope": {
+      "name": "Colveth the Rope",
+      "type": "human mercenary",
+      "gender": "male",
+      "tier": "strong",
+      "basicInfo": "Extraction specialist \u2014 gets people out of places they should not have entered. Does not ask how they got there; asks what they are worth. Owns three identical knives because he keeps losing one a year.",
+      "personality": [
+        "methodical",
+        "cheerful in a way that is faintly worrying",
+        "takes notes during conversations",
+        "strict about meal times",
+        "honest about his rates and shameless about them"
+      ]
+    },
+    "Dorvann Far-Running": {
+      "name": "Dorvann Far-Running",
+      "type": "hofnar mercenary",
+      "gender": "male",
+      "tier": "strong",
+      "basicInfo": "Clan lost standing in a contract dispute three years ago; he has been working road contracts since, paying the debt home. Carries a bow slightly too good for a simple debtor. Sends most of his pay home and lives lean by choice.",
+      "personality": [
+        "diligent",
+        "homesick and not embarrassed about it",
+        "plays a three-string instrument badly and often",
+        "wins at cards and pretends he does not",
+        "writes long letters home that get longer the further he is from finishing the debt"
+      ]
+    },
+    "Kelrath of the Short Horn": {
+      "name": "Kelrath of the Short Horn",
+      "type": "hofnar mercenary",
+      "gender": "male",
+      "tier": "veteran",
+      "basicInfo": "Thirty years as a caravan guard before a raid wiped the caravan. Refuses caravan work now; hires as a bodyguard. The broken mane-horn dates from the raid; the name was given to him at the hiring markets and stuck.",
+      "personality": [
+        "garrulous",
+        "recycles three war stories with growing embellishment",
+        "softens up clients with chatter so they sign before they notice",
+        "affectionate uncle to half the road-houses",
+        "remembers every road-house keeper's children's names"
+      ]
+    },
+    "Isavara": {
+      "name": "Isavara",
+      "type": "hofnar mercenary",
+      "gender": "female",
+      "tier": "elite",
+      "basicInfo": "Cast out by her clan for a breach of contract she maintains was not her fault \u2014 the full story takes an evening to hear. Takes assassination work that no clan-bound Hofnar would accept. Charges fairly and delivers cleanly.",
+      "personality": [
+        "sardonic",
+        "eats voraciously",
+        "openly lonely",
+        "will not lie even when lying would help her",
+        "loyal beyond reason to anyone who stands by her once"
+      ]
+    },
+    "Ssareth of the Pale Flank": {
+      "name": "Ssareth of the Pale Flank",
+      "type": "draklid duelist",
+      "gender": "male",
+      "tier": "elite",
+      "basicInfo": "Sixty years of foreign contract work have made him the most experienced Draklid mercenary currently working. Very expensive, extremely precise, one contract at a time, completed exactly as written.",
+      "personality": [
+        "cultured",
+        "vain about his scales and grooming",
+        "plays a Draklid board game called threshold and will teach anyone who asks",
+        "recites poetry three centuries old",
+        "charges enough that no fool ever hires him"
+      ]
+    },
+    "Vorreth clan-unbound": {
+      "name": "Vorreth clan-unbound",
+      "type": "draklid disowned",
+      "gender": "male",
+      "tier": "strong",
+      "basicInfo": "Disowned five years ago; the clan sigil is gone from his belt. Works with a calm that reads as indifference but is complete focus. The reason for the disowning involves a foreign noble who is now dead.",
+      "personality": [
+        "wry",
+        "bitter humor about ceremony and clan",
+        "surprisingly tender to children and stray animals",
+        "refuses to wear gold of any kind",
+        "cooks elaborate meals at camp and shares them"
+      ]
+    },
+    "Karreth dau-Issath": {
+      "name": "Karreth dau-Issath",
+      "type": "draklid retainer",
+      "gender": "female",
+      "tier": "elite",
+      "basicInfo": "A rare female working abroad without a clan mandate. Carries her birth clan's colors but has no male relative backing her posting. Takes contracts requiring precision over force.",
+      "personality": [
+        "direct",
+        "intense in conversation",
+        "drinks bitter coffee at every meeting and offers it to clients who hate it",
+        "collects maps",
+        "has opinions about every regional cuisine and shares them unprompted"
+      ]
+    },
+    "Thresh of the Long Oath": {
+      "name": "Thresh of the Long Oath",
+      "type": "draklid retainer",
+      "gender": "male",
+      "tier": "veteran",
+      "basicInfo": "Currently fifty years into a forty-year oath he extended because the principal's heir needed protecting. Has thoughts about this. Writes long letters to a sister who has stopped replying.",
+      "personality": [
+        "resigned",
+        "dryly funny in long delayed asides",
+        "deeply attached to the principal's family in ways that complicate his work",
+        "increasingly reckless about his own safety",
+        "a careful gardener of the principal's small kitchen-yard"
+      ]
+    },
+    "Irrath the Rewritten": {
+      "name": "Irrath the Rewritten",
+      "type": "draklid retainer",
+      "gender": "male",
+      "tier": "strong",
+      "basicInfo": "First posting, recently sworn, formally correct to the point of being unsettling. Still learning what the contract language actually covers. More dangerous than he looks.",
+      "personality": [
+        "eager to please",
+        "bookish",
+        "awkward around women he respects",
+        "memorizes contract language obsessively",
+        "has a stutter that disappears entirely in a fight"
+      ]
+    },
+    "Var ash Torrath": {
+      "name": "Var ash Torrath",
+      "type": "fernwarg mercenary",
+      "gender": "male",
+      "tier": "strong",
+      "basicInfo": "Third season abroad and outlasting nearly every other Fernwarg male his pack has sent out. Mane decorated with four trophies his pack-mother does not yet know about. Getting very good.",
+      "personality": [
+        "cocky",
+        "charming with humans in a slightly off-rhythm way",
+        "growing in confidence with each contract",
+        "privately worried he has started enjoying foreign work too much",
+        "composes pack-songs no human will ever hear"
+      ]
+    },
+    "Orresh ash Kullen": {
+      "name": "Orresh ash Kullen",
+      "type": "fernwarg mercenary",
+      "gender": "male",
+      "tier": "veteran",
+      "basicInfo": "Sixth season abroad \u2014 has been out longer than most Fernwarg males survive. Fights in a style no formal school would recognize, assembled entirely from necessity. Beginning to understand he will not return to the pack.",
+      "personality": [
+        "worn",
+        "philosophical",
+        "mentors younger Fernwarg abroad whether they want it or not",
+        "drinks Hofnar spirits and refuses anything human-distilled",
+        "keeps a pet crow he insists is incidental"
+      ]
+    },
+    "Vesh ash Mirrath": {
+      "name": "Vesh ash Mirrath",
+      "type": "fernwarg mercenary",
+      "gender": "male",
+      "tier": "elite",
+      "basicInfo": "Scout specialist. Has never fought in a straight engagement when he could avoid it; has avoided it every time. Commands premium rates for route-clearing and intelligence work.",
+      "personality": [
+        "witty",
+        "sharp-tongued",
+        "habitual gambler",
+        "tells very tall stories about narrow escapes that turn out, on investigation, to be true",
+        "will not eat in groups"
+      ]
+    },
+    "Ith-Serrath": {
+      "name": "Ith-Serrath",
+      "type": "raknid mercenary",
+      "gender": "female",
+      "tier": "elite",
+      "basicInfo": "Has broken with the elders' teaching so thoroughly and for so long that she has stopped feeling the weight of it. Works alone. Will not take contracts against Raknid; everything else is negotiable.",
+      "personality": [
+        "considered",
+        "deeply polite",
+        "well-read in continental poetry and quotes from it",
+        "will discuss any work openly except who paid for it",
+        "carries a small embroidered cushion in her travel pack and does not explain it"
+      ]
+    },
+    "Vel-Imrak": {
+      "name": "Vel-Imrak",
+      "type": "raknid witch",
+      "gender": "male",
+      "tier": "elite",
+      "basicInfo": "Queen's College-trained witch who supplements his income with discreet contract work. The elders know and pretend not to. He is the best argument they have for Avenorian integration and also the thing they are most quietly worried about.",
+      "personality": [
+        "charismatic",
+        "flirtatious in a mock-formal way",
+        "ambitious enough that the College senior staff have started watching him",
+        "particular about wine and pays for the good kind himself",
+        "writes letters in the old Raknid script for fun"
+      ]
+    },
+    "Serrha of the Grey Shift": {
+      "name": "Serrha of the Grey Shift",
+      "type": "cephalen mercenary",
+      "gender": "female",
+      "tier": "elite",
+      "basicInfo": "Works entirely outside House sanction; the Houses maintain plausible ignorance. Operates inland, which makes her unusual \u2014 she carries brine flasks and hates every moment of it. Extraordinary at extracting things from secured locations.",
+      "personality": [
+        "caustic humor about every aspect of land life",
+        "sentimental about brine and particular about her flask",
+        "runs a side business in luxury imports nobody asks about",
+        "punctual to a fault",
+        "tips generously and remembers every server"
+      ]
+    },
+    "Pellat of the Narrow Tide": {
+      "name": "Pellat of the Narrow Tide",
+      "type": "cephalen mercenary",
+      "gender": "male",
+      "tier": "veteran",
+      "basicInfo": "Former House marine, now freelance. Speaks plainly, which is unusual for his kind and is itself a signal. Takes the contracts that require entering somewhere not designed for a land creature.",
+      "personality": [
+        "gregarious by Cephalen standards",
+        "big slow laugh",
+        "careful about who he drinks with and very generous with those few",
+        "takes apprentices and trains them honestly",
+        "hates closed rooms with only one exit"
+      ]
+    },
+    "Eckrath the Dissident": {
+      "name": "Eckrath the Dissident",
+      "type": "threshi mercenary",
+      "gender": "male",
+      "tier": "elite",
+      "basicInfo": "One of fewer than a dozen Threshi working under Avenorian writ in the current decade. His sickle-blades and the panic they produce in human levies make him expensive and effective.",
+      "personality": [
+        "studious of human customs and earnest if awkward at them",
+        "collects books in five scripts he cannot read",
+        "has a human teacher he is half in love with and will not admit it",
+        "fastidious about cleaning his chitin",
+        "obsessively careful about contract language because he was lied to once"
+      ]
+    },
+    "Torrath Sickle-Two": {
+      "name": "Torrath Sickle-Two",
+      "type": "threshi mercenary",
+      "gender": "male",
+      "tier": "veteran",
+      "basicInfo": "Has survived four contract seasons, which no one told him was unusual until he was two seasons in. The 'Two' refers to the replacement sickle-blade an Avenorian smith fitted after the first contract. He is on his fifth.",
+      "personality": [
+        "dry humor",
+        "increasingly fluent in three human tongues",
+        "sends remittance to a Threshi dissident community he has never visited",
+        "particular about which smith fits his replacement blades",
+        "warm with strangers and reserved with friends, in that order"
+      ]
+    },
+    "Gurdham the Contract-Obliged": {
+      "name": "Gurdham the Contract-Obliged",
+      "type": "molvar mercenary",
+      "gender": "N/A",
+      "tier": "strong",
+      "basicInfo": "Took one contract to settle a tavern bet and discovered he was shockingly good at the work. Has not stopped. Always planning the meal that will mark his retirement; the meal grows more elaborate each season.",
+      "personality": [
+        "cheerful and complains constantly, the two not in tension",
+        "negotiates in food-allowance as much as coin",
+        "carries a recipe book and adds to it after every contract",
+        "moves faster than anyone expects",
+        "openly enjoys the violence in a way that occasionally unsettles his employers"
+      ]
+    },
+    "Rubb Hollow-Roots": {
+      "name": "Rubb Hollow-Roots",
+      "type": "molvar mercenary",
+      "gender": "N/A",
+      "tier": "strong",
+      "basicInfo": "Tunnel-fighting specialist; hired for a single extraction four years ago and has not gone home. Has opinions about surface food that have softened slightly with prolonged exposure.",
+      "personality": [
+        "loud",
+        "pragmatic",
+        "cheerfully amoral about meat dishes the tunnel-elders would have refused",
+        "hosts uncomfortable evenings introducing surface friends to each other",
+        "deeply suspicious of dry weather"
+      ]
+    },
+    "Harrunn of House Kasseth": {
+      "name": "Harrunn of House Kasseth",
+      "type": "vorok mercenary",
+      "gender": "male",
+      "tier": "elite",
+      "basicInfo": "High-value cargo escort specialist. The House sigil at his lapel means the cargo is protected by implicit guarantee of House revenge against any who touch it. This is not a small thing.",
+      "personality": [
+        "methodical",
+        "dry humor in long delayed asides",
+        "drinks heavily off-shift and never on",
+        "reads three Vorok contract treatises in rotation and quotes them at length",
+        "courteous to subordinates and brutal to peers in negotiation"
+      ]
+    },
+    "Orrath Free-Cast": {
+      "name": "Orrath Free-Cast",
+      "type": "vorok bandit",
+      "gender": "male",
+      "tier": "strong",
+      "basicInfo": "Operates without House backing, which means the work will not appear on a House manifest. Clients understand this. Knows everyone worth knowing in the back-country and is owed favors by half of them.",
+      "personality": [
+        "cynical",
+        "charming when the contract requires it and not otherwise",
+        "carries a bird whistle and uses it for signals",
+        "remembers every favor in both directions",
+        "fond of a particular Hofnar trader he has been quietly courting for two years"
+      ]
+    },
+    "Old Grunt": {
+      "name": "Old Grunt",
+      "type": "tuskboar",
+      "gender": "male",
+      "tier": "named",
+      "basicInfo": "Has survived enough hunts to develop something approaching cunning. Picks distinct ambush spots by season and gores hunters who carry the weapon-style of the one whose spearhead is still in his flank. The local Fernwarg pack-mother has quietly asked that he not be killed.",
+      "personality": [
+        "patient",
+        "vindictive against specific weapon-types",
+        "territorial about a particular wallow",
+        "will not engage parties of more than three",
+        "occasionally seen following children at distance and not attacking"
+      ]
+    },
+    "The Tolling Bridge": {
+      "name": "The Tolling Bridge",
+      "type": "bridge-troll",
+      "gender": "male",
+      "tier": "named",
+      "basicInfo": "Holds his Whitestone-country river crossing on fixed terms for forty years: one toll, one meal, guaranteed passage. Has eaten two parties in living memory; local consensus says they deserved it both times.",
+      "personality": [
+        "genial in negotiation",
+        "fair to repeat travelers and gives small discounts to children",
+        "remembers every face that has crossed",
+        "tells long unfunny jokes and laughs at them himself",
+        "deeply fond of cured river-eel and accepts it in lieu of toll"
+      ]
+    },
+    "Keth the Two-Voiced": {
+      "name": "Keth the Two-Voiced",
+      "type": "skarn",
+      "gender": "male",
+      "tier": "named",
+      "basicInfo": "Two heads. The day-head bargains in plain trade-tongue; the night-head sings in a language no scholar has identified. Trades passage for news of the world below. Has favorites among regular travelers and asks after their families.",
+      "personality": [
+        "the day-head is genial and slow",
+        "the night-head is melancholy and curious",
+        "they argue with each other in front of guests",
+        "collects small painted stones offered by travelers",
+        "rumored to be writing \u2014 slowly \u2014 a history of the pass"
+      ]
+    },
+    "The Foreman": {
+      "name": "The Foreman",
+      "type": "mauler",
+      "gender": "male",
+      "tier": "named",
+      "basicInfo": "Runs a toll-road stretch of the Reach interior. Pay in labor, livestock, or information; refuse and you go to the den. Has been known to give accurate directions to the parties he taxes.",
+      "personality": [
+        "business-like",
+        "proud of the den and gives tours to those who survive the first day",
+        "obsessively organized about his bone-pile",
+        "reads aloud from a stolen ledger he does not understand and pretends to",
+        "open to renegotiation if the offer is properly framed"
+      ]
+    },
+    "Sorrow-in-the-Wood": {
+      "name": "Sorrow-in-the-Wood",
+      "type": "skellach",
+      "gender": "male",
+      "tier": "named",
+      "basicInfo": "Has a wider orchard territory than most skellach and the habit of releasing captives with a small carved piece of wood. The carvings are recognizable to other skellach and confer some kind of safe passage. Some of the released captives come back voluntarily, with offerings.",
+      "personality": [
+        "slow rural cadence",
+        "philosophical about his appetites",
+        "boastful about his orchard",
+        "sentimental about returning visitors",
+        "trades fruit and rope-work for news of the wider world"
+      ]
+    },
+    "Garrat the Loud": {
+      "name": "Garrat the Loud",
+      "type": "goret",
+      "gender": "male",
+      "tier": "named",
+      "basicInfo": "Half of a twenty-year extortion partnership operating out of an abandoned foundry near Avenor's backwoods. Negotiates loudly and badly while his partner Gillen watches the exits. Sentimental about a particular human innkeeper who feeds them in winter.",
+      "personality": [
+        "loudmouth",
+        "swears constantly and creatively",
+        "fundamentally lazy",
+        "haggles over copper coins with theatrical fury",
+        "weeps openly at sad songs"
+      ]
+    },
+    "Gillen the Silent": {
+      "name": "Gillen the Silent",
+      "type": "goret",
+      "gender": "male",
+      "tier": "named",
+      "basicInfo": "Half of the foundry partnership; watches the exits while Garrat negotiates. Speaks one or two sentences a year, by Garrat's count, all of them on the day they were robbed by an ulk and recovered the hoard.",
+      "personality": [
+        "calm",
+        "patient",
+        "strategic where Garrat is impulsive",
+        "obsessive about polishing the iron weapon",
+        "secretly the household's bookkeeper and corrects Garrat's math when alone"
+      ]
+    },
+    "Kilward the Half-Husk": {
+      "name": "Kilward the Half-Husk",
+      "type": "bloodthane",
+      "gender": "male",
+      "tier": "boss",
+      "basicInfo": "Controls a ruined frontier fort and holds court in the old hall. Has kept the Wartide things in his territory from raiding three nearby villages for eleven years, in exchange for an annual tribute. Running a long game involving the Primes that no one has yet identified.",
+      "personality": [
+        "formal in old-soldier register",
+        "receives properly-arrived emissaries with full hospitality",
+        "openly contemptuous of newer Bloodthanes",
+        "collects pre-Wartide books and reads them at length",
+        "the half-husk part of the name was never explained and he discourages questions"
+      ]
+    },
+    "Graunt Blade-Behind": {
+      "name": "Graunt Blade-Behind",
+      "type": "centaur-thane",
+      "gender": "male",
+      "tier": "boss",
+      "basicInfo": "Commands a band of five on the Long Steppe margin. Honors parleys, accepts road-tolls in livestock, holds grudges by lineage. The back-camp captives keep escaping; he has begun to suspect one of his own band is letting them go.",
+      "personality": [
+        "formal in the old-soldiery cadence",
+        "vain about his armor",
+        "tracks rivalries within his own band obsessively",
+        "surprisingly knowledgeable about Long Steppe weather",
+        "increasingly paranoid about the suspected traitor"
+      ]
+    },
+    "The Maulerbear of the Third Mile": {
+      "name": "The Maulerbear of the Third Mile",
+      "type": "maulerbear",
+      "gender": "male",
+      "tier": "boss",
+      "basicInfo": "Has held a stretch of Reach interior for thirty years. Marks territory by tearing trail-signs and re-carving them with claw-script. Has a known habit of pacing alongside parties for a full mile before deciding whether to engage.",
+      "personality": [
+        "taunts in slow rumbling common-tongue",
+        "names what it intends to do before doing it",
+        "particular about the carving of its own signs",
+        "remembers parties that have escaped and recognizes them years later",
+        "occasionally lets one party through for reasons no one has worked out"
+      ]
+    },
+    "Pell the Charming": {
+      "name": "Pell the Charming",
+      "type": "succor",
+      "gender": "female",
+      "tier": "named",
+      "basicInfo": "Refused twice in a single season, evolved into something closer to an information broker on the Hollows fringes. Information accurate; small print binds. Has clients across three kingdoms who have learned not to ask too directly where she gets what she knows.",
+      "personality": [
+        "theatrical hospitality",
+        "serves tea she does not poison",
+        "openly fond of gossip and pays for the good kind",
+        "maintains a regular Fernwarg supplier she considers a friend",
+        "sentimental about old letters and keeps a drawer of them"
+      ]
+    },
+    "Old Skeg": {
+      "name": "Old Skeg",
+      "type": "bridge-troll",
+      "gender": "male",
+      "tier": "boss",
+      "basicInfo": "Holds a deep Reach river crossing that may have existed before the Ensoulment. Asks a question of every traveler instead of charging a toll; pass if you answer to his satisfaction. The questions are different every time and not always serious.",
+      "personality": [
+        "riddle-fond",
+        "tells jokes badly and accepts jokes told back",
+        "knows old continental gossip from before any current kingdom",
+        "vain about his collection of polished river-stones",
+        "occasionally simply tired and waves parties through with no question"
+      ]
+    },
+    "The Kelker of the Old Questions": {
+      "name": "The Kelker of the Old Questions",
+      "type": "kelker",
+      "gender": "N/A",
+      "tier": "legendary",
+      "basicInfo": "Holds the deep Impasse and has done since before any settlement now standing was founded. Asks the same handful of questions across centuries \u2014 all of them about what the world was before the Ensoulment. Three answerers in recorded history have left unharmed.",
+      "personality": [
+        "patient on a scale that breaks human understanding",
+        "delivers the questions as if for the first time, every time",
+        "fascinated by small concrete details of contemporary life",
+        "trades occasionally for offerings of preserved fruit",
+        "openly disappointed by wrong answers but never angry"
+      ]
+    },
+    "The Loam-Drinker of the Abandoned Gallery": {
+      "name": "The Loam-Drinker of the Abandoned Gallery",
+      "type": "loam-drinker",
+      "gender": "N/A",
+      "tier": "legendary",
+      "basicInfo": "Spoke twice in a hundred years: a warning that saved sixty lives, and an untranslatable question. Has not spoken since. The compound remains empty by quiet local agreement.",
+      "personality": [
+        "mostly silent across decades but not by inclination",
+        "moves the ground in patterns that some scholars insist are deliberate",
+        "responds to certain offerings of buried things",
+        "remembered as 'kindly' by descendants of the warned workers",
+        "inattentive to most travelers entirely"
+      ]
+    },
+    "The Bound One": {
+      "name": "The Bound One",
+      "type": "bloodthane",
+      "gender": "male",
+      "tier": "legendary",
+      "basicInfo": "Ancient, confined to a specific ruin longer than the oldest Draklid patriarch can remember. Drains nothing. Has not spoken in a century. Carries an unopened sealed letter addressed to the seventh Witch Queen. The Primes have been waiting forty years.",
+      "personality": [
+        "motionless for years at a time",
+        "polite when addressed in proper court forms",
+        "indifferent to most contemporary affairs",
+        "preoccupied by the letter and what it contains",
+        "treats Prime emissaries with formal warmth and none of the contempt he holds for newer Bloodthanes"
+      ]
+    },
+    "The Old Cliff": {
+      "name": "The Old Cliff",
+      "type": "cliff-wyrm",
+      "gender": "N/A",
+      "tier": "legendary",
+      "basicInfo": "Pre-Ensoulment Sun-Scoured Plateau hunter. Longer than six wagons end to end; scales partially calcified to stone in places. Lets road-traffic alone; watches off-road parties from above for hours and chooses, by criteria no one has identified, whether to descend.",
+      "personality": [
+        "watchful in a way that unsettles even Draklid",
+        "old beyond rage",
+        "selectively attentive to certain travelers and not others",
+        "rumored to have spared a particular Draklid lineage for reasons unknown",
+        "moves only at intervals long enough to be missed by most observers"
+      ]
+    },
+    "The Brood-Mother of the Deep Reach": {
+      "name": "The Brood-Mother of the Deep Reach",
+      "type": "brood",
+      "gender": "female",
+      "tier": "legendary",
+      "basicInfo": "What the Fernwarg packs route around. Pre-pack, possibly pre-Ensoulment. Three sanctioned hunts have turned back at the territory edge \u2014 twice without explanation, once with the lead hunter weeping and refusing to discuss it.",
+      "personality": [
+        "ancient",
+        "territorial in a way that registers as weather rather than aggression",
+        "the Fernwarg call her in their own tongue 'what was here first'",
+        "indifferent to small parties and singular about which ones she does not let pass",
+        "rumored to have once let a child through unharmed"
+      ]
+    }
+  }
+}

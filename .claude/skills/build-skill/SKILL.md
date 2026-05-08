@@ -7,7 +7,7 @@ agent: build-skill
 
 # Build Skill
 
-Create skills for editing `tabs/*.json` config files.
+Create skills for authoring proposals to `candidates/*.json` (which a merge step promotes into `tabs/*.json`).
 
 ## File Structure
 
@@ -32,7 +32,7 @@ agent: {name}
 
 # {Title}
 
-Edit `tabs/{name}.json`.
+Read canon from `tabs/{name}.json`; write proposals to `candidates/{name}.json` (top-level key: `{block}`).
 
 ## Required Fields
 
@@ -83,11 +83,11 @@ skills:
   - {name}
 ---
 
-You create and edit {plural} in `tabs/{name}.json`.
+You author {plural} proposals. Read canon from `tabs/{name}.json` for context, but **write to `candidates/{name}.json`** (top-level key: `{block}`). If the candidate file already exists, read it, merge your additions/updates into the `{block}` map, and write it back.
 
 ## Chaining
 
-If `{cross-reference}` doesn't exist in `tabs/{other}.json`, spawn **{other}** agent in parallel.
+If `{cross-reference}` doesn't exist in `tabs/{other}.json` or `candidates/{other}.json`, spawn **{other}** agent in parallel.
 ```
 
 ## Reference Template

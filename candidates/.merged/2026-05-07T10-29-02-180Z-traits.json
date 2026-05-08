@@ -1,0 +1,348 @@
+{
+  "traits": {
+    "Hofnar": {
+      "name": "Hofnar",
+      "description": "Equine-humanoid; tall, broad-shouldered, mane-haired, hoof-toed, slight muzzle, some lineages with small temple horns. Males barrel-chested and heavy; females slimmer and faster. Lifted from steppe herds. Live in painted clan-wagon-cities that migrate seasonally \u2014 no fixed capitals. Organized by clan, confederated into seven Riderings led by elder councils. The continent's overland traders: neutral by reputation, scrupulously contract-bound, indispensable to everyone, allied with no one. Reliability is identity; a broken contract destroys standing for generations. Participate in the Quelled trade, which is splitting progressive and traditional clans toward an open break.",
+      "quirk": "Your word is your bond, and others perceive your scrupulous honesty as a sign of deep, ancestral reliability.",
+      "skills": [
+        {
+          "skill": "athletics",
+          "modifier": 10
+        }
+      ],
+      "attributes": [
+        {
+          "attribute": "strength",
+          "modifier": 2
+        },
+        {
+          "attribute": "constitution",
+          "modifier": 1
+        }
+      ],
+      "resources": [
+        {
+          "resource": "health",
+          "modifier": 10
+        }
+      ],
+      "abilities": [
+        "Trade-Tongue Negotiator"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Draklid": {
+      "name": "Draklid",
+      "description": "Draklid. Drake-descended; tall, lean, sinewy, digitigrade, long active tail, scales in rust/copper/ochre/bronze (rare black), clan-marked along the flanks. Long narrow muzzle, slit-pupil amber/yellow/red eyes, sweeping fan of horns, hooked claws, small vestigial wings useless for flight but expressive in display and adorned in ceremony. Live in cliff-cut sandstone clan-holds in the high desert and broken plateau. Each clan is sovereign; never been unified, openly hostile to the suggestion. Long-lived (matriarchs into their fifth century). Patient, calculating, formally polite, scrupulously fair, terrifying to cheat. Younger sons travel as mercenaries, bodyguards, and oath-bound retainers. Dress in layered desert silks, gold at throat and wrists, clan sigils at the belt.",
+      "quirk": "Your patient and calculating demeanor makes it unnervingly difficult for others to detect when you are displeased.",
+      "skills": [
+        {
+          "skill": "intimidation",
+          "modifier": 10
+        }
+      ],
+      "attributes": [
+        {
+          "attribute": "intelligence",
+          "modifier": 2
+        },
+        {
+          "attribute": "dexterity",
+          "modifier": 1
+        }
+      ],
+      "resources": [
+        {
+          "resource": "health",
+          "modifier": 10
+        }
+      ],
+      "abilities": [
+        "Calculating Gaze"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Cephalen": {
+      "name": "Cephalen",
+      "description": "Cephalopod-descended; humanoid silhouette but soft and near-boneless, can squeeze through gaps a third their size. Pearl-and-slate rubbery skin that involuntarily shifts color with emotion. Slit-pupil eyes, webbed long-fingered hands, scalp-tentacles in place of hair (semi-prehensile, used for fine work). Amphibious. Live in half-submerged coastal cities of mother-of-pearl, coral, and worked shell, with flooded lower floors and canal streets. Color-control is the central cultural discipline: children are transparent, adults hold steady, masters project false emotional states with precision. Took the seas by blockade two centuries ago after the human admiralties tried to subordinate them; control all open-water trade by treaty since. Sly as a Cephalen and Cephalen-honest are continental idioms. They do not deny the reputation.",
+      "quirk": "Your skin involuntarily ripples with color when you feel strong emotions, often betraying your true thoughts.",
+      "skills": [
+        {
+          "skill": "persuasion",
+          "modifier": 10
+        }
+      ],
+      "attributes": [
+        {
+          "attribute": "charisma",
+          "modifier": 2
+        },
+        {
+          "attribute": "dexterity",
+          "modifier": 1
+        }
+      ],
+      "resources": [
+        {
+          "resource": "health",
+          "modifier": 10
+        }
+      ],
+      "abilities": [
+        "Emotional Projection"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Molvar": {
+      "name": "Molvar",
+      "description": "Molvar. Tuber-and-root people; low-slung quadrupedal body with two stubby root-fingered upper arms, dense fibrous flesh under thick rind-skin in browns/ochres/umbers, pig-and-mole face with bright forward eyes and whisker-tendrils. Short-lived (~60 years). Live in brightly-lit tunnel-networks under low earthen mounds in central meadows and forest margins. No ruling class \u2014 neighborhood councils, decisions made over long meals. Hedonists: eat, drink, brew, garden, couple prolifically; plumpness admired, fatness more so. Genderless \u2014 any two can couple, either or both can produce a spud (planted in family soil, sprouts a child after half a year). Speak to roots and plants \u2014 coax tunnels into shape, persuade crops to thrive; sometimes hired by surface farmers. Not warlike, but devastating in tunnel defense \u2014 broke human armies in the First Soul-War and have been left alone since. Inter-network defensive pact is unwritten and absolute.",
+      "quirk": "You have a natural, soothing presence that causes nearby plants to thrive and grow slightly faster in your presence.",
+      "skills": [
+        {
+          "skill": "survival",
+          "modifier": 10
+        }
+      ],
+      "attributes": [
+        {
+          "attribute": "constitution",
+          "modifier": 3
+        }
+      ],
+      "resources": [
+        {
+          "resource": "health",
+          "modifier": 10
+        }
+      ],
+      "abilities": [
+        "Plant Whisperer"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Raknid": {
+      "name": "Raknid",
+      "description": "Raknid. Redeemed wartide race \u2014 the brood-line that turned during the Ensoulment and fought the rest of the Wartide alongside Avenoria's allies. Spider-derived: tall, slender, pale chitin-plated bodies in ivory, bone-white, soft grey, or glossy black. Two human-set arms plus two long jointed clawed spider-legs descending from the lower body \u2014 walk in a four-beat gait. Six eyes (large humanlike upper pair, four smaller lower), small folding chelicerae at the mouth, scalp grows a webbed mantle of pale silken fibers. Soft clicking voices, long-lived (comparable to Draklid). No homeland \u2014 their parent-race's high country was scoured and remains uninhabited. Live in scattered small communities of dozens to a few hundred in marginal hill country and forest edges. Most Hedorians do not distinguish them from what they came from: refused service, charged double, run out of towns at dusk. Communities are routinely burned out by neighboring lords or witch-hunters, and they rebuild elsewhere \u2014 they teach their children against returning violence. Take patient work: scholars, archivists, healers, translators, the occasional witch. Avenor accepts them as full citizens; the Queen's College has trained Raknid witches for over a century, who serve the realm with exacting practice and fierce loyalty. Dress simply in muted earth-tones \u2014 undyed linens, soft leathers, layered scarves and travel-cloaks \u2014 sometimes ornamented with small objects woven from their own silk.",
+      "quirk": "Your movements are unnervingly silent and precise, causing others to notice you only when you intend them to.",
+      "skills": [
+        {
+          "skill": "investigation",
+          "modifier": 10
+        }
+      ],
+      "attributes": [
+        {
+          "attribute": "wisdom",
+          "modifier": 2
+        },
+        {
+          "attribute": "intelligence",
+          "modifier": 1
+        }
+      ],
+      "resources": [
+        {
+          "resource": "health",
+          "modifier": 10
+        }
+      ],
+      "abilities": [
+        "Web-Sense"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Primes": {
+      "name": "Primes",
+      "description": "The elders of Hedoria \u2014 already a people before the Ensoulment, with histories that run further back than any other race's. Tall, heavy-built, bear-bodied and broad-shouldered, dense white fur thickening at chest, neck, and tail. Pale chimpanzee-like face with a long lion muzzle, long furry tail used for balance and gesture, dexterous five-fingered hands, broad padded snow-feet. Robe in deep blue, ochre, vermilion, and gold, layered and embroidered with clan, monastery, and lineage markings \u2014 small bone relics (finger-bones, teeth, jaw fragments bound in worked metal) worn at throat, chest, wrists, and belt. Live in great cliff-cut monasteries terraced into the base of cold mountains, hung with banners and skull-iconography, with bone-vaults cut deep into the rock. Seven great monasteries currently active; lost vaults from the Unmade era are recovered across generations. Practice ancestor-magic: a slow, exact, unflashy art of invoking specific named dead by rite and offering, drawing on chained lineages of ancestors back across millennia. Excellent at knowledge, healing, divination, true-naming, untangling curses, and long-time work \u2014 useless for battle-magic. Power is anchored: a Prime at home with full vault-access is enormously powerful; a Prime on the road, carrying only three or four portable relics (named ancestors in their own right), is a fraction of that. The wizard colleges fear them quietly \u2014 Primes hold the actual historical record the colleges have spent centuries rewriting. Black-market grave-robbing of Prime bones exists; the magic does not work for thieves, and the families involved suffer untraceable misfortunes across generations. Did not fight the first Wartide alongside Avenoria; the bone-vaults that made that decision still hold the magic, still counsel preservation, and still resist young Primes who want to commit to the second. Long-standing peerage with Avenor has gone quiet under Sephilia's reordering. The Primes will warn, document, and watch. Their monasteries will survive whatever comes.",
+      "quirk": "You occasionally hear the soft, indistinct whispers of your ancestors when you are in dire need of guidance.",
+      "skills": [
+        {
+          "skill": "performance",
+          "modifier": 10
+        }
+      ],
+      "attributes": [
+        {
+          "attribute": "wisdom",
+          "modifier": 3
+        }
+      ],
+      "resources": [
+        {
+          "resource": "health",
+          "modifier": 10
+        }
+      ],
+      "abilities": [
+        "Ancestor-Call"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Fernwarg": {
+      "name": "Fernwarg",
+      "description": "Wolf-and-fern people of the central forests. Tall, lean, upright, digitigrade, clawed hands and feet. Wolf-derived face \u2014 long muzzle, mobile ears, amber/yellow eyes, full canid expression-register. Coat is fur grown in fern-frond layers along back/shoulders/arms/tail, deep green to forest-dark, seasonally shifting; perfect camouflage in undergrowth. Spinal mane lifts in display, woven with bones, beads, and trophies \u2014 its size reads standing. Matriarchal by anatomy: females are larger, heavier, more muscular, with denser manes; pack-mothers carry headdresses of layered fronds. First birth is dangerous and the central passage of a female's life. Females choose mates. Males cannot lead their birth-pack \u2014 the most ambitious never will \u2014 so the ambitious leave and serve abroad as mercenaries, scouts, retainers. Packs are extended matrilines of 12\u201350, organized into forest-confederations. Share their forests with the Raknid by ancient unwritten compact (Fernwarg in open woodland, Raknid in deep old-growth). Two voices: long-carrying howls between packs, and an evening pack-laughter \u2014 a rising chittering chorus that disturbs human visitors. Locked in long political dispute with the bordering human kingdoms over forest rights; pressure building toward the third soul-war.",
+      "quirk": "Your coat subtly shifts color with the seasons, providing you with natural camouflage in forest environments.",
+      "skills": [
+        {
+          "skill": "survival",
+          "modifier": 10
+        }
+      ],
+      "attributes": [
+        {
+          "attribute": "dexterity",
+          "modifier": 2
+        },
+        {
+          "attribute": "constitution",
+          "modifier": 2
+        }
+      ],
+      "resources": [
+        {
+          "resource": "health",
+          "modifier": 0
+        }
+      ],
+      "abilities": [
+        "Pack-Laughter Chorus"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Threshi": {
+      "name": "Threshi",
+      "description": "Locust-mantis people, chitin-plated in dust-browns/tans/ochres/sand-yellows. Tall and narrow-bodied, triangular head with compound eyes and folding mandibles, segmented wing-panels along the back (short flights, long glides). Wartide race that held its ground when the working caught it. Strongly dimorphic: females are larger, broader, with chitin shovel-forearms (plowing, sowing, egg-laying \u2014 clutches of 20\u201340 several times yearly); males are leaner with folding sickle-blade forearms (harvest and war \u2014 same instrument). High mortality, faster replacement, surplus of unattached males every season. Aristocratic, ruled by warrior-king from a central capital; succession by challenge or claim, no king dies peacefully. Closed to outside trade. After every harvest, landless males ride out to take land, grain, and Quelled from the human borders \u2014 three centuries of inches has put significant former human territory under Threshi grain. Periodic field-worker risings, brutally suppressed.",
+      "quirk": "Your folding mandibles and compound eyes make it difficult for others to read your intentions during negotiations.",
+      "skills": [
+        {
+          "skill": "athletics",
+          "modifier": 10
+        }
+      ],
+      "attributes": [
+        {
+          "attribute": "strength",
+          "modifier": 2
+        },
+        {
+          "attribute": "constitution",
+          "modifier": 2
+        }
+      ],
+      "resources": [
+        {
+          "resource": "health",
+          "modifier": 0
+        }
+      ],
+      "abilities": [
+        "Chitinous Glide"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Quelled": {
+      "name": "Quelled",
+      "description": "Youngest race, lifted from the domesticated livestock of pre-Wartide human farms. Several lineages: pig-quell (broad, snouted, bristled), cow-quell (tall, horned, long-faced), sheep-quell (small, fleece-haired, soft-faced), fowl-quell (lean, sharp, feather-down). Strongly animal in feature; not all stand fully upright. Crude tongues, no writing, no shared history beyond a few generations, no civilization. Bred, slaughtered, and worked as livestock and labor across the human kingdoms outside Avenor \u2014 the agricultural foundation of human society there. Avenor outlawed the trade two generations ago and grants escapees citizenship under the queen's writ; this is one of the chief reasons the rest of human Hedoria considers Avenor a traitor realm. Free Quelled elsewhere are isolated individuals \u2014 rare, hidden, short-lived.",
+      "quirk": "Your humble origins grant you an unassuming presence that causes others to often overlook you in a crowd.",
+      "skills": [
+        {
+          "skill": "persuasion",
+          "modifier": 10
+        }
+      ],
+      "attributes": [
+        {
+          "attribute": "constitution",
+          "modifier": 3
+        },
+        {
+          "attribute": "wisdom",
+          "modifier": 1
+        }
+      ],
+      "resources": [
+        {
+          "resource": "health",
+          "modifier": 0
+        }
+      ],
+      "abilities": [
+        "Livestock Endurance"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Vorok": {
+      "name": "Vorok",
+      "description": "Wartide-blooded miners, the continent's primary source of minerals, possess bodies that adapt to heavy labor over a lifetime. They operate under a complex system of house contracts and possess a supernatural ore-sense that makes them peerless prospectors.",
+      "quirk": "Your deep, grinding voice and casual use of obscene language make you stand out in formal social settings.",
+      "skills": [
+        {
+          "skill": "athletics",
+          "modifier": 10
+        }
+      ],
+      "attributes": [
+        {
+          "attribute": "strength",
+          "modifier": 2
+        },
+        {
+          "attribute": "constitution",
+          "modifier": 1
+        }
+      ],
+      "resources": [
+        {
+          "resource": "health",
+          "modifier": 10
+        }
+      ],
+      "abilities": [
+        "Ore-Sense"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Human": {
+      "name": "Human",
+      "description": "Humans. Pre-Ensoulment majority race of Hedoria, dominant before the Wartide and reduced by it to four peripheral kingdoms \u2014 Avenor on the southern river-coast, Udorath on the western Whitestone, Nadorim in the northern lake-country, and Kelmar at the north end of the Shieldcap mountains. The interior of the continent is held by the lifted and wartide races. Still among the most numerous peoples on the continent. Shorter than Hofnar, Prime, or Draklid; taller than Molvar. Lifespan around seventy years. Coloring and build vary by region: pale and dark-haired in Udorath, ruddy and broad in Kelmar, fairer and lighter-built in Nadorim, mixed in Avenor. Dress varies by kingdom \u2014 Udorathi in well-cut linen and wool with chalk and salt-blue dyes; Kelmari in heavy practical garments for cold and the saddle, with house-colors at the shoulder and worked metal at belt and collar; Nadorim in plain tough cloth and oiled leathers against lake-damp, waterfowl-feather trim on formal wear; Avenorians in the restrained palette of the marble city.",
+      "quirk": "Your sheer tenacity often compels you to find solutions to problems that others have long since abandoned as hopeless.",
+      "skills": [
+        {
+          "skill": "persuasion",
+          "modifier": 10
+        }
+      ],
+      "attributes": [
+        {
+          "attribute": "intelligence",
+          "modifier": 1
+        },
+        {
+          "attribute": "charisma",
+          "modifier": 2
+        }
+      ],
+      "resources": [
+        {
+          "resource": "health",
+          "modifier": 0
+        }
+      ],
+      "abilities": [
+        "Adaptive Learning"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    }
+  }
+}

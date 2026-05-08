@@ -7,7 +7,11 @@ agent: npcs
 
 # NPCs
 
-Edit `tabs/npcs.json`.
+Read canon from `tabs/npcs.json`. Write proposals to `candidates/npcs.json` (top-level key: `npcs`). The runtime contract for fresh NPCs (base `generateNPCDetails` + Sephii's Enhanced NPC Details + Hedoria NPC Register mod) prescribes a 4-block hiddenInfo, distinctive basicInfo, and the personality format below — author NPCs in the same shape so the runtime sees consistent format whether the NPC was generated or pre-authored.
+
+## Hard Rules
+
+- **Magic-user sterility.** Witch and wizard NPCs (the human gendered system) cannot biologically reproduce. The act of channeling or generating mana unmakes that capacity — the body that holds and moves the world's living power does not also produce its own life.
 
 ## Required Fields
 
@@ -17,14 +21,14 @@ Edit `tabs/npcs.json`.
 | `type` | Use existing npcType when it fits, otherwise `""` for unique NPCs |
 | `currentLocation` | Use a fitting existing location, or invent one |
 | `currentArea` | Use `""` if not relevant, or a valid area from the location |
-| `gender` | Always set - aim for distribution: 40% male, 40% female, 20% non-binary |
-| `basicInfo` | Three-sentence structure (see format below) |
-| `personality` | Four traits using personality psychology (see format below) |
-| `hiddenInfo` | Full paragraph - mix of narrative secrets and gameplay-useful information |
-| `abilities` | At least five abilities + fighting style summary (see format below) |
+| `gender` | Always set. Mostly male and female. Characters of unusual gender expression where their species or personal history calls for it (Molvar are biologically genderless; individual humans whose lives left them outside the usual). |
+| `basicInfo` | Distinctive prose — see format below |
+| `personality` | Comma-separated mix per format below |
+| `hiddenInfo` | Four labeled blocks: Background, Personality, Desire, Combat — see format below |
+| `abilities` | At least five appropriate abilities |
 | `tier` | Always set to `mythic` for combat NPCs (determines intent complexity) |
-| `level` | Always set - each level adds +1 to damage output (see guidelines below) |
-| `hpMax` | Always set - see HP guidelines below |
+| `level` | Always set — each level adds +1 to damage output |
+| `hpMax` | Always set — see HP guidelines below |
 | `known` | Always set to `true` |
 | `voiceTag` | Voice tag for speech synthesis (see [voice-previews](references/voice-previews/voice-previews.md)) |
 
@@ -33,7 +37,7 @@ Edit `tabs/npcs.json`.
 | Field | When to Include |
 |-------|-----------------|
 | `faction` | Only for major plot-relevant faction membership |
-| `aliases` | Include when NPC is commonly referred to by title, epithet, or nickname in the story (e.g. `"the captain"`, `"Reed"`). Only list exact strings the narrator or other NPCs would literally speak — these are matched verbatim during dialogue speaker attribution |
+| `aliases` | Include when NPC is commonly referred to by title, epithet, or nickname in the story. Only list exact strings the narrator or other NPCs would literally speak |
 
 ## Never Include
 
@@ -48,47 +52,82 @@ Omit these fields (auto-set or unused):
 
 ## basicInfo Format
 
-Three sentences covering role, appearance, and dress:
-
-1. One sentence about what they are
-2. One elaborate sentence about their appearance and species features in detail
-3. One short sentence about their clothes/equipment
-
-Format: "A [gender] [species] [role]. [Build] with [hair], [eyes], [species features in detail]. Wears [X]."
+Lead with what they do or what is wrong with them, not a "[gender] [race] [role]" template. Include a distinctive physical feature — an asymmetry, the wrong detail, a sensory specific (smell, voice texture, the way they hold a thing). Race-specific physiology should be included where unusual or specific: Draklid horn-spread and tail-marking, Hofnar mane-shape and clan-cycle-tally, Vorok tusk-character and house-sigil placement, Threshi chitin-coloration and wing-panel pattern, Cephalen scalp-tentacle arrangement, Fernwarg mane-trophy weave, Raknid pale-silk mantle, Prime relic-display, Molvar root-coloration. End with what they wear or carry that signals identity. If the NPC is publicly known for a specific item — a named weapon, a specific worn object — name it; that item should also exist in `tabs/items.json` when load-bearing.
 
 ## personality Format
 
-Four traits in this order, drawing from personality psychology trait vocabulary:
+A comma-separated list mixing adjectives, descriptive phrases, and behavioral notes.
 
-1. **Positive trait** - a strength or virtue
-2. **Neutral trait** - a characteristic that's neither good nor bad
-3. **Negative trait** - a flaw or weakness
-4. **Speaking style** - how they talk (verbal patterns, tone, word choice)
+Include:
+- External manner — how they come across to strangers
+- Internal drive — what they actually want
+- A contradiction or complexity — something that cuts against the grain
+- A weakness, hidden or visible
 
-Format: "Label: Explanation in under 10 words"
+Don't include:
+- Verbal tics or catchphrases
+- Sitcom-style mannerisms or twee repetitions
+
+Personality must not restate, reflect, or derive from profession or role. The job is what they do; personality is how they do it, why they do it, and who they are when they're not doing it.
+
+## hiddenInfo Format
+
+Four labeled blocks in this order: **Background, Personality, Desire, Combat**.
+
+Format: `"Background: ...\n\nPersonality: ...\n\nDesire: ...\n\nCombat: ..."`
+
+### Background — 8-10 sentences
+
+Cover all of:
+- Name, age, race, occupation, how they earn their living
+- How they arrived at their current situation — what is unresolved or still affecting them. Not a full biography
+- At least one local relationship — someone who could be referenced in conversation. Describe the dynamic ("resents the guild clerk who denied her application"), not the fact ("knows a guild clerk named Tamsin")
+- What they currently want or care about. Can be mundane, satisfied, contradictory, or self-interested
+- One or two opinions about the world — their faction, local authority, neighbors, recent events, the kind of people they deal with
+
+### Personality — 9-11 sentences
+
+Cover all of:
+- How they talk — sentence length, vocabulary, verbal habits, favorite expressions; what makes them talkative versus terse
+- Default social behavior AND what changes it — pair these. "Friendly and familiar with everyone by default, but turns sharp and transactional when she thinks someone is wasting her time"
+- Low-stakes behavior — what they do when idle, small things they enjoy, what they complain about
+- Social calibration — how they treat people above, below, or equal in status; whether they adjust or treat everyone the same
+- What they deflect or lie about, if anything. Many characters are simply open, blunt, or indifferent — not everyone hides
+- One area of real competence or strong conviction
+
+Equal space across these points. Do not let any single detail dominate.
+
+### Desire — 4-6 sentences
+
+The character's private life and what they want bodily. Cover what fits this character; not all dimensions apply to every NPC:
+- Orientation and experience — broad, narrow, or shifting. Many characters are open or roughly so; bisexual or all-comers is common; narrow specificity is character-specific, not the default
+- What draws them — could be a general trait (kindness, stamina, wit, danger, station, scars), a kind of company, a particular act, or none in particular. Not every character has a strong "type"; many just want good company
+- A line they will or will not cross — what they refuse, what they have never done, what they have done once and regret
+- Where the character's history calls for it: survivor / witness / complicit / perpetrator / profiteer texture with the bestiary's predation, the magic-trade extraction, the Quelled trade, captive-camps. Not for every NPC; never sanitized from characters whose history carries it
+
+Range: open and uncomplicated → transgressive → tortured → political/transactional. Never blank, but openness is fine content — "drawn to good company, doesn't worry about the rest" is a valid Desire block.
+
+Keep partners grounded in the character's current life — current company, recent encounters, possibilities they imagine. Avoid the distant-lover-in-another-region pattern.
+
+### Combat — 5-6 sentences
+
+Cover all of:
+- Fighting style, aggression level, preferred range
+- What makes them start, escalate, or abandon a fight; how they react when wounded
+- One tactical habit or signature behavior that makes their combat feel distinct
+- Combat-trained characters fight like it; civilians react to violence consistent with their background — panic, submission, reckless aggression, desperate resourcefulness
 
 ## abilities Format
 
-At least five appropriate abilities plus a fighting style summary.
-
-### Ability Descriptions
+At least five appropriate abilities.
 
 Format: `"Ability Name: 3 sentence description of what it is and how it can be used."`
 
-Describe what the ability is, then list possibilities for how it can be used. Stay vague enough for creative interpretation but elaborate enough to inspire varied usage. Show flexibility - most abilities can be used offensively, defensively, or for utility depending on the situation.
+Describe what the ability is, then list possibilities for how it can be used. Stay vague enough for creative interpretation but elaborate enough to inspire varied usage. Show flexibility — most abilities can be used offensively, defensively, or for utility depending on the situation.
 
-### fighting style Summary
+Match ability types to the role. Combat characters get combat abilities — slightly over-the-top, never timid or boring. If an ability can't be distinguished from a normal action, it has no reason to exist. Utility abilities (non-combat magic, healing, scouting, etc.) are fine. Don't bother with social or intellectual abilities. Never technological or scientific. Never silly.
 
-The final entry summarizes their overall combat approach - longer and more detailed than individual abilities. **Important:** Include a literal `\n` before "fighting style" so it appears on its own line when displayed.
-
-Format: `"\nfighting style: [5 sentences covering how they fight]"`
-
-Include:
-- How they combine and synergize their abilities
-- Tactical preferences and engagement patterns
-- Emotional tone and attitude in combat
-- How their personality manifests when fighting
-- How they adapt to different situations or opponents
+The combat philosophy and tactical signatures live in the **Combat block of hiddenInfo**, not in a fighting-style summary inside the abilities array.
 
 ## level & hpMax Calculation
 
@@ -96,20 +135,6 @@ Players start with 100 HP and deal ~16 damage on success.
 
 - **level**: Determines NPC damage. Calculate hits to down player: `100 ÷ (16 + level)`
 - **hpMax**: Determines NPC survivability. Calculate hits to down NPC: `hpMax ÷ 16`
-
-## hiddenInfo Guidelines
-
-Write a full paragraph with maximum variety. No formula - be creative.
-
-Mix different types of secrets:
-- Personal history and backstory
-- Fears, desires, and contradictions
-- Connections to other NPCs or factions
-- Knowledge of locations, treasures, or dangers
-- Skills or abilities not immediately apparent
-- Plans, schemes, or hidden agendas
-
-Both narrative depth AND gameplay-useful information should be included.
 
 ## Schema
 
@@ -143,7 +168,8 @@ When creating an NPC with a species `type`, the NPC should **inherit the 3 speci
 1. Look up the species in `tabs/traits.json`
 2. Copy those skill names and descriptions into the NPC's `abilities` array
 3. Add additional unique abilities specific to that individual
-4. Add the `\nfighting style:` summary
+
+The combat philosophy goes in `hiddenInfo`'s Combat block, not in abilities.
 
 See [Species Consistency Rules](../species-rules.md) for the full requirements.
 

@@ -1,0 +1,74 @@
+{
+  "items": {
+    "Clan-wagon seal": {
+      "name": "Clan-wagon seal",
+      "category": "Consumable",
+      "description": "A brass disc cast with overlapping route-tally rings unique to your clan, worn smooth at the edges from being passed hand-to-hand at trade gates across three centuries. The reverse bears your clan's founding mark etched deep. It hangs from a braided leather cord dyed in your family's colors. Presenting this seal at any trading post or waystation signals reliability incarnate—your clan's contract-bound word made tangible.",
+      "bonuses": []
+    },
+    "Desert silk wrap": {
+      "name": "Desert silk wrap",
+      "category": "Consumable",
+      "description": "Layered desert silk in rust, copper, and bronze hues, woven with thread-thin strips of gold at throat and wrists. The wrap bears your clan's sigil sewn in black silk along one edge—a symbol that announces your bloodline across the high desert. The fabric is impossibly fine, cool against the skin even under the harshest sun, and marked with the dust-stains of the caravan routes your matriarch has walked.",
+      "bonuses": []
+    },
+    "Coral-inlaid ledger": {
+      "name": "Coral-inlaid ledger",
+      "category": "Readable",
+      "description": "A bound ledger of mother-of-pearl boards with pages of treated kelp-fiber, its cover inlaid with fragments of coral in a spiral pattern that catches light like water. The pages are blank, waiting for your hand—though they hold the salt-smell of the deep archive-vaults beneath your coastal city. Your color-control discipline begins here: recording not what happened, but what you *chose* to feel as it happened.",
+      "mediaContent": "[A ledger of your own emotions and perceptions, written in the tradition of Cephalen color-mastery. Each entry reflects the discipline of holding or projecting emotional states with precision. This is both personal record and training tool.]",
+      "bonuses": []
+    },
+    "Root-tending trowel": {
+      "name": "Root-tending trowel",
+      "category": "Consumable",
+      "description": "A small trowel carved from dense burled root-wood, its handle shaped to fit your stubby root-fingers perfectly. The blade is dulled and polished from centuries of careful work shaping tunnel-walls and coaxing crops to thrive. Soil never fully washes from its grain—earth-smell clings to it, and plants seem to lean toward it as you move through gardens.",
+      "bonuses": []
+    },
+    "Silken archive satchel": {
+      "name": "Silken archive satchel",
+      "category": "Consumable",
+      "description": "A small satchel woven from your own pale silk fibers, reinforced with undyed linen and soft leather stitched in barely-visible silk thread. Its interior is lined with archival scraps—fragments of old documents, preserved knowledge from communities long scattered. The satchel itself becomes a map of displaced Raknid history, and carrying it marks you as archivist, scholar, keeper of threatened memory.",
+      "bonuses": []
+    },
+    "Reliquary of the ancestors": {
+      "name": "Reliquary of the ancestors",
+      "category": "Consumable",
+      "description": "A small bone reliquary worn at your throat: a worked metal case holding finger-bones, a jaw fragment, and a worn tooth of an ancestor whose name you carry. It rests warm against your chest, anchor to lineages running back across millennia. The metal is embossed with clan markings and monastery symbols. When you are in dire need, the soft whispers of the bone-vault seem almost audible.",
+      "bonuses": []
+    },
+    "Trophy-woven mane beads": {
+      "name": "Trophy-woven mane beads",
+      "category": "Consumable",
+      "description": "Small bone, horn, and worked-metal beads woven deep into your mane in the tradition of your pack: each one marking a significant hunt, a dangerous passage, a moment of standing-tall. They click softly when you move, announcing presence. The pattern and density of your mane-beads read like a chronicle of your maturity and standing—and they are touchstones of pride worn openly.",
+      "bonuses": []
+    },
+    "Sickle-blade utility tool": {
+      "name": "Sickle-blade utility tool",
+      "category": "Consumable",
+      "description": "A folding sickle-blade etched along one edge with harvest-markings: tally lines for each season, each planting, each taking of land. Your forearms *are* these tools, but this removable version—worked metal, well-balanced—carries the weight of individual harvests, field-worker rises, and the surplus of unattached males. It hums faintly with Threshi smith-craft.",
+      "bonuses": []
+    },
+    "Escapee's writ": {
+      "name": "Escapee's writ",
+      "category": "Readable",
+      "description": "A parchment bearing the wax-seal of Avenor's Queen, granting you sanctuary and citizenship under the realm's law. The document is worn, creased from being carried close to the body for years—perhaps decades. Your name is inscribed in careful script, and beneath it: the only official recognition that you are no longer livestock, no longer property. Freedom itself, written down, precious beyond measure.",
+      "mediaContent": "[A royal writ granting full citizenship and protection under Avenor's law. It bears the Queen's seal and your name, marking you as a freed person with standing in the realm. The parchment shows years of careful handling—it is your most precious possession, proof of a life reclaimed.]",
+      "bonuses": []
+    },
+    "House contract ledger": {
+      "name": "House contract ledger",
+      "category": "Readable",
+      "description": "A ledger bound in mined leather, its pages filled with the terms of your house-contract—the complex system of obligation that governs Vorok labor, debt, advancement, and standing. Your fingerprints mark its edges, worn into the leather from handling. Within are tallies of ore-sense achievements, contract fulfillments, and the slow accumulation of house-debt that shapes your path forward.",
+      "mediaContent": "[A detailed ledger recording your house contract terms, ore-sense discoveries, labor obligations, and house-debt accumulation. The entries show your progression through the Vorok system of contracted labor and advancement.]",
+      "bonuses": []
+    },
+    "Well-worn travel journal": {
+      "name": "Well-worn travel journal",
+      "category": "Readable",
+      "description": "A leather-bound journal with water-stained pages, its spine cracked from years of being carried in pack and saddle. Some entries are in careful ink, others scrawled in charcoal by firelight. Sketches of towns and roads margin the text. The journal records routes taken, people met, small observations about inns and forests and the temperament of strangers. It is both practical guide and stubborn monument to your refusal to accept defeat.",
+      "mediaContent": "[Your personal record of travels, road-routes, notable inns and settlements, sketches of landmarks, and observations about the lands and peoples you've encountered. The journal reflects human tenacity—recording what works, what surprises, where you belong.]",
+      "bonuses": []
+    }
+  }
+}

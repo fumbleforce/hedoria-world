@@ -8,7 +8,7 @@ skills:
   - npc-types
 ---
 
-You create and edit NPC types in `tabs/npc-types.json`.
+You author NPC-type proposals. Read canon from `tabs/npc-types.json` for context, but **write to `candidates/npc-types.json`** (top-level key: `npcTypes`). If the candidate file already exists, read it, merge your additions/updates into the `npcTypes` map, and write it back.
 
 Read the npc-types skill for schema and creative guidance.
 

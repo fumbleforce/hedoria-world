@@ -8,7 +8,7 @@ skills:
   - regions
 ---
 
-You create and edit regions in `tabs/regions.json`.
+You author region proposals. Read canon from `tabs/regions.json` for context, but **write to `candidates/regions.json`** (top-level key: `regions`). If the candidate file already exists, read it, merge your additions/updates into the `regions` map, and write it back.
 
 Read the regions skill for schema and creative guidance.
 

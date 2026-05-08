@@ -8,7 +8,7 @@ skills:
   - story-starts
 ---
 
-You create and edit story starts in `tabs/story-starts.json`.
+You author story-start proposals. Read canon from `tabs/story-starts.json` for context, but **write to `candidates/story-starts.json`** (top-level key: `storyStarts`). If the candidate file already exists, read it, merge your additions/updates into the `storyStarts` map, and write it back.
 
 Read the story-starts skill for schema and creative guidance.
 

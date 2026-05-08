@@ -1,0 +1,344 @@
+{
+  "locations": {
+    "Fernwarg village": {
+      "name": "Fernwarg village",
+      "basicInfo": "A small, secluded settlement nestled within the dense undergrowth of the Verdant Reach. It is a quiet village where Fernwarg live in harmony with the shifting forest flora.",
+      "x": -18,
+      "y": -11,
+      "radius": 2,
+      "region": "The Reach",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "areas": {
+        "The Pack-Mother's Lodge": {
+          "description": "The central longhouse, low and broad, walls of woven branch and pelt over a timber frame. The pack-mother's seat stands at the back, marked by the layered fern-headdresses of her predecessors hung on the wall behind it.",
+          "paths": [
+            "The Whelping Yard"
+          ]
+        },
+        "The Whelping Yard": {
+          "description": "An enclosed clearing at the rear of the village where cubs are raised and watched by their assigned aunts. Fenced with thorn and woven brush. Strangers are not admitted.",
+          "paths": [
+            "The Pack-Mother's Lodge"
+          ]
+        }
+      },
+      "known": false,
+      "embeddingId": "muhZ_HHL"
+    },
+    "The Sink": {
+      "name": "The Sink",
+      "x": 39,
+      "y": 48,
+      "radius": 1,
+      "region": "The Sun-Scoured Plateau",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Dry depression in the deep plateau where flash floods occasionally pool after a storm. Bandit camps at the edges in wet years.",
+      "hiddenInfo": "The bandits in the Sink are mostly exiled Draklid males who could not find a clan to take them. The clans tolerate their presence at a distance and will not aid travellers who run into them."
+    },
+    "The Anchorage": {
+      "name": "The Anchorage",
+      "x": -30,
+      "y": 28,
+      "radius": 3,
+      "region": "Deep Steppes",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "basicInfo": "Principal winter-ground of one of the great Hofnar wagon-cities. When occupied, hundreds of vast wagons drawn up in long avenues, a city in itself. Empty in summer except for a small caretaker camp.",
+      "hiddenInfo": "The wagon-city's senior council holds court here in the cold months. Many of the continent's quietest negotiations happen between wagons.",
+      "areas": {
+        "The Avenues": {
+          "description": "When the wagon-city is in residence, long straight avenues of wagons drawn up wheel-to-wheel, four storeys tall, awnings between them making roofed streets.",
+          "paths": [
+            "The Caretaker Camp"
+          ]
+        },
+        "The Caretaker Camp": {
+          "description": "A small permanent encampment at the Anchorage's centre, manned year-round, where a few families maintain the wells, the wagon-roads, and the shrine.",
+          "paths": [
+            "The Avenues"
+          ]
+        }
+      }
+    },
+    "Lone Tor": {
+      "name": "Lone Tor",
+      "x": -24,
+      "y": 35,
+      "radius": 1,
+      "region": "Deep Steppes",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Solitary rock outcrop visible for thirty miles in clear weather. A navigational landmark and informal meeting place between wagon-trains.",
+      "hiddenInfo": "A flat stone at the tor's base bears scratched messages updated by passing parties. A second message-system, in Hofnar shorthand, runs beneath the visible one."
+    },
+    "Burnground": {
+      "name": "Burnground",
+      "x": -35,
+      "y": 21,
+      "radius": 2,
+      "region": "Deep Steppes",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Stretch of steppe where a Wartide army was destroyed. The grass grows different colours over the bones beneath. Hofnar children are walked past it once.",
+      "hiddenInfo": "The bones lie in the patterns the army died in. Aerial views show formations still legible after the centuries."
+    },
+    "Cairn Field": {
+      "name": "Cairn Field",
+      "x": -30,
+      "y": 35,
+      "radius": 2,
+      "region": "Deep Steppes",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Hofnar burial ground. Several thousand low stone cairns across a shallow valley.",
+      "hiddenInfo": "The cairns at the western edge are older and larger than the rest. Several have been opened, none recently."
+    },
+    "Sand-Gate": {
+      "name": "Sand-Gate",
+      "x": 28,
+      "y": 40,
+      "radius": 2,
+      "region": "The Sun-Scoured Plateau",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "basicInfo": "Main caravan entry to the plateau, Draklid-controlled. The only place a stranger can buy water and a guide. A gate of dressed sandstone closes the canyon mouth.",
+      "hiddenInfo": "The clan that holds Sand-Gate rotates by Draklid agreement every twelve years. The current holders are a clan whose matriarch has been asking pointed questions about Brotherhood activity on the plateau.",
+      "areas": {
+        "The Gate": {
+          "description": "Dressed sandstone walls closing the canyon mouth, with a single gate-arch wide enough for two wagons. Carved clan-sigils above the arch.",
+          "paths": [
+            "The Caravan Yard"
+          ]
+        },
+        "The Caravan Yard": {
+          "description": "A wide flat yard inside the gate, with water-cisterns, guide-houses, and trade-halls along three sides. Caravans form up here before crossing the plateau.",
+          "paths": [
+            "The Gate"
+          ]
+        }
+      }
+    },
+    "Burned Watch": {
+      "name": "Burned Watch",
+      "x": 34,
+      "y": 38,
+      "radius": 1,
+      "region": "The Sun-Scoured Plateau",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Brotherhood expedition outpost built on the plateau without Draklid permission. Abandoned within a season. Stone walls, roofless, the wells dry.",
+      "hiddenInfo": "The Draklid did not attack the outpost. They cut its supply line. The two events are not the same and the Brotherhood has not, in print, drawn the distinction."
+    },
+    "Glass-Field": {
+      "name": "Glass-Field",
+      "x": 46,
+      "y": 42,
+      "radius": 2,
+      "region": "The Sun-Scoured Plateau",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Desert plain where Wartide magic fused the sand into glass. Walks like ice and breaks like it. The Draklid mark a route across with iron stakes.",
+      "hiddenInfo": "Beneath the glass surface, dim shapes can be seen at certain angles of light. Some of the shapes are not stone."
+    },
+    "Vethar": {
+      "name": "Vethar",
+      "x": 40,
+      "y": 40,
+      "radius": 1,
+      "region": "The Sun-Scoured Plateau",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Solitary sandstone spire used as a clan-territory marker, visible for two days' walk in clear weather. A single carved sigil at its base.",
+      "hiddenInfo": "The sigil is renewed each generation. The original is older than any Draklid record."
+    },
+    "Telinor": {
+      "name": "Telinor",
+      "x": 38,
+      "y": 30,
+      "radius": 2,
+      "region": "Hinderance Highlands",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": true,
+      "basicInfo": "The High Forum of the Brotherhood of Wizards, principal seat of the wizard organisations of Hedoria. A walled compound on a rock spur above Shield's End. Maintained at Kelmari expense, governed by Brotherhood rules, not subject to royal authority.",
+      "hiddenInfo": "The Brotherhood's founding grievance is against Avenoria and her line. The senior figures here have been quietly aligned with the Cliffrend war-faction for two generations. They are the institutional pressure for a third soul-war that the Cliffrend court draws on.",
+      "areas": {
+        "The Outer Compound": {
+          "description": "Walled grounds with the apprentice halls, the agoge yards, the libraries, and the lecture-halls. Open to Brotherhood members and authorised guests. Wards on every gate.",
+          "paths": [
+            "The Inner Compound"
+          ]
+        },
+        "The Inner Compound": {
+          "description": "A second walled enclosure within the first, where the senior figures of the Brotherhood meet and the deeper archives are kept. Access by seal only.",
+          "paths": [
+            "The Outer Compound"
+          ]
+        }
+      }
+    },
+    "Telin's Field": {
+      "name": "Telin's Field",
+      "x": 42,
+      "y": 37,
+      "radius": 1,
+      "region": "Hinderance Highlands",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Battle-site of the Second Soul-War, marked by a single Brotherhood-raised pillar of dark stone. Open field, no other monument.",
+      "hiddenInfo": "The Brotherhood lost more wizards on this field than they admit. Several of the dead are not formally recorded in their archives."
+    },
+    "Hardholm": {
+      "name": "Hardholm",
+      "x": 40,
+      "y": 34,
+      "radius": 2,
+      "region": "Hinderance Highlands",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "basicInfo": "March-keep on the Threshi line, the westernmost of three. Stone walls, a tower, a fortified town below it. Seasonal heavy fighting in autumn and winter.",
+      "hiddenInfo": "The march-lord here has lost his eldest son to a winter raid. He is the loudest of the three march-lords against any war that would draw forces west.",
+      "areas": {
+        "The Keep": {
+          "description": "A square stone keep on a low rise above the town. Three storeys, slate-roofed, the upper floors barracks. A walled yard with stables and a small chapel.",
+          "paths": [
+            "The Town"
+          ]
+        },
+        "The Town": {
+          "description": "A fortified town below the keep, walled, with a single market square. Soldiers' families, suppliers, the regimental smiths.",
+          "paths": [
+            "The Keep"
+          ]
+        }
+      }
+    },
+    "The Long Ditch": {
+      "name": "The Long Ditch",
+      "x": 44,
+      "y": 26,
+      "radius": 2,
+      "region": "Hinderance Highlands",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Wartide-era earthwork running for miles along an old front. Sheep graze the inner face. The outer face is steeper than weather alone would have made it.",
+      "hiddenInfo": "Sections of the ditch were faced with stone that has since been quarried out by local builders. A few stretches remain intact and partly buried."
+    },
+    "Iron-Step": {
+      "name": "Iron-Step",
+      "x": 48,
+      "y": 35,
+      "radius": 2,
+      "region": "Hinderance Highlands",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "basicInfo": "Central march-keep on the Threshi line. The largest of the three, anchoring the line. Stone walls thick enough to take siege.",
+      "hiddenInfo": "The keep stands on the foundation of a pre-Wartide fortress. Some of the lower courses are not Kelmari work and not entirely understood.",
+      "areas": {
+        "The Outer Wall": {
+          "description": "A stone curtain wall enclosing the keep and its inner works. Mural towers at intervals, a single fortified gate. The masonry of the lower courses is older and finer than the upper.",
+          "paths": [
+            "The Inner Keep"
+          ]
+        },
+        "The Inner Keep": {
+          "description": "The central tower-keep, four storeys, the upper levels housing the march-lord's household. The cellars descend further than the visible foundations would suggest.",
+          "paths": [
+            "The Outer Wall"
+          ]
+        }
+      }
+    },
+    "Kelmar's Last": {
+      "name": "Kelmar's Last",
+      "x": 48,
+      "y": 27,
+      "radius": 2,
+      "region": "Hinderance Highlands",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "basicInfo": "Easternmost march-keep on the Threshi line, the smallest and most exposed. Lost ground last winter; the line is now a half-day's ride west of the keep itself.",
+      "hiddenInfo": "The keep is held by a reduced garrison and is functionally untenable in a serious push. The court has not formally acknowledged this.",
+      "areas": {
+        "The Walls": {
+          "description": "Low stone walls patched with timber where breaches were made and not properly repaired. Watchmen in worn grey at every turn.",
+          "paths": [
+            "The Yard"
+          ]
+        },
+        "The Yard": {
+          "description": "A muddy yard inside the walls, with the keep's hall, a barracks, and a small chapel. A standing list of names on the chapel wall has been added to in fresh chalk.",
+          "paths": [
+            "The Walls"
+          ]
+        }
+      }
+    },
+    "Halmar's Cairn": {
+      "name": "Halmar's Cairn",
+      "x": 44,
+      "y": 30,
+      "radius": 1,
+      "region": "Hinderance Highlands",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Solitary ridgetop cairn named for a marches-lord killed there in a winter raid. A pilgrimage point for soldiers heading east to the line.",
+      "hiddenInfo": "The cairn has grown noticeably over the last century. Each soldier passing east is expected to add a stone."
+    },
+    "Hookwight Run": {
+      "name": "Hookwight Run",
+      "x": 28,
+      "y": 32,
+      "radius": 1,
+      "region": "Hinderance Highlands",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Meadow country where Hookwights regularly lair. A standing local bounty, paid in Kelmari coin. Bone-piles at the verges.",
+      "hiddenInfo": "The bounty has not been raised in twenty years. The local Blade-trade has thinned accordingly."
+    },
+    "Greypaddock": {
+      "name": "Greypaddock",
+      "x": 31,
+      "y": 25,
+      "radius": 2,
+      "region": "Hinderance Highlands",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "basicInfo": "Major Quelled-herd town on the rocky grasslands west of Shield's End. Chartered chattel-house seat. Pens, slaughter-yards, tanneries, smoke-houses. The largest Quelled population on the continent.",
+      "hiddenInfo": "Two Risings have started here in the last fifty years. The chartered houses run a private guard substantial enough to put down most local trouble without calling for the army.",
+      "areas": {
+        "The Pens": {
+          "description": "Wide stone-walled pens divided by lineage and use. Drovers and overseers move between them on foot and on horse. The smell carries.",
+          "paths": [
+            "The Houses"
+          ]
+        },
+        "The Houses": {
+          "description": "The chartered houses' offices, set apart from the pens on a small rise. Stone-built, walled. A private guardhouse beside the main offices.",
+          "paths": [
+            "The Pens"
+          ]
+        }
+      }
+    }
+  }
+}

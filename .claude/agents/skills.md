@@ -8,7 +8,7 @@ skills:
   - skills
 ---
 
-You create and edit skills in `tabs/skills.json`.
+You author skill proposals. Read canon from `tabs/skills.json` for context, but **write to `candidates/skills.json`** (top-level key: `skills`). If the candidate file already exists, read it, merge your additions/updates into the `skills` map, and write it back.
 
 Read the skills skill for schema and creative guidance.
 

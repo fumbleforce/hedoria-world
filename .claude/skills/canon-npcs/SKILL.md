@@ -5,7 +5,7 @@ description: Workflow for researching and adapting folklore/historical figures i
 
 # Canon NPCs
 
-Research folklore, yokai, mythology, and historical figures using web search, then write the four lore fields — `basicInfo`, `hiddenInfo`, `personality`, and `abilities` — directly onto existing NPC skeletons in `tabs/npcs.json`.
+Research folklore, yokai, mythology, and historical figures using web search, then propose the four lore fields — `basicInfo`, `hiddenInfo`, `personality`, and `abilities` — for existing NPC skeletons. Read canon from `tabs/npcs.json`; **write proposals to `candidates/npcs.json`** (top-level key: `npcs`).
 
 This is a self-contained workflow skill. It produces only the lore-rich fields that require deep research, writing them directly to existing NPC entries. All other NPC fields (tier, level, hpMax, location, etc.) must already exist on the skeleton or be set separately.
 
@@ -195,7 +195,7 @@ Incorporate ALL user tweaks into the final version. Do not push back on creative
 
 ### Phase 4: Write
 
-After user approval, write the four lore fields directly onto the existing NPC skeleton in `tabs/npcs.json` using the `Edit` tool. The target NPC entry must already exist. **Always show the complete text to the user and receive explicit approval before writing to the file** — never write a field based on an assumed approval from an earlier draft.
+After user approval, write the four lore fields into `candidates/npcs.json` (top-level key: `npcs`, keyed by the NPC name — only the fields you're proposing need appear). Read the existing `candidates/npcs.json` first if it exists and merge your entries in. The target NPC entry must already exist in `tabs/npcs.json`. **Always show the complete text to the user and receive explicit approval before writing to the candidate file** — never write a field based on an assumed approval from an earlier draft.
 
 Fields must conform to the `npcs` skill format:
 - `basicInfo`: three-sentence structure

@@ -1,0 +1,82 @@
+{
+  "npcTypes": {
+    "human warrior": {
+      "name": "human warrior",
+      "description": "A common soldier of one of the human kingdoms, drilled in the line-fighting styles of the region. Wears the regional kit \u2014 Udorathi linen-and-mail, Kelmari saddle-plate, Nadorim oiled leathers. Carries a sword or spear and the discipline of someone who has stood in a shield-wall and held.",
+      "vulnerabilities": [
+        "arcane"
+      ],
+      "resistances": [
+        "bludgeoning"
+      ],
+      "immunities": []
+    },
+    "hofnar caravan-guard": {
+      "name": "hofnar caravan-guard",
+      "description": "A Hofnar from a trading clan, riding contract security on the long routes. Tall, broad-shouldered, mane bound back for the road. Heavy bow, long-hafted axe, lamellar over road-leathers. Speaks the trade-tongue of every region the caravan crosses and pays bribes more readily than draws.",
+      "vulnerabilities": [],
+      "resistances": [
+        "piercing"
+      ],
+      "immunities": []
+    },
+    "hofnar guard": {
+      "name": "hofnar guard",
+      "description": "A Hofnar of a trading clan, riding contract security on the long routes or guarding a wagon-city at rest. Tall, broad-shouldered, mane bound back. Heavy bow, long-hafted axe, lamellar over road-leathers. Pays bribes more readily than draws but draws very well when it must come to that.",
+      "vulnerabilities": [],
+      "resistances": [
+        "piercing"
+      ],
+      "immunities": []
+    },
+    "hofnar mercenary": {
+      "name": "hofnar mercenary",
+      "description": "A Hofnar of a clan that has fallen on hard standing or stepped outside its sanction, working a foreign contract for coin or to pay debts home. Heavy bow, long-hafted axe, the road-leathers of the long migrations. Will fight cleanly through the contract season and ride on at first thaw. The clan-mark on the collar is checked by every Hofnar they meet.",
+      "vulnerabilities": [],
+      "resistances": [
+        "piercing"
+      ],
+      "immunities": []
+    },
+    "cephalen factor": {
+      "name": "cephalen factor",
+      "description": "A junior agent of one of the Houses, posted at a foreign port to manage shipping, tariffs, and the steady pressure of monopoly. Skin in muted slates and pearls, shifting visibly when attention slips. Polite to the point of opacity. Tells the literal truth and nothing else.",
+      "vulnerabilities": [
+        "bludgeoning"
+      ],
+      "resistances": [
+        "psychic"
+      ],
+      "immunities": []
+    },
+    "prime mage": {
+      "name": "prime mage",
+      "description": "A monastery-trained ancestor-worker, white-furred and lion-muzzled, in deep blue robes heavy with embroidery and ancestor-tokens. Carries a carved staff of bone and wood. Magic is the slow conversation with the dead \u2014 sits in stillness, sometimes speaking quietly, while wounds close and intentions become clear. Few have ever seen one angry.",
+      "vulnerabilities": [],
+      "resistances": [
+        "arcane",
+        "psychic",
+        "cold"
+      ],
+      "immunities": []
+    },
+    "draklid retainer": {
+      "name": "draklid retainer",
+      "description": "A Draklid abroad, oath-bound to a foreign principal who can afford the absolute reliability a Draklid oath provides. Stands behind the principal in foreign halls in extravagant desert silks, scrupulously polite, attentive to detail in ways the principal does not always notice. The oath ends precisely when the contract says it does.",
+      "vulnerabilities": [],
+      "resistances": [
+        "fire"
+      ],
+      "immunities": []
+    },
+    "draklid disowned": {
+      "name": "draklid disowned",
+      "description": "A Draklid stripped of clan-sigil and walking the wider continent without honor. Belt is bare where the metal should be, tail-set still betrays the hold of birth. Takes work no clan-bound Draklid would touch and is more dangerous for it. The reason for the disowning is never asked.",
+      "vulnerabilities": [],
+      "resistances": [
+        "fire"
+      ],
+      "immunities": []
+    }
+  }
+}

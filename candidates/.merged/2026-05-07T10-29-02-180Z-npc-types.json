@@ -1,0 +1,20 @@
+{
+  "npcTypes": {
+    "Witch Queen": {
+      "name": "Witch Queen",
+      "description": "The hereditary sorceress-monarch of Avenor, keeper of the oldest magical lineage on the continent and executor of rites that bind the kingdom's welfare to her personal strength. Born into the royal line that descends from Avenoria herself, a witch queen is a figure of splendid isolation \u2014 waited upon by her household, advised by her college, feared by her rivals. She wears the robes of her office in white silk and gold, and sits upon the high throne in the fashion of her predecessors. Her responsibilities are absolute: to guard the magical covenants, to settle disputes in the lower courts, to commune with the Old Powers through ritual and working, and to produce an heir of sufficient gift to inherit. The role confers immense power and equal vulnerability \u2014 a witch queen erratic in her judgments, influenced by hidden hands, or failing in her duties shakes the foundations of the kingdom itself. Most of Avenor trusts her implicitly. Some whisper that they should not.",
+      "vulnerabilities": [],
+      "resistances": [
+        "arcane"
+      ],
+      "immunities": []
+    },
+    "Exiled Heir": {
+      "name": "Exiled Heir",
+      "description": "A noble heir cast out from succession and lineage, stripped of standing in the eyes of the court though not of the blood that still marks them. An exiled heir walks the world carrying the weight of a name that is now a liability \u2014 known to be of great houses or ancient lines, yet cast adrift, forbidden return except on terms they cannot meet. Some are exiles for discovering dangerous truths; others for failing tests of loyalty; still others for offenses real or manufactured. In Hedoria, an exiled heir retains the education and polish of their birth but must make their own way, often through cunning or illicit work, always aware that return to favor is possible but costly. They bear the haunting duality of those who once had everything and nothing at once.",
+      "vulnerabilities": [],
+      "resistances": [],
+      "immunities": []
+    }
+  }
+}

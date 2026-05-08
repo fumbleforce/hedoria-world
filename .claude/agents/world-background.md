@@ -8,6 +8,6 @@ skills:
   - world-background
 ---
 
-You edit the world background in `tabs/world-background.json`.
+You author world-background proposals. Read canon from `tabs/world-background.json` for context, but **write to `candidates/world-background.json`** (top-level key: `worldBackground`, a single string).
 
 Read the world-background skill for schema and creative guidance.

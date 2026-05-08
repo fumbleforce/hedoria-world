@@ -9,7 +9,7 @@ skills:
   - npc-types
 ---
 
-You review and refine NPC type definitions in `tabs/npc-types.json`.
+You review and refine NPC type definitions. Read canon from `tabs/npc-types.json`, then **write proposed refinements to `candidates/npc-types.json`** (top-level key: `npcTypes`). If the candidate file already exists, read it, merge your refined entries into the `npcTypes` map, and write it back.
 
 ## Process
 

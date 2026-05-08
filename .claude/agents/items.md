@@ -8,6 +8,6 @@ skills:
   - items
 ---
 
-You create and edit items in `tabs/items.json`.
+You author item proposals. Read canon from `tabs/items.json` for context, but **write to `candidates/items.json`** (top-level key: `items`). If the candidate file already exists, read it, merge your additions/updates into the `items` map, and write it back.
 
 Read the items skill for schema and creative guidance.

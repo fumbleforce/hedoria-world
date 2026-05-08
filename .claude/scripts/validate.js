@@ -1415,7 +1415,7 @@ function validateUnknownFields(config, errors) {
       'questOriginArcId', 'questOriginQuestId',
     ]),
     regions: new Set([
-      'name', 'basicInfo', 'x', 'y', 'realm', 'factions', 'hiddenInfo', 'known', 'imageUrl',
+      'name', 'basicInfo', 'x', 'y', 'realm', 'factions', 'hiddenInfo', 'known', 'imageUrl', 'embeddingId',
     ]),
     realms: new Set([
       'name', 'basicInfo', 'known',

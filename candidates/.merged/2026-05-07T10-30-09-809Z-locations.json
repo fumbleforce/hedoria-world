@@ -1,0 +1,42 @@
+{
+  "locations": {
+    "Glass-Field": {
+      "name": "Glass-Field",
+      "x": 43,
+      "y": 41,
+      "radius": 2,
+      "region": "The Sun-Scoured Plateau",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Desert plain where Wartide magic fused the sand into glass. Walks like ice and breaks like it. The Draklid mark a route across with iron stakes.",
+      "hiddenInfo": "Beneath the glass surface, dim shapes can be seen at certain angles of light. Some of the shapes are not stone."
+    },
+    "Telinor": {
+      "name": "Telinor",
+      "x": 40,
+      "y": 28,
+      "radius": 2,
+      "region": "Hinderance Highlands",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": true,
+      "basicInfo": "The High Forum of the Brotherhood of Wizards, principal seat of the wizard organisations of Hedoria. A walled compound on a rock spur above Shield's End. Maintained at Kelmari expense, governed by Brotherhood rules, not subject to royal authority.",
+      "hiddenInfo": "The Brotherhood's founding grievance is against Avenoria and her line. The senior figures here have been quietly aligned with the Cliffrend war-faction for two generations. They are the institutional pressure for a third soul-war that the Cliffrend court draws on.",
+      "areas": {
+        "The Outer Compound": {
+          "description": "Walled grounds with the apprentice halls, the agoge yards, the libraries, and the lecture-halls. Open to Brotherhood members and authorised guests. Wards on every gate.",
+          "paths": [
+            "The Inner Compound"
+          ]
+        },
+        "The Inner Compound": {
+          "description": "A second walled enclosure within the first, where the senior figures of the Brotherhood meet and the deeper archives are kept. Access by seal only.",
+          "paths": [
+            "The Outer Compound"
+          ]
+        }
+      }
+    }
+  }
+}

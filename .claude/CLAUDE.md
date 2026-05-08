@@ -179,13 +179,63 @@ Efficiency need not sacrifice conversation—indeed, 'tis whilst the troupe labo
 
 Agents running in the background cannot receive answers to their questions—such queries vanish into the void. By instructing them to proceed autonomously, we ensure they complete their work rather than stalling on uncertainties.
 
+## The World: Hedoria
+
+This stage is set for **Hedoria** — a vast medieval-fantasy continent for the Voyage system. Mountains and river valleys, deserts and mystical forests, broad steppes and high cold places. Swords, sorcery, monsters, taverns. Magic exists but is rare, costly, and culturally fraught — see `tabs/world-background.json`.
+
+The deeper lore (history, races, geography, bestiary) lives in Google Drive — folder **Hedoria** (`1877tORqPaxTRAj9uGHgfj358FAVz_AUV`). Fetch a document on demand:
+
+```
+mcp__claude_ai_Google_Drive__read_file_content(file_id: "<id>")
+```
+
+| Document | Drive file ID |
+| --- | --- |
+| worldDescription | `1JqXc5FX92A3mbJ9FmaWSHbfHwsJWP95kbEZY_sDzaQM` |
+| Ensoulment | `1tfZWe34SvOnrcGZQrJp5y0gfndUJZWVNj6pNob8yQ08` |
+| Wartide | `1OAs9jPvvslR900uuP3D4vQZRDxS20DPqJW-padqph-w` |
+| The next Wartide | `1N5ulwRy89FFPkbdIGaBR6hoA02d4hW8OYK5E2kbQvY0` |
+| Magic | `1R3fCR9DCQMO6SYlpiPZ7tIdZPfMNa1-7CAbys5VvIeA` |
+| races (overview) | `1woJMIjkhiOTjBaRQYzdYZUBYFy4FOD4jVoSgEILzzs0` |
+| Humans | `1NsfconIh78Am9JRPF9LDqrJElf08AtTlA0FSxvjHdmM` |
+| Threshi | `1CqjR2Q44MmDqloP5mxtH9nEWlVeLVBsIHKrWLpuYMAw` |
+| Hofnar | `1T1jHjVeNy1_GUewZJ38OBy51sso2cGDxDxTG3_A63JQ` |
+| Cephalen | `1YvEvtya5lK9XUW_lpKdxWUPFwIOZGJlswtx2wJxl64A` |
+| Draklid | `1CbUk_oZ9a26iOmTyPELiuhAgb4iJLczis6mspoJ-0xI` |
+| Primes | `1QCXIluzsHggfbWAYXSG20R7pQco2o-CzCfwuUfsUfNQ` |
+| Raknid | `190YQ_uQaMEf1LNXKQYZVUHtIts_RrfMBuGXtGRlKvno` |
+| Vorok | `11XNeKy9dq1ms1GG7a7Kzx8s_N7LVSKfHWoeElUQHISs` |
+| Fernwarg | `1fpFoc5bZH1HCgDrya7a2cwWPsap3e3FQDIguWj2FjTI` |
+| Quelled | `1caPgrMMmDQlXNe7JZZiMLNuJF_Y6T-DSb8jURHkO7As` |
+| hedoria_regions (continent map & locations) | `1uBfR5ggWuVDbD5ObTJfVgKxw56FmBHqC8_ncpDxUpOs` |
+| Avenor (city-state detail) | `1-rDOlTek3GWZSONzZ6GvPJQsMCMPZy-wNLHYeMeyO5I` |
+| hedoria_bestiary (all creature tiers) | `1jwrHU3om4LhhswlnqkAJKF2XWhcjq8qOGP67Rvz2mbI` |
+| Quell Sorcerer (character class) | `1x2lZnaXYZATA7eG6XrBaiidS9ze3ARAvmolfSJA02Bk` |
+
+The original Hedoria source repo is symlinked at `hedoria/` for reference; treat it as read-only.
+
+## The Candidate Workflow
+
+All authored content flows through `candidates/` before reaching `tabs/`. **No agent writes to `tabs/` directly.**
+
+1. Specialist agents author **proposals** to `candidates/<tab-name>.json` (one file per target tab; top-level keys are block names like `npcs`, `npcTypes`, `worldLore`).
+2. The orchestrator reviews the candidate file with the creator.
+3. `node .claude/scripts/merge-candidates.js` promotes accepted candidates into `tabs/` and archives the candidate file to `candidates/.merged/`.
+4. `node .claude/scripts/build.js` rebuilds `config.json` from `tabs/`.
+
+If multiple agents target the same tab, the second agent reads the existing `candidates/<tab>.json`, merges its proposal in, and writes the file back.
+
 ## The Stage (Project Structure)
 
 ```
-tabs/                    # The scripts (JSON content files)
+tabs/                    # The canon (JSON content files; do not edit directly)
+candidates/              # Pending proposals, merged via merge-candidates.js
+candidates/.merged/      # Archive of promoted candidate batches
 config.json              # The compiled production (auto-generated)
+hedoria/                 # Symlink to the source repo (read-only reference)
 .claude/skills/          # Knowledge of the crafts
 .claude/agents/          # Your troupe's specializations
+.claude/scripts/         # Migration, merge, build, validation utilities
 ```
 
 ## Archives of Knowledge

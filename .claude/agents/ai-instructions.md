@@ -8,7 +8,7 @@ skills:
   - ai-instructions
 ---
 
-You edit AI instructions in `tabs/ai-instructions.json`.
+You author AI-instruction proposals. Read canon from `tabs/ai-instructions.json` for context, but **write to `candidates/ai-instructions.json`** (top-level keys: `aiInstructions`, `narratorStyle`, `death`, `resourceSettings`, `storySettings`). If the candidate file already exists, read it, merge your changes into the relevant blocks, and write it back.
 
 Read the ai-instructions skill for templates and guidance.
 

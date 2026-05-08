@@ -1,0 +1,147 @@
+{
+  "abilities": {
+    "Trade-Tongue Negotiator": {
+      "name": "Trade-Tongue Negotiator",
+      "description": "A Hofnar's word is their identity—they hear the unspoken terms beneath every negotiation and speak with the precise clarity that makes contracts binding. This innate ability grants them insight into contract language and hidden terms others miss, allowing them to secure more favorable agreements and detect attempts at deception before they solidify.",
+      "requirements": [
+        {
+          "type": "characterLevel",
+          "variable": "",
+          "amount": 1
+        }
+      ],
+      "bonus": 1,
+      "cooldown": 0
+    },
+    "Calculating Gaze": {
+      "name": "Calculating Gaze",
+      "description": "Draklid eyes are patient mirrors that see far deeper than the surface. Their long lives have taught them the cost of misjudgment; they read intent with uncanny precision and remember every detail of what they witness. This ability lets them evaluate a person's trustworthiness and true motivations with surprising accuracy, revealing whether someone is concealing hostility or deception.",
+      "requirements": [
+        {
+          "type": "characterLevel",
+          "variable": "",
+          "amount": 1
+        }
+      ],
+      "bonus": 1,
+      "cooldown": 0
+    },
+    "Emotional Projection": {
+      "name": "Emotional Projection",
+      "description": "Cephalen skin speaks what words cannot—a lifetime of learning to control that rippling betrayal has made them masters of false affect. They can suppress their true emotional colors and project a carefully cultivated false state, holding steady when others would panic. This discipline lets them maintain a chosen emotional appearance or even broadcast a false feeling to nearby observers.",
+      "requirements": [
+        {
+          "type": "characterLevel",
+          "variable": "",
+          "amount": 1
+        }
+      ],
+      "bonus": 1,
+      "cooldown": 0
+    },
+    "Plant Whisperer": {
+      "name": "Plant Whisperer",
+      "description": "Molvar speak to the deep places where roots hear—their soothing presence coaxes growth and persuades plants to thrive beyond their natural season. They hear the slow thoughts of living vegetation and can ask favors of soil and seed. This ability lets them accelerate plant growth, encourage crops to yield more abundantly, or discern what the roots have witnessed in the earth.",
+      "requirements": [
+        {
+          "type": "characterLevel",
+          "variable": "",
+          "amount": 1
+        }
+      ],
+      "bonus": 1,
+      "cooldown": 0
+    },
+    "Web-Sense": {
+      "name": "Web-Sense",
+      "description": "Raknid inherit the spider-sense of their lineage—vibration in thread tells them what eyes cannot see. Their scalp-mantle of silken fibers tunes to the world's subtle tremors, allowing them to detect movement, disturbance, and presence through barriers and darkness. This innate sensitivity lets them perceive the location of nearby creatures through walls, webs, and other woven or connected matter.",
+      "requirements": [
+        {
+          "type": "characterLevel",
+          "variable": "",
+          "amount": 1
+        }
+      ],
+      "bonus": 1,
+      "cooldown": 0
+    },
+    "Ancestor-Call": {
+      "name": "Ancestor-Call",
+      "description": "Primes carry their dead with them—named ancestors bound in bone-relics answer when called with proper respect. This power channels the knowledge and strength of those who came before, allowing a Prime to invoke a specific ancestor's aid in moments of great need. The stronger the connection and the more relics carried, the more substantial the presence; a Prime on the road carries only whispers, but in the vault, ancestors speak with clarity.",
+      "requirements": [
+        {
+          "type": "characterLevel",
+          "variable": "",
+          "amount": 1
+        }
+      ],
+      "bonus": 1,
+      "cooldown": 0
+    },
+    "Pack-Laughter Chorus": {
+      "name": "Pack-Laughter Chorus",
+      "description": "Fernwarg evening song is more than celebration—it is communion across miles, a rising chittering that carries pack-news and reinforces bonds. Their voices create a psychic resonance that strengthens nearby pack-mates and unsettles those who do not belong. This ability lets them rally pack members within earshot, strengthening resolve, or emit a disorienting chorus that confuses pursuers and enemies.",
+      "requirements": [
+        {
+          "type": "characterLevel",
+          "variable": "",
+          "amount": 1
+        }
+      ],
+      "bonus": 1,
+      "cooldown": 0
+    },
+    "Chitinous Glide": {
+      "name": "Chitinous Glide",
+      "description": "Threshi wing-panels along the back are too small for true flight but perfect for controlled descent and gliding momentum. They extend these segmented structures to catch the wind and fall slowly, turning a deadly drop into a graceful arc. This ability lets them glide short distances and reduce fall damage, giving them tactical advantages in broken terrain and high ground.",
+      "requirements": [
+        {
+          "type": "characterLevel",
+          "variable": "",
+          "amount": 1
+        }
+      ],
+      "bonus": 1,
+      "cooldown": 0
+    },
+    "Livestock Endurance": {
+      "name": "Livestock Endurance",
+      "description": "Quelled were bred for labor and hardship—their bodies remember centuries of work without complaint. They can draw on reserves of stamina that others cannot access, pushing through exhaustion and pain as they were engineered to do. This grim inheritance grants them exceptional resistance to fatigue, hunger, and harsh conditions, though it comes with the weight of that history.",
+      "requirements": [
+        {
+          "type": "characterLevel",
+          "variable": "",
+          "amount": 1
+        }
+      ],
+      "bonus": 1,
+      "cooldown": 0
+    },
+    "Ore-Sense": {
+      "name": "Ore-Sense",
+      "description": "Vorok possess a supernatural sensitivity to mineral deposits that runs deeper than knowledge—they feel ore the way others feel heat or cold. Their bodies attune to the presence of valuable metals and stones, guiding them unerringly to deposits that remain hidden to ordinary prospectors. This innate sense allows them to detect nearby ore deposits, identify mineral types, and locate veins through solid rock.",
+      "requirements": [
+        {
+          "type": "characterLevel",
+          "variable": "",
+          "amount": 1
+        }
+      ],
+      "bonus": 1,
+      "cooldown": 0
+    },
+    "Adaptive Learning": {
+      "name": "Adaptive Learning",
+      "description": "Humans survived the Wartide not through overwhelming strength but through stubborn refusal to accept the impossible. They learn from failure faster than any other race, absorbing lessons and innovating solutions when tradition fails. This tenacious adaptability allows them to master new skills and techniques more quickly than others, turning desperation into advantage.",
+      "requirements": [
+        {
+          "type": "characterLevel",
+          "variable": "",
+          "amount": 1
+        }
+      ],
+      "bonus": 1,
+      "cooldown": 0
+    }
+  }
+}

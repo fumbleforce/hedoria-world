@@ -1,10 +1,11 @@
 #!/usr/bin/env node
-// Injects default nameFilterSettings into tabs/meta.json, then rebuilds config.json
+// Injects default nameFilterSettings into candidates/meta.json (canon promotion runs separately).
 const fs = require('fs');
 const path = require('path');
-const { execFileSync } = require('child_process');
 
-const META_PATH = path.resolve(__dirname, '../../../../tabs/meta.json');
+const TAB_META_PATH = path.resolve(__dirname, '../../../../tabs/meta.json');
+const CANDIDATE_META_PATH = path.resolve(__dirname, '../../../../candidates/meta.json');
+const CANDIDATES_DIR = path.dirname(CANDIDATE_META_PATH);
 
 const DEFAULT_FILTERS = {
   "Marcus": { "replacements": ["Alex","Ethan","Jason","Ryan","Owen","Nathaniel","Adrian","Colin","Scott","Blake","Tyler","Brandon","Mitchell","Douglas","Kenneth"] },
@@ -112,23 +113,26 @@ const DEFAULT_FILTERS = {
   "ozone": { "replacements": ["electricity","petrichor","rain","lightning","metal","bleach","static","copper","antiseptic","chemicals","burnt air","ionized air","sterility","chlorine","heated metal"] }
 };
 
-const meta = JSON.parse(fs.readFileSync(META_PATH, 'utf8'));
-
-if (meta.nameFilterSettings && Object.keys(meta.nameFilterSettings).length > 0) {
-  console.log(`nameFilterSettings already exists with ${Object.keys(meta.nameFilterSettings).length} entries. Skipping.`);
+// Skip if the filters already exist in canon.
+const tabMeta = JSON.parse(fs.readFileSync(TAB_META_PATH, 'utf8'));
+if (tabMeta.nameFilterSettings && Object.keys(tabMeta.nameFilterSettings).length > 0) {
+  console.log(`nameFilterSettings already exists in tabs/meta.json with ${Object.keys(tabMeta.nameFilterSettings).length} entries. Skipping.`);
   process.exit(0);
 }
 
-meta.nameFilterSettings = DEFAULT_FILTERS;
+// Read existing candidate (if any) so we don't clobber other in-flight meta proposals.
+if (!fs.existsSync(CANDIDATES_DIR)) fs.mkdirSync(CANDIDATES_DIR, { recursive: true });
+const candidate = fs.existsSync(CANDIDATE_META_PATH)
+  ? JSON.parse(fs.readFileSync(CANDIDATE_META_PATH, 'utf8'))
+  : {};
+
+candidate.nameFilterSettings = { ...(candidate.nameFilterSettings || {}), ...DEFAULT_FILTERS };
 
 const MOD_ATTRIBUTION = { shortId: "0bt3nPRLuqvh", version: 13 };
-meta.mods = meta.mods || [];
-if (!meta.mods.some(m => m.shortId === MOD_ATTRIBUTION.shortId)) {
-  meta.mods.push(MOD_ATTRIBUTION);
-}
+const existingMods = Array.isArray(candidate.mods) ? candidate.mods : (Array.isArray(tabMeta.mods) ? [...tabMeta.mods] : []);
+if (!existingMods.some(m => m && m.shortId === MOD_ATTRIBUTION.shortId)) existingMods.push(MOD_ATTRIBUTION);
+candidate.mods = existingMods;
 
-fs.writeFileSync(META_PATH, JSON.stringify(meta, null, 2) + '\n');
-console.log(`Injected ${Object.keys(DEFAULT_FILTERS).length} name filter entries into tabs/meta.json`);
-
-const buildScript = path.resolve(__dirname, '../../../scripts/build.js');
-execFileSync('node', [buildScript], { stdio: 'inherit' });
+fs.writeFileSync(CANDIDATE_META_PATH, JSON.stringify(candidate, null, 2) + '\n');
+console.log(`Wrote ${Object.keys(DEFAULT_FILTERS).length} name filter entries to candidates/meta.json`);
+console.log(`Run \`node .claude/scripts/merge-candidates.js meta.json\` to promote, then \`node .claude/scripts/build.js\`.`);

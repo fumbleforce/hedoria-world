@@ -1,0 +1,16 @@
+{
+  "regions": {
+    "Deep Steppes": {
+      "name": "Deep Steppes",
+      "basicInfo": "Vast open grassland reaching into the deep interior, wider and wilder than the Long Steppe to the east. The country runs flat to the horizon in most directions, broken only by shallow river valleys and the occasional rocky outcrop. Grass is dense and tall through the warm months, cured to standing hay by autumn, buried deep under snow in winter. Great wild herds \u2014 aurochs and proto-horse-folk known as the Far-Herds \u2014 range the deep interior in vast moving columns. Wolves and the larger steppe cats follow them. In the summer months the great Hofnar wagon-cities encamp here in formation, hundreds of vast wagons drawn up in long avenues; in winter the wagon-cities have moved south and the country is left to the herds and the weather.",
+      "x": -1,
+      "y": 1,
+      "factions": [],
+      "hiddenInfo": "",
+      "known": false,
+      "imageUrl": "https://images.aidungeon.com/generated_content/0/images/generated/4c306736-12d9-4110-9b1f-e474044b0aaa.png",
+      "embeddingId": "59xz1a7R"
+    },
+    "Deep steppes": null
+  }
+}

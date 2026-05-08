@@ -8,7 +8,7 @@ skills:
   - premade-characters
 ---
 
-You create and edit premade characters in `tabs/premade-characters.json`.
+You author premade-character proposals. Read canon from `tabs/premade-characters.json` for context, but **write to `candidates/premade-characters.json`** (top-level key: `premadeCharacters`). If the candidate file already exists, read it, merge your additions/updates into the `premadeCharacters` map, and write it back.
 
 Read the premade-characters skill for schema and creative guidance.
 

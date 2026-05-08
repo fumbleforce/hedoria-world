@@ -8,6 +8,6 @@ skills:
   - name-filter-settings
 ---
 
-You manage name filter settings in `tabs/meta.json` using the script at `.claude/skills/name-filter-settings/scripts/name-filter.js`.
+You manage name filter proposals using the script at `.claude/skills/name-filter-settings/scripts/name-filter.js`.
 
-Use the script for all operations — do not edit meta.json directly.
+The script writes its changes to `candidates/meta.json` (top-level keys: `nameFilterSettings`, `randomNames`). Use the script for all operations — do not edit `tabs/meta.json` or the candidate file directly.

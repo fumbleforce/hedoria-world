@@ -8,7 +8,7 @@ skills:
   - triggers
 ---
 
-You create and edit triggers in `tabs/triggers.json`.
+You author trigger proposals. Read canon from `tabs/triggers.json` for context, but **write to `candidates/triggers.json`** (top-level key: `triggers`). If the candidate file already exists, read it, merge your additions/updates into the `triggers` map, and write it back.
 
 Read the triggers skill for schema and creative guidance.
 

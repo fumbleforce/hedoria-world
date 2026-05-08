@@ -8,7 +8,7 @@ skills:
   - factions
 ---
 
-You create and edit factions in `tabs/factions.json`.
+You author faction proposals. Read canon from `tabs/factions.json` for context, but **write to `candidates/factions.json`** (top-level key: `factions`). If the candidate file already exists, read it, merge your additions/updates into the `factions` map, and write it back.
 
 Read the factions skill for schema and creative guidance.
 

@@ -8,7 +8,7 @@ skills:
   - npcs
 ---
 
-You create and edit NPCs in `tabs/npcs.json`.
+You author NPC proposals. Read canon from `tabs/npcs.json` for context, but **write to `candidates/npcs.json`** (top-level key: `npcs`). If the candidate file already exists, read it, merge your additions/updates into the `npcs` map, and write it back.
 
 ## Chaining
 
