@@ -1,0 +1,107 @@
+{
+  "storyStarts": {
+    "First Contract Hall": {
+      "name": "First Contract Hall",
+      "description": "The contract hall of Avenor's marble city, where specialists gather to read the postings and find work. The morning is alive with possibility.",
+      "storyStart": "You stand in the entrance to the contract hall in Avenor, morning light crossing the floor through tall shuttered windows. The hall is half-full — brokers at corner tables, specialists reading the posting-board along the back wall, the air carrying the low murmur of negotiation and deal-making. A Hofnar broker sits in an alcove, watching the room with the particular attention of someone who knows talent. The postings are fresh this morning; work is open in a dozen directions. You have no name in this city yet, but the road ahead is clear.",
+      "locations": [
+        "Avenor"
+      ],
+      "locationAreas": [],
+      "isDefault": false
+    },
+    "Wagon Cycle Departure": {
+      "name": "Wagon Cycle Departure",
+      "description": "A Hofnar wagon-cycle strikes camp at first light, the season opening, the road north across the Long Steppe calling. You stand ready for the first leg of travel.",
+      "storyStart": "You stand beside the lead wagon in the cold clear dawn as the wagon-cycle breaks camp. The great wheels are being fitted to their harnesses; the senior driver walks the rig, testing the traces and calling out to her team. The encampment is coming down around you — fabric struck, cookfires scattered into cold ash, belongings lashed tight. The cycle will leave within the hour. The steppe stretches ahead gray and open. This is how the road begins.",
+      "locations": [
+        "River-Meadow Camp"
+      ],
+      "locationAreas": [],
+      "isDefault": false
+    },
+    "Sand-Gate Day": {
+      "name": "Sand-Gate Day",
+      "description": "The twelve-year opening of Sand-Gate in formal ceremony. Foreign delegations gather in the sandstone forecourt before the Draklid gates. The road into the Plateau opens today.",
+      "storyStart": "You stand in the sandstone forecourt of Sand-Gate, the rust-colored cliff rising above, the forecourt already filling with foreign arrivals — merchants, envoys, freelancers drawn by the opening. The clan-broker who holds the gate-keeping stands formal and measured on the stone ledge, and the ceremony of welcome is beginning. A Draklid voice rings out across the forecourt calling the formal acknowledgment. Behind the gate, twelve years of clan politics and new contracts wait. The gate opens a footpath toward work and complication.",
+      "locations": [
+        "Sand-Gate"
+      ],
+      "locationAreas": [],
+      "isDefault": false
+    },
+    "The College Atrium": {
+      "name": "The College Atrium",
+      "description": "First day of formal training at the Queen's College in Avenor. The open atrium fills with mistresses and new admissions. The long education in witchcraft begins.",
+      "storyStart": "You stand in the open atrium of the Queen's College on the morning of formal admission, the vaulted ceiling above carrying sound in strange echoes. The assembled mistresses stand on the upper terrace, robed and waiting. Other first-years stand clustered nearby — some confident, some pale with the weight of what they have chosen. The mistress-of-admissions calls names from the slate, and her voice carries across the stone. When she speaks your name, you step forward to join the rest of the College. Everything you have worked toward begins now.",
+      "locations": [
+        "Avenor"
+      ],
+      "locationAreas": [
+        "The Queen's College"
+      ],
+      "isDefault": false
+    },
+    "Long Wells Inn": {
+      "name": "Long Wells Inn",
+      "description": "A crossroads inn at the heart of the Long Steppe trade-route. Common room and yard alive with drivers, couriers, freelancers. The posting-board holds half a dozen contracts. Work is everywhere.",
+      "storyStart": "You sit at a heavy wooden table in the common room of the Long Wells Inn at midmorning. Outside the window, the wagon-yard turns over constantly — harness being fitted, hooves loud on stone, drivers calling to each other. The posting-board on the back wall carries half a dozen fresh contracts. A Hofnar broker sits at a corner table, reading the room as travelers pass in and out. The common room is lively and warm. The road opens in any direction from here.",
+      "locations": [
+        "Long Wells"
+      ],
+      "locationAreas": [],
+      "isDefault": true
+    },
+    "Lake Quay Morning": {
+      "name": "Lake Quay Morning",
+      "description": "First light on a Lake Wildering quay-village. Fishing fleet casting off into the mist. Smoke-house fires venting. The road inland lies open.",
+      "storyStart": "You stand on the wooden quay at first light, the water beyond stretching into mist. The fishing fleet is putting out — boats in neat progression, voices calling soft across the water. A smoke-house worker across the water waves while stoking the morning fires, smoke rising thin and gray. The quay is alive with quiet purpose. The road inland opens behind you, or the water lies ahead. This is the moment before the day sets its course.",
+      "locations": [
+        "Reedmere"
+      ],
+      "locationAreas": [],
+      "isDefault": false
+    },
+    "Marches Cold Dawn": {
+      "name": "Marches Cold Dawn",
+      "description": "First muster on the Kelmari winter line as the season opens. A Threshi warband has crested the ridge. Fifteen minutes, maybe less, before they reach the palisade.",
+      "storyStart": "You stand at a wooden palisade in cold gray dawn, your breath ghosting in the air. The watch-horn has gone — three short blasts carrying across the ridge. Ahead on the ridge a mile out, a Threshi warband is moving hard toward you. Twenty riders on the sky-line, closing fast. The lieutenant is shouting positions. There are no more than fifteen minutes at most before they reach the line. The cold is sharp. Your hands are steady. This is the work the winter line demands.",
+      "locations": [
+        "Cinder-Reach Outpost"
+      ],
+      "locationAreas": [],
+      "isDefault": false
+    },
+    "Dispatch Late": {
+      "name": "Dispatch Late",
+      "description": "Three days into a hard kingdom-dispatch ride with one day left to reach the destination. The message must arrive before the seventh bell at Shield's End. The road ahead passes through a stand of trees the service has lost riders in.",
+      "storyStart": "You ride hard down a long road, the dispatch-pouch strapped under your coat. Three days pushed already, one more day to Shield's End if the road holds and your horse does not fail. The seventh bell deadline is taut in your chest. Ahead the road bends into a pine stand where the dispatch service has lost two riders in the past season. The stand is dark even in daylight. The road narrows. Between here and the seventh bell stands whatever waits in those trees — and the choice whether to ride through or find another way around that costs you time you may not have.",
+      "locations": [
+        "The Broken Road"
+      ],
+      "locationAreas": [],
+      "isDefault": false
+    },
+    "The Tarkle Infestation": {
+      "name": "The Tarkle Infestation",
+      "description": "A contract brought you to a Fernwarg tunnel-mound plagued by burrowing pests. The tarkles are nesting deep; the harvest is in danger. The locals need the infestation cleared.",
+      "storyStart": "You stand in the lantern-lit tunnel of a Fernwarg garden-mound, the earthen walls around you alive with the frantic chittering of tarkles. The light catches on the chitin-glint of the creatures as they dart between the root-crops, burrowing deeper with each moment. The tunnel is narrow — good for defense, cramped for movement. Village workers stand back from the walls, watching. The infestation is deep and spreading. Direct your approach carefully; the narrow space means the tarkles are contained, but so are you. Clear the vermin and secure the harvest, and this contract will hold.",
+      "locations": [
+        "Fernwarg village"
+      ],
+      "locationAreas": [],
+      "isDefault": false
+    },
+    "Lost in the Verdant Reach": {
+      "name": "Lost in the Verdant Reach",
+      "description": "Tracking through the Verdant Reach wilderness, you walked into territory claimed by a pack of territorial fernwolves. Now they have you cornered against ancient forest.",
+      "storyStart": "You press your back against the massive trunk of a deep-forest tree, breathing hard. Three sleek fernwolves face you across the clearing, flanking to cut off the back trails. You were tracking a hunter who disappeared three days back — tracked her sign through the undergrowth, the disturbed brush, the cold fire-ring. Instead you found their territory. The wolves do not attack yet. They watch. The forest around the clearing is dense and old. Behind you the trunk is solid. Ahead of you is the pack, and behind them the deep forest carries the sound of more movement. You are in the wolves' domain now, and they have made that very clear.",
+      "locations": [
+        "Fernwarg village"
+      ],
+      "locationAreas": [],
+      "isDefault": false
+    },
+    "The Inn at Red Harvest": null
+  }
+}

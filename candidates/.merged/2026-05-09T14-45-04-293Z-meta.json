@@ -1,0 +1,36 @@
+{
+  "nameFilterSettings": {
+    "Kaelen": {
+      "replacements": [
+        "Thalon",
+        "Marcius",
+        "Vellis",
+        "Ossian",
+        "Kessar",
+        "Saryn",
+        "Tholmir",
+        "Halden",
+        "Elwin",
+        "Drennet",
+        "Velmun",
+        "Ruven"
+      ]
+    },
+    "Voss": {
+      "replacements": [
+        "Brokk",
+        "Vell",
+        "Ruk",
+        "Gartha",
+        "Krezz",
+        "Tannok",
+        "Hokkar",
+        "Bram",
+        "Dougal",
+        "Honnar",
+        "Edmund",
+        "Ewan"
+      ]
+    }
+  }
+}

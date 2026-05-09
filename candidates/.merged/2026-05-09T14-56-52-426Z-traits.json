@@ -1,0 +1,205 @@
+{
+  "traits": {
+    "Recruit": {
+      "name": "Recruit",
+      "description": "One season of drill and at most one engagement under your belt. You can hold a line if pointed at it, follow orders, and look like a soldier from a distance — but the small skills that mark a veteran are still ahead of you. The discipline is starting to stick; the instinct is not yet there.",
+      "quirk": "You watch how the older soldiers stand at rest, and you copy it before you understand it.",
+      "skills": [
+        {
+          "skill": "melee",
+          "modifier": 4
+        },
+        {
+          "skill": "athletics",
+          "modifier": 3
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "stamina",
+          "modifier": 5
+        }
+      ],
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Free-Hand": {
+      "name": "Free-Hand",
+      "description": "An independent for-hire taking whatever short work comes. No Free-Company badge yet, no name in the contract-circles, but you have a weapon, the willingness to use it, and the start of a reputation. The big road-contracts are not yet open to you; the small ones build the name that opens them.",
+      "quirk": "You quote your rate before they ask, because that's what you watched the veterans do.",
+      "skills": [
+        {
+          "skill": "melee",
+          "modifier": 4
+        },
+        {
+          "skill": "survival",
+          "modifier": 3
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "stamina",
+          "modifier": 5
+        }
+      ],
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Wizard Aspirant": {
+      "name": "Wizard Aspirant",
+      "description": "A youth with the spark, in early years of formal training or under an unsanctioned tutor. Can hold a staff and lay simple workings — small strikes, light bracing — but the mana pool is small and the four disciplines have not yet settled into instinct. Years of drill still ahead before the practice is real.",
+      "quirk": "You count the mana you can hold against the working you want to do, and the working keeps winning.",
+      "skills": [
+        {
+          "skill": "staff-work",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "mana",
+          "modifier": 10
+        }
+      ],
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": [
+        "Witch",
+        "Hedge-Witch",
+        "Consort of the College"
+      ]
+    },
+    "Witch Initiate": {
+      "name": "Witch Initiate",
+      "description": "A novice in early training — College first-year, hedge-tutored from her teens, or just past the change that revealed the gift. Can hold a small reservoir and do trivial workings; nothing combat-grade yet. The first year is mostly nervy practice and learning when not to.",
+      "quirk": "You spend half a working watching to see if it took, and the other half worrying it didn't.",
+      "skills": [
+        {
+          "skill": "witchcraft",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "reservoir",
+          "modifier": 15
+        }
+      ],
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": [
+        "Wizard",
+        "Hedge-Wizard",
+        "Consort of the College"
+      ]
+    },
+    "Wagon-Hand": {
+      "name": "Wagon-Hand",
+      "description": "Junior on a Hofnar wagon, kingdom road-crew, or independent caravan. Strong back, fresh eyes, learning the routes and the contract patterns from the seniors. No agency in trade decisions yet; you do what you're told, watch what you're shown, and earn your standing through the first season.",
+      "quirk": "You memorize the order of stops on a route the way other people memorize songs.",
+      "skills": [
+        {
+          "skill": "athletics",
+          "modifier": 3
+        },
+        {
+          "skill": "persuasion",
+          "modifier": 2
+        },
+        {
+          "skill": "survival",
+          "modifier": 2
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "stamina",
+          "modifier": 5
+        }
+      ],
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Runner": {
+      "name": "Runner",
+      "description": "A dispatch-rider, kingdom messenger, or scout-runner — the youth they send when the road is dangerous and the message has to arrive. Travels light, fast, and across country others find difficult. Not yet trusted with the larger work of long contracts or deep scouting, but the routes that build that trust are exactly what you are running now.",
+      "quirk": "You judge a road by how fast you can leave it, not by how comfortable it is to walk.",
+      "skills": [
+        {
+          "skill": "athletics",
+          "modifier": 4
+        },
+        {
+          "skill": "survival",
+          "modifier": 3
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "stamina",
+          "modifier": 8
+        }
+      ],
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    }
+  },
+  "traitCategories": {
+    "Profession": {
+      "name": "Profession",
+      "maxSelections": 1,
+      "traits": [
+        "Recruit",
+        "Free-Hand",
+        "Wizard Aspirant",
+        "Witch Initiate",
+        "Wagon-Hand",
+        "Runner",
+        "Courtesan",
+        "Soldier",
+        "Mercenary",
+        "Hedge-Wizard",
+        "Hedge-Witch",
+        "Consort of the College",
+        "Mana-Hunter",
+        "Prime Ancestor-Mage",
+        "Prime Warden",
+        "Hold-Warrior",
+        "Hunter",
+        "Crafter",
+        "Healer",
+        "Drifter",
+        "Apothecary",
+        "Wizard",
+        "Witch",
+        "Trader",
+        "Diplomat",
+        "Spy",
+        "Pit-Foreman",
+        "Sailor",
+        "Pilot",
+        "Scribe",
+        "Watch-Officer",
+        "Outlaw",
+        "Caravan Guard"
+      ]
+    }
+  }
+}

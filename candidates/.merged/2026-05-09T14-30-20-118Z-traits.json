@@ -1,0 +1,139 @@
+{
+  "traits": {
+    "Witch-Killer": null,
+    "Hedge-Witch": {
+      "name": "Hedge-Witch",
+      "description": "A village practitioner working in quiet violation of kingdom law (or openly in Avenor as a freelance outside the College). Helps with births, fevers, contraceptive draughts, locks, the small protective workings the local lord pretends not to notice. Modest reservoir filled where she can manage it — black-market potion, careful partner, rare beast-source. Lives in constant low-grade danger and has rehearsed the fire she will set in the cottage if the Brotherhood comes for her.",
+      "skills": [
+        {
+          "skill": "witchcraft",
+          "modifier": 8
+        },
+        {
+          "skill": "craft",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "reservoir",
+          "modifier": 30
+        }
+      ],
+      "quirk": "You read every visitor for what they are, especially the polite ones.",
+      "startingItems": [],
+      "abilities": [
+        "Hedge-Working",
+        "Apothecary's Touch"
+      ],
+      "unlockedBy": [],
+      "excludedBy": [
+        "Wizard",
+        "Consort of the College"
+      ]
+    },
+    "Witch": {
+      "name": "Witch",
+      "description": "A trained witch — typically a human woman, occasionally a Draklid, Cephalen, Raknid, or freed Quell. Her power lives in a reservoir she fills with male essence and spends on workings: projection, glamour, sight, body, hand. Training comes through the Queen's College in Avenor (open practice, lawful, the consort-line system keeping her supplied at home) or through the hedge tradition (informal teaching, careful filling on what she can find, the practice concealed from neighbors). The five working domains are the same; only the access to consort-line resources and the legal protection differ. Outside Avenor every witch lives with the threat of arrest, exile, or quiet death — even the College-trained, when they cross borders.",
+      "skills": [
+        {
+          "skill": "witchcraft",
+          "modifier": 12
+        },
+        {
+          "skill": "investigation",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "reservoir",
+          "modifier": 60
+        }
+      ],
+      "quirk": "You think in mana — what each working will cost, when you can fill, who in the room is the spark and who is not.",
+      "startingItems": [],
+      "abilities": [
+        "Hedge-Working",
+        "Witchlight",
+        "Conjure Cold",
+        "Cooperative Filling"
+      ],
+      "unlockedBy": [],
+      "excludedBy": [
+        "Wizard",
+        "Consort of the College"
+      ]
+    },
+    "Consort of the College": {
+      "name": "Consort of the College",
+      "description": "A male wizard of Avenor, contracted under the Queen's College donor-line system as a partner to one or more witches. The original cooperative tradition the Brotherhood broke from. Honored, lawful in Avenor, doctrinally unthinkable in the three kingdoms. A consort generates mana like any wizard and donates it to his contracted witches; senior consorts work cooperatively in the field, multiplying the witch's range past anything the Brotherhood can match alone.",
+      "skills": [
+        {
+          "skill": "staff-work",
+          "modifier": 8
+        },
+        {
+          "skill": "persuasion",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "mana",
+          "modifier": 30
+        }
+      ],
+      "quirk": "You think of mana as something to give. The Brotherhood has a different word for what you are.",
+      "startingItems": [],
+      "abilities": [
+        "Standing Wall",
+        "Cooperative Filling"
+      ],
+      "unlockedBy": [],
+      "excludedBy": [
+        "Wizard",
+        "Witch",
+        "Hedge-Witch"
+      ]
+    }
+  },
+  "traitCategories": {
+    "Profession": {
+      "name": "Profession",
+      "maxSelections": 1,
+      "traits": [
+        "Courtesan",
+        "Soldier",
+        "Mercenary",
+        "Hedge-Wizard",
+        "Hedge-Witch",
+        "Consort of the College",
+        "Mana-Hunter",
+        "Prime Ancestor-Mage",
+        "Prime Warden",
+        "Hold-Warrior",
+        "Hunter",
+        "Crafter",
+        "Healer",
+        "Drifter",
+        "Apothecary",
+        "Wizard",
+        "Witch",
+        "Trader",
+        "Diplomat",
+        "Spy",
+        "Pit-Foreman",
+        "Sailor",
+        "Pilot",
+        "Scribe",
+        "Watch-Officer",
+        "Outlaw",
+        "Caravan Guard"
+      ]
+    }
+  }
+}

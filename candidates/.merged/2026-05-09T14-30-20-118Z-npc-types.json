@@ -1,0 +1,14 @@
+{
+  "npcTypes": {
+    "witch-killer": null,
+    "hedge-witch": {
+      "name": "hedge-witch",
+      "description": "A village practitioner working in quiet violation of kingdom law. Helps with births, fevers, contraceptive draughts, and the small protective workings the local lord pretends not to notice. Mana reservoir is modest, filled where she can manage it. Lives in constant low-grade danger and has rehearsed the fire she will set in the cottage if the Brotherhood comes for her.",
+      "vulnerabilities": [],
+      "resistances": [
+        "poisoning"
+      ],
+      "immunities": []
+    }
+  }
+}

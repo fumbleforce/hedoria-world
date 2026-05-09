@@ -1,0 +1,26 @@
+{
+  "resourceSettings": {
+    "willpower": {
+      "name": "willpower",
+      "initialValue": 20,
+      "maxValue": 100,
+      "rechargeRate": 0,
+      "restRechargeMultiplier": 1,
+      "color": "#a855f7",
+      "isHealth": false,
+      "gainPerLevel": 3,
+      "usageInstructions": "### Willpower\n\nThe reserve a character holds against pressure that targets the mind and the body's reflexes rather than the body itself. Stands between intent and the act when something or someone tries to move you against your judgment — fear, charm, temptation, command, trained social or sexual pressure. Drained by all such attempts. Does not regenerate in combat. Recovers fully on rest, provided the character can actually rest.\n\n### Damage sources\n\n- Fear and threat (intimidation, oppressive places, a serious enemy's presence): -3 to -10\n- Crude social or sexual pressure (taunts, low-tier seduction, public groping): -2 to -6\n- Temptation (an offer that hits a craving): -3 to -10 per offer resisted; failure to resist drains the same amount and the character takes the bait\n- Trained social or sexual pressure (polished interrogation, expert seduction, persuasion against your interests): -8 to -20\n- Mind-craft and command-magic (compulsions, binding-work, master mind-workers): -15 to -40\n- Will-shattering finishers (rare master-tier moves that exist to break someone): -25 to -60, more against an already-weakened target\n\n### Standing debuffs\n\n- Active addiction lowers maximum Willpower while the craving is unsated; deeper addictions impose larger caps\n- Recent humiliation, public shame, or torture may impose a temporary cap reduction at narrator discretion until the character recovers a measure of self\n- Some places drain Willpower over time as ambient pressure — see the location's own description\n\n### Empty\n\nA character at zero Willpower yields to whatever pressure brought them there. The narrator chooses the resolution that fits the source and the breaker's intent. This is not death and rarely permanent; the broken character recovers Willpower with rest, but the choices made at zero are remembered and acted upon.\n\n### Recovery and modifiers\n\n- Rest restores fully where rest is possible\n- Specific abilities, items, and shrines may aid recovery — see their descriptions for effect\n- An exhausted, bleeding, intoxicated, or shamed character defends worse against everything\n\n### Coverage\n\nMost flesh-bearing humanoids and most beasts carry Willpower. Mindless undead and constructs are immune. Species exceptions and creature inversions live in the species traits and bestiary entries; the resource itself is universal."
+    },
+    "reservoir": {
+      "name": "reservoir",
+      "initialValue": 30,
+      "maxValue": 10000,
+      "rechargeRate": 0,
+      "restRechargeMultiplier": 0,
+      "color": "#ec4899",
+      "isHealth": false,
+      "gainPerLevel": 30,
+      "usageInstructions": "### Reservoir (the witch's stored mana)\n\nThe witch's stored magical pool. Does not regenerate from rest; a depleted witch must fill before working again. The cap is 10,000 — far beyond what any single witch reaches in ordinary play, but the ceiling is there because it has been touched.\n\nAvailable to any character trained in witchcraft. Most others cannot draw on a witch-sized reservoir at all.\n\n### Filling\n\nThe reservoir is filled either by drinking alchemical preparations distilled from real essence-sources, or directly from a willing male partner through ingestion of his essence or being ejaculated into. Specific filling paths, cultural framings, and their consequences live in the witchcraft skill and the relevant abilities — not here. Material alone (feathers, antlers, plant reagents) does not fill; only essence fills.\n\n### Costs\n\n- Trivial workings (witchlight, hedge-craft, small heat or cold, easing a fever): 0 to -5\n- Moderate workings (combat projection, scry, telekinesis, conjured flame, glamour over self): -10 to -25\n- Major workings (battlefield-scale fire or cold, glamour over a crowd, breaking a curse, mending a critical wound): -40 to -100\n- Reservoir Spend (the boss-fight finisher): -100 to -300, often emptying the tank for a single act the world remembers\n\n### Spent\n\nA witch with low reservoir can do trivial workings only. All other workings: Very Hard minimum. A witch with an empty reservoir is a woman in unusual clothes hoping nobody notices. Witches in places where the practice is illegal live with this state as a constant condition."
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "skills": {
+    "stealth": {
+      "name": "stealth",
+      "type": "utility",
+      "attribute": "dexterity",
+      "description": "Moving unseen, unheard, and unconsidered. Slipping a sentry, holding still in cover, crossing a room behind a guard's back, taking a position above a doorway and being part of the ceiling. Distinct from acrobatics; stealth is the discipline of going where you are not noticed. Fernwarg in fern-country and Raknid in deep wood are native experts.",
+      "startingItems": []
+    }
+  }
+}

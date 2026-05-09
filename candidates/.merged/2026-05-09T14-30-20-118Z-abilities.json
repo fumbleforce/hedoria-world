@@ -1,0 +1,23 @@
+{
+  "abilities": {
+    "Witch-Killer Tracker": null,
+    "Witch-Mark": {
+      "name": "Witch-Mark",
+      "description": "Hedge-witch dark working. A small malicious mark laid on a person — a chronic ache, a fever that returns at the same hour, a bad luck that finds them at gates. Modest in cost, sustained by ill will. The village hedge-witch's quiet revenge on the lord who mistreated her, and the working most likely to draw the Brotherhood's attention if the village starts to talk.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Forbidden Working",
+          "amount": 1
+        },
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 8
+        }
+      ],
+      "bonus": 8,
+      "cooldown": 20
+    }
+  }
+}
