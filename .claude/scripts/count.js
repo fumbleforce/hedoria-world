@@ -293,35 +293,42 @@ function analyzeConfig(config) {
     }
   }
 
-  // AI Instructions analysis
+  // AI Instructions analysis.
+  // Voyage measures each instruction string on its JSON-escaped length
+  // (each \n counts as 2 chars). Use JSON.stringify(s).length - 2 to match.
+  // The combined limit only applies to array-form aiInstructions; object-form
+  // (per-task subkeyed strings) is not subject to it in practice.
   if (config.aiInstructions) {
+    const escapedLen = (s) => JSON.stringify(s).length - 2;
     let combinedTotal = 0;
+    const recordIndividual = (path, text, includeInCombined) => {
+      if (typeof text !== 'string' || !text) return;
+      const len = escapedLen(text);
+      if (includeInCombined) combinedTotal += len;
+      if (len > AI_INSTRUCTION_INDIVIDUAL_LIMIT) {
+        result.aiInstructions.individual.push({
+          path,
+          used: len,
+          limit: AI_INSTRUCTION_INDIVIDUAL_LIMIT,
+        });
+      }
+    };
     for (const [taskId, taskInstructions] of Object.entries(config.aiInstructions)) {
       if (Array.isArray(taskInstructions)) {
         for (let i = 0; i < taskInstructions.length; i++) {
           const instr = taskInstructions[i];
           if (typeof instr === 'string') {
-            const len = instr.length;
-            combinedTotal += len;
-            if (len > AI_INSTRUCTION_INDIVIDUAL_LIMIT) {
-              result.aiInstructions.individual.push({
-                path: `aiInstructions.${taskId}[${i}]`,
-                used: len,
-                limit: AI_INSTRUCTION_INDIVIDUAL_LIMIT,
-              });
-            }
+            recordIndividual(`aiInstructions.${taskId}[${i}]`, instr, true);
           } else if (instr && typeof instr === 'object' && instr.instruction) {
-            const len = instr.instruction.length;
-            combinedTotal += len;
-            if (len > AI_INSTRUCTION_INDIVIDUAL_LIMIT) {
-              result.aiInstructions.individual.push({
-                path: `aiInstructions.${taskId}[${i}].instruction`,
-                used: len,
-                limit: AI_INSTRUCTION_INDIVIDUAL_LIMIT,
-              });
-            }
+            recordIndividual(`aiInstructions.${taskId}[${i}].instruction`, instr.instruction, true);
           }
         }
+      } else if (taskInstructions && typeof taskInstructions === 'object') {
+        for (const [subKey, text] of Object.entries(taskInstructions)) {
+          recordIndividual(`aiInstructions.${taskId}.${subKey}`, text, false);
+        }
+      } else if (typeof taskInstructions === 'string') {
+        recordIndividual(`aiInstructions.${taskId}`, taskInstructions, false);
       }
     }
     result.aiInstructions.combinedTotal = combinedTotal;

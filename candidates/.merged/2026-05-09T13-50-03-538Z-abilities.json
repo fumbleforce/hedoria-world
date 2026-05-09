@@ -1,0 +1,95 @@
+{
+  "abilities": {
+    "Read the Market": {
+      "name": "Read the Market",
+      "description": "Size up a counterparty's true needs, their fear of loss, and the price band they are genuinely willing to move in. A Trader's read of the room cuts through posture and bluff. Useful in commerce, barter, and any negotiation where the first to show their bottom price loses.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "persuasion",
+          "amount": 5
+        }
+      ],
+      "bonus": 5,
+      "cooldown": 0
+    },
+    "Bridge the Gap": {
+      "name": "Bridge the Gap",
+      "description": "Reframe a hostile negotiation into language both sides can hear. A Diplomat carries word from one party to another in the exact phrasing each wants to receive — not lying, just choosing which truth to emphasize. Useful when direct contact would break a fragile agreement.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "persuasion",
+          "amount": 10
+        }
+      ],
+      "bonus": 10,
+      "cooldown": 4
+    },
+    "Ground-Sense": {
+      "name": "Ground-Sense",
+      "description": "Read the rock before the work begins — judge the soundness of overhead, sense the pocket of gas or water-table depth, feel the fault-line that will shift under weight. A Pit-Foreman's sense keeps the mine from killing the crew. Useful in any worked stone, vault, or collapsed structure.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "craft",
+          "amount": 8
+        }
+      ],
+      "bonus": 8,
+      "cooldown": 0
+    },
+    "Weather-Sense": {
+      "name": "Weather-Sense",
+      "description": "Read the sky and water hours before the shift comes — the pressure-change in the bones, the wave-pattern that says the wind is turning, the smell of a storm closing in from the far horizon. A Sailor's sense means safe harbor or a corpse in the water. Passive and always working.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "survival",
+          "amount": 5
+        }
+      ],
+      "bonus": 5,
+      "cooldown": 0
+    },
+    "Channel-Read": {
+      "name": "Channel-Read",
+      "description": "Read a strange river bar, harbor approach, or narrow strait at a glance — find the safe water and the hidden rock without local knowledge. A Pilot brings a vessel through impossible passage by reading the current and the depth the ordinary eye cannot see.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "survival",
+          "amount": 10
+        }
+      ],
+      "bonus": 10,
+      "cooldown": 3
+    },
+    "Interrogate": {
+      "name": "Interrogate",
+      "description": "Sweat a witness or suspect using combined force and insight — the Watch-Officer finds what someone is hiding when they have a reason to talk. Not torture, just pressure at the right angle until the story breaks and the truth spills.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "intimidation",
+          "amount": 10
+        }
+      ],
+      "bonus": 10,
+      "cooldown": 4
+    },
+    "Camp-Hold": {
+      "name": "Camp-Hold",
+      "description": "Set a circled camp on hostile ground — sightlines clear, watch-rotation tight, ambush geometry impossible. While a Caravan Guard holds the camp, the party gets a defensive bonus and resistance to surprise. Useful any time a night on bad ground has to end with everyone alive.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "survival",
+          "amount": 8
+        }
+      ],
+      "bonus": 8,
+      "cooldown": 6
+    }
+  }
+}

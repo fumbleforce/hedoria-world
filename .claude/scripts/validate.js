@@ -1020,24 +1020,39 @@ function validateCharacterLimits(config, errors, warnings) {
     errors.push(createError('death.instructions', `Too long: ${config.death.instructions.length} chars (max: ${LIMITS.fields.deathInstructions})`));
   }
 
-  // AI instruction limits
+  // AI instruction limits.
+  // Voyage measures each instruction string on its JSON-escaped length
+  // (each \n counts as 2 chars). Use JSON.stringify(s).length - 2 to match.
+  // The combined limit only applies to array-form aiInstructions; object-form
+  // (per-task subkeyed strings) is not subject to it in practice.
   if (config.aiInstructions) {
+    const escapedLen = (s) => JSON.stringify(s).length - 2;
     let combinedTotal = 0;
+    const checkIndividual = (path, text) => {
+      if (typeof text !== 'string' || !text) return;
+      const len = escapedLen(text);
+      if (len > LIMITS.fields.aiInstructionIndividual) {
+        errors.push(createError(path, `Instruction too long: ${len} chars (max: ${LIMITS.fields.aiInstructionIndividual}, JSON-escaped count)`));
+      }
+      return len;
+    };
     for (const [taskId, instructions] of Object.entries(config.aiInstructions)) {
       if (Array.isArray(instructions)) {
         instructions.forEach((instr, idx) => {
           const text = typeof instr === 'string' ? instr : instr?.instruction;
-          if (text) {
-            combinedTotal += text.length;
-            if (text.length > LIMITS.fields.aiInstructionIndividual) {
-              errors.push(createError(`aiInstructions.${taskId}[${idx}]`, `Instruction too long: ${text.length} chars (max: ${LIMITS.fields.aiInstructionIndividual})`));
-            }
-          }
+          const len = checkIndividual(`aiInstructions.${taskId}[${idx}]`, text);
+          if (len) combinedTotal += len;
         });
+      } else if (instructions && typeof instructions === 'object') {
+        for (const [subKey, text] of Object.entries(instructions)) {
+          checkIndividual(`aiInstructions.${taskId}.${subKey}`, text);
+        }
+      } else if (typeof instructions === 'string') {
+        checkIndividual(`aiInstructions.${taskId}`, instructions);
       }
     }
     if (combinedTotal > LIMITS.fields.aiInstructionCombined) {
-      errors.push(createError('aiInstructions', `Combined AI instructions too long: ${combinedTotal} chars (max: ${LIMITS.fields.aiInstructionCombined})`));
+      errors.push(createError('aiInstructions', `Combined AI instructions too long: ${combinedTotal} chars (max: ${LIMITS.fields.aiInstructionCombined}, JSON-escaped count)`));
     }
   }
 

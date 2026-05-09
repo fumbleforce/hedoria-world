@@ -1,0 +1,579 @@
+{
+  "traitCategories": {
+    "Profession": {
+      "name": "Profession",
+      "maxSelections": 1,
+      "traits": [
+        "Courtesan",
+        "Soldier",
+        "Mercenary",
+        "Witch-Killer",
+        "Hedge-Wizard",
+        "Hedge-Witch",
+        "Consort of the College",
+        "Mana-Hunter",
+        "Prime Ancestor-Mage",
+        "Prime Warden",
+        "Hold-Warrior",
+        "Hunter",
+        "Crafter",
+        "Healer",
+        "Drifter",
+        "Apothecary",
+        "Wizard",
+        "Witch",
+        "Trader",
+        "Diplomat",
+        "Spy",
+        "Pit-Foreman",
+        "Sailor",
+        "Pilot",
+        "Scribe",
+        "Watch-Officer",
+        "Outlaw",
+        "Caravan Guard"
+      ]
+    },
+    "Talent": {
+      "name": "Talent",
+      "maxSelections": 2,
+      "traits": [
+        "Quelled-Marked",
+        "Drawing Witch",
+        "Forbidden Working",
+        "School of Projection",
+        "School of the Hidden",
+        "School of Sight",
+        "School of the Body",
+        "School of the Hand",
+        "Marches Drilled",
+        "Marsh Skirmisher",
+        "Lake Archer",
+        "Free-Company Veteran",
+        "Duelist Trained",
+        "Pair-Bonded Brother",
+        "Hollow-Touched",
+        "Pinnacle of the Reservoir",
+        "Pinnacle of Mana",
+        "Disowned",
+        "Refugee under the Writ",
+        "Wagon-Born",
+        "Cephalen-Schooled",
+        "Quick-Witted",
+        "Iron Stomach",
+        "Sharp-Eyed",
+        "Light-Footed",
+        "Silver-Tongued",
+        "Apprenticed Under a Master",
+        "Survived a Wasting",
+        "Lost to Captivity",
+        "Crossed the Unforgiving",
+        "Late Arrival"
+      ]
+    }
+  },
+  "traits": {
+    "Trader": {
+      "name": "Trader",
+      "description": "A merchant who buys low and sells high across kingdom borders and trade-routes. Reads ledgers, factor-letters, and contract clauses with ease; knows guild licenses and the customs of every major market town. Could be trained on a Hofnar wagon, in a Cephalen counting-house, as a human burgher-merchant, or through years of freelance broker work.",
+      "quirk": "You see a room first by what it is willing to trade.",
+      "skills": [
+        {
+          "skill": "persuasion",
+          "modifier": 8
+        },
+        {
+          "skill": "lore",
+          "modifier": 5
+        },
+        {
+          "skill": "insight",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [],
+      "startingItems": [],
+      "abilities": [
+        "Read the Market"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Diplomat": {
+      "name": "Diplomat",
+      "description": "A court envoy or treaty-bearer trained to navigate the delicate spaces between hostile powers. Reads rooms with precision, drafts careful language, and carries word between parties who will not speak directly. Could be a human kingdom-emissary, Cephalen House ambassador, Threshi border-envoy, or independent broker working freelance contracts.",
+      "quirk": "You say what each side needs to hear, framed the way they are ready to receive it.",
+      "skills": [
+        {
+          "skill": "persuasion",
+          "modifier": 10
+        },
+        {
+          "skill": "insight",
+          "modifier": 5
+        },
+        {
+          "skill": "deception",
+          "modifier": 3
+        }
+      ],
+      "attributes": [],
+      "resources": [],
+      "startingItems": [],
+      "abilities": [
+        "Bridge the Gap"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Spy": {
+      "name": "Spy",
+      "description": "An informant, watcher, or intelligence-handler trained to listen, move unseen, and carry word through dangerous territory. Skilled at manufacturing false tells and reading the social signatures of intrigue. Could be Cephalen-trained in color-discipline, a hedge-network informant, a kingdom agent, or freelance work.",
+      "quirk": "You listen to what people don't say, and the silence tells you everything.",
+      "skills": [
+        {
+          "skill": "investigation",
+          "modifier": 8
+        },
+        {
+          "skill": "stealth",
+          "modifier": 8
+        },
+        {
+          "skill": "insight",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [],
+      "startingItems": [],
+      "abilities": [
+        "Read the Room"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Pit-Foreman": {
+      "name": "Pit-Foreman",
+      "description": "A mining specialist who reads ground-water, gas pockets, fault-lines, ore-body structure, ventilation, and tunnel-shoring with practiced eye. Oversees extraction and safety in difficult ground. Could be a Vorok consortium foreman, a kingdom's quarry-master, or a foreign engineer trained in Vorok mines on contract.",
+      "quirk": "You assess ground first by what it will give up and what it will take from you.",
+      "skills": [
+        {
+          "skill": "craft",
+          "modifier": 8
+        },
+        {
+          "skill": "survival",
+          "modifier": 5
+        },
+        {
+          "skill": "athletics",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "stamina",
+          "modifier": 10
+        }
+      ],
+      "startingItems": [],
+      "abilities": [
+        "Ground-Sense"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Sailor": {
+      "name": "Sailor",
+      "description": "A deck-hand, oarsman, or ship-fighter with salt-weathered hands and the muscle to work rope, sail, and boarding pike through a long voyage. Reads weather, current, and the small language of the ship with instinctive ease. Could be Cephalen crew, Nadorim coastal hand, lake-fisher of the Avenor or Kelmar lakes, or river-pilot of the great waterways.",
+      "quirk": "You feel the water's mood before the crew sees it in the sky.",
+      "skills": [
+        {
+          "skill": "athletics",
+          "modifier": 8
+        },
+        {
+          "skill": "survival",
+          "modifier": 5
+        },
+        {
+          "skill": "ranged",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "stamina",
+          "modifier": 8
+        }
+      ],
+      "startingItems": [],
+      "abilities": [
+        "Weather-Sense"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Pilot": {
+      "name": "Pilot",
+      "description": "A master of currents, charts, and channels who brings ships through treacherous harbor approaches, river bars, and dangerous straits. The difference between a safe passage and a wreck often rests on the pilot's read of invisible water. Could be a Cephalen harbor-pilot, Nadorim river-master, kingdom navigator, or independent contracted specialist.",
+      "quirk": "You read water before you read the sky, and your crew trusts what you say.",
+      "skills": [
+        {
+          "skill": "survival",
+          "modifier": 10
+        },
+        {
+          "skill": "investigation",
+          "modifier": 5
+        },
+        {
+          "skill": "acrobatics",
+          "modifier": 3
+        }
+      ],
+      "attributes": [],
+      "resources": [],
+      "startingItems": [],
+      "abilities": [
+        "Channel-Read"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Scribe": {
+      "name": "Scribe",
+      "description": "A literate clerk, copyist, or court-recorder skilled in drafting contracts, copying texts, and maintaining ledgers with exacting care. The work grants authority in any kingdom that values the written word. Could be a kingdom bureaucrat, Threshi court specialist, Hofnar contract-drafter, Brotherhood archivist, or freelance letter-writer.",
+      "quirk": "You read what was written and hear what was not said.",
+      "skills": [
+        {
+          "skill": "lore",
+          "modifier": 8
+        },
+        {
+          "skill": "investigation",
+          "modifier": 5
+        },
+        {
+          "skill": "insight",
+          "modifier": 3
+        }
+      ],
+      "attributes": [],
+      "resources": [],
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Watch-Officer": {
+      "name": "Watch-Officer",
+      "description": "A town watch sergeant, kingdom investigator, or harbor-warden carrying arrest authority within jurisdiction. Trained to read crime scenes, run hard questions, and manage the violence that comes with law. Could be Avenorian watch, Udorath garrison-officer, or Hofnar caravan-warden.",
+      "quirk": "You read guilt before a person opens their mouth.",
+      "skills": [
+        {
+          "skill": "investigation",
+          "modifier": 10
+        },
+        {
+          "skill": "intimidation",
+          "modifier": 5
+        },
+        {
+          "skill": "melee",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "stamina",
+          "modifier": 8
+        }
+      ],
+      "startingItems": [],
+      "abilities": [
+        "Interrogate"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Outlaw": {
+      "name": "Outlaw",
+      "description": "An exile, brigand, or fugitive living back-country beyond the reach of the law. Learned to read pursuit, know the fence-network, and move unseen through territories where being found means death. Could be a banished hedge-witch, a Vorok blacklisted from the houses, a Threshi who broke contract, or a deserter from any kingdom.",
+      "quirk": "You read authority the moment it enters a room, and you know exactly where the door is.",
+      "skills": [
+        {
+          "skill": "stealth",
+          "modifier": 8
+        },
+        {
+          "skill": "survival",
+          "modifier": 8
+        },
+        {
+          "skill": "deception",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [],
+      "startingItems": [],
+      "abilities": [
+        "Vanish"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Caravan Guard": {
+      "name": "Caravan Guard",
+      "description": "A hired wagon-protector with years of cross-border journey-fighting in the blood. Practiced at reading ambush ground, the pace of a long road, and how to hold a circled camp against raiders. Could be a Vorok exile, free-company hand, kingdom veteran on contract, or any drifter who took the work.",
+      "quirk": "You assess every piece of ground first for who has the advantage.",
+      "skills": [
+        {
+          "skill": "melee",
+          "modifier": 8
+        },
+        {
+          "skill": "survival",
+          "modifier": 5
+        },
+        {
+          "skill": "perception",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "stamina",
+          "modifier": 10
+        }
+      ],
+      "startingItems": [],
+      "abilities": [
+        "Camp-Hold"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Quick-Witted": {
+      "name": "Quick-Witted",
+      "description": "A mind that moves fast — catching tells before others register the question, parsing situations with rapid clarity. Useful in negotiation, combat, and any moment where the first read wins.",
+      "quirk": "You see the angle before it is played.",
+      "skills": [
+        {
+          "skill": "insight",
+          "modifier": 5
+        },
+        {
+          "skill": "perception",
+          "modifier": 3
+        }
+      ],
+      "attributes": [],
+      "resources": [],
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Iron Stomach": {
+      "name": "Iron Stomach",
+      "description": "A digestive system that survives bad food, dubious water, and mild poisons without flinching. The bearer eats what others leave behind and walks away better for it.",
+      "quirk": "You pick at suspect food without hesitation and never sicken from it.",
+      "skills": [],
+      "attributes": [
+        {
+          "attribute": "constitution",
+          "modifier": 2
+        }
+      ],
+      "resources": [
+        {
+          "resource": "stamina",
+          "modifier": 5
+        }
+      ],
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Sharp-Eyed": {
+      "name": "Sharp-Eyed",
+      "description": "Distance and low-light vision that catches what is faint, far, or hidden in shadow. Useful in any environment where others strain to see.",
+      "quirk": "You spot what others miss in fog, dusk, or the gloom of a distant ridgeline.",
+      "skills": [
+        {
+          "skill": "perception",
+          "modifier": 5
+        },
+        {
+          "skill": "ranged",
+          "modifier": 3
+        }
+      ],
+      "attributes": [],
+      "resources": [],
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Light-Footed": {
+      "name": "Light-Footed",
+      "description": "Stealth and balance that allow silent movement on any ground and recovery from a slip without crashing. The bearer is never the one whose step gives the position away.",
+      "quirk": "You move quiet on any surface and catch yourself before you fall.",
+      "skills": [
+        {
+          "skill": "stealth",
+          "modifier": 5
+        },
+        {
+          "skill": "acrobatics",
+          "modifier": 3
+        }
+      ],
+      "attributes": [],
+      "resources": [],
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Silver-Tongued": {
+      "name": "Silver-Tongued",
+      "description": "A gift for reading what people want to hear and giving a version of it. The bearer talks their way through doors that others pound against.",
+      "quirk": "You choose the angle the room is already leaning toward and lean harder.",
+      "skills": [
+        {
+          "skill": "persuasion",
+          "modifier": 5
+        },
+        {
+          "skill": "deception",
+          "modifier": 3
+        }
+      ],
+      "attributes": [],
+      "resources": [],
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Apprenticed Under a Master": {
+      "name": "Apprenticed Under a Master",
+      "description": "The bearer learned a trade from someone who really knew it — the depth of knowledge that comes only from years at the bench or forge with a skilled hand teaching the subtleties. Hold high standards, see slipshod work for what it is.",
+      "quirk": "You know how it should be done, and sloppy work offends you on a fundamental level.",
+      "skills": [
+        {
+          "skill": "craft",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [],
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Survived a Wasting": {
+      "name": "Survived a Wasting",
+      "description": "Long illness, plague, or fever that left scars on the body and hardness in the spirit. The bearer is tougher for what the sickness took and what they had to do to walk out of it.",
+      "quirk": "You read how a body is failing because you know all the ways a body can fail.",
+      "skills": [],
+      "attributes": [
+        {
+          "attribute": "constitution",
+          "modifier": 2
+        }
+      ],
+      "resources": [
+        {
+          "resource": "stamina",
+          "modifier": 5
+        }
+      ],
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Lost to Captivity": {
+      "name": "Lost to Captivity",
+      "description": "Held prisoner for a year or more — mine, raid-camp, debt-prison, breeding compound, or lord's dungeon. Came out hardened in ways that do not heal. The bearer reads coercion fast and knows when someone is being squeezed.",
+      "quirk": "You see the cage in any room, even rooms made of nothing but air.",
+      "skills": [
+        {
+          "skill": "insight",
+          "modifier": 5
+        },
+        {
+          "skill": "stealth",
+          "modifier": 3
+        }
+      ],
+      "attributes": [
+        {
+          "attribute": "wisdom",
+          "modifier": 2
+        }
+      ],
+      "resources": [],
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Crossed the Unforgiving": {
+      "name": "Crossed the Unforgiving",
+      "description": "Walked alone across a hostile region — the Black Steppe, Hollow-fringe, Threshi border-zone, or deep desert — and came out the other side changed. Know how far rest can carry, when to push, and when to camp.",
+      "quirk": "You assess the land first by what it will cost to cross it.",
+      "skills": [
+        {
+          "skill": "survival",
+          "modifier": 8
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "stamina",
+          "modifier": 10
+        }
+      ],
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Late Arrival": {
+      "name": "Late Arrival",
+      "description": "The bearer came to their present trade late, after a different life already lived. Brings cross-domain perspective that younger trainees lack. See what specialists miss because they only know one way.",
+      "quirk": "You remember how it was done before, and that memory is useful more often than you would think.",
+      "skills": [
+        {
+          "skill": "lore",
+          "modifier": 5
+        },
+        {
+          "skill": "investigation",
+          "modifier": 3
+        }
+      ],
+      "attributes": [],
+      "resources": [],
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    }
+  }
+}
