@@ -1,0 +1,67 @@
+{
+  "items": {
+    "Aphrodisiac Draught": {
+      "name": "Aphrodisiac Draught",
+      "category": "Consumable",
+      "description": "A pale amber liquid in a glass vial, its scent warm and herbaceous with an undertone of something floral. Mixed from distilled essences of night-blooming plants and fermented honeywine, the draught takes effect within minutes when drunk. It lowers the drinker's resistance to sexual persuasion and advances, leaving them more willing than they might otherwise be. Street-corner witches and apothecaries sell this openly; some use it on themselves before a shift, others on unwilling marks. The effect fades within hours, leaving no lasting harm.",
+      "bonuses": []
+    },
+    "Contraceptive Draught": {
+      "name": "Contraceptive Draught",
+      "category": "Consumable",
+      "description": "A bitter herbal infusion, dark brown and faintly metallic-tasting. Hedge-witches and town apothecaries brew this in batches; it prevents conception for several days when drunk. Any woman who works in the trade knows to keep a supply close. The recipe is old and reliable, passed between practitioners and written in every working witch's grimoire. Cost is low; availability across the continent nearly universal.",
+      "bonuses": []
+    },
+    "Soothing Salve": {
+      "name": "Soothing Salve",
+      "category": "Consumable",
+      "description": "A pale cream in a tin, blended from calendula, silk-leaf, and rendered fat. Applied to abraded or bruised skin, it eases soreness and accelerates healing. Used by workers in the carnal trade to mend minor injuries from rough sessions, by healers to treat simple wounds, and by anyone who wants to move without pain the morning after vigorous exertion. Cheap, common, and matter-of-fact. One tin heals incidental damage from a scene and speeds willpower recovery.",
+      "bonuses": []
+    },
+    "Lubricant Oil": {
+      "name": "Lubricant Oil",
+      "category": "Consumable",
+      "description": "A clear to amber oil with a faint almond scent, blended from seed oils and herb-infusions. Applied before or during physical activity, it reduces friction and damage. Trade workers keep quantities of it on hand; it is as unremarkable in a brothel or carnal-witch's quarters as rope is in a ship. One vial provides protection during heavy sexual sessions or rough use.",
+      "bonuses": []
+    },
+    "Sleeping Draught": {
+      "name": "Sleeping Draught",
+      "category": "Consumable",
+      "description": "A sweet, pale liquid in a glass bottle, tasting of honey and herbs with a bitter undertone. Slipped into food or drink, it leaves the drinker drowsy within minutes and deeply asleep within the hour. Common in any apothecary or witches' quarter, used by healers to ease pain, by carnal workers to pacify troublesome patrons, and by thieves to rob quietly. The sleep is natural and leaves no lasting damage; the sleeper wakes within a few hours refreshed.",
+      "bonuses": []
+    },
+    "Bedroom Restraints": {
+      "name": "Bedroom Restraints",
+      "category": "Tool",
+      "slot": "trinket",
+      "description": "[Common] Soft leather cuffs and binding straps, finely tooled and fitted with brass buckles and D-rings. Stitched with reinforced thread and designed for repeated use without fraying. Carnal practitioners carry these as working tools to pin and hold a partner during pleasure or training. They restrain without bruising if fitted carefully. Used in conjunction with the Suppress and Pin and Ride abilities, they grant tactical advantage in capture-play scenarios.",
+      "bonuses": []
+    },
+    "Witch's Kiss-Mark": {
+      "name": "Witch's Kiss-Mark",
+      "category": "Consumable",
+      "description": "A small wooden palette of enchanted lip-paint, ash-grey and shimmering faintly in candlelight. Applied to the lips, it leaves a mark on anyone kissed by the wearer. The mark binds the kissed person into a light enchantment of charm lasting one scene, lowering their willpower defense against the wearer's persuasion and enticements. Each use consumes the paint entirely; a fresh palette must be crafted. Sold quietly in carnal-witch quarters and black-market apothecaries, expensive enough to reserve for high-value targets or special nights.",
+      "bonuses": []
+    },
+    "Quell-Perfume": {
+      "name": "Quell-Perfume",
+      "category": "Consumable",
+      "description": "A vial of dark, thick liquid with a cloying floral scent that clings to skin and clothes. Distilled from Quelled-creature secretions, it is forbidden in most kingdoms and freely bought only in places where the Quelled are trafficked openly. Applied to the skin, the wearer becomes powerfully attractive to anyone they embrace, who risks becoming aphrodised without drinking or being dosed. Repeated use is addictive, degrading the wearer's willpower each time. Possession carries criminal penalties in any land with enforcement authority.",
+      "bonuses": []
+    },
+    "Iron Ring of the Brotherhood": {
+      "name": "Iron Ring of the Brotherhood",
+      "category": "Tool",
+      "slot": "trinket",
+      "description": "[Rare] A heavy iron signet ring, its face stamped with the Brotherhood's glyph in mirror-script that identifies rank and standing. Issued to full Brothers and close allies of the order, the ring carries a subtle working that shields the wearer from Carnal Arts specifically wielded by witches. Non-witch practitioners can still affect the wearer; only witch-channeled effects are blocked. The ring also advertises the wearer's allegiance openly. In some kingdoms this marks them as a man of power; in others, as an enemy to be monitored.",
+      "bonuses": []
+    },
+    "Joy-Wood Phallus": {
+      "name": "Joy-Wood Phallus",
+      "category": "Tool",
+      "slot": "trinket",
+      "description": "[Rare] A carved implement of joy-wood, polished smooth and inscribed with minor workings that hum faintly to the touch. Joy-wood is wood harvested from the same rare forests that yield ingredients for witch-craft; it carries residual enchantment that amplifies carnal effects. Use of this device allows the Sister's Draw ability at lower thresholds of carnal-arts and witchcraft rank. Possession raises eyebrows in any settled place; in lands with College authority, it is quietly restricted and subject to confiscation on search.",
+      "bonuses": []
+    }
+  }
+}

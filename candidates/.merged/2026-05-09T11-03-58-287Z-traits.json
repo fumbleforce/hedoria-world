@@ -1,0 +1,30 @@
+{
+  "traits": {
+    "Courtesan": {
+      "name": "Courtesan",
+      "description": "A trained practitioner of paid intimacy in courtesan-house, tavern, or street apprenticeship. You read people as a craft, manage risk with precision, and know every layer of the trade. The work grants both coin and unmatched skill in reading desire and negotiating its terms.",
+      "quirk": "You read a room first for who is paying attention and second for the terms of what they want.",
+      "skills": [
+        {
+          "skill": "carnal-arts",
+          "modifier": 8
+        },
+        {
+          "skill": "persuasion",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [],
+      "startingItems": [
+        {
+          "item": "Contraceptive Draught",
+          "quantity": 1
+        }
+      ],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    }
+  }
+}

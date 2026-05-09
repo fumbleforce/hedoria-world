@@ -1,0 +1,96 @@
+{
+  "traitCategories": {
+    "Profession": {
+      "name": "Profession",
+      "maxSelections": 1,
+      "traits": [
+        "Courtesan"
+      ]
+    },
+    "Talent": {
+      "name": "Talent",
+      "maxSelections": 2,
+      "traits": [
+        "Quelled-Marked",
+        "Drawing Witch"
+      ]
+    }
+  },
+  "traits": {
+    "Courtesan": {
+      "name": "Courtesan",
+      "description": "A trained practitioner of paid intimacy in courtesan-house, tavern, or street apprenticeship. You read people as a craft, manage risk with precision, and know every layer of the trade. The work grants both coin and unmatched skill in reading desire and negotiating its terms.",
+      "quirk": "You read a room first for who is paying attention and second for the terms of what they want.",
+      "skills": [
+        {
+          "skill": "carnal-arts",
+          "modifier": 8
+        },
+        {
+          "skill": "persuasion",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [],
+      "startingItems": [
+        {
+          "item": "contraceptive-draught",
+          "quantity": 1
+        }
+      ],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Quelled-Marked": {
+      "name": "Quelled-Marked",
+      "description": "You survived the Quelled-trade, the structural sexual slavery that touches every beast-market and breeding-house across Hedoria. The mark on your body reads what happened. The skill it taught is undeniable, and the hardness it left behind keeps you standing when others would break.",
+      "quirk": "You have seen what others cannot imagine. The things you survived made you unbreakable in ways quiet people do not speak of.",
+      "skills": [
+        {
+          "skill": "carnal-arts",
+          "modifier": 8
+        }
+      ],
+      "attributes": [],
+      "resources": [],
+      "startingItems": [],
+      "abilities": [
+        "Hardened to It"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Drawing Witch": {
+      "name": "Drawing Witch",
+      "description": "You are a witch who chose the direct path over the hedge craft. You draw mana from partners through sexual intimacy, uncut and efficient. This is the taboo technique most witches refuse, the one that marks you dangerous in the eyes of every kingdom that learns what you are. The Brotherhood hunts you before they hunt others.",
+      "quirk": "You walk into rooms and the air changes. People feel drawn to you before they know why, and when they learn what draws them, they recoil.",
+      "skills": [
+        {
+          "skill": "carnal-arts",
+          "modifier": 8
+        },
+        {
+          "skill": "witchcraft",
+          "modifier": 8
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "reservoir",
+          "modifier": 60
+        }
+      ],
+      "startingItems": [],
+      "abilities": [
+        "Wild Draw"
+      ],
+      "unlockedBy": [
+        "Witch"
+      ],
+      "excludedBy": []
+    }
+  }
+}

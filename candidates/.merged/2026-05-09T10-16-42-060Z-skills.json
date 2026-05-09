@@ -1,0 +1,11 @@
+{
+  "skills": {
+    "carnal-arts": {
+      "name": "carnal-arts",
+      "type": "utility",
+      "attribute": "charisma",
+      "description": "The practiced art of seduction, intimacy, and the body's use as instrument of pleasure, leverage, and combat pressure. Covers the working-craft of courtesans and tavern companions, the seductive register that shakes a foe's Willpower in a fight, and the carnal channel by which a witch can fill her reservoir directly from a partner; the last is efficient but the path most witches avoid, preferring clean extraction from creatures, alchemical preparations, or quietly-given donor mana. Bounded by what the body can endure, by the looks the practice draws even in tolerant places, and by the open hostility it meets from the Brotherhood and most kingdoms outside the few that look the other way.",
+      "startingItems": []
+    }
+  }
+}

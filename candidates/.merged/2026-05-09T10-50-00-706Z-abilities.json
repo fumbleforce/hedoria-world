@@ -1,0 +1,355 @@
+{
+  "abilities": {
+    "Flash": {
+      "name": "Flash",
+      "description": "A sudden display calculated to distract, scandalizing or amusing onlookers. Lift a skirt, bare a breast, hike a shirt, the moment of exposure working on the viewer's eye and drawing a moment's distraction from the tactical. Ranged Willpower damage to a single target or small group; the bigger the audience, the deeper the landing. Cooldown on reuse to preserve the shock.",
+      "requirements": [],
+      "bonus": 0,
+      "cooldown": 2
+    },
+    "Lewd Taunt": {
+      "name": "Lewd Taunt",
+      "description": "Verbal or gestural mockery of a sexual kind. Catcall, lewd gesture, suggestion, invitation, the tone audible in a crowded tavern and the aim to fracture the target's focus. Ranged Willpower chip that stacks with multiple practitioners using it on the same target in the same scene; harmless when used alone, devastating in concert.",
+      "requirements": [],
+      "bonus": 0,
+      "cooldown": 1
+    },
+    "Grope": {
+      "name": "Grope",
+      "description": "Crude and unwanted touch, delivered in passing or face-to-face. Grab, pinch, swat, pull hair; the act done without consent and meant to mark territory or humiliate. Adjacent Willpower damage and a clear message of dominance. Provokes either capitulation or violent reaction; there is no neutral response.",
+      "requirements": [],
+      "bonus": 0,
+      "cooldown": 1
+    },
+    "Force Kiss": {
+      "name": "Force Kiss",
+      "description": "Mouth-on-target intimate contact, taken without consent. Kiss, suck, lick, the act pressed on the target's neck, ear, mouth; adjacent contact that humiliates and damages resolve. Counterable by Vile Reflex if the target has it. High stamina cost; high Willpower damage on landing.",
+      "requirements": [],
+      "bonus": 0,
+      "cooldown": 2
+    },
+    "Whisper Filth": {
+      "name": "Whisper Filth",
+      "description": "Quiet words spoken at close range, bypassing the public witness that marks other crude attacks. Whispered invitation, suggestion, threat; the target alone hears the content, no crowd to muffle the intent. Adjacent Willpower damage without the social buffering of a wider audience.",
+      "requirements": [],
+      "bonus": 0,
+      "cooldown": 1
+    },
+    "Gross-Out": {
+      "name": "Gross-Out",
+      "description": "Assault through revulsion. Spit, drool, fart, belch, the act performed at or near the target; the response is recoil rather than arousal. Bypasses defenses built for seduction; low Willpower damage but high visceral impact, clearing a space or breaking a hold.",
+      "requirements": [],
+      "bonus": 0,
+      "cooldown": 2
+    },
+    "Vile Reflex": {
+      "name": "Vile Reflex",
+      "description": "Universal crude defense. Knee to the groin, bite back hard, slap with force; the reaction automatic and available to any target caught in crude touch. A reaction triggered by Force Kiss, Grope, or similar crude adjacent attack. Small physical damage to the attacker; no cooldown, an immediate right of refusal.",
+      "requirements": [],
+      "bonus": 0,
+      "cooldown": 0
+    },
+    "Mount the Beaten": {
+      "name": "Mount the Beaten",
+      "description": "The victor's right, expressed through the carnal. A finishing move available when the foe lies at zero health or zero Willpower; the act of sexual dominance final and absolute. Requires high stamina; leaves a permanent reputation scar and Willpower scar on any survivor. Cannot be undone through casual healing or time.",
+      "requirements": [],
+      "bonus": 0,
+      "cooldown": 5
+    },
+    "Allure Strike": {
+      "name": "Allure Strike",
+      "description": "Trained technical Willpower attack delivered through gaze, voice, posture, the working of sex appeal as a weapon. Ranged and scaling with the practitioner's skill; far more potent than crude taunts but requiring finesse to land. The difference between a street insult and a courtesan's calculated dismantling.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 1
+        }
+      ],
+      "bonus": 1,
+      "cooldown": 2
+    },
+    "Body Press": {
+      "name": "Body Press",
+      "description": "Adjacent positioning that commands attention through proximity. Lean in with cleavage, press hips, pin through deliberate body contact; the working uses physicality and presence to dominate the engagement. Moderate Willpower damage and advantage on the next Carnal or Persuasion roll. The fight tips before a hand is thrown.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 1
+        }
+      ],
+      "bonus": 1,
+      "cooldown": 2
+    },
+    "Suppress": {
+      "name": "Suppress",
+      "description": "Adjacent grapple that silences and blinds the target through intimate positioning. Sit-on-face, smother, deepthroat-gag, throat-pin; the variant determined by anatomy and practicality. Spellcasters cannot cast while suppressed. Sustained Willpower damage each round that the hold is maintained; high stamina cost to initiate and sustain.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 1
+        }
+      ],
+      "bonus": 1,
+      "cooldown": 3
+    },
+    "Tease and Withhold": {
+      "name": "Tease and Withhold",
+      "description": "Escalation followed by refusal, designed to frustrate and damage resolve. Build arousal, then withdraw; the unmet expectation landing harder on the next touch. A setup move that delays Willpower damage one round but multiplies it on landing. Works on targets susceptible to seduction and frustration alike.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 1
+        }
+      ],
+      "bonus": 1,
+      "cooldown": 3
+    },
+    "Honeyed Tongue": {
+      "name": "Honeyed Tongue",
+      "description": "Reaction parry against incoming Carnal attack. On successful counter, no damage taken and an immediate free Lewd Taunt back at the attacker, turning their own opening against them. Available to any trained practitioner; the difference between raw crude and technical defense.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 1
+        }
+      ],
+      "bonus": 1,
+      "cooldown": 0
+    },
+    "Hardened to It": {
+      "name": "Hardened to It",
+      "description": "Passive reduction to Willpower damage from sexual sources, the body and mind acclimated to rough trade. The practitioner takes persistent small damage from rough work, but incidental health wounds close at scene-end without treatment. Built through repeated carnal engagement; a callousness that protects.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 1
+        }
+      ],
+      "bonus": 1,
+      "cooldown": 0
+    },
+    "Disgrace": {
+      "name": "Disgrace",
+      "description": "Humiliation through exposure or violation, usable mid-fight or as a post-combat finisher. Strip a target, force them into position, mark them publicly with the signs of carnal defeat. Permanent reputation and Willpower scar on the survivor; the impact deepens if performed before witnesses. Medium stamina cost; the working takes time.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 1
+        }
+      ],
+      "bonus": 1,
+      "cooldown": 4
+    },
+    "Bind in Bliss": {
+      "name": "Bind in Bliss",
+      "description": "Overwhelming pleasure as an incapacitating force. The target loses the next turn to involuntary response, body overridden by sensation; works on humanoids and most beasts. High Willpower damage; rarely survivable without countermeasure. Master-tier technique requiring discipline and skill.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 5
+        }
+      ],
+      "bonus": 5,
+      "cooldown": 5
+    },
+    "Break the Will": {
+      "name": "Break the Will",
+      "description": "Finisher move requiring the target Willpower at or below a set threshold. The act of breaking final resistance through carnal domination; the target yields, charms, or surrenders depending on circumstance. Ends the engagement by forcing capitulation. Master-tier technique; the endpoint of many encounters.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 5
+        }
+      ],
+      "bonus": 5,
+      "cooldown": 6
+    },
+    "Marathon": {
+      "name": "Marathon",
+      "description": "Passive doubling of stamina pool available for Carnal Arts abilities and recovery rate. The earned signature of a genuine master; the body trained to sustain prolonged engagement without collapse. Passive benefit at high skill; marks the practitioner's graduation to the dangerous tier of the craft.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 5
+        }
+      ],
+      "bonus": 5,
+      "cooldown": 0
+    },
+    "Juicing": {
+      "name": "Juicing",
+      "description": "The iconic witch-sex-kill, forbidden and taboo even in places that look the other way. Requires Suppress setup or target Willpower at threshold. The act of sexual assault combined with mana-draw, killing the target through dual damage while filling the witch's reservoir. High stamina and reservoir cost; the practitioner is marked as a Drawing Witch afterward, carrying the reputation that brand entails everywhere but the most hidden quarters.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 5
+        },
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 5
+        },
+        {
+          "type": "trait",
+          "variable": "Witch",
+          "amount": 1
+        }
+      ],
+      "bonus": 5,
+      "cooldown": 6
+    },
+    "Wild Draw": {
+      "name": "Wild Draw",
+      "description": "Mana-draw from a willing partner without mana of their own, the everyday witch's refill method. Charmed, seduced, paid, or romantic partner; the act structured as intimacy rather than extract. Modest reservoir refill through a downtime scene. Requires carnal-arts training to calibrate; available once per scene per partner. The default path; the one witches without witch-marks take.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 1
+        },
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 0
+        },
+        {
+          "type": "trait",
+          "variable": "Witch",
+          "amount": 1
+        }
+      ],
+      "bonus": 0,
+      "cooldown": 0
+    },
+    "Forced Draw": {
+      "name": "Forced Draw",
+      "description": "Mana-draw from an unwilling source, the black-witch method. Captive, beaten, broken; the extraction carried out as domination and theft. Small dirty yield; addictive to the practitioner and risks Willpower cap reduction through repeated use. The witch is branded by this act and the reputation follows to every kingdom where witches face inquiry.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 1
+        },
+        {
+          "type": "trait",
+          "variable": "Witch",
+          "amount": 1
+        }
+      ],
+      "bonus": 0,
+      "cooldown": 0
+    },
+    "Sister's Draw": {
+      "name": "Sister's Draw",
+      "description": "The rarest technique, drawing from female partners with their own mana. Very small yield; the method is nearly lost, taught by only a handful of senior witches to their closest students. Requires both carnal-arts and witchcraft at master level. No formal tradition teaches it openly and most witches do not know it exists. Once per scene per partner.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 7
+        },
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 7
+        },
+        {
+          "type": "trait",
+          "variable": "Witch",
+          "amount": 1
+        }
+      ],
+      "bonus": 7,
+      "cooldown": 0
+    },
+    "Set the Rate": {
+      "name": "Set the Rate",
+      "description": "Sex-work transaction skill, turning an encounter into structured income. Gold scaled by the practitioner's skill and the client's wealth; the negotiation done cleanly and the agreement binding. Available outside combat during downtime sessions. The difference between street-walking and professional practice.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 1
+        }
+      ],
+      "bonus": 1,
+      "cooldown": 0
+    },
+    "Aftercare": {
+      "name": "Aftercare",
+      "description": "Extract intelligence or leverage from a satisfied client after a successful encounter. The sex-worker reads the client's unguarded moment, gathering names, secrets, commercial advantage, or long-term asset leverage. Overlaps with Insight skill; used in downtime after a session gone right.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 1
+        }
+      ],
+      "bonus": 1,
+      "cooldown": 0
+    },
+    "House Standing": {
+      "name": "House Standing",
+      "description": "Passive standing in a brothel-house network, accumulating reputation and protection. Street risk reduced in towns where the practitioner has worked; access to contracts street-walkers cannot reach; the house backing the worker against casual violence. Built through repeated work in organized establishments.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 1
+        }
+      ],
+      "bonus": 1,
+      "cooldown": 0
+    },
+    "Read the Room": {
+      "name": "Read the Room",
+      "description": "Pre-screening of a potential client before commitment, reading the room for danger and deception. Carnal-arts combined with Insight skill; reveals whether the client means harm, carries disease, intends theft, or brings legitimate coin. The sex-worker's safeguard against bad clients.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 1
+        }
+      ],
+      "bonus": 1,
+      "cooldown": 1
+    },
+    "Settle the Bill": {
+      "name": "Settle the Bill",
+      "description": "Closing move on difficult clients, ending an encounter on the practitioner's terms. Client tries to stiff, assault, or otherwise escalate; the sex-worker extracts payment and terminates the encounter without brawl or escalation. The professional move that protects working girls from the worst outcomes.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 1
+        }
+      ],
+      "bonus": 1,
+      "cooldown": 2
+    },
+    "Juke the Patron": {
+      "name": "Juke the Patron",
+      "description": "Defensive trick turning a too-rough or too-dangerous client toward safer ground without breaking the encounter or the fee. Fake the climax, slip sleeping draught into wine, suggest an alternative service, the practitioner steering toward control. Allows exit from a deteriorating encounter while keeping the coin.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 1
+        }
+      ],
+      "bonus": 1,
+      "cooldown": 3
+    }
+  }
+}

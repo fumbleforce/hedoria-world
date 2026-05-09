@@ -1,0 +1,66 @@
+{
+  "abilities": {
+    "Cooperative Filling": {
+      "name": "Cooperative Filling",
+      "description": "The cooperative practice the Brotherhood was built to refuse. With a willing male partner who carries his own mana, the witch fills her reservoir directly through ingestion of his essence or being ejaculated into. A long downtime scene played out as intimacy; mechanically a meaningful refill from the partner's mana, larger than any single potion can match. Always done in private. The Queen's College consort-line still teaches it, though institutional fashion has drifted toward distilled potion-use over the last generation; direct filling reads as old-fashioned even in College halls. In conservative kingdoms outside Avenor it is doctrinally illegal; a witch and partner caught at it face arrest and quiet disposal.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Witch",
+          "amount": 1
+        }
+      ],
+      "bonus": 0,
+      "cooldown": 0
+    },
+    "Donate Mana": {
+      "name": "Donate Mana",
+      "description": "The consort's working: channel mana through cooperative practice into a bonded witch's reservoir or a shared working. The Queen's College trains and credentials its consort-line, though the role is increasingly old-fashioned even there as institutional fashion has shifted toward distilled potion-use. Done in private; the act is intimate when scenic and instantaneous in combat, and the consort feels a witch he is bonded to across a meaningful distance. Doctrinally unthinkable for a Brotherhood man; in conservative kingdoms a registered consort travels with discretion.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Consort of the College",
+          "amount": 1
+        }
+      ],
+      "bonus": 10,
+      "cooldown": 0
+    },
+    "Co-Working": {
+      "name": "Co-Working",
+      "description": "The cooperative practice in action: a witch and a willing wizard partner pool their reservoirs on a single working. The witch acts; the wizard's mana flows alongside her reservoir into the spell. Workings at the upper edge of either's solo reach become routine; workings beyond either's solo reach become possible. The classical Avenorian battlefield mode, taught at the College and still the most powerful application of paired practice; less common in everyday use as the consort tradition has narrowed.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Witch",
+          "amount": 1
+        }
+      ],
+      "bonus": 12,
+      "cooldown": 6
+    },
+    "Wild Draw": {
+      "name": "Wild Draw",
+      "description": "Mana-draw from a willing partner without mana of their own. Charmed, seduced, paid, or romantic partner; the act structured as intimacy rather than extract. Modest reservoir refill through a downtime scene, conducted in private. Requires carnal-arts training to calibrate; available once per scene per partner. Used by witches who lack potion supply or a consort, or who prefer the directness.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 1
+        },
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 0
+        },
+        {
+          "type": "trait",
+          "variable": "Witch",
+          "amount": 1
+        }
+      ],
+      "bonus": 0,
+      "cooldown": 0
+    }
+  }
+}
