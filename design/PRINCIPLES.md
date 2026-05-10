@@ -82,3 +82,4 @@ The world's bestiary includes creatures that initiate sexual violence: Mauler, S
 - `.claude/CLAUDE.md` — orchestrator role and the troupe of specialist agents
 - `lore/` — in-world content corpus
 - `tabs/` — runtime canon
+

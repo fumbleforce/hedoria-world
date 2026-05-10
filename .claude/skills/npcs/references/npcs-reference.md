@@ -17,7 +17,7 @@ interface NPC {
   visualDescription?: string      // ✅ Used for portrait generation
   visualTags?: string[]           // ✅ Only used for image caching
   personality?: string[]          // ✅ Prose descriptions of personality traits
-  abilities?: string[]            // ✅ Prose descriptions of abilities
+  abilities?: string[]            // ✅ Name-only references to entries in tabs/abilities.json. Never inline "Name: description" prose.
   aliases?: string[]              // ✅ Alternate names/titles matched during dialogue speaker attribution (e.g. "the captain", "Reed")
   level?: number                  // ⚠️ For premade NPCs, defaults to a 50/50 roll between 1 and 2 — set explicitly for any NPC that should be stronger. Each level adds +1 base damage
   hpMax?: number                  // ⚠️ Calculated from level + tier if undefined

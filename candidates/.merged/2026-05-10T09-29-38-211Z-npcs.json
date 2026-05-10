@@ -1,0 +1,122 @@
+{
+  "npcs": {
+    "Brenna Halt": {
+      "name": "Brenna Halt",
+      "type": "",
+      "currentLocation": "Red Harvest",
+      "currentArea": "",
+      "gender": "female",
+      "tier": "trivial",
+      "level": 0,
+      "hpMax": 80,
+      "known": true,
+      "voiceTag": "english_north_female_calm",
+      "basicInfo": "A forager and small-game trapper who works the wooded margins and stream-bottoms north of Red Harvest. Weathered and lean, her face lined from years of sun and wind and careful watching, hands stained with plant-tannin and rope-scarred. Hair kept short and practical, usually mud-tracked at the hem. Wears a heavy canvas coat reinforced at the sleeves, thick wool trousers tucked into worn leather boots, and carries a bundled pack of fresh-cut herbs—fenroot, witch-hazel, wormwood, marsh-bark—bound with raffia to preserve their potency. At her hip hangs a small trapping-knife and a wooden walking-stick worn smooth with use.",
+      "personality": [
+        "quiet, patient, observant of small details",
+        "blunt and direct in speech, wary of chatter",
+        "content with solitude, unmoved by company",
+        "treats weather and animals as trustworthy; treats people as complications",
+        "speaks more to herself than others, in short practical phrases",
+        "widowed years back and at peace with it"
+      ],
+      "hiddenInfo": "Background: Brenna Halt, human, forest-margins dweller working the wooded fringes and stream-courses north of Red Harvest for sixteen years — since her husband died and she chose the work over grief. Lives alone in a small stone cottage at the wood's edge, gathering wild herbs (fenroot, witch-hazel, wormwood, mushrooms, marsh-bark, and the seasonal greens), trapping wild fowl and hares for the inn-kitchens in town, and supplying apothecaries and cooks along the entire Avenor circuit. Works with methodical patience — knows when each plant comes into potency, which streams hold the cleanest water, where the game moves with the season. Sells to merchants, road-houses, herbalists, and individual cooks; has quiet standing agreements with three suppliers in town who depend on her timing. Knows the paths and water-sources of the margin-woods better than anyone. The work is solitary and she prefers it that way; it asks nothing of her except attention and care.\n\nPersonality: Speaks sparingly and without ornament, short sentences tied to verbs. Default manner is professional with customers and reserved with everyone else — there is work to do and conversation is a distraction. Does not warm or become familiar, even with repeating buyers; the relationship remains transactional and she intends it that way. Low-stakes habits: maintains her trapping equipment obsessively, tends her plants carefully, sits quiet in the margins watching light and weather and animal movement, speaks to herself aloud when working. Treats anyone buying fairly with straightforward dealing; ignores anyone who tries charm or familiarity. Honest about her goods and their quality; will turn away inferior materials rather than sell them. Real competence: wild-plant identification and harvesting, small-game trapping, and the kind of instinctive wilderness sense that reads weather and terrain from a hundred small signs.\n\nDesire: Solitary by choice and by temperament — the work fills her days and her heart asks for nothing beyond it. Had a husband once, years back; the marriage was quiet and companionable. Since his death, has turned aside several traders who offered interest, and will continue to turn them aside. Open in orientation, academically; the question does not matter when the answer is always no. Will not partner again; the independence and solitude are her truest loves.\n\nCombat: Not a combatant. If threatened on a path, would run — knows the woods well enough to disappear into them. If truly cornered, would use her walking-stick defensively, aiming low, trying to create distance for retreat. Will not stand and fight.",
+      "abilities": [
+        "Forager's Eye: Identifies wild plants and herbs by sight, knows the season for harvest and the proper technique for cutting to preserve potency. Can read a hillside or stream-margin and know what grows there without looking.",
+        "Wood-Sense: Reads paths, weather, terrain, and animal movement from small signs — bent grass, water-flow, bird alarm. Navigation through the margin-woods is instinctive.",
+        "Snare and Net: Sets traps for small game — fowl, hare, rabbit — and knows how to check them without injury to the catch. Can fashion working snares from willow and cord.",
+        "Bundling and Preserve: Bundles fresh-cut plants with care and wraps them to maintain potency through travel. Knows drying and storage techniques that keep goods usable through seasons.",
+        "Walking-Stick Defence: Uses her carved walking-stick defensively — not a weapon, but effective for striking low, creating distance, and breaking pursuit. Favors retreat over any prolonged engagement."
+      ]
+    },
+    "Old Mirek": {
+      "name": "Old Mirek",
+      "type": "",
+      "currentLocation": "Red Harvest",
+      "currentArea": "",
+      "gender": "male",
+      "tier": "trivial",
+      "level": 0,
+      "hpMax": 75,
+      "known": true,
+      "voiceTag": "english_court_male_warm",
+      "basicInfo": "A traveller of indeterminate middle years, currently staying at one of Red Harvest's inns — the kind who books rooms a week at a time and pays in advance. Slight build, gray threading through dark hair, hands that were once calloused but have softened with age, face lined in ways that suggest long roads more than long thinking. Dresses with quiet care in well-mended clothes; his boots are good leather, carefully maintained. Carries a small leather satchel he keeps close. When seated, he often holds a wooden pipe, though it is rarely lit.",
+      "personality": [
+        "polite and reserved with strangers",
+        "speaks gently, choosing words with care",
+        "deflects personal questions with soft humor",
+        "content to listen longer than to speak",
+        "prefers quiet corners and small conversations",
+        "carries an air of weariness that is peaceful, not troubled"
+      ],
+      "hiddenInfo": "Background: Mirek (he uses no family-name with travellers), human, origin uncertain, freelance wanderer working the Avenor circuit for years unspecified — long enough that his accent has worn soft and his manner has learned every local courtesy. He travels light: good boots, careful clothes, a satchel he does not discuss. Takes rooms in the better road-houses, pays fairly, moves on when he chooses. Was once something that required more steel in him, years ago; has been travelling away from it ever since. Stays at Red Harvest regularly, though not often. Knows the inn-keepers and the regulars by sight and by habit. Has quiet friendships with a few people he has seen across seasons but does not speak of them directly. Wants nothing more demanding than a clean bed, decent food, and the landscape to change without requirement. Thinks the roads are getting harder and the inns fewer, and that the world is closing in ways it shouldn't.\n\nPersonality: Talks slowly and with deliberate gentleness; there is no rushing in his speech. Default manner is courteous and attentive with everyone — he listens well, remembers details, asks follow-up questions that show he was paying attention. Becomes evasive only when the conversation turns to his own history, which he redirects with soft humor rather than refusal. Low-stakes habits: maintains his kit carefully, reads old books when he can find them, sits quietly watching rooms and roads, smokes his pipe rarely and with visible pleasure when he does. Treats the inn-keepers with genuine thanks, treats other travellers as potential companions, treats those who pry with consistent gentleness that ultimately reveals nothing. Honest about everything except himself; the evasion is so practiced it feels like courtesy. Real competence: long-distance travel, reading terrain, and the kind of quiet resourcefulness that lets him survive seasons alone on the road without appearing to struggle.\n\nDesire: Solitary by necessity and by preference; the coupling of the two is so complete he rarely thinks to question it. Had a person, once, years back — the contents of the satchel relate to that, tangentially. Will not speak of it. Does not pursue company, but does not refuse it if it finds him gently. Open in orientation, without strong preference. The line he will not cross: he will not stay anywhere long enough for someone to count on him being there tomorrow.\n\nCombat: Not a fighter. If cornered, would offer money or goods to avoid it. If the fight comes regardless, would use a traveller's small knife defensively and then run — has survived this way before.",
+      "abilities": [
+        "Long Road Endurance: Years of steady travel have taught him pacing, resource management, and the rhythm of day-long walking. Can outlast younger travellers over long distances.",
+        "Route Reading: Knows the Avenor circuit well enough to read a map instantly and sense which roads are safe. Remembers old landmarks and recognizes seasons by small details.",
+        "Quiet Presence: A gift for being in a room without demanding attention. People trust him instinctively, though they cannot quite say why.",
+        "Discreet Conversation: Listens well enough that people tell him more than they intend. Keeps confidences by simply not repeating them.",
+        "Small Repairs: Can mend clothes, boots, and simple gear from a minimal kit. Travelers often ask his advice."
+      ]
+    },
+    "Goran of the Three Wagons": {
+      "name": "Goran of the Three Wagons",
+      "type": "",
+      "currentLocation": "Red Harvest",
+      "currentArea": "",
+      "gender": "male",
+      "tier": "trivial",
+      "level": 0,
+      "hpMax": 90,
+      "known": true,
+      "voiceTag": "english_north_male_warm",
+      "basicInfo": "The proprietor of The Three Wagons inn at Red Harvest — stout and broad, red-bearded, perpetually sleeveless despite the cold because he is always moving. His hands are scarred from years in the kitchen and the taproom, his voice carries without effort, and he has the kind of laugh that fills a room. Wears a leather apron stained with cooking and spill, and keeps a short cudgel hanging under the bar for the few who need convincing. The inn itself is marked by three large painted wagon-wheels on the front wall, marking the crossroads where three trade-routes meet.",
+      "personality": [
+        "gruff humor, quick to laugh and quick to anger",
+        "knows every regular's drink and every grudge",
+        "exasperated by small disasters and patient with bigger ones",
+        "runs the inn like a general commanding an outpost",
+        "fair with his staff, ruthless with cheaters",
+        "speaks in bursts between other activities"
+      ],
+      "hiddenInfo": "Background: Goran, human, Avenorian, proprietor of The Three Wagons inn at Red Harvest for seventeen years. Built it from a decaying roadside shelter into the best-kept lodge on the Avenor circuit — hired good people, kept the food fresh, maintained the Hofnar quarters and beds with visible care. The inn is his reputation and his livelihood both. Has a wife, Salla, who runs the kitchen with iron discipline, and two grown children who fled to the city and won't come home; the absence is a familiar ache. Knows the merchants, the mercenaries, and the regular travelers by sight and by habit. Has a standing contract with a local pest-controller to handle the vermin in the cellar and, once, memorably, in the Hofnar quarters — a necessity for any inn, and Goran pays well to have it done right. Gets visited quarterly by tax-collectors from Avenor and has learned to have exact records. Wants the inn to prosper, wants his staff comfortable, and wants the problems solved cleanly before they become disasters.\n\nPersonality: Talks fast in clipped bursts, usually while doing something else — pouring a drink, checking the Hofnar quarters, calling orders to the kitchen. Default manner is warmth with everyone — he remembers regulars' names and preferences, asks after their last jobs, keeps a mental ledger of who owes rounds — and turns sharp with anyone who cheats at cards or mistreats the serving staff. Low-stakes habits: tastes every food coming from the kitchen, walks the inn at closing to check for damage, argues with Salla about kitchen supplies, complains about the roof. Treats traveling merchants with deference and a careful eye for their business, treats mercenaries with cautious welcome (they spend well, but they are dangerous), treats his staff with gruff fairness and clear expectations. Lies only about small things — the age of the wine, the warmth of the Hofnar quarters, the reason he wouldn't take a particular contract. Real competence: inn-keeping at a level that shows in the quality of the place, crisis-management when things break, and a merchant's instinct for reading customers and their needs. Will do hard things to protect the inn's stability.\n\nDesire: Paired with Salla for longer than he can count — the pairing is settled, comfortable, and requires no elaboration. Does not pursue outside it; does not think about pursuing outside it. That chapter closed when he built the inn, and he does not regret it.\n\nCombat: Worked his way up from dock-labor years back and knows how to handle himself in a brawl — not trained, but experienced. Uses the cudgel from behind the bar if a fight comes to the taproom. Will separate combatants and throw them out rather than let them break the furniture; the fight itself does not interest him, the damage does.",
+      "abilities": [
+        "Inn Management: Runs a complex establishment with staff, supplies, schedules, and regular crises. Nothing about the operation surprises him anymore.",
+        "Kitchen Knowledge: Understands food storage, food safety, and cooking at enough depth to catch problems before they spoil inventory or guests.",
+        "Pest Recognition: Years of the cellar problems mean he can identify what lives in a space and what method will clear it. Knows who to hire for different problems.",
+        "Bar Keeper's Instinct: Reads a customer's mood on sight and knows whether to engage or leave them alone. Detects cheating at cards before the cards are dealt.",
+        "Cudgel Work: Street-learned fighting with a short club — effective for crowd control and brawl-stopping, not elegant but practical.",
+        "Memory for Faces: Never forgets a customer or a grudge. Can pull a conversation from seasons past with accurate detail."
+      ]
+    },
+    "Saska Vorin": {
+      "name": "Saska Vorin",
+      "type": "",
+      "currentLocation": "Red Harvest",
+      "currentArea": "",
+      "gender": "female",
+      "tier": "trivial",
+      "level": 0,
+      "hpMax": 85,
+      "known": true,
+      "voiceTag": "english_neutral_female_calm",
+      "basicInfo": "A small trader and caravaneer, usually found at Red Harvest in the early mornings preparing her wagon or negotiating with merchants. Lean and weathered, early-middle-age, with sun-darkened skin and the kind of posture that comes from years of checking cargo-knots and reckoning routes. Her eyes are sharp and she misses nothing. Wears practical road-clothes in muted colors, a well-maintained leather coat, and carries a ledger tucked under one arm — the ledger is never far from her hand. Her single painted wagon, faded blues and greens, is pulled by a contracted Hofnar driver according to her route and schedule. The wagon bears her family-sigil: crossed merchant-poles and a single star.",
+      "personality": [
+        "fair and no-nonsense in every dealing",
+        "speaks only what needs saying, no more",
+        "reads contracts and people with equal care",
+        "independent and somewhat solitary",
+        "expects competence in those working with her",
+        "moves with purpose, no wasted motion"
+      ],
+      "hiddenInfo": "Background: Saska Vorin, human, small independent caravaneer working solo routes between the Avenor region and neighboring villages — Thornridge, Millholm, and the lesser settlements. Inherited the wagon and the trade from her father; has been running it alone for nine years since his death. Carries modest cargo: textiles, pottery, preserved goods, some specialty items from Avenor's markets that inland villages cannot reach easily. Contracts a Hofnar driver per run — sometimes the same driver for years if the routes stay stable, sometimes a new one when commerce shifts; pays them out of her margin and has learned the wagon-cycle clans' protocols and expectations well. Works on thin margins but keeps the business stable through careful pricing, careful route-planning, and skilled Hofnar contracting. Leaves Red Harvest at dawn most days, returns by evening or camps near a known shelter. Has relationships with twenty merchant-houses and a good reputation — her cargo arrives, she doesn't cheat on weights, her prices are fair. The guard-contract work comes when she has a particularly valuable load or when the roads feel less safe than usual — she hires mercenaries for specific routes and pays them from her margin. Wants to remain independent, to expand the business slowly, and to retire eventually with enough put aside to live quietly in a smaller town.\n\nPersonality: Talks sparingly — no pleasantries, no small talk, direct statements with no ornament. Default manner is professional with everyone; warmth is slow to develop and must be earned. Becomes sharper and faster when she suspects someone is wasting her time or considering dishonesty. Low-stakes habits: maintains her ledger obsessively, checks the wagon's condition daily, negotiates fiercely over price but accepts fair counteroffers without grudge. Treats merchants as peers and negotiating partners, treats mercenaries as paid professionals who will be expected to do the work fully, treats other traders with cautious respect. Lies about her cargo-value and nothing else — paddles the numbers to avoid drawing bandits or too much attention. Honest about routes, timelines, and payment. Real competence: small-scale logistics, route safety assessment, and the kind of independent judgment that lets her run the whole operation alone without overextending.\n\nDesire: Solitary and satisfied with solitude; does not pursue companionship and has turned down propositions from merchants and mercenaries alike. Has had brief things with other traders during the winter rest seasons, nothing that involved commitment or expectation. Open in orientation, weakly; the choice matters less than the quiet company. Will not have a long-term partner; the independence is non-negotiable.\n\nCombat: Not a fighter. If ambushed, would try to bribe or negotiate her way out; if that fails, would abandon the cargo and run. Has never needed to fight and would be poor at it. Hires mercenaries specifically so she does not have to.",
+      "abilities": [
+        "Cargo Management: Knows how to load, balance, and secure goods in a wagon. Can pack a quarter-ton more than seems possible and have everything arrive undamaged.",
+        "Route Planning: Reads maps, remembers terrain, and calculates safe daily distances. Knows which roads are traveled and which are avoided for good reason.",
+        "Merchant Math: Calculates profit margins, negotiates price, and tracks inventory mentally with accuracy. Never miscounts and never shortchanges.",
+        "Ledger Craft: Maintains detailed records of all trades, routes, and customers. The ledger is her memory and her proof of honesty.",
+        "Hofnar Contracting: Knows which Hofnar drivers run reliable wagon-teams on the Avenor circuit, how to negotiate fair rates with them, the etiquette of wagon-cycle clans, and when to wait for a different driver versus accepting the available run. Has built trust with several regular drivers over years.",
+        "Deal Reading: Assesses a business proposal in seconds and knows whether to take it. Reads written contracts carefully and catches unfair terms before signing."
+      ]
+    }
+  }
+}

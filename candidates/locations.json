@@ -1,0 +1,96 @@
+{
+  "locations": {
+    "Red Harvest": {
+      "name": "Red Harvest",
+      "basicInfo": "A crossroads community with several inns and taverns and some tradesfolk catering to travellers in the region of Avenor",
+      "x": -5,
+      "y": 4,
+      "radius": 1,
+      "region": "Avenor",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": true,
+      "areas": {
+        "Three Wagons Common Room": {
+          "description": "The main room of the Three Wagons inn, warm with lamplight and crowded with caravan hands, couriers, and locals sharing stew and gossip.",
+          "paths": [
+            "Stable Yard",
+            "Market Street",
+            "Cellar Door"
+          ]
+        },
+        "Stable Yard": {
+          "description": "A muddy yard with hitching rails, tack racks, and a half-roofed stable where Hofnar teams and village carts are tended.",
+          "paths": [
+            "Three Wagons Common Room",
+            "Market Street"
+          ]
+        },
+        "Market Street": {
+          "description": "A narrow lane of produce carts, coopers, and apothecary stalls where travellers buy supplies before taking the Avenor road.",
+          "paths": [
+            "Three Wagons Common Room",
+            "Stable Yard",
+            "Cellar Door"
+          ]
+        },
+        "Cellar Door": {
+          "description": "A reinforced trapdoor at the rear of the inn's pantry, barred from above after recent vermin attacks.",
+          "paths": [
+            "Three Wagons Common Room",
+            "Market Street",
+            "Goran's Cellar"
+          ]
+        }
+      }
+    },
+    "Goran's Cellar": {
+      "name": "Goran's Cellar",
+      "basicInfo": "A damp under-inn cellar beneath the Three Wagons where grain bins, smoked meats, and spare casks are stored.",
+      "x": -5,
+      "y": 4,
+      "radius": 1,
+      "region": "Avenor",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": true,
+      "areas": {
+        "Trapdoor Landing": {
+          "description": "A narrow landing with a ladder up to the inn and stacked flour sacks against sweating stone walls.",
+          "paths": [
+            "Cask Hall",
+            "Rat Run"
+          ]
+        },
+        "Cask Hall": {
+          "description": "Rows of ale and vinegar casks, some chewed open at the base by gristlemaws.",
+          "paths": [
+            "Trapdoor Landing",
+            "Cold Store"
+          ]
+        },
+        "Rat Run": {
+          "description": "A low side tunnel where claw marks and shredded straw lead deeper toward a nest.",
+          "paths": [
+            "Trapdoor Landing",
+            "Nest Chamber"
+          ]
+        },
+        "Cold Store": {
+          "description": "A chill room for salted meat and root crates, with disturbed shelves and gnawed twine.",
+          "paths": [
+            "Cask Hall",
+            "Nest Chamber"
+          ]
+        },
+        "Nest Chamber": {
+          "description": "A broken storage alcove where the gristlemaw brood has made a nest from torn sacks and splintered crate wood.",
+          "paths": [
+            "Rat Run",
+            "Cold Store"
+          ]
+        }
+      }
+    }
+  }
+}

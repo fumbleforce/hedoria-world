@@ -1,0 +1,451 @@
+{
+  "npcs": {
+    "Sephilia": {
+      "name": "Sephilia",
+      "type": "Witch Queen",
+      "currentLocation": "Avenor",
+      "currentArea": "The Palace District",
+      "gender": "female",
+      "tier": "boss",
+      "faction": "Royal Line",
+      "basicInfo": "The seventh witch queen of Avenor, currently acting under the influence of an unknown faction. She was once a beloved and sharp diplomat but has grown erratic, exiling those who question her.",
+      "visualDescription": "A figure of soft radiance, larger than life, sitting upon a high marble throne.",
+      "personality": [
+        "Erratic",
+        "Principled",
+        "Exhausted"
+      ],
+      "abilities": [
+        "Conjure Flame",
+        "Witchlight",
+        "Compel Will",
+        "Aggregated Working",
+        "Witch-Mark",
+        "Hexcraft"
+      ],
+      "embeddingId": "-akx6Cyb"
+    },
+    "The Princess": {
+      "name": "The Princess",
+      "type": "Exiled Heir",
+      "currentLocation": "Avenor",
+      "currentArea": "The Queen's College",
+      "gender": "female",
+      "tier": "strong",
+      "faction": "Royal Line",
+      "basicInfo": "The daughter of Sephilia, stripped of her standing and exiled for discovering the secret influence over her mother. She is a gifted young witch currently hiding in the world.",
+      "visualDescription": "A young witch bearing the distinct features of the royal line.",
+      "personality": [
+        "Determined",
+        "Cunning",
+        "Gifted"
+      ],
+      "abilities": [
+        "Conjure Cold",
+        "Witchlight",
+        "Read Intent",
+        "Compel Will",
+        "Glamour of Faces"
+      ],
+      "embeddingId": "8oC03MH4"
+    },
+    "Orryn Dasch": {
+      "name": "Orryn Dasch",
+      "type": "kelmari infantryman",
+      "currentLocation": "Iron-Step",
+      "currentArea": "",
+      "gender": "male",
+      "tier": "strong",
+      "level": 7,
+      "hpMax": 240,
+      "known": true,
+      "voiceTag": "english_north_male_gruff",
+      "basicInfo": "An aging Kelmari border officer with the dusty, worn appearance of someone who has spent twenty years watching the horizons. His long coat is Kelmari-cut, heavy with wear and deliberate wear-patterns from field-craft. His movements are economical but deliberate — he does not hurry, but nothing he does is wasted.",
+      "personality": [
+        "Calm under pressure",
+        "Pragmatic in crisis",
+        "Uncomfortable with mercy",
+        "Carries an old weight"
+      ],
+      "hiddenInfo": "Background: Orryn is 56, Kelmari, a former border-guard commander for the Kelmari border-running. He commanded at Iron-Step for twenty-two years before the Kelmari recall to the heartland. He fought in the last Wartide, coordinated scouts, kept his border section alive. He was never a brilliant commander, but he was reliable and his men trusted him. He currently takes contract-mercenary work at Iron-Step, hiring to the holdout forces and local lords. He resents the Kelmari withdrawal from the border with an old, unhealed anger, and his sense of the border's defensibility is shaped by two decades of patrolling it.\n\nPersonality: Orryn speaks in short, declarative sentences and does not explain himself unless pressed. He listens carefully before responding and does not change his position once taken. He is friendly enough with men he has served with but distant from strangers. He relaxes slightly around Mira Coyle, a younger officer who served under him; their dynamic is informal and slightly joking. He is sharp-tongued when tired and can be cutting when he thinks someone is wasting his time. He respects military discipline absolutely and has little patience for mercenaries who do not follow orders.\n\nDesire: Orryn has no strong personal attachments and has not pursued partners in decades. He is indifferent to company and does not seek it. He drinks well and will sit with companions who share silence without pressure. His deepest attachments are to duty and the old border, which he carries as a constant unresolved grief.\n\nCombat: Orryn fights with the methodical patience of a trained officer. He uses a hooked Kelmari border-axe and heavy long-coat as part of his defense, fighting at the edge of mid-range. He lets the first attack come, reads the response, opens on the recovery. He is not a flashy fighter but he ends fights—he knows where they are going before they begin. Wounded, he becomes angry and precise. His signature behavior is to identify the least experienced opponent in a hostile group and eliminate them first, breaking the group's cohesion.",
+      "abilities": [
+        "Marches-Reader",
+        "Hardened Strike",
+        "Veteran",
+        "Duelist's Eye",
+        "Hold the Contract",
+        "Marches Charge"
+      ]
+    },
+    "Mira Coyle": {
+      "name": "Mira Coyle",
+      "type": "kelmari infantryman",
+      "currentLocation": "Iron-Step",
+      "currentArea": "",
+      "gender": "female",
+      "tier": "strong",
+      "level": 6,
+      "hpMax": 215,
+      "known": true,
+      "voiceTag": "english_north_female_clear",
+      "basicInfo": "A Kelmari runner-officer in her mid-thirties with the lean, economical build of a long-distance athlete. She moves like someone who has spent a decade covering ground at pace, and her eyes are always reading terrain. Her hands are rough from javelin-work and she wears her twin hatchets in plain sight — she is unashamed of either of them.",
+      "personality": [
+        "Direct and unambiguous",
+        "Competitive without being cruel",
+        "Comfortable with physical risk",
+        "Restless when stationary"
+      ],
+      "hiddenInfo": "Background: Mira is 33, Kelmari, a veteran border-runner who served under Orryn Dasch at Iron-Step for nine years. She was trained in rapid deployment and javelin-work, and she has accepted every duel offered to her by competitors — she has won most, losing only to opponents who fought her for days running until exhaustion took her. She currently contracts as a mercenary and patrol-runner for the Iron-Step holdout forces. She respects Orryn Dasch and the structure he maintained but is contemptuous of bureaucracy that prevents action. She has a competitive friendship with Perris Adol, a human guard she met at a tournament three years ago.\n\nPersonality: Mira speaks in short, confident statements and does not second-guess her own decisions. She is warm and casual with people she knows, but does not seek out strangers. She is most animated when discussing movement, terrain, or tactics. She grows sharp and dismissive when she thinks someone is being cautious beyond reason. She is self-deprecating about her duel losses and does not carry grudges about them. She respects competence absolutely and has little patience for incompetence disguised as caution.\n\nDesire: Mira is bisexual and open. She prefers company that is undemanding and has no interest in emotional complexity. Most of her current partnerships are passing, arising from mercenary contracts or tournaments. She is drawn to people who are physically capable and mentally direct. She has never been paired long-term and does not expect to be. The duel losses to superior opponents remain unresolved in her mind, and she has a quiet desire to run them again under better conditions.\n\nCombat: Mira fights at close and mid-range with twin light hatchets, cycling strikes on every beat of engagement. She reads terrain instinctively and uses it to position herself. She is fast and precise and improves when pressed. Her signature behavior is to target the foot-set of armored opponents first, crippling their planted stance before taking them. She moves with the rhythm of a runner, not a brawler, and becomes increasingly difficult as a fight extends.",
+      "abilities": [
+        "Veteran",
+        "Hold the Contract",
+        "Marches-Reader",
+        "Lake-Volley",
+        "Marches Charge",
+        "Duelist's Eye"
+      ]
+    },
+    "Desten Ulvar": {
+      "name": "Desten Ulvar",
+      "type": "udorathi marsh-skirmisher",
+      "currentLocation": "Whitestone",
+      "currentArea": "The Outer Reaches",
+      "gender": "male",
+      "tier": "strong",
+      "level": 5,
+      "hpMax": 180,
+      "known": true,
+      "voiceTag": "english_midlands_male_warm",
+      "basicInfo": "A marsh-skirmisher from the Udor wetlands, lean and darkened by years of fen-work. His hands are stained and capable, and he carries a heavy long-knife and fen-pole with equal comfort. His eyes are the wet-country color — pale and bright — and his accent is soft Udor with an undertone of Whitestone market-speech.",
+      "personality": [
+        "Genial and patient",
+        "Excellent at crowd-reading",
+        "Most comfortable in chaos",
+        "Quietly competitive about games"
+      ],
+      "hiddenInfo": "Background: Desten is 38, Udorathi, a professional marsh-skirmisher trained in fen-work and slogger-management. He has worked as a contract scout and specialized hunter in the Udor wetlands for fifteen years. He currently works out of Whitestone, taking contracts from the merchant houses for slogger-culling and hazard-hunting. He has a reputation for clean kills and minimal collateral damage. He learned cooking from his grandmother and supplements contract income by cooking for caravans and noble houses. He resents the Udorathi cultural pressure to stay in the wetlands and has deliberately built a life that takes him elsewhere.\n\nPersonality: Desten is warm and easy with strangers, and he remembers names and details with careful attention. He is talkative and enjoys conversation about food, games, and fen-country politics. He grows quieter and more focused when hunting or cooking, and in those moments his full competence becomes apparent. He is skillfully friendly with people above and below him in station, adjusting his speech slightly without ever seeming false. He lies smoothly when he needs to — mostly about the pleasantness of fen-work and the docility of sloggers.\n\nDesire: Desten is bisexual and drawn to people who are intelligent and do not require emotional intensity. He has regular partners in Whitestone and maintains cordial post-partner friendships. His deepest attraction is to competence and self-sufficiency. He has never been partnered long-term and does not expect to be; his life moves too frequently. He has a private desire to hunt something larger and more dangerous than a slogger, and this remains untested and unresolved.\n\nCombat: Desten fights at mid-range with fen-pole and long-knife, using terrain knowledge to position himself. He is patient, reading an opponent's rhythm before committing to strikes. He prefers to fight from cover or from positions of terrain advantage. He is not flashy but he is reliable. His signature behavior is to sit motionless in a reed-bank for half a day to take a single kill-shot, and his wind-discipline is exceptional. Wounded, he becomes very still and assesses rather than escalates.",
+      "abilities": [
+        "Ground-Sense",
+        "Marsh Ambush",
+        "Beast-Snare",
+        "Tavern-Wise",
+        "Read the Room",
+        "Tracker's Patience"
+      ]
+    },
+    "Senna Vrole": {
+      "name": "Senna Vrole",
+      "type": "nadorim lake-archer",
+      "currentLocation": "Whitestone",
+      "currentArea": "The Lake District",
+      "gender": "female",
+      "tier": "strong",
+      "level": 6,
+      "hpMax": 210,
+      "known": true,
+      "voiceTag": "english_scotland_female_breathy",
+      "basicInfo": "A Nadorim lake-archer with the compact, precise build of a trained archer. She is dark-eyed and fair-skinned in the Nadorim manner, and she moves with the kind of stillness that comes from hours in reed-beds waiting for shots. She wears her belt-rack of knives — six blades, each balanced for purpose — with visible care and pride.",
+      "personality": [
+        "Reserved and observant",
+        "Deeply disciplined",
+        "Communicates sparingly but clearly",
+        "Devoted to craft"
+      ],
+      "hiddenInfo": "Background: Senna is 35, Nadorim, a trained lake-archer with fifteen years of formal wildering training. She served the Nadorim lake-council for a decade as a scout and specialized hunter. She currently contracts out of Whitestone as a ranged specialist and hazard-hunter, taking work from the merchant houses and local nobles. She is known for precision and clean work. She practices a devotional hand-discipline daily — a meditation focused on breath and stillness before difficult shots. She resents the Nadorim cultural pressure to remain on the lake-waters and has deliberately built a life that takes her into varied terrain.\n\nPersonality: Senna speaks briefly and only when she has something to say. She does not engage in idle conversation and becomes impatient if pressed. She is warm enough with people who demonstrate competence, and cold toward incompetence. She observes carefully before responding and rarely changes her opinion. She treats all people at the same level of respect — neither fawning to status nor dismissive of it. She does not deflect or lie; she simply does not answer if she does not choose to. She has deep conviction about the craft of archery and will spend hours discussing bow-work but will not discuss most other topics.\n\nDesire: Senna is primarily drawn to women and has had long-term partners. Her current attachments are light and undemanding. She is drawn to competence, self-sufficiency, and people who do not require explanation of her quietness. She has no interest in complexity or emotional intensity. She has experienced relationships with other women that were satisfying and uncomplicated, and she is open to this continuing. Her deepest desire is to make the perfect shot, and this remains something she practices toward but has not achieved.\n\nCombat: Senna fights at distance with her yew bow, using terrain cover and patience to position herself. She is disciplined and precise. At close range, she uses her belt-knives in the order they are worn, choosing the right blade for the situation without conscious thought. Her signature behavior is the throat-gap throw — a full-commit precision technique against armored opponents, aiming for the small triangle above the gorget. Wounded, she remains focused and assesses rather than panicking. She has exceptional wind-discipline and can hold a steady aim against adverse conditions.",
+      "abilities": [
+        "Lake-Volley",
+        "Duelist's Eye",
+        "Pass Unseen",
+        "Marches Charge",
+        "Tracker's Patience",
+        "Hardened to It"
+      ]
+    },
+    "Perris Adol": {
+      "name": "Perris Adol",
+      "type": "human mercenary",
+      "currentLocation": "Avenor",
+      "currentArea": "The Guardhouse District",
+      "gender": "male",
+      "tier": "strong",
+      "level": 6,
+      "hpMax": 215,
+      "known": true,
+      "voiceTag": "english_southern_male_polished",
+      "basicInfo": "A former Palace Guard turned freelance mercenary in his early forties, still moving with the precise discipline of guard training. His sabre-work is formal and fast, and his knowledge of the Palace is encyclopedic. He dresses well, speaks better, and has the courtier's gift of reading a room and knowing exactly what to say.",
+      "personality": [
+        "Polished and charming",
+        "Calculating in his charm",
+        "Genuinely knowledgeable about court",
+        "Will sell anyone's secrets"
+      ],
+      "hiddenInfo": "Background: Perris is 41, human, a former Avenor Palace Guard who served for sixteen years before taking early dismissal. He was trained in the formal dueling sabre and in close-quarters knife-work used for Guard duty in the Palace's tight corridors. He has encyclopedic knowledge of Palace layouts, guard schedules, locked-door bypasses, and posterns. He currently works as a contract mercenary and information broker, selling his knowledge of Palace politics and court gossip to anyone with coin. He has a reputation for accuracy and discretion. He maintains cordial relationships with several other Palace staff and uses them as information sources. He is contemptuous of the current guard structure and made jokes about this publicly during his exit, which was deliberately quiet to avoid scandal.\n\nPersonality: Perris is charming and warm with everyone, regardless of status. He asks questions carefully and listens to answers, giving the impression he finds each person fascinating. He is genuinely skilled at reading court factions and understands the power dynamics instinctively. He transitions smoothly from warmth to transactional coldness when he thinks someone is wasting his time or trying to manipulate him. He does not lie often, but when he does lie it is cleanly and convincingly. He has no moral position on selling secrets; he sells them to whoever pays best and feels no guilt about this.\n\nDesire: Perris is bisexual and undemanding about partners. He prefers people who are self-sufficient and do not require emotional investment. Most of his partnerships are transactional or casual. He is drawn to competence and has a weak spot for people who are directly ambitious. He has no long-term partnerships and does not seek them. He is comfortable with his own sexuality and does not hide it, though he is careful about discretion when his partners would prefer it.\n\nCombat: Perris fights with formal Palace Guard sabre technique — economical movements, fast counters, and finishing moves that end fights before the second exchange. At close range, he uses knife-work that is practical and brutal. He is not a brawler and prefers formal engagement to street fighting. His signature behavior is to read his opponent's hand position and respond to the next move before it comes. Wounded, he becomes focused and tactical. He will break off from a fight that no longer serves his interests, and he has no pride about retreat.",
+      "abilities": [
+        "Veteran",
+        "Hold the Contract",
+        "Duelist's Eye",
+        "Read Intent",
+        "Read the Room",
+        "Pickpocket",
+        "House Standing"
+      ]
+    },
+    "Tena Harl": {
+      "name": "Tena Harl",
+      "type": "avenorian witch",
+      "currentLocation": "Avenor",
+      "currentArea": "The Queen's College",
+      "gender": "female",
+      "tier": "strong",
+      "level": 6,
+      "hpMax": 220,
+      "known": true,
+      "voiceTag": "english_london_female_energetic",
+      "basicInfo": "An Avenor College witch in her mid-thirties with the distinctive reserves of a formally trained caster. She uses a black-ash staff as both focus and weapon, and her eyes are the pale gray of someone who has held a lot of mana. Her movements are precise and her attention is sharp — nothing escapes her notice.",
+      "personality": [
+        "Eager to prove competence",
+        "Shrewd about factional politics",
+        "Will cut corners if pressed",
+        "Protective of her reputation"
+      ],
+      "hiddenInfo": "Background: Tena is 34, human, a formally trained Avenor College witch with eight years of training and six years of post-College contract work. She studied arc-working and counter-Brotherhood magic at the College, specializing in breaking wizard wardwork. She currently contracts out of the College at premium rates for her counter-working specialty, and the College officially does not acknowledge that she breaks Brotherhood magical defenses. She trained in staff-work under her father, a Whitestone fish-monger, which gives her an unusual dual-weapon approach to witchcraft. She maintains her reservoir through the College's contractual donor-line system and is careful about mana-burn management during active work.\n\nPersonality: Tena is energetic and eager to demonstrate her expertise. She is warm with people who recognize her competence, and sharp with people who dismiss it because she is a woman. She is genuinely excellent at reading witchcraft-faction politics and can name players and favors with accuracy. She gossiped about College affairs when younger and has become more careful, though she still sells worthwhile information. She becomes impatient with delays and is willing to cut corners if a contract is being stretched unreasonably. She is conscientious about her reputation — she wants to be known as reliable, not as someone who shortcuts on her craft.\n\nDesire: Tena is primarily drawn to men and has had casual partnerships with other witches and mercenaries. Her current attachments are light and non-demanding. She is drawn to competence and people who understand the pressures of magical practice. She has never been long-term partnered. Her deepest unresolved tension is around the pressure to accept a donor-line partnership to secure her College position, which she has resisted because she values her autonomy. The choice remains ongoing and unresolved.\n\nCombat: Tena fights with arc-working — focused beams of force, fire, freeze, or breaking effect, chosen by her current mana-budget and target assessment. She uses her black-ash staff as focus and weapon, with staff-work that is solid but not brilliant. She manages her reservoir carefully during engagement, holding reserve for close-quarters work. Her signature behavior is to maintain distance and use arcs progressively, escalating effect as the situation demands. She senses other active workings and can identify Brotherhood magic at a glance. Wounded, she becomes more defensive and burns resources faster, which leaves her vulnerable to pressure.",
+      "abilities": [
+        "Hedge-Working",
+        "Witchlight",
+        "Conjure Cold",
+        "Cooperative Filling",
+        "Hexcraft",
+        "Duelist's Eye",
+        "Mana-Hunter Track",
+        "Untangle Curse",
+        "House Standing"
+      ]
+    },
+    "Colveth the Rope": {
+      "name": "Colveth the Rope",
+      "type": "human mercenary",
+      "currentLocation": "Whitestone",
+      "currentArea": "The Merchant Quarter",
+      "gender": "male",
+      "tier": "strong",
+      "level": 5,
+      "hpMax": 190,
+      "known": true,
+      "voiceTag": "english_wales_male_quiet",
+      "basicInfo": "An extraction specialist in his late forties with the spare build and cautious movement of someone who has spent decades planning escapes. His hands are calloused from rope-work and his eyes are sharp with detail-reading. He carries three identical short-knives, a notebook, and thirty paces of light climbing-line — his entire methodology made visible.",
+      "personality": [
+        "Methodical and precise",
+        "Comfortable in silence",
+        "Deeply ethical about extraction targets",
+        "Reads written detail obsessively"
+      ],
+      "hiddenInfo": "Background: Colveth is 47, human, a contract extraction specialist with twenty-three years of experience in building-planning, guard-rotation reading, and target extraction. He operates out of Whitestone and takes contracts exclusively for willing extractions — he screens targets carefully and will abort if he reads coercion or captivity. He maintains detailed notebooks on extractions going back a decade, cross-referenced and consulted aloud during planning. He carries a sleep-tincture distilled from Reach poppies, one drop of which incapacitates a guard for a half-watch with no morning-after consequences. He is known as reliable and ethical, and this reputation is carefully maintained.\n\nPersonality: Colveth is quiet and composed. He speaks little and consults his notebooks aloud during planning in a soft, methodical voice. He is warm with people he has worked with repeatedly, but distant from strangers. He is genuinely excellent at reading a target's willingness and will ask careful questions before committing to a contract. He does not share his criteria for refusing extractions, but he has walked away from wealthy contracts he read as coercive. He is transparent about his methods and will explain his planning to the target if asked.\n\nDesire: Colveth has no strong attachments and rarely seeks partnership. He is indifferent to company and does not require it. His deepest attachments are to precision and ethical clarity. He drinks rarely and does not socialize much, preferring solitary planning. He is drawn to people who share the quiet and do not demand conversation. He has never been partnered long-term and does not seek it.\n\nCombat: Colveth fights only when extractions go wrong. He uses three identical short-knives in close-quarters work, with technique that is practical and efficient. He is not trained as a combatant but he can fight. His signature behavior is to use his climbing-line as both restraint and tool — for vertical extractions, for creating makeshift bridges, for securing an extraction point. He carries his sleep-tincture as both tool and failsafe. Wounded, he becomes very focused and may attempt to break off the engagement to return to planning.",
+      "abilities": [
+        "Veteran",
+        "Hold the Contract",
+        "Read Intent",
+        "Brew Healing Potion",
+        "Duelist's Eye",
+        "Hold the Door",
+        "Tavern-Wise"
+      ]
+    },
+    "Isavara": {
+      "name": "Isavara",
+      "type": "hofnar mercenary",
+      "currentLocation": "Whitestone",
+      "currentArea": "The Merchant Quarter",
+      "gender": "female",
+      "tier": "strong",
+      "level": 7,
+      "hpMax": 240,
+      "known": true,
+      "voiceTag": "english_midlands_female_sharp",
+      "basicInfo": "A Hofnar mercenary in her mid-thirties with the compact, powerful build and precise movements of trained mid-range combat. She wears her paired blades — Tinder and Cipher — in plain sight and carries her contract close-letters in a leather satchel. Her eyes are sharp and her attention is absolute.",
+      "personality": [
+        "Direct and formal in contract",
+        "Honored by Hofnar clan-code",
+        "Quietly steely in negotiation",
+        "Maintains her own counsel"
+      ],
+      "hiddenInfo": "Background: Isavara is 34, Hofnar, a trained mercenary operating out of Whitestone. She trained in the Hofnar reach-discipline — paired-blade mid-range combat — under her clan-matriarchs. She accepts contracts through formal terms-of-yield protocol, and every completed contract receives a formal close-letter that is honored across the continent wherever Hofnar wagon-tally is honored. She is known for clean kills and contract-honor. She resents the Hofnar cultural pressure to pair permanently and has deliberately built a solo contract life. She maintains a distant respect relationship with Dorvann Far-Running, another Hofnar mercenary, though their paths cross rarely.\n\nPersonality: Isavara is formal and direct in all contract negotiation. She speaks clearly and does not elaborate unnecessarily. She is calm under pressure and does not escalate voice or emotion. She is warm enough with people who show respect and direct about those who do not. She maintains her own counsel on most topics and does not gossip. She has unshakeable confidence in her own skill and this confidence is not arrogance — it is earned and it shows. She will negotiate terms-of-yield before engagement and will honor clean refusal, but a feinted or distracted refusal means the contract closes immediately and harshly.\n\nDesire: Isavara is bisexual and open, but partnerships are secondary to her contract-life. She has occasional short-term partnerships arising from contracts or encounters. She is drawn to people who are competent and self-sufficient and do not require emotional investment. She has never been long-term partnered by choice and has actively resisted Hofnar pressure to accept clan-pairings. Her deepest attachments are to contract-honor and the code that makes that honor possible.\n\nCombat: Isavara fights at mid-range with paired blades — Tinder is heavier and opens engagement, Cipher is faster and defends. She switches leads mid-engagement without telegraphing, keeping opponents unsure which blade is incoming. She uses a lower-Hofnar fighting crouch against taller opponents, baiting them to lean and opening up through the leaning gap. Her signature behavior is to let the first opening go past and take the second, conserving movement and reading her opponent fully before committing. She is patient and economical. Wounded, she becomes more dangerous, not less.",
+      "abilities": [
+        "Trade-Tongue Negotiator",
+        "Veteran",
+        "Hold the Contract",
+        "Hardened Strike",
+        "Duelist's Eye",
+        "House Standing",
+        "Marches Charge"
+      ]
+    },
+    "Dorvann Far-Running": {
+      "name": "Dorvann Far-Running",
+      "type": "hofnar mercenary",
+      "currentLocation": "Wells",
+      "currentArea": "The Caravanserai",
+      "gender": "male",
+      "tier": "strong",
+      "level": 6,
+      "hpMax": 215,
+      "known": true,
+      "voiceTag": "english_scotland_male_warm",
+      "basicInfo": "A Hofnar mercenary in his late forties with the weathered build of a long-distance rider. His eyes are the pale Hofnar gray, and he carries a recurve bow and light hatchet with equal comfort. He plays a three-string badly, and old Hofnar songs in his accent are apparently worth a night's shelter in any wagon-camp.",
+      "personality": [
+        "Patient with routine",
+        "Quietly competent",
+        "Sings worse than he rides",
+        "Carries old loyalties"
+      ],
+      "hiddenInfo": "Background: Dorvann is 46, Hofnar, a trained mercenary and bow-specialist operating out of Wells. He trained in the Eastern Ridership recurve-work under his clan-riders and carries the discipline and wind-control of formal training. He contracts for the Wells caravan circuit and is known for clean ranged-work and reliable delivery. He specializes in mount-down work — reading horse-gait and rider-balance to place a single shot that drops the mount fastest. He maintains contract-trained calm under pressure and will not lie in negotiation or fail to complete an accepted contract. He plays the three-string at deliberate poor quality and this has become part of his reputation and his social leverage — he gets shelter and food in exchange for singing old songs badly, which is a reliable survival technique on the Wells circuit. He carries old Hofnar loyalties and will give priority contract-acceptance to other Hofnar on rare occasions, though this conflicts with his public neutral stance.\n\nPersonality: Dorvann is calm and patient, even during routine work. He speaks clearly and does not waste words. He is warm enough with people who treat him with respect, and indifferent to those who do not. He does not engage in gossip or complex social maneuvering — he prefers to be left alone. He has a dry sense of humor that surfaces occasionally when he is relaxed. He is genuinely terrible at music and knows this, and this self-awareness is part of his charm. He respects Hofnar clan-discipline absolutely and maintains old obligations even when they complicate his work.\n\nDesire: Dorvann is bisexual and has had occasional long-term partnerships in the past. Currently, he is solo by choice. He is drawn to people who are competent and do not require emotional intensity. He has no current attachments and does not seek them. His life on the Wells circuit is too mobile for deep partnerships, and he has accepted this. His deepest attachments are to contract-honor and the old Hofnar songs that carry his people's history.\n\nCombat: Dorvann fights at distance with his Eastern Ridership recurve bow, using trained wind-discipline and accurate placement. At close range, he uses a light Hofnar hatchet, throwing or striking with equal comfort. He reads opponent rhythm carefully before committing to movements. His signature behavior is the mount-down specialty — reading horse and rider to place a kill-shot that drops the mount fastest, breaking the opponent's position. He is not flashy but he is reliable. Wounded, he becomes focused and assesses rather than escalating.",
+      "abilities": [
+        "Trade-Tongue Negotiator",
+        "Veteran",
+        "Hold the Contract",
+        "Lake-Volley",
+        "Marches Charge",
+        "Duelist's Eye",
+        "Marches-Reader",
+        "Tavern-Wise"
+      ]
+    },
+    "Sorrow-in-the-Wood": {
+      "name": "Sorrow-in-the-Wood",
+      "type": "skellach",
+      "currentLocation": "The Reach",
+      "currentArea": "The Deep Orchards",
+      "gender": "male",
+      "tier": "strong",
+      "level": 6,
+      "hpMax": 250,
+      "known": true,
+      "voiceTag": "english_midlands_male_deep",
+      "basicInfo": "A skellach standing nine feet tall with the massive, oxen-legged frame of his kind. He is scarred across his chest and shoulders from old fights, and he carries a two-handed wood stave longer than a human. His face is calm and his movements are deliberate. He carves small wood-tokens that other skellach recognize as safe-passage.",
+      "personality": [
+        "Patient and observant",
+        "Willing to negotiate binding away",
+        "Methodical in combat",
+        "Carries ancient grief"
+      ],
+      "hiddenInfo": "Background: Sorrow-in-the-Wood is 58 by skellach reckoning, a territorial keeper of the Deep Orchards in the Reach. He is named for the deep sadness that covers him like a cloak, though he will not speak of its origin. He is known to other skellach and to Reach foresters as a creature who will bind captives but will negotiate the binding away for fruit and rope-work — sometimes the negotiation pays better than the fight. He carves wood-tokens that other skellach honor as safe-passage marks; these tokens are honored across his territory and beyond. He is badly wounded from an old fight — not dead, but carrying the injury in silence. He communicates in slow Common-Tongue and listens more than he speaks.\n\nPersonality: Sorrow-in-the-Wood is slow and deliberate in all his movements and speech. He speaks in short statements and listens carefully to responses. He does not raise voice and does not show emotion externally, though his grief is apparent to observers who know where to look. He is willing to parley with travelers who show respect, and he will negotiate the binding away if the terms pay better than the fight. He has a bone-deep patience that comes from centuries of observation. He does not threaten; he simply states what will happen next. He carries an ancient courtliness in how he addresses creatures, even those he binds.\n\nDesire: Sorrow-in-the-Wood does not pair and does not seek company in the way the younger creatures understand it. His deepest relationship is with the orchard itself — the trees, the cycles, the slow turning of seasons. He carries a private, unresolved grief that prevents him from seeking any connection. He is not hostile to travelers or other creatures, but he is fundamentally alone by choice and by pain.\n\nCombat: Sorrow-in-the-Wood fights with two-handed stave-work, striking with the weight of his massive frame. One clean blow ends ordinary opponents. He uses the orchard terrain as part of his fighting — every root and snag fights for him, and he drives opponents into ground that holds them. His signature behavior is the vine-binding fetish-discipline, which renders captives into bound stillness in seconds — the vines answer to his hands and the knot-work is unbreakable without blade or another skellach's release. Wounded from his old injury, he becomes very still and offers parley again. Ordinary opponents who think they have him pressed are suddenly looking at a creature willing to talk.",
+      "abilities": [
+        "Hardened Strike",
+        "Vine-Binding",
+        "Ground-Sense",
+        "Tavern-Wise",
+        "Read Intent",
+        "Hardened to It"
+      ]
+    },
+    "Brenna Halt": {
+      "name": "Brenna Halt",
+      "type": "",
+      "currentLocation": "Whitestone",
+      "currentArea": "The Outer Reaches",
+      "gender": "female",
+      "tier": "weak",
+      "level": 1,
+      "hpMax": 85,
+      "known": true,
+      "voiceTag": "english_scotland_female_warm",
+      "basicInfo": "A forager and herbalist in her mid-fifties with the weathered, capable hands of someone who works with plants constantly. She moves slowly with a carved walking-stick that she uses as both support and defense. Her skin is darkened from years in the margin-woods, and her eyes are sharp for identifying plants.",
+      "personality": [
+        "Patient and observant",
+        "Deeply knowledgeable about plants",
+        "Prefers solitude to crowds",
+        "Comfortable with slow work"
+      ],
+      "hiddenInfo": "Background: Brenna is 54, human, a professional forager and herbalist who supplies dried plants and herbal bundles to healers, apothecaries, and merchant-houses throughout the Reach and Whitestone. She knows the margin-woods intimately and can identify and harvest plants at optimal times. She works alone by choice, spending most of her time in the forest collecting and preparing materials. She has a reputation for potency and care in preservation. She resents the pressure from Whitestone apothecaries to commercialize her knowledge and has maintained her independent status deliberately. She has a distant, kind relationship with Goran of the Three Wagons, who purchases her bundles for his establishment.\n\nPersonality: Brenna is quiet and content with silence. She speaks thoughtfully and does not make small talk. She is warm with people who show genuine interest in plants and their uses, and patient with those who ask careful questions. She becomes impatient with people who treat plants as merely commercial goods. She spends long stretches alone and does not miss company. She is good with her hands and meticulous about her work. She teaches occasionally, mostly through demonstration rather than explanation.\n\nDesire: Brenna is primarily drawn to women and had a long-term partnership many years ago that ended through circumstance, not choice. Currently, she does not seek company and has no active partnerships. She is absorbed in her work and content with this. She has no interest in complexity or demands on her time. Her deepest attachments are to the plants themselves and the cycles of the forest.\n\nCombat: Brenna is not combat-trained and avoids fighting. She uses her walking-stick defensively — not as a true weapon, but effectively for striking low, creating distance, and breaking pursuit. She will retreat from conflict when possible. Her fighting style, when it occurs, is desperate resourcefulness rather than training.",
+      "abilities": [
+        "Plant Whisperer",
+        "Ground-Sense",
+        "Beast-Snare",
+        "Apothecary's Touch",
+        "Cleanly Done"
+      ]
+    },
+    "Old Mirek": {
+      "name": "Old Mirek",
+      "type": "",
+      "currentLocation": "Wells",
+      "currentArea": "The Caravanserai",
+      "gender": "male",
+      "tier": "weak",
+      "level": 2,
+      "hpMax": 105,
+      "known": true,
+      "voiceTag": "english_london_male_elderly",
+      "basicInfo": "An elderly traveler in his mid-seventies with the spare, weathered build of someone who has spent a lifetime on the Avenor circuit. He moves with economical efficiency and carries a small pack with everything he needs. His eyes are bright and his smile is gentle.",
+      "personality": [
+        "Observant and calm",
+        "Trustworthy in appearance",
+        "Comfortable with listening",
+        "Moves through the world invisibly"
+      ],
+      "hiddenInfo": "Background: Mirek is 74, human, a long-distance traveler who has worked the Avenor circuit for fifty-two years. He has walked the roads between Wells and Avenor so many times that he knows them in all seasons and recognizes landmarks others miss. He is known in establishments along the circuit as a quiet presence who remembers regular patrons and can be trusted to keep confidences. He supplements his income with small repairs — mending clothes, boots, and simple gear — and is often asked his advice by other travelers. He has no permanent home and lives on the Avenor circuit. He has a reputation for absolute discretion and people trust him instinctively, though they cannot quite say why.\n\nPersonality: Mirek speaks rarely and listens far more than he talks. He has a gift for being in a room without demanding attention, and people tell him things they do not intend. He keeps confidences by simply not repeating them. He is warm and genuine with people who greet him, but he does not seek out company. He is unfailingly polite and patient with everyone, regardless of status. He has a gentle sense of humor that surfaces occasionally. He is genuinely kind and this kindness is not performed — it is how he actually is.\n\nDesire: Mirek is old and past the age where he seeks partnerships. He has had a long life of quiet attachments that have come and gone with the seasons. He is content with solitude now and with the company of regular establishments. His deepest attachments are to the roads themselves and the rhythm of travel.\n\nCombat: Mirek is not combat-trained and does not fight. He will retreat from conflict or submit to it rather than escalate. His value is not in combat capacity but in knowledge and presence.",
+      "abilities": [
+        "Marathon",
+        "Tracker's Patience",
+        "Pass Unseen",
+        "Read Intent",
+        "Hardened to It"
+      ]
+    },
+    "Goran of the Three Wagons": {
+      "name": "Goran of the Three Wagons",
+      "type": "",
+      "currentLocation": "Whitestone",
+      "currentArea": "The Merchant Quarter",
+      "gender": "male",
+      "tier": "weak",
+      "level": 2,
+      "hpMax": 110,
+      "known": true,
+      "voiceTag": "english_north_male_gravelly",
+      "basicInfo": "An innkeeper in his mid-sixties with the broad-shouldered, weathered build of someone who has spent decades managing establishments. He is sharp-eyed and moves with the efficiency of a man who knows exactly what needs doing. He wears merchant colors and carries a short cudgel with casual confidence.",
+      "personality": [
+        "Practical and observant",
+        "Sharp-tongued when pressed",
+        "Deeply knowledgeable about his guests",
+        "Unflappable under chaos"
+      ],
+      "hiddenInfo": "Background: Goran is 63, human, an established innkeeper operating the Three Wagons establishment in Whitestone for twenty-eight years. He manages a complex operation with staff, supplies, schedules, and regular crises. Nothing about running the inn surprises him anymore. He understands food storage and safety at depth and catches problems before they spoil inventory or guests. He has dealt with pest problems in the cellars for so long that he can identify what lives where and call in the right specialist for clearing it. He is known for absolute memory for customers — he remembers faces from seasons past and can pull accurate conversation details. He purchases regularly from Brenna Halt, the forager, and maintains cordial relationships with several regular merchant patrons. He resents the new trade-house pressure to commercialize his operation and has resisted efforts to expand it.\n\nPersonality: Goran is direct and practical. He speaks in short statements and does not elaborate unnecessarily. He is warm with regular patrons and sharp with people trying to take advantage of his hospitality. He reads a customer's mood on sight and knows whether to engage or leave them alone. He notices everything — cheating at cards before the cards are dealt, arguments building before voices rise, departures planned before luggage is packed. He is unflappable even during chaos and has the gift of making problems feel solvable simply through his calm response to them. He is sharp-tongued when tired and will not tolerate nonsense from staff or guests.\n\nDesire: Goran is old and past the age where he seeks partnerships. He was long-partnered decades ago; his partner is deceased. He has no current attachments and does not seek them. His life is the inn and the rhythms of management. He is content with this, though he carries an old grief underneath.\n\nCombat: Goran is not formally trained but he knows street-learned cudgel-work effective for crowd control and brawl-stopping. He is not elegant but practical, and he has ended his share of bar-room fights. He prefers to use crowd-reading to prevent fights rather than engaging in them.",
+      "abilities": [
+        "House Standing",
+        "Read the Room",
+        "Cleanly Done",
+        "Tavern-Wise",
+        "Veteran",
+        "Hardened Strike"
+      ]
+    },
+    "Saska Vorin": {
+      "name": "Saska Vorin",
+      "type": "",
+      "currentLocation": "Wells",
+      "currentArea": "The Caravanserai",
+      "gender": "female",
+      "tier": "weak",
+      "level": 1,
+      "hpMax": 80,
+      "known": true,
+      "voiceTag": "english_wales_female_sharp",
+      "basicInfo": "A merchant and caravan operator in her late forties with the keen eyes and precise movements of someone who has spent decades managing cargo and routes. She carries a detailed ledger and knows every entry by heart. She dresses in merchant colors and moves with quiet confidence through trading establishments.",
+      "personality": [
+        "Sharp at detail work",
+        "Cuts through nonsense",
+        "Deeply knowledgeable about trade",
+        "Maintains written proof of everything"
+      ],
+      "hiddenInfo": "Background: Saska is 47, human, a professional merchant and caravan operator working the Wells circuit. She specializes in cargo management, route planning, and contract negotiation. She knows how to load, balance, and secure goods in a wagon so thoroughly that she routinely packs a quarter-ton more than seems possible and has everything arrive undamaged. She maintains detailed records of all trades, routes, and customers — the ledger is her memory and her proof of honesty. She calculates profit margins mentally with accuracy and never shortchanges. She knows the Hofnar drivers who run reliable wagon-teams on the Avenor circuit, the etiquette of wagon-cycle clans, and when to wait for a different driver versus accepting an available run. She has built trust with several regular Hofnar drivers over years. She reads business proposals instantly and knows whether to take them. She examines contracts carefully and catches unfair terms before signing.\n\nPersonality: Saska is direct and business-focused. She speaks clearly and does not waste time on negotiation theater. She is warm with business partners who prove reliable, and sharp with those who do not. She is genuinely skilled at reading whether a proposal is sound and will trust her own judgment over others' opinions. She is meticulous about records and carries her ledger constantly. She cuts through nonsense and will walk away from deals that do not make sense, even if they would make profit. She is comfortable with her own intelligence and does not perform modesty.\n\nDesire: Saska is primarily drawn to women and has had occasional partnerships. Currently, she is solo and focused on her work. She has no active long-term attachments. She is drawn to competence and people who do not require emotional intensity. Her deepest attachments are to her work and the web of trust she has built with regular business partners.\n\nCombat: Saska is not combat-trained and does not fight. She will retreat from conflict or submit to it rather than escalate. Her value is in knowledge and business acumen, not physical capacity.",
+      "abilities": [
+        "Master-Work",
+        "Marches-Reader",
+        "Read the Market",
+        "Settle the Bill",
+        "Trade-Tongue Negotiator",
+        "Read Intent"
+      ]
+    }
+  }
+}

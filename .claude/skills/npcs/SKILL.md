@@ -121,11 +121,17 @@ Cover all of:
 
 At least five appropriate abilities.
 
-Format: `"Ability Name: 3 sentence description of what it is and how it can be used."`
+**Format: name-only references to entries in `tabs/abilities.json`.** Each string must exactly match an existing ability's `name` field. The runtime resolves name → full description at play-time.
 
-Describe what the ability is, then list possibilities for how it can be used. Stay vague enough for creative interpretation but elaborate enough to inspire varied usage. Show flexibility — most abilities can be used offensively, defensively, or for utility depending on the situation.
+```json
+"abilities": ["Tracker's Patience", "Beast-Snare", "Plant Whisperer", "Hardened to It", "Pass Unseen"]
+```
 
-Match ability types to the role. Combat characters get combat abilities — slightly over-the-top, never timid or boring. If an ability can't be distinguished from a normal action, it has no reason to exist. Utility abilities (non-combat magic, healing, scouting, etc.) are fine. Don't bother with social or intellectual abilities. Never technological or scientific. Never silly.
+Run `node .claude/scripts/block-tool.js keys abilities abilities` to see the full catalogue. Match abilities to the NPC's role and combat capacity. Combat characters get combat abilities; civilians get utility abilities. Never silly, never technological or scientific.
+
+**Never write inline `"Name: description"` prose.** That fragments the catalogue and blocks reuse — the same convention as `traits.<trait>.abilities`, which has always been name-only references.
+
+If an NPC's identity calls for an ability the catalogue lacks, **add the new ability to `tabs/abilities.json` first** (full schema entry: name, description, requirements, bonus, cooldown), then reference it by name from the NPC.
 
 The combat philosophy and tactical signatures live in the **Combat block of hiddenInfo**, not in a fighting-style summary inside the abilities array.
 
@@ -163,11 +169,11 @@ interface NPC {
 
 ## Species Ability Inheritance
 
-When creating an NPC with a species `type`, the NPC should **inherit the 3 species skills** from the corresponding trait as abilities:
+When creating an NPC with a species `type`, the NPC should **inherit the species abilities** from the corresponding trait:
 
 1. Look up the species in `tabs/traits.json`
-2. Copy those skill names and descriptions into the NPC's `abilities` array
-3. Add additional unique abilities specific to that individual
+2. Copy the **names only** from the trait's `abilities` array into the NPC's `abilities` array
+3. Add additional ability references specific to that individual, chosen from `tabs/abilities.json`
 
 The combat philosophy goes in `hiddenInfo`'s Combat block, not in abilities.
 

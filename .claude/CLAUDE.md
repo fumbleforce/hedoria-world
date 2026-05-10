@@ -205,6 +205,14 @@ Agents running in the background cannot receive answers to their questions—suc
 
 This stage is set for **Hedoria** — a vast medieval-fantasy continent for the Voyage system. Mountains and river valleys, deserts and mystical forests, broad steppes and high cold places. Swords, sorcery, monsters, taverns. Magic exists but is rare, costly, and culturally fraught — see `tabs/world-background.json`.
 
+### Map Coordinates
+
+Locations carry `(x, y)` fields. **Y increases going NORTH** (math/cartographic convention, not screen). Higher Y = north, lower Y = south; higher X = east, lower X = west.
+
+When describing direction between two locations, compute Δx/Δy from canonical coords and convert with **Y+ = N**. Surface this rule explicitly to authoring agents (quests, npcs, locations, regions) — they default to screen coords and will silently invert otherwise.
+
+### Deeper Lore
+
 The deeper lore (history, races, geography, bestiary) lives in Google Drive — folder **Hedoria** (`1877tORqPaxTRAj9uGHgfj358FAVz_AUV`). Fetch a document on demand:
 
 ```
