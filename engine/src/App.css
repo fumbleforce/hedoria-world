@@ -1,0 +1,372 @@
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: #0b0f17;
+  color: #e5e7eb;
+  font-family: Inter, system-ui, sans-serif;
+  overflow: hidden;
+}
+
+.bootScreen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  font-size: 1.2rem;
+  color: #cbd5e1;
+}
+
+.gameRoot {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.sceneRoot {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.sceneRoot canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  outline: none;
+}
+
+.hud {
+  position: absolute;
+  z-index: 5;
+  pointer-events: auto;
+}
+
+.hud-top-left {
+  top: 16px;
+  left: 16px;
+  max-width: 360px;
+}
+
+.hud-top-right {
+  top: 16px;
+  right: 16px;
+  display: flex;
+  gap: 8px;
+}
+
+.hud-top-right button {
+  background: rgba(15, 23, 42, 0.85);
+  color: #f1f5f9;
+  border: 1px solid #334155;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  backdrop-filter: blur(6px);
+}
+
+.hud-top-right button:hover {
+  background: rgba(30, 41, 59, 0.95);
+  border-color: #64748b;
+}
+
+.hud-bottom-center {
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.hint {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid #334155;
+  color: #cbd5e1;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  backdrop-filter: blur(4px);
+}
+
+.locationCard {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid #334155;
+  border-radius: 10px;
+  padding: 14px 16px;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.locationCard__region {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
+}
+
+.locationCard__name {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #f8fafc;
+  margin-top: 2px;
+}
+
+.locationCard__area {
+  font-size: 0.85rem;
+  color: #fde68a;
+  margin-top: 4px;
+}
+
+.locationCard__desc {
+  font-size: 0.8rem;
+  color: #cbd5e1;
+  margin-top: 6px;
+  line-height: 1.4;
+  max-height: 80px;
+  overflow: hidden;
+}
+
+.areaLabel {
+  background: rgba(15, 23, 42, 0.85);
+  color: #e5e7eb;
+  border: 1px solid #475569;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+}
+
+.areaLabel.current {
+  background: rgba(202, 138, 4, 0.92);
+  border-color: #fde047;
+  color: #1c1917;
+  font-weight: 600;
+}
+
+.floatingLabel {
+  background: rgba(15, 23, 42, 0.92);
+  color: #f1f5f9;
+  border: 1px solid #475569;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+}
+
+.overlay {
+  position: absolute;
+  z-index: 10;
+  pointer-events: auto;
+}
+
+.overlay-bottom {
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  width: min(720px, 92vw);
+  background: rgba(15, 23, 42, 0.94);
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+}
+
+.overlay-bottom .panel {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.overlay-bottom .panel h2 {
+  font-size: 1rem;
+  margin: 0 0 10px;
+  color: #f1f5f9;
+}
+
+.dialogueActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  justify-content: flex-end;
+}
+
+.dialogueActions button {
+  background: #1f2937;
+  border: 1px solid #475569;
+  color: #f1f5f9;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.dialogueActions button:hover {
+  background: #334155;
+}
+
+.dialogueLog {
+  max-height: 180px;
+  overflow: auto;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.dialogueLog p {
+  margin: 4px 0;
+}
+
+.dialogueForm {
+  display: flex;
+  gap: 8px;
+}
+
+.dialogueForm input {
+  flex: 1;
+  background: #0f172a;
+  border: 1px solid #334155;
+  color: #e5e7eb;
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+.dialogueForm button {
+  background: #2563eb;
+  color: white;
+  border: 1px solid #1d4ed8;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.combatActors {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.combatActor {
+  border: 1px solid #475569;
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.combatActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.combatActions button {
+  background: #be123c;
+  color: #fff;
+  border: 1px solid #9f1239;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.combatLog {
+  margin-top: 10px;
+  max-height: 110px;
+  overflow: auto;
+  font-size: 0.85rem;
+  color: #cbd5e1;
+}
+
+.combatLog p {
+  margin: 2px 0;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  backdrop-filter: blur(4px);
+}
+
+.modal__inner {
+  background: #111827;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 20px;
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow: auto;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  min-width: 480px;
+}
+
+.modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.modal__header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.modal__header button {
+  background: #1f2937;
+  border: 1px solid #475569;
+  color: #f1f5f9;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.mapGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 8px;
+  max-height: 60vh;
+  overflow: auto;
+}
+
+.mapNode {
+  border: 1px solid #475569;
+  background: #1f2937;
+  color: #e5e7eb;
+  padding: 10px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.85rem;
+}
+
+.mapNode:hover {
+  background: #334155;
+  border-color: #64748b;
+}
+
+.mapNode.selected {
+  background: #2563eb;
+  color: #eff6ff;
+  border-color: #1d4ed8;
+}
+
+.exportPreview {
+  max-height: 60vh;
+  overflow: auto;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 0.8rem;
+}

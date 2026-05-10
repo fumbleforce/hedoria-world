@@ -1,0 +1,190 @@
+{
+  "configVersion": "1.0.0",
+  "abilities": {
+    "Quick Jab": {
+      "name": "Quick Jab",
+      "description": "A fast strike.",
+      "requirements": [],
+      "bonus": 2,
+      "cooldown": 1
+    }
+  },
+  "factions": {
+    "Town Watch": {
+      "name": "Town Watch",
+      "basicInfo": "Keeps order in the village."
+    }
+  },
+  "items": {
+    "Rusty Sword": {
+      "name": "Rusty Sword",
+      "category": "Weapon",
+      "slot": "mainHand",
+      "description": "A battered blade.",
+      "bonuses": []
+    }
+  },
+  "locations": {
+    "Tinford": {
+      "name": "Tinford",
+      "basicInfo": "A small trade village.",
+      "x": 0,
+      "y": 0,
+      "radius": 2,
+      "region": "Tin Valley",
+      "complexityType": "basic",
+      "detailType": "basic",
+      "known": true,
+      "areas": {
+        "Square": {
+          "description": "The village square.",
+          "paths": ["Cellar Entrance"]
+        },
+        "Cellar Entrance": {
+          "description": "A ladder into the old cellar.",
+          "paths": ["Square", "Cellar Hall"]
+        },
+        "Cellar Hall": {
+          "description": "A damp hall with rats.",
+          "paths": ["Cellar Entrance"]
+        }
+      }
+    }
+  },
+  "npcTypes": {
+    "rat": {
+      "name": "rat",
+      "description": "A small aggressive rat.",
+      "vulnerabilities": ["bludgeoning"],
+      "resistances": [],
+      "immunities": []
+    }
+  },
+  "npcs": {
+    "Ari Keld": {
+      "name": "Ari Keld",
+      "type": "",
+      "currentLocation": "Tinford",
+      "currentArea": "Square",
+      "tier": "trivial",
+      "level": 1,
+      "hpMax": 80,
+      "faction": "Town Watch",
+      "abilities": ["Quick Jab"],
+      "known": true
+    },
+    "Cellar Rat": {
+      "name": "Cellar Rat",
+      "type": "rat",
+      "currentLocation": "Tinford",
+      "currentArea": "Cellar Hall",
+      "tier": "trivial",
+      "level": 1,
+      "hpMax": 40,
+      "abilities": [],
+      "known": true
+    },
+    "Mina Dore": {
+      "name": "Mina Dore",
+      "type": "",
+      "currentLocation": "Tinford",
+      "currentArea": "Square",
+      "tier": "trivial",
+      "level": 1,
+      "hpMax": 80,
+      "abilities": [],
+      "known": true
+    }
+  },
+  "quests": {
+    "clear-cellar": {
+      "name": "clear-cellar",
+      "questSource": "Ari Keld",
+      "questStatement": "Ari asks you to clear the rats from the old cellar.",
+      "mainObjective": "Defeat the cellar rat",
+      "completionCondition": "The cellar rat is defeated and Ari is informed.",
+      "questDesignBrief": "A tiny starter quest.",
+      "detailType": "basic",
+      "questLocation": "Tinford",
+      "questGiverNPC": "Ari Keld"
+    }
+  },
+  "realms": {
+    "Tin Realm": {
+      "name": "Tin Realm",
+      "basicInfo": "A tiny realm for tests."
+    }
+  },
+  "regions": {
+    "Tin Valley": {
+      "name": "Tin Valley",
+      "basicInfo": "A valley with one village.",
+      "x": 0,
+      "y": 0,
+      "realm": "Tin Realm",
+      "factions": ["Town Watch"],
+      "known": true
+    }
+  },
+  "skills": {
+    "athletics": {
+      "name": "athletics",
+      "type": "utility",
+      "attribute": "strength",
+      "description": "General physical exertion."
+    }
+  },
+  "traits": {},
+  "encounterElements": {
+    "Inhabited Places": "- village squares\n- roads\n- inns"
+  },
+  "storyStarts": {},
+  "nameFilterSettings": {
+    "Kaelen": {
+      "replacements": ["Halden", "Ruven"]
+    }
+  },
+  "combatSettings": {
+    "damageTypes": ["bludgeoning", "slashing"],
+    "tickModel": "turn-based",
+    "tierDefaults": {
+      "trivial": {
+        "attributes": {
+          "strength": 8,
+          "dexterity": 8,
+          "constitution": 8,
+          "intelligence": 8,
+          "wisdom": 8,
+          "charisma": 8
+        },
+        "skillRank": 1,
+        "ac": 10,
+        "attacksPerTurn": 1,
+        "damageDie": "1d4+0"
+      }
+    }
+  },
+  "resourceSettings": {
+    "health": {
+      "name": "health",
+      "initialValue": 80,
+      "maxValue": 80
+    }
+  },
+  "attributeSettings": {
+    "attributeNames": ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"]
+  },
+  "aiInstructions": {
+    "generateDMResponse": {
+      "extra_dm_prompt_info": ""
+    },
+    "generateInitialStart": {
+      "custom": "Start in Tinford."
+    }
+  },
+  "worldLore": {},
+  "death": {
+    "permadeath": false,
+    "instructions": "You are defeated, then recover in the village."
+  }
+}

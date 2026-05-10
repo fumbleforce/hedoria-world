@@ -1,0 +1,97 @@
+{
+  "combatSettings": {
+    "minCombatXP": 1,
+    "baseCombatXP": 100,
+    "abilityCooldown": 20,
+    "abilityBonus": 10,
+    "npcDailyHealingAmount": 999,
+    "damageTypes": [
+      "piercing",
+      "slashing",
+      "bludgeoning",
+      "poisoning",
+      "fire",
+      "lightning",
+      "wind",
+      "water",
+      "arcane",
+      "light",
+      "dark",
+      "psychic"
+    ]
+  },
+  "resourceSettings": {
+    "health": {
+      "name": "health",
+      "initialValue": 80,
+      "maxValue": 80,
+      "rechargeRate": 1,
+      "restRechargeMultiplier": 1,
+      "color": "#ef4444",
+      "gainPerLevel": 10,
+      "isHealth": true,
+      "usageInstructions": "### Health Changes\n- Small injuries: -1 to 15% player health\n- Medium injuries: -5 to 25% player health\n- Massive injuries: -15 to 50% of player health\n- Normal Healing potions +30 - +40\n- Bandages + 20\n- Waking from unconsciousness: return to between half health and full health, depending on how well your recovery was.\n- Being revived from death: return to full health.\n### Don't Deduct Health When\n- The story mentions treated or untreated wounds\n- Story mentions pain from a wound\n- When unconscious or carried\n- An environment is generally dangerous, but does not explicitly damage the character\n- A character is only looking around. Look around is a safe action."
+    },
+    "stamina": {
+      "name": "stamina",
+      "initialValue": 30,
+      "maxValue": 30,
+      "rechargeRate": 2,
+      "restRechargeMultiplier": 1,
+      "color": "#52DB48",
+      "isHealth": false,
+      "gainPerLevel": 5,
+      "usageInstructions": "### Stamina\n\nThe physical resource for nearly every character in Hedoria. Drained by combat, athletics, hard travel, and any sustained physical effort. Recharges per turn and replenishes on rest.\n\n- Walking, talking, casual movement: 0\n- Single combat strike, leap, sprint: -3 to -5\n- Sustained engagement, long climb, hard ride: -5 to -10\n- Pushing past collapse: -10+\n\nFighters, mercenaries, hunters, scouts, and the great mass of non-casters spend stamina on the things mana-users would spend mana on. A wizard or witch also spends stamina for physical actions; mana is for the working itself."
+    },
+    "mana": {
+      "name": "mana",
+      "initialValue": 50,
+      "maxValue": 100,
+      "rechargeRate": 5,
+      "restRechargeMultiplier": 2,
+      "color": "#3b82f6",
+      "isHealth": false,
+      "gainPerLevel": 5,
+      "usageInstructions": "### Mana (the wizard's reservoir)\n\nThe small magical reservoir produced by a wizard's body. Generated only by male humans with the spark — Brothers of Telinor, hedge-wizards, and the Avenorian consort line. Other characters do not generate mana and should not have this resource.\n\nMana recovers from rest overnight. The pool is small.\n\n### Costs\n\n- Trivial wizardry (a small ward, a brief stiffening): 0 to -2\n- Standard wizardry through the staff (a strike behind plate, a brace against a charge): -5 to -10\n- Major wizardry through the staff (Hardened Strike, Wind-Slow across a battlefield, Standing Wall against a sustained press): -15 to -25\n- Without a staff in hand: utility costs roughly the same; combat-staff abilities are unavailable until the wizard replaces it."
+    },
+    "reservoir": {
+      "name": "reservoir",
+      "initialValue": 0,
+      "maxValue": 0,
+      "rechargeRate": 0,
+      "restRechargeMultiplier": 0,
+      "color": "#ec4899",
+      "isHealth": false,
+      "gainPerLevel": 30,
+      "usageInstructions": "### Reservoir (the witch's stored mana)\n\nThe witch's stored magical pool. Does not regenerate from rest; a depleted witch must fill before working again. The cap is 10,000 — far beyond what any single witch reaches in ordinary play, but the ceiling is there because it has been touched.\n\nAvailable to any character trained in witchcraft. Most others cannot draw on a witch-sized reservoir at all.\n\n### Filling\n\nThe reservoir is filled either by drinking alchemical preparations distilled from real essence-sources, or directly from a willing male partner through ingestion of his essence or being ejaculated into. Specific filling paths, cultural framings, and their consequences live in the witchcraft skill and the relevant abilities — not here. Material alone (feathers, antlers, plant reagents) does not fill; only essence fills.\n\n### Costs\n\n- Trivial workings (witchlight, hedge-craft, small heat or cold, easing a fever): 0 to -5\n- Moderate workings (combat projection, scry, telekinesis, conjured flame, glamour over self): -10 to -25\n- Major workings (battlefield-scale fire or cold, glamour over a crowd, breaking a curse, mending a critical wound): -40 to -100\n- Reservoir Spend (the boss-fight finisher): -100 to -300, often emptying the tank for a single act the world remembers\n\n### Spent\n\nA witch with low reservoir can do trivial workings only. All other workings: Very Hard minimum. A witch with an empty reservoir is a woman in unusual clothes hoping nobody notices. Witches in places where the practice is illegal live with this state as a constant condition."
+    },
+    "willpower": {
+      "name": "willpower",
+      "initialValue": 100,
+      "maxValue": 100,
+      "rechargeRate": 0,
+      "restRechargeMultiplier": 1,
+      "color": "#a855f7",
+      "isHealth": false,
+      "gainPerLevel": 3,
+      "usageInstructions": "### Willpower\n\nThe reserve a character holds against pressure that targets the mind and the body's reflexes rather than the body itself. Stands between intent and the act when something or someone tries to move you against your judgment — fear, charm, temptation, command, trained social or sexual pressure. Drained by all such attempts. Does not regenerate in combat. Recovers fully on rest, provided the character can actually rest.\n\n### Damage sources\n\n- Fear and threat (intimidation, oppressive places, a serious enemy's presence): -3 to -10\n- Crude social or sexual pressure (taunts, low-tier seduction, public groping): -2 to -6\n- Temptation (an offer that hits a craving): -3 to -10 per offer resisted; failure to resist drains the same amount and the character takes the bait\n- Trained social or sexual pressure (polished interrogation, expert seduction, persuasion against your interests): -8 to -20\n- Mind-craft and command-magic (compulsions, binding-work, master mind-workers): -15 to -40\n- Will-shattering finishers (rare master-tier moves that exist to break someone): -25 to -60, more against an already-weakened target\n\n### Direction of damage\n\nWillpower damage falls on the **target** of pressure, not the source. A character who uses Carnal Arts, intimidation, charm, persuasion, or other Willpower-targeting moves shakes their target's Willpower — their own is not touched by the act of using the ability. The defender takes the damage; the attacker does not.\n\nThe narrator must identify who is acting and who is being acted upon each time these moves come into play. A courtesan working a room, brushing a cheek, or kissing a patron is using Carnal Arts on the patron — the patron's Willpower drains, not the courtesan's. The attacker only loses Willpower if the target counters back, or if a separate source (fear, temptation, etc.) acts on them.\n\n### Standing debuffs\n\n- Active addiction lowers maximum Willpower while the craving is unsated; deeper addictions impose larger caps\n- Recent humiliation, public shame, or torture may impose a temporary cap reduction at narrator discretion until the character recovers a measure of self\n- Some places drain Willpower over time as ambient pressure — see the location's own description\n\n### Empty\n\nA character at zero Willpower yields to whatever pressure brought them there. The narrator chooses the resolution that fits the source and the breaker's intent. This is not death and rarely permanent; the broken character recovers Willpower with rest, but the choices made at zero are remembered and acted upon.\n\n### Recovery and modifiers\n\n- Rest restores fully where rest is possible\n- Specific abilities, items, and shrines may aid recovery — see their descriptions for effect\n- An exhausted, bleeding, intoxicated, or shamed character defends worse against everything\n\n### Coverage\n\nMost flesh-bearing humanoids and most beasts carry Willpower. Mindless undead and constructs are immune. Species exceptions and creature inversions live in the species traits and bestiary entries; the resource itself is universal."
+    }
+  },
+  "attributeSettings": {
+    "attributeNames": [
+      "strength",
+      "dexterity",
+      "constitution",
+      "intelligence",
+      "wisdom",
+      "charisma"
+    ],
+    "lowAttributeTraits": {},
+    "maxStartingAttribute": 16,
+    "lowAttributeThreshold": 2,
+    "attributeBonusModifier": 2.5,
+    "attributeStatModifiers": {},
+    "startingAttributeValue": 8,
+    "startingAttributePoints": 16
+  }
+}

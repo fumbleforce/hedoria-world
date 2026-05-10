@@ -1,0 +1,20 @@
+{
+  "mode": "soft",
+  "warnings": [],
+  "errors": [],
+  "enumValues": {
+    "locations.detailType": [
+      "basic",
+      "detailed"
+    ],
+    "locations.complexityType": [
+      "complex"
+    ],
+    "npcs.tier": [
+      "boss",
+      "elite",
+      "strong",
+      "trivial"
+    ]
+  }
+}

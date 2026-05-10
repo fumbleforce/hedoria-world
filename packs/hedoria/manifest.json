@@ -1,0 +1,8 @@
+{
+  "packId": "hedoria",
+  "packName": "Hedoria",
+  "schemaVersion": "1.0.0",
+  "engineCompatibility": "^0.1.0",
+  "seed": "hedoria-default",
+  "sourceConfig": "../../config.json"
+}

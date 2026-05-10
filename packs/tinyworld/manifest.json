@@ -1,0 +1,8 @@
+{
+  "packId": "tinyworld",
+  "packName": "Tinyworld",
+  "schemaVersion": "1.0.0",
+  "engineCompatibility": "^0.1.0",
+  "seed": "tinyworld-default",
+  "sourceConfig": "./world.json"
+}

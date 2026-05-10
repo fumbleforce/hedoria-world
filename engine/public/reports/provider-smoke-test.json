@@ -1,0 +1,20 @@
+{
+  "promptLength": 796,
+  "checks": [
+    {
+      "provider": "gemini-2.5-flash",
+      "env": "GEMINI_API_KEY",
+      "ready": false
+    },
+    {
+      "provider": "claude-haiku-4.5",
+      "env": "ANTHROPIC_API_KEY",
+      "ready": false
+    },
+    {
+      "provider": "llama-3.1-70b (ollama)",
+      "env": "OLLAMA_BASE_URL",
+      "ready": false
+    }
+  ]
+}
