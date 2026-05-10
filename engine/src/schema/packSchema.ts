@@ -180,3 +180,4 @@ export type PackData = z.infer<typeof PackSchema>;
 export type PackNpc = z.infer<typeof NpcSchema>;
 export type PackNpcType = z.infer<typeof NpcTypeSchema>;
 export type PackLocation = z.infer<typeof LocationSchema>;
+export type PackRegion = z.infer<typeof RegionSchema>;

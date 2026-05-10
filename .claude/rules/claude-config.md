@@ -33,4 +33,4 @@ Rules for the orchestrator when editing project configuration files.
 ## Never Add Examples
 
 - **No examples in skills, agents, or references.** Examples introduce bias that kills creativity. Use formats with `[placeholders]` and descriptive rules instead.
-- **No world-specific content in general skills.** Keep guidelines, formats, and field descriptions generic. Exception: skills that are inherently world-bound (canon-npcs, image-gen, review-npcs, npc-type-review, species-rules) may contain world-specific content.
+- **No world-specific content in general skills.** Keep guidelines, formats, and field descriptions generic. Exception: skills that are inherently world-bound (canon-npcs, review-npcs, npc-type-review, species-rules) may contain world-specific content.

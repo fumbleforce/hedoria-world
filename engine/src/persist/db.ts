@@ -36,12 +36,34 @@ export type MetaRow = {
   value: unknown;
 };
 
+export type SceneSpecRow = {
+  saveId: string;
+  scope: "region" | "location" | "area";
+  ids: string;
+  spec: unknown;
+  source: "bundle" | "llm" | "procedural" | "author";
+  generatedAt: number;
+};
+
+export type TextureRow = {
+  saveId: string;
+  key: string;
+  bytes: Uint8Array;
+  mime: string;
+  width: number;
+  height: number;
+  source: "bundle" | "llm" | "procedural";
+  generatedAt: number;
+};
+
 export class VoyageDb extends Dexie {
   meta!: Table<MetaRow, string>;
   saves!: Table<SaveRow, string>;
   expansionEntities!: Table<ExpansionEntityRow, [string, string, string]>;
   transcript!: Table<TranscriptRow, [string, string]>;
   quarantine!: Table<QuarantineRow, [string, string]>;
+  sceneSpecs!: Table<SceneSpecRow, [string, string, string]>;
+  textures!: Table<TextureRow, [string, string]>;
 
   constructor() {
     super("voyage3d");
@@ -51,6 +73,23 @@ export class VoyageDb extends Dexie {
       expansionEntities: "[saveId+entityType+entityId], [saveId+entityType]",
       transcript: "[saveId+callId], [saveId+promptHash]",
       quarantine: "[saveId+quarantineId], [saveId+entityType]",
+    });
+    this.version(2).stores({
+      meta: "key",
+      saves: "saveId, packId, updatedAt",
+      expansionEntities: "[saveId+entityType+entityId], [saveId+entityType]",
+      transcript: "[saveId+callId], [saveId+promptHash]",
+      quarantine: "[saveId+quarantineId], [saveId+entityType]",
+      sceneSpecs: "[saveId+scope+ids], [saveId+scope]",
+    });
+    this.version(3).stores({
+      meta: "key",
+      saves: "saveId, packId, updatedAt",
+      expansionEntities: "[saveId+entityType+entityId], [saveId+entityType]",
+      transcript: "[saveId+callId], [saveId+promptHash]",
+      quarantine: "[saveId+quarantineId], [saveId+entityType]",
+      sceneSpecs: "[saveId+scope+ids], [saveId+scope]",
+      textures: "[saveId+key]",
     });
   }
 }

@@ -1,6 +1,12 @@
 import { z } from "zod";
 import { findTranscriptByPromptHash, putTranscript } from "../persist/saveLoad";
-import type { LlmProvider, LlmRequest, LlmResponse } from "./types";
+import type {
+  LlmCallKind,
+  LlmCallOptions,
+  LlmProvider,
+  LlmRequest,
+  LlmResponse,
+} from "./types";
 
 const ToolCallSchema = z.object({
   name: z.string(),
@@ -21,6 +27,29 @@ function hashPrompt(input: string): string {
   return `h${Math.abs(hash)}`;
 }
 
+/**
+ * Fire-and-forget POST to the dev-server `/__llm-log` middleware. Appends one
+ * JSON line per LLM call to `engine/logs/llm-prompts.jsonl`. Silently no-ops
+ * in production builds (the endpoint 404s and we swallow the error).
+ */
+function logLlmCall(payload: {
+  kind: LlmCallKind;
+  model: string;
+  promptHash: string;
+  cached: boolean;
+  request: LlmRequest;
+  response: LlmResponse;
+  durationMs: number;
+}): void {
+  void fetch("/__llm-log", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ts: new Date().toISOString(), ...payload }),
+  }).catch(() => {
+    // Dev-only sink; production builds have no middleware. Swallow.
+  });
+}
+
 export class LlmAdapter {
   private readonly provider: LlmProvider;
   private readonly saveId: string;
@@ -30,13 +59,28 @@ export class LlmAdapter {
     this.saveId = saveId;
   }
 
-  async complete(request: LlmRequest): Promise<LlmResponse> {
+  async complete(
+    request: LlmRequest,
+    options?: LlmCallOptions,
+  ): Promise<LlmResponse> {
+    const kind: LlmCallKind = options?.kind ?? "other";
     const promptBlob = JSON.stringify(request);
     const promptHash = hashPrompt(promptBlob);
+    const startedAt = performance.now();
+
     const cached = await findTranscriptByPromptHash(this.saveId, promptHash);
     if (cached) {
       const parsed = LlmResponseSchema.safeParse(JSON.parse(cached.response) as unknown);
       if (parsed.success) {
+        logLlmCall({
+          kind,
+          model: cached.model,
+          promptHash,
+          cached: true,
+          request,
+          response: parsed.data,
+          durationMs: performance.now() - startedAt,
+        });
         return parsed.data;
       }
     }
@@ -51,6 +95,15 @@ export class LlmAdapter {
       prompt: promptBlob,
       response: JSON.stringify(parsed),
       generatedAt: Date.now(),
+    });
+    logLlmCall({
+      kind,
+      model: this.provider.id,
+      promptHash,
+      cached: false,
+      request,
+      response: parsed,
+      durationMs: performance.now() - startedAt,
     });
     return parsed;
   }

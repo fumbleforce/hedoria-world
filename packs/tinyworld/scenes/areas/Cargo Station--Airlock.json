@@ -1,0 +1,60 @@
+{
+  "scope": "area",
+  "archetype": "interior-room",
+  "surface": {
+    "material": "metal",
+    "condition": "worn",
+    "palette": ["#3a3e48", "#22252c", "#5a6070"]
+  },
+  "sky": {
+    "kind": "indoor-vault",
+    "palette": ["#101218", "#161821", "#1d2030"],
+    "brightness": 0.12
+  },
+  "weather": {
+    "kind": "none",
+    "intensity": 0
+  },
+  "density": "sparse",
+  "scale": 8,
+  "lighting": {
+    "primary": "neon",
+    "intensity": 0.65
+  },
+  "features": [
+    {
+      "template": "energy-conduit",
+      "x": -0.7,
+      "z": 0.0,
+      "scale": 0.7
+    },
+    {
+      "template": "energy-conduit",
+      "x": 0.7,
+      "z": 0.0,
+      "scale": 0.7
+    },
+    {
+      "template": "machine",
+      "x": 0.0,
+      "z": 0.5,
+      "scale": 0.7,
+      "label": "Console"
+    },
+    {
+      "template": "door-portal",
+      "x": 0.0,
+      "z": -0.8,
+      "label": "Out to Pad"
+    }
+  ],
+  "exits": [
+    {
+      "toAreaId": "Pad",
+      "x": 0.0,
+      "z": -0.8,
+      "kind": "portal"
+    }
+  ],
+  "ambientAudio": "machine-hum"
+}

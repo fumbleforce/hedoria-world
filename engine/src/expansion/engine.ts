@@ -36,11 +36,14 @@ export async function runExpansion(
   saveId: string,
   pack: PackData,
 ): Promise<ExpansionEntityRow | null> {
-  const response = await adapter.complete({
-    system: "Return strict JSON with entityType, entityId, and data. Keep references in-pack.",
-    messages: [{ role: "user", content: promptForTrigger(trigger) }],
-    jsonMode: true,
-  });
+  const response = await adapter.complete(
+    {
+      system: "Return strict JSON with entityType, entityId, and data. Keep references in-pack.",
+      messages: [{ role: "user", content: promptForTrigger(trigger) }],
+      jsonMode: true,
+    },
+    { kind: "expansion" },
+  );
 
   let parsed: z.infer<typeof ExpansionOutputSchema>;
   try {

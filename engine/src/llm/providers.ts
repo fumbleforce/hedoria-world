@@ -7,6 +7,47 @@ type HttpProviderConfig = {
   model: string;
 };
 
+/**
+ * Quota / 429 cooldown. When Gemini returns 429 we record a "do not call
+ * again before X" timestamp on the provider instance. Subsequent calls inside
+ * the window throw a typed RateLimitedError immediately, without hitting the
+ * network. This stops a single bad page-load from firing dozens of redundant
+ * requests against an already-exhausted quota.
+ *
+ * Tries to honour Google's `retryDelay` field from the error body. Falls back
+ * to `DEFAULT_COOLDOWN_MS` if missing or unparseable. Caps at `MAX_COOLDOWN_MS`
+ * because Google sometimes returns "wait 24h" for daily-quota exhaustion and
+ * we'd rather retry sooner if the user manually triggers it.
+ */
+const DEFAULT_COOLDOWN_MS = 60_000;
+const MAX_COOLDOWN_MS = 5 * 60_000;
+
+export class RateLimitedError extends Error {
+  readonly retryAfterMs: number;
+  constructor(message: string, retryAfterMs: number) {
+    super(message);
+    this.name = "RateLimitedError";
+    this.retryAfterMs = retryAfterMs;
+  }
+}
+
+/**
+ * Parse `retryDelay: "30s"` (or `"500ms"`) out of a Gemini 429 body. Returns
+ * the delay in ms, or null if no parseable retry hint is present.
+ */
+function parseRetryDelay(errorBody: string): number | null {
+  const match = /retryDelay"?\s*:\s*"(\d+(?:\.\d+)?)(ms|s)?"/u.exec(errorBody);
+  if (!match) return null;
+  const n = Number(match[1]);
+  if (!Number.isFinite(n)) return null;
+  return match[2] === "ms" ? n : n * 1000;
+}
+
+/**
+ * Generic Bearer-auth HTTP JSON provider. Used by Anthropic / OpenAI when
+ * routed through a server-side proxy (the browser cannot call those APIs
+ * directly because of CORS).
+ */
 class HttpJsonProvider implements LlmProvider {
   readonly id: string;
   private readonly endpoint: string;
@@ -44,13 +85,112 @@ class HttpJsonProvider implements LlmProvider {
   }
 }
 
-export function createGeminiProvider(apiKey: string): LlmProvider {
-  return new HttpJsonProvider({
-    id: "gemini-flash",
-    endpoint: "/api/llm/gemini",
-    apiKey,
-    model: "gemini-2.5-flash",
-  });
+/**
+ * Direct-to-Google Gemini text provider. Calls the public Generative Language
+ * REST API from the browser using an API key embedded in the URL.
+ *
+ * The API supports CORS, so this works without a server proxy. The trade-off
+ * is that the key ships in the browser bundle — fine for personal/dev use,
+ * NOT safe for a public deployment. For production, route through a proxy
+ * and use {@link HttpJsonProvider} instead.
+ */
+class GeminiTextProvider implements LlmProvider {
+  readonly id: string;
+  private readonly apiKey: string;
+  private readonly model: string;
+  private cooldownUntil = 0;
+
+  constructor(apiKey: string, model: string) {
+    this.id = model;
+    this.apiKey = apiKey;
+    this.model = model;
+  }
+
+  async complete(request: LlmRequest): Promise<LlmResponse> {
+    const now = Date.now();
+    if (this.cooldownUntil > now) {
+      throw new RateLimitedError(
+        `Gemini text API in cooldown after a previous 429 (${this.model}); skipping for ${Math.ceil(
+          (this.cooldownUntil - now) / 1000,
+        )}s`,
+        this.cooldownUntil - now,
+      );
+    }
+
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
+      this.model,
+    )}:generateContent?key=${encodeURIComponent(this.apiKey)}`;
+
+    const contents = request.messages.map((m) => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: [{ text: m.content }],
+    }));
+
+    const body: Record<string, unknown> = { contents };
+    if (request.system) {
+      body.systemInstruction = { parts: [{ text: request.system }] };
+    }
+    if (request.jsonMode) {
+      body.generationConfig = { responseMimeType: "application/json" };
+    }
+
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+      const text = await response.text().catch(() => "");
+      if (response.status === 429) {
+        const hinted = parseRetryDelay(text);
+        const cooldown = Math.min(
+          MAX_COOLDOWN_MS,
+          Math.max(DEFAULT_COOLDOWN_MS, hinted ?? DEFAULT_COOLDOWN_MS),
+        );
+        this.cooldownUntil = Date.now() + cooldown;
+        // One concise warning instead of dumping the full body — the adapter
+        // catches the throw and the cache falls back to the procedural spec.
+        console.warn(
+          `[gemini] 429 quota exhausted on ${this.model}; cooling down for ${Math.round(
+            cooldown / 1000,
+          )}s. Free-tier daily quota resets ~midnight Pacific. Override the model via VITE_GEMINI_TEXT_MODEL in engine/.env.`,
+        );
+        throw new RateLimitedError(
+          `Gemini text API 429 on ${this.model}: quota exhausted`,
+          cooldown,
+        );
+      }
+      throw new Error(
+        `Gemini text API ${response.status}: ${text.slice(0, 300)}`,
+      );
+    }
+    const json = (await response.json()) as {
+      candidates?: Array<{
+        content?: { parts?: Array<{ text?: string }> };
+      }>;
+    };
+    const text =
+      json.candidates?.[0]?.content?.parts
+        ?.map((p) => p.text ?? "")
+        .filter((s) => s.length > 0)
+        .join("") ?? "";
+    return { text };
+  }
+}
+
+// Default text model: gemini-2.5-flash — chosen for free-tier reliability.
+// As of 2026-05, gemini-2.5-flash has the most generous free-tier quota among
+// the production-stable text models (~500 requests/day, vs ~250/day for
+// gemini-3-flash-preview and even tighter caps on gemini-3.1-pro-preview).
+// Scene classification and NPC dialogue do not need frontier reasoning, so
+// the stable model is the right default. Override via VITE_GEMINI_TEXT_MODEL
+// in engine/.env to opt into newer/larger models (gemini-3-flash-preview,
+// gemini-3.1-flash, gemini-3.1-pro-preview, gemini-2.5-pro).
+export function createGeminiProvider(
+  apiKey: string,
+  model: string = "gemini-2.5-flash-lite",
+): LlmProvider {
+  return new GeminiTextProvider(apiKey, model);
 }
 
 export function createAnthropicProvider(apiKey: string): LlmProvider {

@@ -1,0 +1,16 @@
+{
+  "scope": "area",
+  "archetype": "open-built",
+  "density": "moderate",
+  "scale": 12,
+  "features": [
+    {
+      "template": "machine",
+      "x": -0.5,
+      "z": 0.4,
+      "scale": 0.85
+    }
+  ],
+  "exits": [],
+  "ambientAudio": "machine-hum"
+}

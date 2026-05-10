@@ -1,0 +1,17 @@
+{
+  "scope": "area",
+  "archetype": "open-built",
+  "density": "moderate",
+  "scale": 12,
+  "features": [
+    {
+      "template": "statue",
+      "x": -0.4,
+      "z": 0.4,
+      "scale": 0.8,
+      "label": "Founder's Stone"
+    }
+  ],
+  "exits": [],
+  "ambientAudio": "city-bustle"
+}

@@ -10,9 +10,10 @@ type Props = {
   npc?: PackNpc;
   messages: DialogueMessage[];
   onSend: (text: string) => void;
+  disabled?: boolean;
 };
 
-export function DialoguePanel({ npc, messages, onSend }: Props) {
+export function DialoguePanel({ npc, messages, onSend, disabled = false }: Props) {
   const [input, setInput] = useState("");
   return (
     <section className="panel">
@@ -27,14 +28,20 @@ export function DialoguePanel({ npc, messages, onSend }: Props) {
       <form
         onSubmit={(event) => {
           event.preventDefault();
+          if (disabled) return;
           if (!input.trim()) return;
           onSend(input.trim());
           setInput("");
         }}
         className="dialogueForm"
       >
-        <input value={input} onChange={(event) => setInput(event.target.value)} placeholder="Say something..." />
-        <button type="submit">Send</button>
+        <input
+          value={input}
+          onChange={(event) => setInput(event.target.value)}
+          placeholder={disabled ? "Waiting for reply…" : "Say something..."}
+          disabled={disabled}
+        />
+        <button type="submit" disabled={disabled}>Send</button>
       </form>
     </section>
   );

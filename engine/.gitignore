@@ -12,6 +12,14 @@ dist
 dist-ssr
 *.local
 
+# Local environment files (never commit secrets like GEMINI keys)
+.env
+.env.*
+!.env.example
+
+# LLM transcript log (appended by the dev-server `/__llm-log` middleware)
+logs/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

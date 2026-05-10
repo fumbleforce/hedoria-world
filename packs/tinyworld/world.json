@@ -27,26 +27,43 @@
   "locations": {
     "Tinford": {
       "name": "Tinford",
-      "basicInfo": "A small trade village.",
+      "basicInfo": "A small trade village clustered around a stone fountain and a market.",
       "x": 0,
       "y": 0,
-      "radius": 2,
+      "radius": 1,
       "region": "Tin Valley",
       "complexityType": "basic",
       "detailType": "basic",
       "known": true,
       "areas": {
         "Square": {
-          "description": "The village square.",
-          "paths": ["Cellar Entrance"]
-        },
-        "Cellar Entrance": {
-          "description": "A ladder into the old cellar.",
-          "paths": ["Square", "Cellar Hall"]
+          "description": "The village square. A stone fountain in the centre, a market stall to the side, a few houses around the edge.",
+          "paths": ["Cellar Hall"]
         },
         "Cellar Hall": {
-          "description": "A damp hall with rats.",
-          "paths": ["Cellar Entrance"]
+          "description": "A damp stone hall lit by a single torch. Rats nest in the corners.",
+          "paths": ["Square"]
+        }
+      }
+    },
+    "Cargo Station": {
+      "name": "Cargo Station",
+      "basicInfo": "A scarred metal docking platform anchored to a dead asteroid.",
+      "x": 0,
+      "y": 0,
+      "radius": 1,
+      "region": "Asteroid Belt",
+      "complexityType": "basic",
+      "detailType": "basic",
+      "known": true,
+      "areas": {
+        "Pad": {
+          "description": "An open landing pad with crates, conduit lines and a small machine.",
+          "paths": ["Airlock"]
+        },
+        "Airlock": {
+          "description": "A small pressurised chamber with an inner hatch.",
+          "paths": ["Pad"]
         }
       }
     }
@@ -118,11 +135,20 @@
   "regions": {
     "Tin Valley": {
       "name": "Tin Valley",
-      "basicInfo": "A valley with one village.",
+      "basicInfo": "A valley of green earth and scattered woods, framed by distant mountains.",
       "x": 0,
       "y": 0,
       "realm": "Tin Realm",
       "factions": ["Town Watch"],
+      "known": true
+    },
+    "Asteroid Belt": {
+      "name": "Asteroid Belt",
+      "basicInfo": "A dead drift of broken rock and silent metal in open void.",
+      "x": 1,
+      "y": 0,
+      "realm": "Tin Realm",
+      "factions": [],
       "known": true
     }
   },

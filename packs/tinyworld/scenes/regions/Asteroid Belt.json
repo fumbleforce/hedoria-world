@@ -1,0 +1,58 @@
+{
+  "scope": "region",
+  "archetype": "void",
+  "surface": {
+    "material": "metal",
+    "condition": "scorched",
+    "palette": ["#1a1c24", "#2d2f3a", "#4a4d5e"]
+  },
+  "sky": {
+    "kind": "starfield",
+    "palette": ["#03060e", "#0a1230", "#1a2155"],
+    "brightness": 0.18
+  },
+  "weather": {
+    "kind": "none",
+    "intensity": 0
+  },
+  "density": "sparse",
+  "scale": 60,
+  "lighting": {
+    "primary": "ambient-only",
+    "intensity": 0.6
+  },
+  "features": [
+    {
+      "template": "rock-cluster",
+      "x": -0.85,
+      "z": -0.7,
+      "scale": 1.6
+    },
+    {
+      "template": "rock-cluster",
+      "x": 0.8,
+      "z": 0.85,
+      "scale": 1.4
+    },
+    {
+      "template": "rock-cluster",
+      "x": 0.9,
+      "z": -0.95,
+      "scale": 1.1
+    },
+    {
+      "template": "crystal-cluster",
+      "x": -0.6,
+      "z": 0.6,
+      "scale": 1.0
+    },
+    {
+      "template": "obelisk",
+      "x": 0.0,
+      "z": -0.9,
+      "scale": 0.9
+    }
+  ],
+  "exits": [],
+  "ambientAudio": "void-silence"
+}

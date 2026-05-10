@@ -1,0 +1,70 @@
+{
+  "scope": "location",
+  "archetype": "open-built",
+  "density": "moderate",
+  "scale": 18,
+  "features": [
+    {
+      "template": "platform",
+      "x": 0.0,
+      "z": 0.0,
+      "scale": 1.4,
+      "label": "Landing Pad"
+    },
+    {
+      "template": "machine",
+      "x": -0.6,
+      "z": -0.5,
+      "rotation": 0.4,
+      "scale": 1.0
+    },
+    {
+      "template": "energy-conduit",
+      "x": 0.55,
+      "z": -0.5,
+      "scale": 1.1
+    },
+    {
+      "template": "energy-conduit",
+      "x": 0.6,
+      "z": 0.5,
+      "scale": 1.0
+    },
+    {
+      "template": "pod",
+      "x": -0.65,
+      "z": 0.55,
+      "rotation": 1.2,
+      "scale": 1.0
+    },
+    {
+      "template": "lamp",
+      "x": -0.3,
+      "z": 0.0,
+      "materialOverride": "neon",
+      "scale": 0.9
+    },
+    {
+      "template": "lamp",
+      "x": 0.3,
+      "z": 0.0,
+      "materialOverride": "neon",
+      "scale": 0.9
+    },
+    {
+      "template": "door-portal",
+      "x": 0.0,
+      "z": 0.85,
+      "rotation": 3.14,
+      "label": "Airlock"
+    }
+  ],
+  "exits": [
+    {
+      "toAreaId": "Airlock",
+      "x": 0.0,
+      "z": 0.85,
+      "kind": "portal"
+    }
+  ]
+}

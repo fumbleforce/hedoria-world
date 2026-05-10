@@ -11,6 +11,7 @@
     "compile:soft": "node ./scripts/compile-pack.mjs --mode=soft --pack=hedoria",
     "compile:strict": "node ./scripts/compile-pack.mjs --mode=strict --pack=hedoria",
     "compile:tinyworld": "node ./scripts/compile-pack.mjs --mode=strict --pack=tinyworld",
+    "prebake:textures": "node ./scripts/prebake-textures.mjs --pack=tinyworld",
     "lint:no-world-names": "node ./scripts/lint-no-world-names.mjs",
     "smoke:providers": "node ./scripts/provider-smoke-test.mjs"
   },

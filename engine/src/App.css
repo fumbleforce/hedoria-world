@@ -41,9 +41,27 @@ body,
   outline: none;
 }
 
+/* drei <Html> labels render at z-index up to ~20 (set via zIndexRange).
+   We keep all UI chrome at >= 50 so place name labels never cover the HUD. */
+.zoomBadge {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  z-index: 50;
+  pointer-events: none;
+  background: rgba(15, 23, 42, 0.55);
+  color: #f1f5f9;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
 .hud {
   position: absolute;
-  z-index: 5;
+  z-index: 50;
   pointer-events: auto;
 }
 
@@ -161,9 +179,104 @@ body,
   user-select: none;
 }
 
+/* Compass — bottom-left. The world is rendered with an isometric camera
+   whose yaw is user-controllable via middle-mouse drag. The .compass__face
+   rotation is set inline by the React component to match the live camera
+   azimuth, so the painted N always points where world-north is on screen. */
+.compass {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  z-index: 50;
+  pointer-events: none;
+  user-select: none;
+  width: 88px;
+  height: 88px;
+  background: rgba(15, 23, 42, 0.55);
+  border-radius: 50%;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(4px);
+}
+
+.compass__face {
+  position: absolute;
+  inset: 0;
+  /* `transform` is overridden inline by the React component to match the
+     live camera azimuth. The 45deg fallback below corresponds to the
+     default isometric view in case the inline style isn't applied yet. */
+  transform: rotate(45deg);
+}
+
+.compass__needle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 70%;
+  margin-left: -2px;
+  margin-top: -35%;
+  background: linear-gradient(
+    to bottom,
+    #ef4444 0%,
+    #ef4444 50%,
+    #e2e8f0 50%,
+    #e2e8f0 100%
+  );
+  border-radius: 2px;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.6);
+}
+
+.compass__hub {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  margin-top: -4px;
+  background: #cbd5e1;
+  border-radius: 50%;
+  border: 1px solid #475569;
+}
+
+.compass__cardinal {
+  position: absolute;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #f8fafc;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+.compass__cardinal--n {
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #fca5a5;
+}
+
+.compass__cardinal--s {
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.compass__cardinal--e {
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.compass__cardinal--w {
+  left: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
 .overlay {
   position: absolute;
-  z-index: 10;
+  z-index: 60;
   pointer-events: auto;
 }
 
@@ -369,4 +482,205 @@ body,
   border-radius: 6px;
   padding: 10px;
   font-size: 0.8rem;
+}
+
+/* DB Inspector — read-only modal that lists every IndexedDB table on the
+   left rail and the rows of the selected table (most-recent first) in the
+   main pane. Each row collapses to a 1-line summary; clicking expands the
+   full JSON. Used for "did the cache actually populate?" sanity checks. */
+.dbInspector {
+  width: min(1100px, 96vw);
+  height: min(82vh, 900px);
+  display: flex;
+  flex-direction: column;
+  min-width: 720px;
+  padding: 16px 18px;
+}
+
+.dbInspector__headerActions {
+  display: flex;
+  gap: 8px;
+}
+
+.dbInspector__headerActions button {
+  background: #1f2937;
+  border: 1px solid #475569;
+  color: #f1f5f9;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.dbInspector__headerActions button:hover {
+  background: #334155;
+}
+
+.dbInspector__body {
+  flex: 1;
+  display: flex;
+  gap: 12px;
+  min-height: 0;
+}
+
+.dbInspector__rail {
+  width: 200px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.dbInspector__tableBtn {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  background: #1f2937;
+  border: 1px solid #334155;
+  color: #cbd5e1;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.85rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.dbInspector__tableBtn:hover {
+  background: #334155;
+  border-color: #475569;
+}
+
+.dbInspector__tableBtn.active {
+  background: #1e40af;
+  border-color: #2563eb;
+  color: #eff6ff;
+}
+
+.dbInspector__tableName {
+  font-weight: 500;
+}
+
+.dbInspector__tableCount {
+  background: rgba(0, 0, 0, 0.35);
+  color: #f1f5f9;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.dbInspector__rows {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 10px;
+  overflow: hidden;
+}
+
+.dbInspector__rowsHeader {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-bottom: 8px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.dbInspector__empty {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  padding: 16px;
+}
+
+.dbInspector__rowList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.dbInspector__row {
+  border: 1px solid #1e293b;
+  border-radius: 6px;
+  margin-bottom: 4px;
+  background: #111827;
+}
+
+.dbInspector__row:hover {
+  border-color: #334155;
+}
+
+.dbInspector__rowSummary {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: transparent;
+  border: none;
+  color: #e5e7eb;
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.8rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  overflow: hidden;
+}
+
+.dbInspector__rowSummary:hover {
+  background: rgba(51, 65, 85, 0.4);
+}
+
+.dbInspector__rowToggle {
+  color: #64748b;
+  width: 12px;
+  flex-shrink: 0;
+}
+
+.dbInspector__rowFields {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #cbd5e1;
+}
+
+.dbInspector__rowDetail {
+  border-top: 1px solid #1e293b;
+  padding: 10px;
+  display: flex;
+  gap: 12px;
+}
+
+.dbInspector__thumb {
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  background: #0b1220;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+}
+
+.dbInspector__json {
+  flex: 1;
+  margin: 0;
+  padding: 10px;
+  background: #0b1220;
+  border: 1px solid #1e293b;
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem;
+  color: #e2e8f0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 50vh;
+  overflow-y: auto;
 }

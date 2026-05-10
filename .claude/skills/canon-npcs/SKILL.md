@@ -250,15 +250,6 @@ Do not modify any other fields on the NPC entry.
 ### voiceTags
 - Required field — don't assign without user input
 
-### Portrait Workflow
-After lore fields are locked, follow the image-gen skill's Character Portrait Workflow. Key points:
-1. Curate basicInfo to visual-only description per the image-gen skill's keep/drop rules
-2. Present ALL personality trait keywords to the user via `AskUserQuestion` — do not pick for them
-3. Assemble the full prompt and show it to the user before generating
-4. Run image generation directly via Bash — never delegate to agents
-5. Show image and wait for user approval; use `-i` for touch-ups
-6. Once approved: upload via upload-image.mjs, write `portraitUrl`, clean up unpicked variants via cleanup-variants.mjs
-
 ## Ability Adaptation Rules
 
 Folklore powers are **creative seeds**, not literal translations. Follow these principles:

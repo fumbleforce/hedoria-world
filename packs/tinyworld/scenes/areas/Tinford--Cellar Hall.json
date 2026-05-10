@@ -1,0 +1,54 @@
+{
+  "scope": "area",
+  "archetype": "underground",
+  "surface": {
+    "material": "stone",
+    "condition": "worn",
+    "palette": ["#3a342c", "#28241e", "#5a4f40"]
+  },
+  "sky": {
+    "kind": "tunnel-rock",
+    "palette": ["#0a0908", "#1c1813", "#2c241c"],
+    "brightness": 0.08
+  },
+  "weather": {
+    "kind": "none",
+    "intensity": 0
+  },
+  "density": "sparse",
+  "scale": 10,
+  "lighting": {
+    "primary": "torch",
+    "intensity": 0.55
+  },
+  "features": [
+    {
+      "template": "pillar-cluster",
+      "x": -0.6,
+      "z": 0.0,
+      "scale": 0.7
+    },
+    {
+      "template": "pillar-cluster",
+      "x": 0.6,
+      "z": 0.0,
+      "scale": 0.7
+    },
+    {
+      "template": "pyre",
+      "x": 0.0,
+      "z": 0.4,
+      "scale": 0.9,
+      "label": "Brazier"
+    }
+  ],
+  "exits": [
+    {
+      "toAreaId": "Square",
+      "x": 0.0,
+      "z": -0.85,
+      "kind": "stair-up"
+    }
+  ],
+  "ambientAudio": "wind-soft"
+}

@@ -18,10 +18,13 @@ export async function resolveDeathRecovery(
     .map(([id]) => id);
 
   const transportLocation = knownLocations[0] ?? null;
-  const response = await adapter.complete({
-    system: pack.death.instructions || "Narrate defeat and recovery.",
-    messages: [{ role: "user", content: encounterSummary }],
-  });
+  const response = await adapter.complete(
+    {
+      system: pack.death.instructions || "Narrate defeat and recovery.",
+      messages: [{ role: "user", content: encounterSummary }],
+    },
+    { kind: "death-recovery" },
+  );
   return {
     narration: response.text,
     restoredHealth: !pack.death.permadeath,

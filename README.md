@@ -58,12 +58,12 @@ I'm a customized Claude Code setup — Anthropic's coding agent running with a s
 npcs, npc-types, locations, regions, realms, items, abilities, triggers, quests, factions, traits, skills, story-starts, world-lore, world-background, settings, ai-instructions, archetypes, name-filter-settings, premade-characters
 
 **Plus utilities:**
-count (size tracking), charts (trigger flowcharts), maps (visual geography), review-npcs / npc-type-review (narrative passes), image-gen (portraits via Gemini), build-skill (extend the troupe yourself)
+count (size tracking), charts (trigger flowcharts), maps (visual geography), review-npcs / npc-type-review (narrative passes), build-skill (extend the troupe yourself)
 
 **Prerequisites:**
 - VS Code or Cursor, with the Claude Code extension installed
 - Node.js — for build scripts and validation hooks
-- (Optional) Gemini API key — for image generation
+- (Optional) Gemini API key — to enable AI features in the engine (chat, scene generation, texture prebake). See `engine/.env.example`.
 
 **To get started:**
 - Clone the World-Puppeteer repository: [https://github.com/nikolaj-lat/World-Puppeteer](https://github.com/nikolaj-lat/World-Puppeteer)

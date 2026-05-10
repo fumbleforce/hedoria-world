@@ -5,6 +5,45 @@ import process from "node:process";
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..", "..");
 const engineRoot = path.resolve(root, "engine");
 
+async function readJsonIfExists(filePath) {
+  try {
+    const text = await fs.readFile(filePath, "utf8");
+    return JSON.parse(text);
+  } catch (err) {
+    if (err && err.code === "ENOENT") return null;
+    throw err;
+  }
+}
+
+async function readSceneScope(packDir, scope) {
+  const dir = path.join(packDir, "scenes", scope);
+  let entries;
+  try {
+    entries = await fs.readdir(dir);
+  } catch (err) {
+    if (err && err.code === "ENOENT") return {};
+    throw err;
+  }
+  const out = {};
+  for (const entry of entries) {
+    if (!entry.endsWith(".json")) continue;
+    const full = path.join(dir, entry);
+    const json = await readJsonIfExists(full);
+    if (!json) continue;
+    const id = entry.replace(/\.json$/u, "");
+    out[id] = json;
+  }
+  return out;
+}
+
+async function readScenesBundle(packName) {
+  const packDir = path.resolve(root, "packs", packName);
+  const regions = await readSceneScope(packDir, "regions");
+  const locations = await readSceneScope(packDir, "locations");
+  const areas = await readSceneScope(packDir, "areas");
+  return { regions, locations, areas };
+}
+
 function parseArgs() {
   const args = Object.fromEntries(
     process.argv.slice(2).map((arg) => {
@@ -91,6 +130,45 @@ async function main() {
       {
         biomes: {},
         silhouettes: {},
+      },
+      null,
+      2,
+    ),
+  );
+
+  const scenes = await readScenesBundle(pack);
+  const scenesBundle = {
+    packId: pack,
+    generatedAt: new Date().toISOString(),
+    scenes,
+  };
+  await fs.writeFile(
+    path.join(bundleDir, "scenes.bundle.json"),
+    JSON.stringify(scenesBundle, null, 2),
+  );
+
+  const textureSrc = path.resolve(root, "packs", pack, "assets", "textures");
+  const textureDst = path.resolve(engineRoot, "public", "textures");
+  let textures = [];
+  try {
+    const entries = await fs.readdir(textureSrc);
+    await fs.mkdir(textureDst, { recursive: true });
+    for (const entry of entries) {
+      if (!entry.endsWith(".png")) continue;
+      await fs.copyFile(path.join(textureSrc, entry), path.join(textureDst, entry));
+      textures.push(entry);
+    }
+  } catch (err) {
+    if (!err || err.code !== "ENOENT") throw err;
+  }
+  await fs.writeFile(
+    path.join(bundleDir, "texture-index.json"),
+    JSON.stringify(
+      {
+        packId: pack,
+        generatedAt: new Date().toISOString(),
+        baseUrl: "/textures/",
+        keys: textures.map((file) => file.replace(/\.png$/u, "")).sort(),
       },
       null,
       2,

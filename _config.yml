@@ -13,7 +13,6 @@ exclude:
   - .claude/skills/npc-type-review
   - .claude/skills/maps
   - .claude/skills/count/SKILL.md
-  - .claude/skills/image-gen
   - .claude/skills/canon-npcs
 
 aux_links:

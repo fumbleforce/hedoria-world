@@ -13,7 +13,7 @@ todos:
     status: completed
   - id: scene-generator
     content: "Procedural location scene: floor sized by radius, area rooms laid out from the area graph, paths as floor strips, biome material picked from sceneTags or region keyword scan, prop tag library"
-    status: completed
+    status: in_progress
   - id: sprite-pipeline
     content: Build-time and runtime portrait generation via Gemini Flash Image; sprite cache in IndexedDB; THREE.Sprite billboards with equipment overlays for NPCs and player
     status: completed

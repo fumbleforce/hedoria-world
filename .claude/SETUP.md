@@ -41,34 +41,16 @@ node --version
 
 Open this folder in your editor and start a Claude Code session. Claude Code hooks will run automatically on session start.
 
-## Step 5 (Optional): Image Generation
+## Step 5 (Optional): Enable AI features in the engine
 
-To generate images (portraits, covers, etc.) using Google Gemini:
+To enable LLM-driven chat, scene generation, and texture prebake in the
+standalone engine:
 
 1. Get an API key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey)
+2. Copy `engine/.env.example` to `engine/.env` and paste the key into
+   `VITE_GEMINI_API_KEY=`
+3. Restart the dev server (`npm run dev` in `engine/`) so Vite picks up
+   the new env
 
-2. Add the key to your environment:
-
-   **macOS / Linux** — add to `~/.zshrc` or `~/.bashrc`:
-   ```bash
-   export GEMINI_API_KEY="your-key-here"
-   ```
-   Then reload: `source ~/.zshrc`
-
-   **Windows (PowerShell)**:
-   ```powershell
-   [Environment]::SetEnvironmentVariable('GEMINI_API_KEY', 'your-key-here', 'User')
-   ```
-   Then restart your terminal.
-
-3. Install the Gemini SDK in your home directory:
-
-   **macOS / Linux**:
-   ```bash
-   cd ~ && npm install @google/genai
-   ```
-
-   **Windows (PowerShell)**:
-   ```powershell
-   cd $HOME; npm install @google/genai
-   ```
+The same `engine/.env` file powers `npm run prebake:textures`, so one key
+covers everything.
