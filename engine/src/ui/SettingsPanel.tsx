@@ -7,7 +7,11 @@ import {
 import type { IndexedWorld } from "../world/indexer";
 import type { TileFiller } from "../grid/tileFiller";
 import type { TileImageCache } from "../grid/tileImageCache";
-import { ensureLocationGrid, ensureRegionGrid } from "../dialogue/narrator";
+import {
+  ensureLocationGrid,
+  ensureRegionGrid,
+  prewarmGridImages,
+} from "../dialogue/narrator";
 
 type Props = {
   onClose: () => void;
@@ -55,13 +59,29 @@ export function SettingsPanel({
   const onRebuild = async () => {
     if (!activeGrid) return;
     const { scope, ownerId } = activeGrid;
+    const regionBiome = activeGrid.biome;
     const ctx = { llm, world, tileFiller, tileImageCache };
+    const llmCacheBuster = String(Date.now());
     await tileFiller.clearGrid(scope, ownerId);
-    await tileImageCache.clearImagesForGrid(activeGrid);
+    // Drop the live grid from the store so TileGridView does not keep
+    // mounting cells for the old layout (which would refetch images while
+    // the filler is still building the new spec).
     if (scope === "region") {
-      await ensureRegionGrid(ctx, ownerId);
+      useStore.getState().setRegionGrid(null);
+      const newGrid = await ensureRegionGrid(ctx, ownerId, {
+        skipPrewarm: true,
+        llmCacheBuster,
+      });
+      await tileImageCache.clearImagesForGrid(newGrid);
+      prewarmGridImages(tileImageCache, newGrid);
     } else if (scope === "location") {
-      await ensureLocationGrid(ctx, ownerId, activeGrid.biome);
+      useStore.getState().setLocationGrid(null);
+      const newGrid = await ensureLocationGrid(ctx, ownerId, regionBiome, {
+        skipPrewarm: true,
+        llmCacheBuster,
+      });
+      await tileImageCache.clearImagesForGrid(newGrid);
+      prewarmGridImages(tileImageCache, newGrid);
     }
   };
 

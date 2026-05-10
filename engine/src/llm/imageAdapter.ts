@@ -1,3 +1,5 @@
+import { useStore } from "../state/store";
+
 export type ImageProviderConfig = {
   id: string;
   endpoint: string;
@@ -20,6 +22,8 @@ export type ImageResponse = {
   height: number;
 };
 
+let liveImageActivitySeq = 0;
+
 export interface ImageProvider {
   readonly id: string;
   generate(request: ImageRequest): Promise<ImageResponse>;
@@ -39,35 +43,45 @@ export class HttpImageProvider implements ImageProvider {
   }
 
   async generate(request: ImageRequest): Promise<ImageResponse> {
-    const response = await fetch(this.endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {}),
-      },
-      body: JSON.stringify({
-        model: this.model,
-        prompt: request.prompt,
-        width: request.width ?? 512,
-        height: request.height ?? 512,
-        variant: request.variant,
-      }),
-    });
-    if (!response.ok) {
-      throw new Error(`image provider ${this.id} failed: ${response.status}`);
+    const width = request.width ?? 512;
+    const height = request.height ?? 512;
+    const activityId = `image-http:${++liveImageActivitySeq}`;
+    useStore
+      .getState()
+      .setBackgroundActivity(activityId, `Image · ${width}×${height}px (${this.id})`);
+    try {
+      const response = await fetch(this.endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {}),
+        },
+        body: JSON.stringify({
+          model: this.model,
+          prompt: request.prompt,
+          width,
+          height,
+          variant: request.variant,
+        }),
+      });
+      if (!response.ok) {
+        throw new Error(`image provider ${this.id} failed: ${response.status}`);
+      }
+      const payload = (await response.json()) as {
+        base64: string;
+        mime?: string;
+        width?: number;
+        height?: number;
+      };
+      return {
+        bytes: base64ToBytes(payload.base64),
+        mime: payload.mime ?? "image/png",
+        width: payload.width ?? width,
+        height: payload.height ?? height,
+      };
+    } finally {
+      useStore.getState().setBackgroundActivity(activityId, null);
     }
-    const payload = (await response.json()) as {
-      base64: string;
-      mime?: string;
-      width?: number;
-      height?: number;
-    };
-    return {
-      bytes: base64ToBytes(payload.base64),
-      mime: payload.mime ?? "image/png",
-      width: payload.width ?? request.width ?? 512,
-      height: payload.height ?? request.height ?? 512,
-    };
   }
 }
 
@@ -158,89 +172,97 @@ export class GeminiImageProvider implements ImageProvider {
 
     const width = request.width ?? 512;
     const height = request.height ?? 512;
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
-      this.model,
-    )}:generateContent?key=${encodeURIComponent(this.apiKey)}`;
-    const body = {
-      contents: [{ role: "user", parts: [{ text: request.prompt }] }],
-      generationConfig: {
-        responseModalities: ["IMAGE"],
-        imageConfig: {
-          aspectRatio: width === height ? "1:1" : `${width}:${height}`,
-        },
-      },
-    };
-
-    // AbortController-driven timeout. We don't trust upstream to ever
-    // respond — long tails on the image API are common and a stalled
-    // mosaic call would otherwise hold the cache's in-flight slot
-    // indefinitely.
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), IMAGE_REQUEST_TIMEOUT_MS);
-    let response: Response;
+    const activityId = `image-gemini:${++liveImageActivitySeq}`;
+    useStore
+      .getState()
+      .setBackgroundActivity(activityId, `Image model · ${width}×${height}px`);
     try {
-      response = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-        signal: controller.signal,
-      });
-    } catch (err) {
-      if ((err as { name?: string })?.name === "AbortError") {
-        throw new ImageTimeoutError(
-          `Gemini image API timeout after ${Math.round(IMAGE_REQUEST_TIMEOUT_MS / 1000)}s on ${this.model}`,
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
+        this.model,
+      )}:generateContent?key=${encodeURIComponent(this.apiKey)}`;
+      const body = {
+        contents: [{ role: "user", parts: [{ text: request.prompt }] }],
+        generationConfig: {
+          responseModalities: ["IMAGE"],
+          imageConfig: {
+            aspectRatio: width === height ? "1:1" : `${width}:${height}`,
+          },
+        },
+      };
+
+      // AbortController-driven timeout. We don't trust upstream to ever
+      // respond — long tails on the image API are common and a stalled
+      // mosaic call would otherwise hold the cache's in-flight slot
+      // indefinitely.
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), IMAGE_REQUEST_TIMEOUT_MS);
+      let response: Response;
+      try {
+        response = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+          signal: controller.signal,
+        });
+      } catch (err) {
+        if ((err as { name?: string })?.name === "AbortError") {
+          throw new ImageTimeoutError(
+            `Gemini image API timeout after ${Math.round(IMAGE_REQUEST_TIMEOUT_MS / 1000)}s on ${this.model}`,
+          );
+        }
+        throw err;
+      } finally {
+        clearTimeout(timer);
+      }
+      if (!response.ok) {
+        const text = await response.text().catch(() => "");
+        if (response.status === 429) {
+          const hinted = parseRetryDelay(text);
+          const cooldown = Math.min(
+            IMAGE_MAX_COOLDOWN_MS,
+            Math.max(
+              IMAGE_DEFAULT_COOLDOWN_MS,
+              hinted ?? IMAGE_DEFAULT_COOLDOWN_MS,
+            ),
+          );
+          this.cooldownUntil = Date.now() + cooldown;
+          console.warn(
+            `[gemini] 429 quota exhausted on image model ${this.model}; cooling down for ${Math.round(
+              cooldown / 1000,
+            )}s. Override via VITE_GEMINI_IMAGE_MODEL in engine/.env.`,
+          );
+          throw new RateLimitedImageError(
+            `Gemini image API 429 on ${this.model}: quota exhausted`,
+            cooldown,
+          );
+        }
+        throw new Error(
+          `Gemini image API ${response.status}: ${text.slice(0, 300)}`,
         );
       }
-      throw err;
-    } finally {
-      clearTimeout(timer);
-    }
-    if (!response.ok) {
-      const text = await response.text().catch(() => "");
-      if (response.status === 429) {
-        const hinted = parseRetryDelay(text);
-        const cooldown = Math.min(
-          IMAGE_MAX_COOLDOWN_MS,
-          Math.max(
-            IMAGE_DEFAULT_COOLDOWN_MS,
-            hinted ?? IMAGE_DEFAULT_COOLDOWN_MS,
-          ),
-        );
-        this.cooldownUntil = Date.now() + cooldown;
-        console.warn(
-          `[gemini] 429 quota exhausted on image model ${this.model}; cooling down for ${Math.round(
-            cooldown / 1000,
-          )}s. Override via VITE_GEMINI_IMAGE_MODEL in engine/.env.`,
-        );
-        throw new RateLimitedImageError(
-          `Gemini image API 429 on ${this.model}: quota exhausted`,
-          cooldown,
-        );
-      }
-      throw new Error(
-        `Gemini image API ${response.status}: ${text.slice(0, 300)}`,
+      const json = (await response.json()) as {
+        candidates?: Array<{
+          content?: {
+            parts?: Array<{ inlineData?: { data?: string; mimeType?: string } }>;
+          };
+        }>;
+      };
+      const part = json.candidates?.[0]?.content?.parts?.find(
+        (p) => p.inlineData?.data,
       );
+      const data = part?.inlineData?.data;
+      if (!data) {
+        throw new Error("Gemini image API: no inline image data in response");
+      }
+      return {
+        bytes: base64ToBytes(data),
+        mime: part.inlineData?.mimeType ?? "image/png",
+        width,
+        height,
+      };
+    } finally {
+      useStore.getState().setBackgroundActivity(activityId, null);
     }
-    const json = (await response.json()) as {
-      candidates?: Array<{
-        content?: {
-          parts?: Array<{ inlineData?: { data?: string; mimeType?: string } }>;
-        };
-      }>;
-    };
-    const part = json.candidates?.[0]?.content?.parts?.find(
-      (p) => p.inlineData?.data,
-    );
-    const data = part?.inlineData?.data;
-    if (!data) {
-      throw new Error("Gemini image API: no inline image data in response");
-    }
-    return {
-      bytes: base64ToBytes(data),
-      mime: part.inlineData?.mimeType ?? "image/png",
-      width,
-      height,
-    };
   }
 }
 

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { findTranscriptByPromptHash, putTranscript } from "../persist/saveLoad";
 import { diag } from "../diag/log";
+import { useStore } from "../state/store";
 import type {
   LlmCallKind,
   LlmCallOptions,
@@ -8,6 +9,28 @@ import type {
   LlmRequest,
   LlmResponse,
 } from "./types";
+
+let textLlmActivitySeq = 0;
+
+/** Player-facing label for the HUD activity strip (never shown for `chat` — that uses `pendingNarrations`). */
+function labelForNonChatLlmKind(kind: LlmCallKind): string {
+  switch (kind) {
+    case "scene-classify":
+      return "Text model · map / tile layout";
+    case "skill-check":
+      return "Text model · skill check";
+    case "quest-verify":
+      return "Text model · quest check";
+    case "death-recovery":
+      return "Text model · death recovery";
+    case "expansion":
+      return "Text model · expansion";
+    case "other":
+      return "Text model · task";
+    case "chat":
+      return "Text model · narrator";
+  }
+}
 
 const ToolCallSchema = z.object({
   name: z.string(),
@@ -115,6 +138,15 @@ export class LlmAdapter {
       jsonMode: request.jsonMode ?? false,
       toolCount: request.tools?.length ?? 0,
     });
+    const showHudActivity = kind !== "chat";
+    const activityId = showHudActivity
+      ? `text-llm:${++textLlmActivitySeq}:${kind}`
+      : "";
+    if (showHudActivity) {
+      useStore
+        .getState()
+        .setBackgroundActivity(activityId, labelForNonChatLlmKind(kind));
+    }
     try {
       const raw = await this.provider.complete(request);
       const parsed = LlmResponseSchema.parse(raw);
@@ -155,6 +187,10 @@ export class LlmAdapter {
         durationMs: Math.round(performance.now() - startedAt),
       });
       throw err;
+    } finally {
+      if (showHudActivity) {
+        useStore.getState().setBackgroundActivity(activityId, null);
+      }
     }
   }
 }

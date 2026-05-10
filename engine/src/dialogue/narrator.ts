@@ -766,6 +766,14 @@ export class Narrator {
   }
 }
 
+/** Options for {@link ensureRegionGrid} / {@link ensureLocationGrid}. */
+export type EnsureGridOptions = {
+  /** When true, caller is responsible for calling {@link prewarmGridImages} after any image invalidation. */
+  skipPrewarm?: boolean;
+  /** Appended to the filler user prompt so the text LLM transcript cache cannot replay a stale grid. */
+  llmCacheBuster?: string;
+};
+
 /**
  * Idempotent helper so the rest of the app can write
  *
@@ -776,6 +784,7 @@ export class Narrator {
 export async function ensureRegionGrid(
   ctx: NarratorContext,
   regionId: string,
+  options?: EnsureGridOptions,
 ): Promise<TileGrid> {
   const region = ctx.world.regionsById[regionId];
   if (!region) {
@@ -789,6 +798,7 @@ export async function ensureRegionGrid(
       region,
       regionId,
       locations,
+      llmCacheBuster: options?.llmCacheBuster,
     });
   } finally {
     useStore.getState().setGenerating({ regionGridFor: undefined });
@@ -807,7 +817,9 @@ export async function ensureRegionGrid(
   // (kind, biome) pair. Calling `getUrl(kind, biome)` directly here
   // would force per-tile mode even when the cache is in mosaic mode,
   // duplicating work and starving the mosaic request of API budget.
-  prewarmGridImages(ctx.tileImageCache, grid);
+  if (!options?.skipPrewarm) {
+    prewarmGridImages(ctx.tileImageCache, grid);
+  }
   return grid;
 }
 
@@ -815,6 +827,7 @@ export async function ensureLocationGrid(
   ctx: NarratorContext,
   locationId: string,
   regionBiome?: string,
+  options?: EnsureGridOptions,
 ): Promise<TileGrid> {
   const location = ctx.world.locations[locationId];
   if (!location) {
@@ -829,6 +842,7 @@ export async function ensureLocationGrid(
       locationId,
       region,
       regionBiome,
+      llmCacheBuster: options?.llmCacheBuster,
     });
   } finally {
     useStore.getState().setGenerating({ locationGridFor: undefined });
@@ -839,7 +853,9 @@ export async function ensureLocationGrid(
     );
   }
   useStore.getState().setLocationGrid(grid);
-  prewarmGridImages(ctx.tileImageCache, grid);
+  if (!options?.skipPrewarm) {
+    prewarmGridImages(ctx.tileImageCache, grid);
+  }
   return grid;
 }
 
@@ -859,7 +875,7 @@ export async function ensureLocationGrid(
  * generating the instant a grid is loaded into the store, even if
  * the renderer hasn't mounted yet.
  */
-function prewarmGridImages(cache: TileImageCache, grid: TileGrid): void {
+export function prewarmGridImages(cache: TileImageCache, grid: TileGrid): void {
   for (let y = 0; y < grid.height; y += 1) {
     for (let x = 0; x < grid.width; x += 1) {
       const tile = getTile(grid, x, y);

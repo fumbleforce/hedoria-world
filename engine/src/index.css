@@ -1,28 +1,31 @@
 :root {
   color-scheme: dark;
 
-  /* The world. Layered dark blue-greens that read as "night sky over a map".
-     Brighter than pure black so the LLM-generated tiles still pop. */
-  --bg: #0a0d14;
-  --bg-2: #11151f;
+  /* Warm cellar / lamplight — umber and soot instead of electric blue. */
+  --bg: #100d0a;
+  --bg-2: #181410;
 
-  /* Floating glass — translucent surfaces sit on top of the map. */
-  --glass-bg: rgba(14, 18, 28, 0.72);
-  --glass-bg-strong: rgba(10, 13, 22, 0.86);
-  --glass-border: rgba(180, 200, 255, 0.10);
-  --glass-border-strong: rgba(180, 200, 255, 0.18);
-  --glass-shadow: 0 16px 38px rgba(0, 0, 0, 0.55);
-  --glass-blur: blur(18px) saturate(140%);
+  /* Floating glass — brown-tinted panes over the map. */
+  --glass-bg: rgba(22, 18, 14, 0.78);
+  --glass-bg-strong: rgba(16, 13, 10, 0.9);
+  --glass-border: rgba(212, 188, 150, 0.12);
+  --glass-border-strong: rgba(230, 206, 170, 0.2);
+  --glass-shadow: 0 16px 38px rgba(0, 0, 0, 0.58);
+  --glass-blur: blur(16px) saturate(105%);
 
-  --fg: #eef2f9;
-  --fg-2: #aab3c5;
-  --fg-3: #6f7790;
-  --accent: #9ad6ff;
-  --accent-glow: rgba(154, 214, 255, 0.55);
-  --accent-2: #ffc488;
-  --accent-2-glow: rgba(255, 196, 136, 0.55);
-  --danger: #ef6262;
-  --warn: #efb262;
+  /* Parchment + ink */
+  --fg: #ebe4d6;
+  --fg-2: #b8aa96;
+  --fg-3: #7a6e62;
+
+  /* Aged brass / wheat — primary highlights, paths, player ring */
+  --accent: #c9a66b;
+  --accent-glow: rgba(201, 166, 107, 0.45);
+  /* Muted sage — anchors, NPC lines, secondary emphasis */
+  --accent-2: #8faa84;
+  --accent-2-glow: rgba(143, 170, 132, 0.42);
+  --danger: #d66a5a;
+  --warn: #d4a04a;
 
   /* Vertical clearance reserved at the top of the canvas so the HUD
    * strip is never overlapped by tile imagery. Tweak here to nudge
@@ -62,8 +65,8 @@ button {
 }
 button:hover:not(:disabled) {
   border-color: var(--accent);
-  background: rgba(154, 214, 255, 0.10);
-  box-shadow: 0 0 0 1px rgba(154, 214, 255, 0.25);
+  background: rgba(201, 166, 107, 0.12);
+  box-shadow: 0 0 0 1px rgba(201, 166, 107, 0.28);
 }
 button:disabled {
   opacity: 0.5;
@@ -81,27 +84,28 @@ input {
 input:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(154, 214, 255, 0.18);
+  box-shadow: 0 0 0 2px rgba(201, 166, 107, 0.22);
 }
 
 /* -------------------------------------------------------------- App shell
  *
  * Everything sits inside one full-viewport stacking context. The map is the
  * canvas; HUD, side rail, hint and modals are absolutely-positioned glass
- * surfaces over it. The page never scrolls — internal panels do.
+ * surfaces over it (warm parchment / brass palette). The page never scrolls
+ * — internal panels do.
  */
 .app {
   position: relative;
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  /* Subtle radial vignette to focus attention on the centre of the map. */
+  /* Warm vignette — lamplight pool over a wooden table. */
   background:
     radial-gradient(
       ellipse at center,
-      #131a2a 0%,
+      #221a14 0%,
       var(--bg) 55%,
-      #04060c 100%
+      #060403 100%
     );
 }
 
@@ -152,11 +156,15 @@ input:focus {
   pointer-events: auto;
 }
 .hud__title {
+  font-family: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  font-size: 1.05em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--accent);
-  text-shadow: 0 0 12px rgba(154, 214, 255, 0.35);
+  text-shadow:
+    0 0 14px rgba(201, 166, 107, 0.35),
+    0 1px 0 rgba(0, 0, 0, 0.45);
 }
 .hud__crumbs {
   display: flex;
@@ -189,14 +197,14 @@ input:focus {
   color: var(--fg-2);
 }
 .hud__chip--live {
-  color: #d6ffd6;
-  border-color: rgba(170, 255, 170, 0.35);
-  background: rgba(80, 220, 120, 0.10);
+  color: #d4e4cc;
+  border-color: rgba(143, 170, 132, 0.4);
+  background: rgba(60, 78, 52, 0.35);
 }
 .hud__chip--mock {
-  color: #ffd6a8;
-  border-color: rgba(255, 196, 136, 0.35);
-  background: rgba(255, 196, 136, 0.10);
+  color: #e8d4b8;
+  border-color: rgba(201, 166, 107, 0.38);
+  background: rgba(92, 72, 48, 0.28);
 }
 .hud__actions {
   display: flex;
@@ -492,6 +500,52 @@ input:focus {
  * grows to fill the available width so the typing affordance dominates;
  * the submit button is a small pill on the right edge.
  */
+/* Stack of in-flight LLM / image work — same horizontal band as the
+ * action prompt so it never depends on tile cells mounting. */
+.activityStrip {
+  position: absolute;
+  /* Sit above the scene bottom hint (88px) + one line, still over the map. */
+  bottom: 132px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(720px, calc(100vw - 48px));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 8px 14px;
+  background: var(--glass-bg-strong);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border-strong);
+  border-radius: 12px;
+  box-shadow:
+    0 8px 28px rgba(0, 0, 0, 0.42),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+  z-index: 11;
+  pointer-events: none;
+}
+.activityStrip__title {
+  flex: 0 0 auto;
+  font-size: 0.68em;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+  font-weight: 600;
+}
+.activityStrip__pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  justify-content: flex-start;
+}
+.activityStrip__pills .loadingPill {
+  margin-left: 0;
+}
+
 .actionPrompt {
   position: absolute;
   bottom: 18px;
@@ -535,7 +589,7 @@ input:focus {
   padding: 6px 16px;
   border-radius: 999px;
   border: 1px solid var(--accent);
-  background: rgba(154, 214, 255, 0.12);
+  background: rgba(201, 166, 107, 0.12);
   color: var(--accent);
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -544,7 +598,7 @@ input:focus {
 }
 .actionPrompt__submit:hover:not(:disabled) {
   background: var(--accent);
-  color: #062028;
+  color: #1a120c;
 }
 .actionPrompt__submit:active:not(:disabled) {
   transform: scale(0.97);
@@ -596,8 +650,8 @@ input:focus {
  *
  * Previously: per-cell ::before/::after + a viewport-wide `--pulse` custom
  * property that still forced every pending cell to repaint each frame,
- * felt bright/cyan-heavy, and restarting the viewport animation whenever
- * the `:has()` state toggled caused visible jumps. */
+ * felt noisy, and restarting the viewport animation whenever the `:has()`
+ * state toggled caused visible jumps. */
 .tileGrid:has(.tileGrid__cellImage--pending)::before {
   content: "";
   grid-column: 1 / -1;
@@ -675,15 +729,15 @@ input:focus {
   border-color: var(--accent);
   box-shadow:
     inset 0 0 0 1px var(--accent),
-    0 0 0 2px rgba(154, 214, 255, 0.45),
+    0 0 0 2px rgba(201, 166, 107, 0.45),
     0 0 22px var(--accent-glow);
   z-index: 4;
 }
 .tileGrid__cell--adjacent {
-  border-color: rgba(154, 214, 255, 0.35);
+  border-color: rgba(201, 166, 107, 0.35);
   box-shadow:
-    inset 0 0 0 1px rgba(154, 214, 255, 0.25),
-    0 0 8px rgba(154, 214, 255, 0.18);
+    inset 0 0 0 1px rgba(201, 166, 107, 0.25),
+    0 0 8px rgba(201, 166, 107, 0.18);
 }
 .tileGrid__cell--impassable {
   filter: grayscale(0.65) brightness(0.55);
@@ -719,12 +773,12 @@ input:focus {
   background:
     radial-gradient(
       circle at center,
-      rgba(154, 214, 255, 0.18),
-      rgba(154, 214, 255, 0.04) 60%,
+      rgba(201, 166, 107, 0.18),
+      rgba(201, 166, 107, 0.04) 60%,
       transparent 100%
     );
-  border: 1px dashed rgba(154, 214, 255, 0.50);
-  box-shadow: inset 0 0 0 1px rgba(154, 214, 255, 0.18);
+  border: 1px dashed rgba(201, 166, 107, 0.50);
+  box-shadow: inset 0 0 0 1px rgba(201, 166, 107, 0.18);
 }
 .tileGrid__cell--exit:hover {
   border-color: var(--accent);
@@ -748,7 +802,7 @@ input:focus {
 }
 .tileGrid__cell--exit .tileGrid__cellLabel {
   background: rgba(8, 10, 16, 0.55);
-  border-color: rgba(154, 214, 255, 0.35);
+  border-color: rgba(201, 166, 107, 0.35);
   color: var(--accent);
   font-size: 9px;
   letter-spacing: 0.05em;
@@ -758,23 +812,23 @@ input:focus {
  * outward so the player feels the pull of the cardinal direction. */
 .tileGrid__cell--exit-north {
   background:
-    linear-gradient(0deg, transparent 30%, rgba(154, 214, 255, 0.15) 100%),
-    rgba(154, 214, 255, 0.04);
+    linear-gradient(0deg, transparent 30%, rgba(201, 166, 107, 0.15) 100%),
+    rgba(201, 166, 107, 0.04);
 }
 .tileGrid__cell--exit-south {
   background:
-    linear-gradient(180deg, transparent 30%, rgba(154, 214, 255, 0.15) 100%),
-    rgba(154, 214, 255, 0.04);
+    linear-gradient(180deg, transparent 30%, rgba(201, 166, 107, 0.15) 100%),
+    rgba(201, 166, 107, 0.04);
 }
 .tileGrid__cell--exit-east {
   background:
-    linear-gradient(90deg, transparent 30%, rgba(154, 214, 255, 0.15) 100%),
-    rgba(154, 214, 255, 0.04);
+    linear-gradient(90deg, transparent 30%, rgba(201, 166, 107, 0.15) 100%),
+    rgba(201, 166, 107, 0.04);
 }
 .tileGrid__cell--exit-west {
   background:
-    linear-gradient(270deg, transparent 30%, rgba(154, 214, 255, 0.15) 100%),
-    rgba(154, 214, 255, 0.04);
+    linear-gradient(270deg, transparent 30%, rgba(201, 166, 107, 0.15) 100%),
+    rgba(201, 166, 107, 0.04);
 }
 
 .tileGrid__cellImage {
@@ -861,7 +915,7 @@ input:focus {
    * player has generated a portrait. */
   background:
     radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.18), transparent 55%),
-    radial-gradient(circle at 50% 50%, var(--accent) 0%, #1a3a4a 70%, #0a1a26 100%);
+    radial-gradient(circle at 50% 50%, var(--accent) 0%, #2a2218 70%, #0c0806 100%);
   border: 2px solid rgba(255, 255, 255, 0.85);
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.55),
@@ -1045,7 +1099,7 @@ input:focus {
 }
 .sceneView__group--engaged {
   border-color: var(--accent);
-  background: rgba(154, 214, 255, 0.08);
+  background: rgba(201, 166, 107, 0.08);
 }
 .sceneView__group header {
   display: flex;
@@ -1081,8 +1135,8 @@ input:focus {
   gap: 6px;
   margin-left: 8px;
   padding: 2px 10px;
-  background: rgba(154, 214, 255, 0.12);
-  border: 1px solid rgba(154, 214, 255, 0.30);
+  background: rgba(201, 166, 107, 0.12);
+  border: 1px solid rgba(201, 166, 107, 0.30);
   border-radius: 999px;
   color: var(--accent);
   font-size: 0.72em;
@@ -1108,7 +1162,7 @@ input:focus {
 .modal {
   position: fixed;
   inset: 0;
-  background: rgba(2, 4, 10, 0.65);
+  background: rgba(8, 5, 3, 0.72);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   display: flex;
@@ -1186,7 +1240,7 @@ input:focus {
 }
 .settingsPanel__primaryBtn:hover {
   border-color: var(--accent);
-  background: rgba(154, 214, 255, 0.08);
+  background: rgba(201, 166, 107, 0.08);
 }
 .settingsPanel__btnRow {
   display: flex;
@@ -1387,8 +1441,9 @@ input:focus {
 }
 .bootScreen__title {
   display: block;
+  font-family: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
   color: var(--accent);
-  font-size: 1.1em;
+  font-size: 1.15em;
   margin-bottom: 8px;
 }
 
@@ -1418,12 +1473,12 @@ input:focus {
   overflow: hidden;
   background: linear-gradient(
     135deg,
-    rgba(154, 214, 255, 0.18),
-    rgba(255, 196, 136, 0.12)
+    rgba(201, 166, 107, 0.2),
+    rgba(143, 170, 132, 0.14)
   );
   border: 1px solid var(--glass-border-strong);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5),
-    inset 0 0 0 2px rgba(154, 214, 255, 0.10);
+    inset 0 0 0 2px rgba(201, 166, 107, 0.10);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1505,7 +1560,7 @@ input:focus {
 .characterPanel__field textarea:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(154, 214, 255, 0.18);
+  box-shadow: 0 0 0 3px rgba(201, 166, 107, 0.18);
 }
 .characterPanel__actions {
   display: flex;
@@ -1529,7 +1584,7 @@ input:focus {
 .sideRail__card--character:hover,
 .sideRail__card--character:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(154, 214, 255, 0.15), var(--glass-shadow);
+  box-shadow: 0 0 0 3px rgba(201, 166, 107, 0.15), var(--glass-shadow);
   outline: none;
 }
 .sideRail__charRow {
@@ -1544,8 +1599,8 @@ input:focus {
   overflow: hidden;
   background: linear-gradient(
     135deg,
-    rgba(154, 214, 255, 0.22),
-    rgba(255, 196, 136, 0.14)
+    rgba(201, 166, 107, 0.24),
+    rgba(143, 170, 132, 0.16)
   );
   border: 1px solid var(--glass-border-strong);
   display: flex;

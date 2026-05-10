@@ -10,7 +10,7 @@ import { CharacterPanel } from "./ui/CharacterPanel";
 import { DbInspector } from "./ui/DbInspector";
 import { NarrationPanel } from "./ui/NarrationPanel";
 import { ActionPrompt } from "./ui/ActionPrompt";
-import { LoadingPill } from "./ui/LoadingPill";
+import { BackgroundActivityStrip } from "./ui/BackgroundActivityStrip";
 import { SettingsPanel } from "./ui/SettingsPanel";
 
 /**
@@ -42,7 +42,6 @@ export function App() {
   const shop = useStore((s) => s.shop);
   const inventory = useStore((s) => s.inventory);
   const activeQuestIds = useStore((s) => s.activeQuestIds);
-  const generating = useStore((s) => s.generating);
   const character = useStore((s) => s.character);
   const availablePacks = useStore((s) => s.availablePacks);
   const currentPackId = useStore((s) => s.currentPackId);
@@ -99,8 +98,6 @@ export function App() {
 
   const { narrator, worldNarrator, tileImageCache, tileFiller, llm, imageProvider, world } =
     services;
-  const isGeneratingRegion = !!generating.regionGridFor;
-  const isGeneratingLocation = !!generating.locationGridFor;
 
   // Switching authored worlds rewires everything (config hash, save
   // row, tile cache, region anchors), so the cheapest correct path is
@@ -148,6 +145,7 @@ export function App() {
 
       <NarrationPanel />
 
+      <BackgroundActivityStrip />
       <ActionPrompt worldNarrator={worldNarrator} />
 
       <header className="hud">
@@ -189,10 +187,6 @@ export function App() {
           ) : null}
           <span className="hud__sep">·</span>
           <span className="hud__crumb">mode: {mode}</span>
-          {isGeneratingRegion ? <LoadingPill label="Building region" /> : null}
-          {isGeneratingLocation ? (
-            <LoadingPill label={`Building ${generating.locationGridFor}`} />
-          ) : null}
         </span>
         <span className="hud__chip">
           {inventory.currency.gold}g {inventory.currency.silver}s{" "}

@@ -59,6 +59,11 @@ export type RegionFillerInput = {
   /** Locations whose .region matches this region. Become location-anchors. */
   locations: Array<{ id: string; loc: WorldLocation }>;
   activeQuestMarkers?: QuestMarker[];
+  /**
+   * When set (e.g. HUD “Rebuild map”), appended to the user prompt so the
+   * text-LLM transcript cache cannot replay a stale `scene-classify` grid.
+   */
+  llmCacheBuster?: string;
 };
 
 export type LocationFillerInput = {
@@ -67,6 +72,7 @@ export type LocationFillerInput = {
   region?: WorldRegion;
   regionBiome?: string;
   activeQuestMarkers?: QuestMarker[];
+  llmCacheBuster?: string;
 };
 
 export type TileFillerOptions = {
@@ -287,7 +293,7 @@ export class TileFiller {
     const anchors = projectLocations({ locations, gridW: width, gridH: height });
 
     const system = systemPromptForRegion();
-    const user = userPromptForRegion({
+    let user = userPromptForRegion({
       regionId,
       regionName: region.name || regionId,
       regionProse: region.basicInfo,
@@ -297,6 +303,9 @@ export class TileFiller {
       activeQuestMarkers,
       worldBackground: this.worldBackgroundHint(),
     });
+    if (input.llmCacheBuster) {
+      user += `\n\n<!-- engine:grid-regenerate ${input.llmCacheBuster} -->`;
+    }
 
     return this.invokeFiller({
       scope: "region",
@@ -328,7 +337,7 @@ export class TileFiller {
     }));
 
     const system = systemPromptForLocation();
-    const user = userPromptForLocation({
+    let user = userPromptForLocation({
       locationId,
       locationName: location.name || locationId,
       locationProse: location.basicInfo,
@@ -341,6 +350,9 @@ export class TileFiller {
       activeQuestMarkers,
       worldBackground: this.worldBackgroundHint(),
     });
+    if (input.llmCacheBuster) {
+      user += `\n\n<!-- engine:grid-regenerate ${input.llmCacheBuster} -->`;
+    }
 
     return this.invokeFiller({
       scope: "location",
