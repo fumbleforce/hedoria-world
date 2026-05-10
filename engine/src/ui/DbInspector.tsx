@@ -23,8 +23,8 @@ type TableSpec = {
   summary: string[];
   /** Field name to sort rows by, descending. Optional. */
   sortBy?: string;
-  /** Render hint: textures get a thumbnail; everything else is plain JSON. */
-  variant?: "default" | "texture";
+  /** Render hint: tile images get a thumbnail; everything else is plain JSON. */
+  variant?: "default" | "image";
 };
 
 const TABLE_SPECS: TableSpec[] = [
@@ -41,11 +41,11 @@ const TABLE_SPECS: TableSpec[] = [
     sortBy: "generatedAt",
   },
   {
-    name: "textures",
-    table: db.textures as unknown as Table<unknown, unknown>,
+    name: "tileImages",
+    table: db.tileImages as unknown as Table<unknown, unknown>,
     summary: ["key", "source", "width", "height", "generatedAt"],
     sortBy: "generatedAt",
-    variant: "texture",
+    variant: "image",
   },
   {
     name: "expansionEntities",
@@ -61,7 +61,7 @@ const TABLE_SPECS: TableSpec[] = [
   {
     name: "saves",
     table: db.saves as unknown as Table<unknown, unknown>,
-    summary: ["saveId", "packId", "updatedAt"],
+    summary: ["saveId", "configHash", "updatedAt"],
     sortBy: "updatedAt",
   },
   {
@@ -234,8 +234,8 @@ function RowItem({ row, spec, expanded, onToggle }: RowItemProps) {
   const summary = useMemo(() => buildSummary(row, spec.summary), [row, spec.summary]);
   const fullJson = useMemo(() => stringifyForDisplay(row), [row]);
   const thumbnailUrl = useMemo(() => {
-    if (spec.variant !== "texture") return null;
-    return buildTextureThumbnail(row);
+    if (spec.variant !== "image") return null;
+    return buildImageThumbnail(row);
   }, [row, spec.variant]);
 
   return (
@@ -254,7 +254,7 @@ function RowItem({ row, spec, expanded, onToggle }: RowItemProps) {
             <img
               className="dbInspector__thumb"
               src={thumbnailUrl}
-              alt={String(row.key ?? "texture")}
+              alt={String(row.key ?? "tile")}
             />
           ) : null}
           <pre className="dbInspector__json">{fullJson}</pre>
@@ -318,10 +318,10 @@ function stringifyForDisplay(row: Record<string, unknown>): string {
 }
 
 /**
- * Build a `data:` URL from a stored texture row so we can preview generated
- * tiles in-line. Returns null if the row doesn't look like a texture.
+ * Build a `data:` URL from a stored tile-image row so we can preview generated
+ * tiles in-line. Returns null if the row doesn't look like a tile image.
  */
-function buildTextureThumbnail(row: Record<string, unknown>): string | null {
+function buildImageThumbnail(row: Record<string, unknown>): string | null {
   const bytes = row.bytes;
   const mime = (row.mime as string | undefined) ?? "image/png";
   if (!(bytes instanceof Uint8Array)) return null;

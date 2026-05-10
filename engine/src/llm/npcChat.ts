@@ -1,5 +1,5 @@
 import type { IndexedWorld } from "../world/indexer";
-import type { PackNpc } from "../schema/packSchema";
+import type { WorldNpc } from "../schema/worldSchema";
 import type { LlmRequest } from "./types";
 
 export type NpcChatMessage = {
@@ -8,7 +8,7 @@ export type NpcChatMessage = {
 };
 
 export type NpcChatContext = {
-  npc: PackNpc;
+  npc: WorldNpc;
   world: IndexedWorld | null;
   history: NpcChatMessage[];
   /** The new player utterance that should be appended as the next user turn. */
@@ -28,13 +28,13 @@ export type NpcChatContext = {
  */
 export function buildNpcChatRequest(ctx: NpcChatContext): LlmRequest {
   const { npc, world, history, playerInput } = ctx;
-  const npcType = world?.pack.npcTypes[npc.type];
-  const faction = npc.faction ? world?.pack.factions[npc.faction] : undefined;
+  const npcType = world?.world.npcTypes[npc.type];
+  const faction = npc.faction ? world?.world.factions[npc.faction] : undefined;
   const location = npc.currentLocation
-    ? world?.pack.locations[npc.currentLocation]
+    ? world?.world.locations[npc.currentLocation]
     : undefined;
   const region = location?.region
-    ? world?.pack.regions[location.region]
+    ? world?.world.regions[location.region]
     : undefined;
 
   const lines: string[] = [

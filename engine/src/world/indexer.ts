@@ -1,4 +1,9 @@
-import type { PackData, PackLocation, PackNpc } from "../schema/packSchema";
+import type {
+  WorldData,
+  WorldLocation,
+  WorldNpc,
+  WorldRegion,
+} from "../schema/worldSchema";
 
 export type ExpansionEntityType =
   | "npc"
@@ -23,46 +28,54 @@ export type ExpansionEntityRow = {
 };
 
 export type IndexedWorld = {
-  pack: PackData;
-  npcsByLocation: Map<string, PackNpc[]>;
-  npcsByArea: Map<string, PackNpc[]>;
+  world: WorldData;
+  npcsByLocation: Map<string, WorldNpc[]>;
+  npcsByArea: Map<string, WorldNpc[]>;
   areaGraph: Map<string, Map<string, string[]>>;
   factionsById: Map<string, { name: string; basicInfo?: string }>;
   abilitiesById: Map<string, unknown>;
   itemsById: Map<string, unknown>;
-  regionsByXY: Array<{ id: string; x: number; y: number }>;
-  locations: Record<string, PackLocation>;
+  /** Locations grouped by their `region` string. Empty array if a region has none. */
+  locationsByRegion: Map<string, Array<{ id: string; loc: WorldLocation }>>;
+  regionsById: Record<string, WorldRegion>;
+  locations: Record<string, WorldLocation>;
 };
 
-function upsertMergedPack(base: PackData, expansionRows: ExpansionEntityRow[]): PackData {
-  const merged: PackData = structuredClone(base);
+function upsertMergedWorld(
+  base: WorldData,
+  expansionRows: ExpansionEntityRow[],
+): WorldData {
+  const merged: WorldData = structuredClone(base);
 
   for (const row of expansionRows) {
     if (row.entityType === "npc") {
-      merged.npcs[row.entityId] = row.data as PackData["npcs"][string];
+      merged.npcs[row.entityId] = row.data as WorldData["npcs"][string];
     } else if (row.entityType === "npcType") {
-      merged.npcTypes[row.entityId] = row.data as PackData["npcTypes"][string];
+      merged.npcTypes[row.entityId] = row.data as WorldData["npcTypes"][string];
     } else if (row.entityType === "region") {
-      merged.regions[row.entityId] = row.data as PackData["regions"][string];
+      merged.regions[row.entityId] = row.data as WorldData["regions"][string];
     } else if (row.entityType === "location") {
-      merged.locations[row.entityId] = row.data as PackData["locations"][string];
+      merged.locations[row.entityId] = row.data as WorldData["locations"][string];
     } else if (row.entityType === "faction") {
-      merged.factions[row.entityId] = row.data as PackData["factions"][string];
+      merged.factions[row.entityId] = row.data as WorldData["factions"][string];
     } else if (row.entityType === "item") {
-      merged.items[row.entityId] = row.data as PackData["items"][string];
+      merged.items[row.entityId] = row.data as WorldData["items"][string];
     }
   }
 
   return merged;
 }
 
-export function buildWorldIndex(basePack: PackData, expansionRows: ExpansionEntityRow[]): IndexedWorld {
-  const pack = upsertMergedPack(basePack, expansionRows);
-  const npcsByLocation = new Map<string, PackNpc[]>();
-  const npcsByArea = new Map<string, PackNpc[]>();
+export function buildWorldIndex(
+  baseWorld: WorldData,
+  expansionRows: ExpansionEntityRow[],
+): IndexedWorld {
+  const world = upsertMergedWorld(baseWorld, expansionRows);
+  const npcsByLocation = new Map<string, WorldNpc[]>();
+  const npcsByArea = new Map<string, WorldNpc[]>();
   const areaGraph = new Map<string, Map<string, string[]>>();
 
-  for (const [id, npc] of Object.entries(pack.npcs)) {
+  for (const [id, npc] of Object.entries(world.npcs)) {
     if (!npc.currentLocation) continue;
     const locList = npcsByLocation.get(npc.currentLocation) ?? [];
     locList.push(npc);
@@ -78,7 +91,7 @@ export function buildWorldIndex(basePack: PackData, expansionRows: ExpansionEnti
     }
   }
 
-  for (const [locationId, location] of Object.entries(pack.locations)) {
+  for (const [locationId, location] of Object.entries(world.locations)) {
     const graph = new Map<string, string[]>();
     for (const [areaId, area] of Object.entries(location.areas ?? {})) {
       graph.set(areaId, [...area.paths]);
@@ -86,15 +99,25 @@ export function buildWorldIndex(basePack: PackData, expansionRows: ExpansionEnti
     areaGraph.set(locationId, graph);
   }
 
+  const locationsByRegion = new Map<string, Array<{ id: string; loc: WorldLocation }>>();
+  for (const [id, loc] of Object.entries(world.locations)) {
+    const regionId = loc.region || "";
+    if (!regionId) continue;
+    const arr = locationsByRegion.get(regionId) ?? [];
+    arr.push({ id, loc });
+    locationsByRegion.set(regionId, arr);
+  }
+
   return {
-    pack,
+    world,
     npcsByLocation,
     npcsByArea,
     areaGraph,
-    factionsById: new Map(Object.entries(pack.factions)),
-    abilitiesById: new Map(Object.entries(pack.abilities)),
-    itemsById: new Map(Object.entries(pack.items)),
-    regionsByXY: Object.entries(pack.regions).map(([id, region]) => ({ id, x: region.x, y: region.y })),
-    locations: pack.locations,
+    factionsById: new Map(Object.entries(world.factions)),
+    abilitiesById: new Map(Object.entries(world.abilities)),
+    itemsById: new Map(Object.entries(world.items)),
+    locationsByRegion,
+    regionsById: world.regions,
+    locations: world.locations,
   };
 }

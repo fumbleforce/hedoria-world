@@ -1,0 +1,8 @@
+{
+  "packId": "larion",
+  "packName": "larion",
+  "schemaVersion": "1.0.0",
+  "engineCompatibility": "^0.1.0",
+  "seed": "larion-default",
+  "sourceConfig": "./larion.json"
+}

@@ -133,6 +133,27 @@ class GeminiTextProvider implements LlmProvider {
     if (request.jsonMode) {
       body.generationConfig = { responseMimeType: "application/json" };
     }
+    // Bridge our ToolSpec[] to Gemini's functionDeclarations[] so the model
+    // can emit real structured function calls. Without this, Gemini sees
+    // tools only as text in the system prompt and either ignores them or
+    // (worse) emits Python-style `move_region(...)` strings into the text
+    // body, which then leaks into the narration panel.
+    if (request.tools && request.tools.length > 0) {
+      body.tools = [
+        {
+          functionDeclarations: request.tools.map((t) => ({
+            name: t.name,
+            description: t.description,
+            // Gemini expects a JSON-Schema-shaped `parameters` block, which
+            // is exactly what our `inputSchema` already is.
+            parameters: t.inputSchema,
+          })),
+        },
+      ];
+      // Encourage but don't require function calls so the model can still
+      // emit pure narration when no tool is appropriate.
+      body.toolConfig = { functionCallingConfig: { mode: "AUTO" } };
+    }
 
     const response = await fetch(endpoint, {
       method: "POST",
@@ -166,15 +187,38 @@ class GeminiTextProvider implements LlmProvider {
     }
     const json = (await response.json()) as {
       candidates?: Array<{
-        content?: { parts?: Array<{ text?: string }> };
+        content?: {
+          parts?: Array<{
+            text?: string;
+            functionCall?: { name?: string; args?: Record<string, unknown> };
+          }>;
+        };
       }>;
     };
-    const text =
-      json.candidates?.[0]?.content?.parts
-        ?.map((p) => p.text ?? "")
-        .filter((s) => s.length > 0)
-        .join("") ?? "";
-    return { text };
+    const parts = json.candidates?.[0]?.content?.parts ?? [];
+
+    // Split the parts stream into prose text and structured function calls.
+    // Gemini interleaves them in the order the model produced, so a single
+    // candidate may look like:
+    //   parts: [{text:"You walk west."}, {functionCall:{name:"move_region",args:{...}}}]
+    // We preserve order in `toolCalls[]` so the narrator dispatcher applies
+    // them in the same sequence the model intended.
+    const textChunks: string[] = [];
+    const toolCalls: Array<{ name: string; arguments: Record<string, unknown> }> = [];
+    for (const part of parts) {
+      if (part.functionCall && typeof part.functionCall.name === "string") {
+        toolCalls.push({
+          name: part.functionCall.name,
+          arguments: (part.functionCall.args ?? {}) as Record<string, unknown>,
+        });
+      } else if (typeof part.text === "string" && part.text.length > 0) {
+        textChunks.push(part.text);
+      }
+    }
+    return {
+      text: textChunks.join(""),
+      toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+    };
   }
 }
 

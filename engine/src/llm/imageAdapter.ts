@@ -105,6 +105,34 @@ function parseRetryDelay(errorBody: string): number | null {
   return match[2] === "ms" ? n : n * 1000;
 }
 
+/**
+ * Hard timeout for a single image-API round-trip. Gemini occasionally
+ * hangs without ever returning bytes or an HTTP error — without an
+ * AbortController-driven cap the request would stall forever, leaving
+ * the tile cache with a pending promise the player has no way to
+ * recover from short of a page reload. Two minutes is generous enough
+ * for the slowest mosaic request we've observed (~110s for a 256² tile,
+ * ~35s for a 1280² mosaic) and short enough that a wedged call gets
+ * caught and the cell falls through to its placeholder so the redraw
+ * button can retry.
+ *
+ * Overridable via `VITE_GEMINI_IMAGE_TIMEOUT_MS` in `engine/.env` for
+ * users on slow links who want to wait longer.
+ */
+const IMAGE_REQUEST_TIMEOUT_MS = (() => {
+  const raw = (import.meta as { env?: Record<string, string | undefined> })
+    ?.env?.VITE_GEMINI_IMAGE_TIMEOUT_MS;
+  const parsed = raw ? Number(raw) : NaN;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 120_000;
+})();
+
+export class ImageTimeoutError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ImageTimeoutError";
+  }
+}
+
 export class GeminiImageProvider implements ImageProvider {
   readonly id: string;
   private readonly apiKey: string;
@@ -142,18 +170,41 @@ export class GeminiImageProvider implements ImageProvider {
         },
       },
     };
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+
+    // AbortController-driven timeout. We don't trust upstream to ever
+    // respond — long tails on the image API are common and a stalled
+    // mosaic call would otherwise hold the cache's in-flight slot
+    // indefinitely.
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), IMAGE_REQUEST_TIMEOUT_MS);
+    let response: Response;
+    try {
+      response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+    } catch (err) {
+      if ((err as { name?: string })?.name === "AbortError") {
+        throw new ImageTimeoutError(
+          `Gemini image API timeout after ${Math.round(IMAGE_REQUEST_TIMEOUT_MS / 1000)}s on ${this.model}`,
+        );
+      }
+      throw err;
+    } finally {
+      clearTimeout(timer);
+    }
     if (!response.ok) {
       const text = await response.text().catch(() => "");
       if (response.status === 429) {
         const hinted = parseRetryDelay(text);
         const cooldown = Math.min(
           IMAGE_MAX_COOLDOWN_MS,
-          Math.max(IMAGE_DEFAULT_COOLDOWN_MS, hinted ?? IMAGE_DEFAULT_COOLDOWN_MS),
+          Math.max(
+            IMAGE_DEFAULT_COOLDOWN_MS,
+            hinted ?? IMAGE_DEFAULT_COOLDOWN_MS,
+          ),
         );
         this.cooldownUntil = Date.now() + cooldown;
         console.warn(
@@ -166,7 +217,9 @@ export class GeminiImageProvider implements ImageProvider {
           cooldown,
         );
       }
-      throw new Error(`Gemini image API ${response.status}: ${text.slice(0, 300)}`);
+      throw new Error(
+        `Gemini image API ${response.status}: ${text.slice(0, 300)}`,
+      );
     }
     const json = (await response.json()) as {
       candidates?: Array<{
@@ -175,7 +228,9 @@ export class GeminiImageProvider implements ImageProvider {
         };
       }>;
     };
-    const part = json.candidates?.[0]?.content?.parts?.find((p) => p.inlineData?.data);
+    const part = json.candidates?.[0]?.content?.parts?.find(
+      (p) => p.inlineData?.data,
+    );
     const data = part?.inlineData?.data;
     if (!data) {
       throw new Error("Gemini image API: no inline image data in response");
@@ -189,13 +244,13 @@ export class GeminiImageProvider implements ImageProvider {
   }
 }
 
-// Default image model: gemini-3.1-flash-image-preview — "Nano Banana 2", the
+// Default image model: gemini-3.1-flash-image-preview — Gemini 2.5 flash image, the
 // documented default at https://ai.google.dev/gemini-api/docs/image-generation
 // as of 2026-05. Override via VITE_GEMINI_IMAGE_MODEL in engine/.env.
 // Premium alternative: gemini-3-pro-image-preview (Nano Banana Pro).
 export function createGeminiImageProvider(
   apiKey: string,
-  model: string = "gemini-3.1-flash-image-preview",
+  model: string = "gemini-2.5-flash-image",
 ): ImageProvider {
   return new GeminiImageProvider(apiKey, model);
 }
@@ -224,7 +279,11 @@ function hashColor(input: string): [number, number, number] {
   return [(h >> 16) & 0xff, (h >> 8) & 0xff, h & 0xff];
 }
 
-function solidPng(width: number, height: number, color: [number, number, number]): Uint8Array {
+function solidPng(
+  width: number,
+  height: number,
+  color: [number, number, number],
+): Uint8Array {
   // Tiny solid-colour PNG (no compression beyond raw filters). Good enough for
   // a deterministic mock without bringing in pngjs or canvas.
   const rgba = new Uint8Array(width * height * 4 + height);
@@ -243,9 +302,15 @@ function solidPng(width: number, height: number, color: [number, number, number]
   return encodePngFromRaw(width, height, rgba);
 }
 
-const PNG_SIGNATURE = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+const PNG_SIGNATURE = new Uint8Array([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+]);
 
-function encodePngFromRaw(width: number, height: number, rawWithFilters: Uint8Array): Uint8Array {
+function encodePngFromRaw(
+  width: number,
+  height: number,
+  rawWithFilters: Uint8Array,
+): Uint8Array {
   const ihdr = new Uint8Array(13);
   const dv = new DataView(ihdr.buffer);
   dv.setUint32(0, width);
@@ -303,7 +368,7 @@ function zlibStore(raw: Uint8Array): Uint8Array {
     header[0] = isFinal;
     header[1] = blockLen & 0xff;
     header[2] = (blockLen >> 8) & 0xff;
-    const negLen = (~blockLen) & 0xffff;
+    const negLen = ~blockLen & 0xffff;
     header[3] = negLen & 0xff;
     header[4] = (negLen >> 8) & 0xff;
     blocks.push(header);

@@ -15,41 +15,47 @@ async function readBody(req: IncomingMessage): Promise<string> {
   });
 }
 
-function promotionEndpoint(): Plugin {
+/**
+ * Generic JSONL sink. Used by two endpoints below — one for raw LLM
+ * prompt/response pairs (large, churns fast), one for the higher-level
+ * "what's happening in the engine right now" event stream. Keeping them
+ * in separate files means you can `tail -F engine/logs/events.jsonl` for
+ * an at-a-glance flow without the LLM bodies drowning everything else.
+ */
+async function appendJsonl(file: string, body: string): Promise<void> {
+  const dir = path.dirname(file);
+  await fs.mkdir(dir, { recursive: true });
+  let line: string;
+  try {
+    line = JSON.stringify(JSON.parse(body));
+  } catch {
+    line = JSON.stringify({ raw: body });
+  }
+  await fs.appendFile(file, line + "\n");
+}
+
+function makeJsonlEndpoint(opts: { name: string; url: string; file: string }): Plugin {
   return {
-    name: "promotion-endpoint",
+    name: opts.name,
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
-        if (req.method !== "POST" || req.url !== "/__promote") {
+        if (req.method !== "POST" || req.url !== opts.url) {
           next();
           return;
         }
         try {
           const body = await readBody(req);
-          const parsed = JSON.parse(body) as {
-            packId: string;
-            entries: Array<{ entityType: string; entityId: string; data: Record<string, unknown> }>;
-          };
-
-          const outputRoot = path.resolve(__dirname, "..", "packs", parsed.packId, "candidates");
-          await fs.mkdir(outputRoot, { recursive: true });
-          const grouped = new Map<string, Record<string, unknown>>();
-          for (const entry of parsed.entries) {
-            const bucket = grouped.get(entry.entityType) ?? {};
-            bucket[entry.entityId] = entry.data;
-            grouped.set(entry.entityType, bucket);
-          }
-
-          for (const [entityType, block] of grouped.entries()) {
-            const filePath = path.resolve(outputRoot, `${entityType}.json`);
-            await fs.writeFile(filePath, JSON.stringify(block, null, 2));
-          }
-
+          await appendJsonl(opts.file, body);
           res.statusCode = 200;
           res.end(JSON.stringify({ ok: true }));
         } catch (error) {
           res.statusCode = 500;
-          res.end(JSON.stringify({ ok: false, error: error instanceof Error ? error.message : String(error) }));
+          res.end(
+            JSON.stringify({
+              ok: false,
+              error: error instanceof Error ? error.message : String(error),
+            }),
+          );
         }
       });
     },
@@ -66,41 +72,204 @@ function promotionEndpoint(): Plugin {
  * Production builds simply 404 the call, which the client swallows.
  */
 function llmLogEndpoint(): Plugin {
-  return {
+  return makeJsonlEndpoint({
     name: "llm-log-endpoint",
+    url: "/__llm-log",
+    file: path.resolve(__dirname, "logs", "llm-prompts.jsonl"),
+  });
+}
+
+/**
+ * Dev-only structured event sink. Every interesting engine event (boot
+ * stages, tile-grid cache hits/misses, image generation requests, narrator
+ * tool dispatches, scene-runner state) lands here as one JSON line. The
+ * accompanying `diag` client in `src/diag/log.ts` keeps these compact —
+ * each event references the larger LLM transcript by `promptHash` so the
+ * two files compose without duplicating the bulk content.
+ *
+ *   tail -F engine/logs/events.jsonl | jq -c '{ts,channel,level,message}'
+ */
+function diagLogEndpoint(): Plugin {
+  return makeJsonlEndpoint({
+    name: "diag-log-endpoint",
+    url: "/__diag-log",
+    file: path.resolve(__dirname, "logs", "events.jsonl"),
+  });
+}
+
+/**
+ * Pack discovery + serving. Each `packs/<id>/manifest.json` declares a
+ * `sourceConfig` path (relative to the manifest) that points at the actual
+ * authored world file. Two endpoints expose this to the client:
+ *
+ *   GET /__packs            -> [{ packId, packName, schemaVersion, seed }]
+ *   GET /__pack/<packId>    -> the resolved source-config JSON for that pack
+ *
+ * Reading happens on every request so editing a pack's source file
+ * hot-updates the engine on the next reload without a server restart.
+ *
+ * For backward compatibility (and dev convenience) we keep `/config.json`
+ * working: it resolves through the `hedoria` pack manifest if available,
+ * otherwise falls back to the repo-root `config.json` directly.
+ */
+type Manifest = {
+  packId: string;
+  packName?: string;
+  schemaVersion?: string;
+  engineCompatibility?: string;
+  seed?: string;
+  sourceConfig: string;
+};
+
+const PACKS_ROOT = path.resolve(__dirname, "..", "packs");
+
+async function readManifest(packId: string): Promise<{
+  manifest: Manifest;
+  manifestDir: string;
+} | null> {
+  try {
+    const manifestDir = path.join(PACKS_ROOT, packId);
+    const manifestPath = path.join(manifestDir, "manifest.json");
+    const raw = await fs.readFile(manifestPath, "utf8");
+    const manifest = JSON.parse(raw) as Manifest;
+    if (typeof manifest?.packId !== "string" || typeof manifest?.sourceConfig !== "string") {
+      return null;
+    }
+    return { manifest, manifestDir };
+  } catch {
+    return null;
+  }
+}
+
+async function listPackIds(): Promise<string[]> {
+  try {
+    const entries = await fs.readdir(PACKS_ROOT, { withFileTypes: true });
+    return entries
+      .filter((e) => e.isDirectory())
+      .map((e) => e.name)
+      .sort();
+  } catch {
+    return [];
+  }
+}
+
+function packsEndpoint(): Plugin {
+  return {
+    name: "packs-endpoint",
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
-        if (req.method !== "POST" || req.url !== "/__llm-log") {
+        if (req.method !== "GET" || !req.url) {
           next();
           return;
         }
-        try {
-          const body = await readBody(req);
-          const logDir = path.resolve(__dirname, "logs");
-          await fs.mkdir(logDir, { recursive: true });
-          const file = path.resolve(logDir, "llm-prompts.jsonl");
-          // Defensive: ensure the body is a single line of JSON, never multi-line,
-          // so the JSONL invariant holds even if the client passed pretty-printed
-          // payload by accident.
-          let line: string;
+
+        // List manifests for every directory under /packs.
+        if (req.url === "/__packs") {
           try {
-            line = JSON.stringify(JSON.parse(body));
-          } catch {
-            line = JSON.stringify({ raw: body });
+            const ids = await listPackIds();
+            const summaries = [];
+            for (const id of ids) {
+              const found = await readManifest(id);
+              if (!found) continue;
+              const { manifest } = found;
+              summaries.push({
+                packId: manifest.packId,
+                packName: manifest.packName ?? manifest.packId,
+                schemaVersion: manifest.schemaVersion ?? null,
+                engineCompatibility: manifest.engineCompatibility ?? null,
+                seed: manifest.seed ?? null,
+              });
+            }
+            res.statusCode = 200;
+            res.setHeader("Content-Type", "application/json");
+            res.setHeader("Cache-Control", "no-store");
+            res.end(JSON.stringify({ packs: summaries }));
+          } catch (error) {
+            res.statusCode = 500;
+            res.end(
+              JSON.stringify({
+                ok: false,
+                error: error instanceof Error ? error.message : String(error),
+              }),
+            );
           }
-          await fs.appendFile(file, line + "\n");
-          res.statusCode = 200;
-          res.end(JSON.stringify({ ok: true }));
-        } catch (error) {
-          res.statusCode = 500;
-          res.end(JSON.stringify({ ok: false, error: error instanceof Error ? error.message : String(error) }));
+          return;
         }
+
+        // Serve the resolved source-config JSON for a specific pack.
+        const packMatch = req.url.match(/^\/__pack\/([^/?#]+)(?:\?.*)?$/);
+        if (packMatch) {
+          const packId = decodeURIComponent(packMatch[1]);
+          const found = await readManifest(packId);
+          if (!found) {
+            res.statusCode = 404;
+            res.end(JSON.stringify({ ok: false, error: `pack not found: ${packId}` }));
+            return;
+          }
+          const { manifest, manifestDir } = found;
+          // sourceConfig is resolved relative to the manifest file. Reject
+          // anything that escapes the repo root just to be safe.
+          const sourcePath = path.resolve(manifestDir, manifest.sourceConfig);
+          const repoRoot = path.resolve(__dirname, "..");
+          if (!sourcePath.startsWith(repoRoot + path.sep)) {
+            res.statusCode = 400;
+            res.end(
+              JSON.stringify({
+                ok: false,
+                error: `pack ${packId} sourceConfig escapes repo root`,
+              }),
+            );
+            return;
+          }
+          try {
+            const body = await fs.readFile(sourcePath, "utf8");
+            res.statusCode = 200;
+            res.setHeader("Content-Type", "application/json");
+            res.setHeader("Cache-Control", "no-store");
+            res.end(body);
+          } catch (error) {
+            res.statusCode = 500;
+            res.end(
+              JSON.stringify({
+                ok: false,
+                error: error instanceof Error ? error.message : String(error),
+              }),
+            );
+          }
+          return;
+        }
+
+        // Backward-compat: keep /config.json pointing at the hedoria pack
+        // (or the repo-root config.json as a last resort).
+        if (req.url === "/config.json") {
+          try {
+            const hedoria = await readManifest("hedoria");
+            const file = hedoria
+              ? path.resolve(hedoria.manifestDir, hedoria.manifest.sourceConfig)
+              : path.resolve(__dirname, "..", "config.json");
+            const body = await fs.readFile(file, "utf8");
+            res.statusCode = 200;
+            res.setHeader("Content-Type", "application/json");
+            res.setHeader("Cache-Control", "no-store");
+            res.end(body);
+          } catch (error) {
+            res.statusCode = 500;
+            res.end(
+              JSON.stringify({
+                ok: false,
+                error: error instanceof Error ? error.message : String(error),
+              }),
+            );
+          }
+          return;
+        }
+
+        next();
       });
     },
   };
 }
 
-// https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), promotionEndpoint(), llmLogEndpoint()],
+  plugins: [react(), llmLogEndpoint(), diagLogEndpoint(), packsEndpoint()],
 });

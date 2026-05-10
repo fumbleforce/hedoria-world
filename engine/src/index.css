@@ -1,3 +1,38 @@
+:root {
+  color-scheme: dark;
+
+  /* The world. Layered dark blue-greens that read as "night sky over a map".
+     Brighter than pure black so the LLM-generated tiles still pop. */
+  --bg: #0a0d14;
+  --bg-2: #11151f;
+
+  /* Floating glass — translucent surfaces sit on top of the map. */
+  --glass-bg: rgba(14, 18, 28, 0.72);
+  --glass-bg-strong: rgba(10, 13, 22, 0.86);
+  --glass-border: rgba(180, 200, 255, 0.10);
+  --glass-border-strong: rgba(180, 200, 255, 0.18);
+  --glass-shadow: 0 16px 38px rgba(0, 0, 0, 0.55);
+  --glass-blur: blur(18px) saturate(140%);
+
+  --fg: #eef2f9;
+  --fg-2: #aab3c5;
+  --fg-3: #6f7790;
+  --accent: #9ad6ff;
+  --accent-glow: rgba(154, 214, 255, 0.55);
+  --accent-2: #ffc488;
+  --accent-2-glow: rgba(255, 196, 136, 0.55);
+  --danger: #ef6262;
+  --warn: #efb262;
+
+  /* Vertical clearance reserved at the top of the canvas so the HUD
+   * strip is never overlapped by tile imagery. Tweak here to nudge
+   * the map farther up or down without touching component code. */
+  --canvas-top-inset: 64px;
+
+  font-family:
+    "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -6,18 +41,1418 @@ html,
 body,
 #root {
   margin: 0;
-  min-height: 100%;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  overflow: hidden; /* the app shell handles its own scroll regions */
 }
 
 button {
-  background: #2563eb;
-  color: #eff6ff;
-  border: 1px solid #1d4ed8;
+  font: inherit;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--fg);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 6px;
-  padding: 6px 10px;
+  padding: 5px 12px;
   cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease,
+    box-shadow 120ms ease;
+}
+button:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: rgba(154, 214, 255, 0.10);
+  box-shadow: 0 0 0 1px rgba(154, 214, 255, 0.25);
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-button:hover {
-  background: #1d4ed8;
+input {
+  font: inherit;
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--fg);
+  border: 1px solid var(--glass-border);
+  border-radius: 6px;
+  padding: 7px 10px;
+}
+input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(154, 214, 255, 0.18);
+}
+
+/* -------------------------------------------------------------- App shell
+ *
+ * Everything sits inside one full-viewport stacking context. The map is the
+ * canvas; HUD, side rail, hint and modals are absolutely-positioned glass
+ * surfaces over it. The page never scrolls — internal panels do.
+ */
+.app {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  /* Subtle radial vignette to focus attention on the centre of the map. */
+  background:
+    radial-gradient(
+      ellipse at center,
+      #131a2a 0%,
+      var(--bg) 55%,
+      #04060c 100%
+    );
+}
+
+/* The map canvas: takes the whole viewport. Children (RegionMap, LocationMap,
+ * SceneView) center themselves inside. Padding leaves clearance for the HUD
+ * (top) and hint strip (bottom) so floating overlays don't clip the action. */
+.app__canvas {
+  /* The canvas IS the map. It fills the viewport horizontally; the
+   * HUD, narration rail, side rail, and bottom hint sit on top as
+   * floating overlays. The camera in `TileGridView` centres on the
+   * player so any edges hidden behind the rails are simply offscreen
+   * from the player's POV — exactly how a 2D RPG/RTS camera feels.
+   *
+   * The top is inset by `--canvas-top-inset` so the HUD strip has a
+   * clean band of space above the tile imagery. Without this offset
+   * the camera frequently parked a brightly painted tile directly
+   * behind the HUD chips and made them illegible against the busy
+   * imagery; carving out a deliberate band fixes that for free
+   * without resorting to a backdrop blur on every chip. */
+  position: absolute;
+  top: var(--canvas-top-inset, 64px);
+  right: 0;
+  bottom: 0;
+  left: 0;
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* HUD: flat top strip. No background, no border — the crumbs, chips and
+ * action buttons sit directly on the map. Each individual chip already
+ * has its own subtle background so they read against the bright map
+ * imagery, but the strip as a whole is just a layout container. */
+.hud {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+.hud > * {
+  pointer-events: auto;
+}
+.hud__title {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+  text-shadow: 0 0 12px rgba(154, 214, 255, 0.35);
+}
+.hud__crumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--fg-2);
+  font-size: 0.88em;
+  margin-right: auto;
+}
+.hud__crumb {
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.04);
+}
+.hud__crumb--strong {
+  color: var(--fg);
+}
+.hud__sep {
+  color: var(--fg-3);
+  font-size: 0.85em;
+}
+.hud__chip {
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.78em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--glass-border);
+  color: var(--fg-2);
+}
+.hud__chip--live {
+  color: #d6ffd6;
+  border-color: rgba(170, 255, 170, 0.35);
+  background: rgba(80, 220, 120, 0.10);
+}
+.hud__chip--mock {
+  color: #ffd6a8;
+  border-color: rgba(255, 196, 136, 0.35);
+  background: rgba(255, 196, 136, 0.10);
+}
+.hud__actions {
+  display: flex;
+  gap: 6px;
+}
+
+/* Pack/world selector. Pinned next to the title so it reads as
+ * "you are looking at this world right now". Keeps the same glass
+ * vocabulary as the rest of the HUD chips. */
+.hud__pack {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px 2px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--glass-border);
+  font-size: 0.78em;
+  letter-spacing: 0.04em;
+}
+.hud__packLabel {
+  text-transform: uppercase;
+  color: var(--fg-3);
+  font-size: 0.85em;
+}
+.hud__packSelect {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--fg);
+  font: inherit;
+  letter-spacing: inherit;
+  padding: 0 18px 0 4px;
+  cursor: pointer;
+  /* tiny chevron via background-image so we don't need a separate icon */
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--fg-2) 50%),
+    linear-gradient(135deg, var(--fg-2) 50%, transparent 50%);
+  background-position:
+    calc(100% - 9px) 50%,
+    calc(100% - 5px) 50%;
+  background-size:
+    4px 4px,
+    4px 4px;
+  background-repeat: no-repeat;
+}
+.hud__packSelect:focus {
+  outline: 1px solid var(--accent);
+  outline-offset: 1px;
+}
+.hud__packSelect option {
+  background: #0d121b;
+  color: var(--fg);
+}
+
+/* Floating side rail (top-right): quests + region brief, stacked. Glass with
+ * blur, narrow column so it doesn't crowd the map. Caps its height with
+ * internal scroll so a long region brief still fits. */
+.sideRail {
+  position: absolute;
+  top: 72px;
+  right: 12px;
+  width: 320px;
+  max-height: calc(100vh - 92px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 5;
+  pointer-events: none; /* re-enabled per-card */
+}
+.sideRail__card {
+  pointer-events: auto;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: var(--glass-shadow);
+  overflow: auto;
+}
+.sideRail__card h2 {
+  margin: 0 0 8px;
+  font-size: 0.78em;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+  font-weight: 600;
+}
+.sideRail__card h2 small {
+  color: var(--fg-3);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.sideRail__card p,
+.sideRail__card li,
+.sideRail__card ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sideRail__card ul {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sideRail__card li strong {
+  color: var(--fg);
+}
+.sideRail__card .panel__hint,
+.sideRail__hint {
+  color: var(--fg-3);
+  font-size: 0.8em;
+  margin-top: 6px;
+}
+.sideRail__brief {
+  font-size: 0.88em;
+  line-height: 1.5;
+  color: var(--fg-2);
+  white-space: pre-wrap;
+}
+
+/* -------------------------------------------------------------- Narration
+ *
+ * The persistent narration rail on the left. Always visible, always
+ * scrolling to the latest entry. Every player intent and every narrator
+ * response lands here in order, so the panel doubles as the player's
+ * "what just happened" memory.
+ */
+.narrationPanel {
+  position: absolute;
+  top: 72px;
+  left: 12px;
+  width: 360px;
+  max-height: calc(100vh - 92px);
+  display: flex;
+  flex-direction: column;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  box-shadow: var(--glass-shadow);
+  pointer-events: auto;
+  z-index: 5;
+  overflow: hidden;
+}
+.narrationPanel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px 8px;
+  border-bottom: 1px solid var(--glass-border);
+  flex-shrink: 0;
+}
+.narrationPanel__header h2 {
+  margin: 0;
+  font-size: 0.78em;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+.narrationPanel__pending {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.narrationPanel__dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent-glow);
+  animation: narrationDot 1.1s ease-in-out infinite;
+}
+@keyframes narrationDot {
+  0%, 100% { opacity: 0.35; transform: scale(0.9); }
+  50%       { opacity: 1.0;  transform: scale(1.2); }
+}
+.narrationPanel__empty {
+  margin: 16px;
+  color: var(--fg-3);
+  font-size: 0.88em;
+  line-height: 1.55;
+  font-style: italic;
+}
+.narrationPanel__list {
+  margin: 0;
+  padding: 12px 16px 16px;
+  list-style: none;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  flex: 1 1 auto;
+  /* The reading flow is top → bottom, with the latest entry at the
+   * bottom. A soft fade at the top hints that the log scrolls back. */
+  mask-image: linear-gradient(
+    180deg,
+    transparent 0%,
+    black 28px,
+    black calc(100% - 8px),
+    transparent 100%
+  );
+}
+.narrationPanel__entry {
+  margin: 0 0 10px;
+  font-size: 0.92em;
+  line-height: 1.55;
+  color: var(--fg);
+}
+.narrationPanel__entry:last-child {
+  margin-bottom: 0;
+}
+.narrationPanel__entry--player {
+  color: var(--accent);
+  font-weight: 500;
+}
+.narrationPanel__entry--narration {
+  color: var(--fg-2);
+}
+.narrationPanel__entry--say {
+  color: var(--accent-2);
+}
+.narrationPanel__entry--system {
+  color: var(--fg-3);
+  font-style: italic;
+  font-size: 0.84em;
+}
+.narrationPanel__entry--error {
+  color: var(--danger);
+  font-size: 0.84em;
+}
+.narrationPanel__speaker {
+  display: inline-block;
+  margin-right: 6px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.narrationPanel__entry--player .narrationPanel__speaker {
+  color: var(--accent);
+}
+.narrationPanel__entry--say .narrationPanel__speaker {
+  color: var(--accent-2);
+}
+.narrationPanel__text {
+  white-space: pre-wrap;
+}
+
+/* Subtle bottom hint strip — replaces the panel hint that used to sit
+ * underneath the map. Centered, tiny, never grabs attention. */
+/* Bottom hint sits *above* the action prompt now (the prompt is the
+ * primary bottom-centre affordance), giving each their own band of
+ * vertical space. The hint's translucent pill stays visually subordinate
+ * so the eye lands on the input. */
+.bottomHint {
+  position: absolute;
+  bottom: 88px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 14px;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  color: var(--fg-2);
+  font-size: 0.82em;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+  z-index: 5;
+  white-space: nowrap;
+  max-width: calc(100vw - 48px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* -- Action prompt -----------------------------------------------------
+ *
+ * Persistent free-text input pinned to the bottom-centre of the canvas.
+ * Visible in every mode (region / location / scene), so the player can
+ * always do arbitrary things — speak, search, rest, look — without
+ * being confined to clicking adjacent tiles or NPC group buttons.
+ *
+ * Visually a single horizontal "command bar" with a glass platter so it
+ * floats above the map without blocking too much of it. Fixed pixel
+ * width on desktop, but capped to viewport on narrow screens. The input
+ * grows to fill the available width so the typing affordance dominates;
+ * the submit button is a small pill on the right edge.
+ */
+.actionPrompt {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(720px, calc(100vw - 48px));
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px 8px 14px;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  box-shadow:
+    0 6px 22px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+  z-index: 12;
+}
+.actionPrompt__input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--fg);
+  font-size: 0.95em;
+  padding: 6px 4px;
+  letter-spacing: 0.01em;
+}
+.actionPrompt__input::placeholder {
+  color: var(--fg-2);
+  opacity: 0.75;
+}
+.actionPrompt__input:disabled {
+  opacity: 0.5;
+}
+.actionPrompt__submit {
+  flex: 0 0 auto;
+  padding: 6px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--accent);
+  background: rgba(154, 214, 255, 0.12);
+  color: var(--accent);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, transform 120ms ease;
+}
+.actionPrompt__submit:hover:not(:disabled) {
+  background: var(--accent);
+  color: #062028;
+}
+.actionPrompt__submit:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.actionPrompt__submit:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* -------------------------------------------------------------- Map view
+ *
+ * The container that wraps each map (region/location). It is no longer a
+ * "panel" — it's a board. We keep the same component (TileGridView) but its
+ * outer wrapper now provides ambience: title floats above, label floats
+ * below, the grid itself sits on a soft platter.
+ */
+/* The map viewport: fills the parent (always `.app__canvas`), clips
+ * overflow so off-screen tiles don't spill into the HUD / rails, and
+ * provides the centre point that `TileGridView` translates the grid to.
+ *
+ * No chrome — the map sits directly on the page background. The radial
+ * vignette on `.app` already supplies the only ambient framing we need. */
+.tileGridViewport {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* The inner grid is positioned absolutely inside the viewport and
+ * translated by `TileGridView` so the player's tile lands on the
+ * viewport centre. We deliberately don't set width/height here; both are
+ * computed by JSX based on the fixed cell pixel size. */
+.tileGrid {
+  /* `position: absolute` + `top/left: 50%` is applied via inline style. */
+}
+
+/* Cells: still 1:1 squares, but more refined chrome. Subtle inner shadow
+ * gives each tile depth without competing with the LLM-generated image. */
+.tileGrid__cell {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  /* No background — the tile image OR the canvas dark fill behind
+   * the grid shows through. With gap:0 in the grid template, a solid
+   * cell background would paint a hard rectangle even when the image
+   * has already loaded for the cell behind it during transitions. */
+  background: transparent;
+  color: var(--fg);
+  /* Very faint internal hairline so neighbouring tiles still read as
+   * separate cells without making the grid look caged. The border
+   * itself is transparent so highlight states (here/adjacent/anchor)
+   * can paint a stronger colour on top without ever needing to fight
+   * a competing default. */
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 0;
+  overflow: hidden;
+  cursor: pointer;
+  /* A hair of inner stroke (~3% white) creates the "grid feel" the
+   * gap used to. Drop this to 0 if a totally seamless mosaic look
+   * is desired. */
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+  transition:
+    transform 100ms ease,
+    box-shadow 140ms ease,
+    border-color 120ms ease,
+    filter 120ms ease;
+}
+.tileGrid__cell:hover {
+  transform: translateY(-1px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.10),
+    0 6px 14px rgba(0, 0, 0, 0.4);
+  z-index: 1;
+}
+.tileGrid__cell--here {
+  border-color: var(--accent);
+  box-shadow:
+    inset 0 0 0 1px var(--accent),
+    0 0 0 2px rgba(154, 214, 255, 0.45),
+    0 0 22px var(--accent-glow);
+  z-index: 2;
+}
+.tileGrid__cell--adjacent {
+  border-color: rgba(154, 214, 255, 0.35);
+  box-shadow:
+    inset 0 0 0 1px rgba(154, 214, 255, 0.25),
+    0 0 8px rgba(154, 214, 255, 0.18);
+}
+.tileGrid__cell--impassable {
+  filter: grayscale(0.65) brightness(0.55);
+  cursor: not-allowed;
+}
+.tileGrid__cell--dangerous {
+  outline: 1px dashed var(--danger);
+  outline-offset: -3px;
+}
+.tileGrid__cell--anchor {
+  border-color: var(--accent-2);
+  box-shadow:
+    inset 0 0 0 1px var(--accent-2),
+    0 0 14px var(--accent-2-glow);
+}
+.tileGrid__cell--anchor.tileGrid__cell--here {
+  /* Player standing on anchor: combine the two highlights cleanly. */
+  box-shadow:
+    inset 0 0 0 1px var(--accent),
+    inset 0 0 0 2px var(--accent-2),
+    0 0 22px var(--accent-glow);
+}
+.tileGrid__cell--path {
+  border-style: dashed;
+}
+
+/* Exit tiles: the four cardinal "doors" out of a location. They sit on the
+ * outer ring of the grid and are visibly distinct from terrain — no image,
+ * dashed border, gentle accent gradient pointing outward, and a big
+ * directional arrow. Designed so the player reads them as "leave the
+ * location" at a glance. */
+.tileGrid__cell--exit {
+  background:
+    radial-gradient(
+      circle at center,
+      rgba(154, 214, 255, 0.18),
+      rgba(154, 214, 255, 0.04) 60%,
+      transparent 100%
+    );
+  border: 1px dashed rgba(154, 214, 255, 0.50);
+  box-shadow: inset 0 0 0 1px rgba(154, 214, 255, 0.18);
+}
+.tileGrid__cell--exit:hover {
+  border-color: var(--accent);
+  box-shadow:
+    inset 0 0 0 1px var(--accent),
+    0 0 18px var(--accent-glow);
+  transform: translateY(-1px);
+}
+.tileGrid__cellExitArrow {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.7em;
+  font-weight: 600;
+  color: var(--accent);
+  text-shadow: 0 0 8px var(--accent-glow);
+  letter-spacing: 0;
+  line-height: 1;
+}
+.tileGrid__cell--exit .tileGrid__cellLabel {
+  background: rgba(8, 10, 16, 0.55);
+  border-color: rgba(154, 214, 255, 0.35);
+  color: var(--accent);
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+/* Slight visual hint for which way each exit goes — the gradient leans
+ * outward so the player feels the pull of the cardinal direction. */
+.tileGrid__cell--exit-north {
+  background:
+    linear-gradient(0deg, transparent 30%, rgba(154, 214, 255, 0.15) 100%),
+    rgba(154, 214, 255, 0.04);
+}
+.tileGrid__cell--exit-south {
+  background:
+    linear-gradient(180deg, transparent 30%, rgba(154, 214, 255, 0.15) 100%),
+    rgba(154, 214, 255, 0.04);
+}
+.tileGrid__cell--exit-east {
+  background:
+    linear-gradient(90deg, transparent 30%, rgba(154, 214, 255, 0.15) 100%),
+    rgba(154, 214, 255, 0.04);
+}
+.tileGrid__cell--exit-west {
+  background:
+    linear-gradient(270deg, transparent 30%, rgba(154, 214, 255, 0.15) 100%),
+    rgba(154, 214, 255, 0.04);
+}
+
+.tileGrid__cellImage {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+/* "Still cooking" indicator — a slow opacity/brightness pulse over a
+ * coloured overlay so the player can see at a glance which cells are
+ * still awaiting an image. The overlay is a separate ::before drawn on
+ * top of the placeholder background-color (set inline by TileGridCell
+ * as `kindColor`) so we don't have to redeclare positioning on the
+ * base .tileGrid__cellImage rule (overriding its `position: absolute`
+ * with `position: relative` collapses the inset:0 sizing and the cell
+ * disappears entirely — that bug ate the previous version of this
+ * indicator).
+ *
+ * - The ::before is a translucent accent-blue wash that animates
+ *   opacity + scale, giving a clear "breathing" feel against the
+ *   per-kind background. Strong enough to be obvious even on a
+ *   bright tile colour.
+ * - The ::after is the older diagonal sweep, kept as a subtle
+ *   secondary indicator of forward motion. */
+.tileGrid__cellImage--pending {
+  /* Keep the base rule's `position: absolute; inset: 0` intact —
+   * we add overlays via pseudo-elements rather than re-positioning. */
+  overflow: hidden;
+}
+.tileGrid__cellImage--pending::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(154, 214, 255, 0.55);
+  mix-blend-mode: screen;
+  pointer-events: none;
+  animation: tilePulse 1.4s ease-in-out infinite;
+  z-index: 1;
+}
+.tileGrid__cellImage--pending::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    115deg,
+    transparent 0%,
+    transparent 40%,
+    rgba(255, 255, 255, 0.18) 50%,
+    transparent 60%,
+    transparent 100%
+  );
+  background-size: 220% 100%;
+  animation: tileShimmer 1.8s linear infinite;
+  pointer-events: none;
+  z-index: 2;
+}
+@keyframes tileShimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+@keyframes tilePulse {
+  0%,
+  100% {
+    opacity: 0.18;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+.tileGrid__cellLabel {
+  /* Centered rounded "chip" hovering near the bottom of the cell
+   * instead of a crossing dark gradient. The chip hugs the text so
+   * the tile image stays visible everywhere except where the label
+   * actually needs contrast. */
+  position: absolute;
+  left: 50%;
+  bottom: 6px;
+  transform: translateX(-50%);
+  max-width: calc(100% - 12px);
+  font-size: 10px;
+  line-height: 1.2;
+  background: rgba(8, 10, 16, 0.48);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  padding: 2px 8px 3px;
+  text-align: center;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  letter-spacing: 0.02em;
+}
+.tileGrid__cell--anchor .tileGrid__cellLabel {
+  color: var(--accent-2);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+/* -- Player portrait ---------------------------------------------------
+ *
+ * Floating circular avatar pinned to the player's current tile. Sits in
+ * grid-space (positioned absolutely inside `.tileGrid` using pixel
+ * coordinates that match cell centres), so it travels with the world as
+ * the camera follows. The portrait has a faster CSS transition than the
+ * camera, which is what makes a single step feel weighty: the disc
+ * snaps to the new tile while the camera is still gliding, briefly
+ * appearing off-centre in the direction of motion before settling.
+ *
+ * The artwork is a placeholder gradient + silhouette glyph for now; a
+ * future pass can swap in an AI-generated character image by replacing
+ * the inner content of `.tileGrid__portraitDisc` (e.g. with a
+ * background-image) without changing the layout or animation here.
+ */
+.tileGrid__portrait {
+  width: 88px;
+  height: 88px;
+  /* `left/top/transform` are set inline in TileGridView so the portrait
+     can transition between cell centres in tile-space coordinates. */
+}
+.tileGrid__portraitDisc {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.18), transparent 55%),
+    radial-gradient(circle at 50% 50%, var(--accent) 0%, #1a3a4a 70%, #0a1a26 100%);
+  border: 3px solid rgba(255, 255, 255, 0.85);
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.6),
+    0 0 18px var(--accent-glow),
+    0 6px 14px rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: portraitPulse 3s ease-in-out infinite;
+}
+.tileGrid__portraitGlyph {
+  width: 56%;
+  height: 56%;
+  fill: rgba(255, 255, 255, 0.92);
+  /* Soft drop shadow so the silhouette reads against any disc tint. */
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+}
+@keyframes portraitPulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 2px rgba(0, 0, 0, 0.6),
+      0 0 18px var(--accent-glow),
+      0 6px 14px rgba(0, 0, 0, 0.55);
+  }
+  50% {
+    box-shadow:
+      0 0 0 2px rgba(0, 0, 0, 0.6),
+      0 0 28px var(--accent-glow),
+      0 8px 18px rgba(0, 0, 0, 0.6);
+  }
+}
+.tileGrid__questMarker {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--accent-2);
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.9);
+  font-weight: 700;
+}
+
+/* -------------------------------------------------------------- Scene view
+ *
+ * Scene mode is denser — narration log, NPC group cards, action input. We
+ * present it as a single floating glass card centered on the canvas, sized
+ * to feel like an in-game journal page, not a webpage section.
+ */
+/* The scene card is a focused glass platter centred on the canvas.
+ * Without explicit positioning it would land at the canvas's top-left
+ * (the canvas is `position: absolute` with no flex layout), which is
+ * what made the old free-text form feel "stuck in the corner". We
+ * absolute-position it to sit a comfortable distance below the HUD and
+ * above the bottom action prompt, centred horizontally so it reads as
+ * "the screen the player is currently in" rather than a card pasted
+ * onto a map. */
+.sceneView {
+  position: absolute;
+  top: 92px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(880px, calc(100vw - 48px));
+  max-height: calc(100vh - 220px);
+  display: flex;
+  flex-direction: column;
+  background: var(--glass-bg-strong);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border-strong);
+  border-radius: 14px;
+  box-shadow: var(--glass-shadow);
+  padding: 16px 20px;
+  gap: 12px;
+  overflow-y: auto;
+  z-index: 6;
+}
+.sceneView__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.sceneView__header h2 {
+  margin: 0;
+  font-size: 0.82em;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+.sceneView__header h2 small {
+  color: var(--fg-3);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+.sceneView__lockBadge {
+  background: var(--danger);
+  color: #1a0808;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.78em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.sceneView__grid {
+  display: grid;
+  grid-template-columns: 1fr 260px;
+  gap: 16px;
+  min-height: 0;
+}
+.sceneView__narration h3,
+.sceneView__groups h3,
+.sceneView__combat h3 {
+  margin: 0 0 8px;
+  font-size: 0.72em;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+.sceneView__log {
+  list-style: none;
+  margin: 0;
+  padding: 12px 14px;
+  height: clamp(180px, 38vh, 320px);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 8px;
+  border: 1px solid var(--glass-border);
+}
+.sceneView__logLine {
+  font-size: 0.95em;
+  line-height: 1.45;
+}
+.sceneView__logLine--player {
+  color: var(--accent);
+}
+.sceneView__logLine--npc {
+  color: var(--accent-2);
+}
+.sceneView__groups ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sceneView__group {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.sceneView__group--locked {
+  border-color: var(--danger);
+  background: rgba(239, 98, 98, 0.08);
+}
+.sceneView__group--engaged {
+  border-color: var(--accent);
+  background: rgba(154, 214, 255, 0.08);
+}
+.sceneView__group header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.sceneView__groupState {
+  font-size: 0.72em;
+  letter-spacing: 0.12em;
+  color: var(--fg-3);
+  text-transform: uppercase;
+}
+.sceneView__groupActions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.sceneView__hint {
+  color: var(--fg-3);
+  font-size: 0.85em;
+}
+.sceneView__combat {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--glass-border);
+}
+
+/* -------------------------------------------------------------- Loading pill */
+.loadingPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+  padding: 2px 10px;
+  background: rgba(154, 214, 255, 0.12);
+  border: 1px solid rgba(154, 214, 255, 0.30);
+  border-radius: 999px;
+  color: var(--accent);
+  font-size: 0.72em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 500;
+  vertical-align: middle;
+}
+.loadingPill__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: loadingPulse 1.2s ease-in-out infinite;
+}
+@keyframes loadingPulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.85); }
+  50%      { opacity: 1;    transform: scale(1); }
+}
+
+/* -------------------------------------------------------------- Modals
+ * Inventory, Shop, DB inspector. Same glass treatment. */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 4, 10, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 24px;
+}
+.modal__inner {
+  background: var(--glass-bg-strong);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border-strong);
+  border-radius: 12px;
+  padding: 18px 20px;
+  max-width: 80vw;
+  max-height: 80vh;
+  width: 720px;
+  overflow: auto;
+  box-shadow: var(--glass-shadow);
+}
+.modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.modal__header h2 {
+  margin: 0;
+  font-size: 0.86em;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+
+.inventoryPanel ul,
+.shopPanel ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.inventoryPanel li,
+.shopPanel li {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--glass-border);
+  padding: 10px 12px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.inventoryPanel__action {
+  margin-left: 6px;
+}
+.shopPanel__wallet {
+  margin-top: 12px;
+  color: var(--fg-2);
+}
+
+/* DB inspector kept compact since it's a debug tool. */
+.dbInspector {
+  width: 90vw;
+  max-width: 1100px;
+  height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+.dbInspector__body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 8px;
+  min-height: 0;
+}
+.dbInspector__rail {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 8px;
+  border-radius: 8px;
+  overflow: auto;
+}
+.dbInspector__tableBtn {
+  display: flex;
+  justify-content: space-between;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+}
+.dbInspector__tableBtn.active {
+  border-color: var(--accent);
+}
+.dbInspector__tableCount {
+  color: var(--fg-2);
+  font-size: 0.9em;
+}
+.dbInspector__rows {
+  background: rgba(0, 0, 0, 0.4);
+  padding: 8px;
+  border-radius: 8px;
+  overflow: auto;
+}
+.dbInspector__rowList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.dbInspector__row {
+  border-bottom: 1px solid var(--glass-border);
+}
+.dbInspector__rowSummary {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  padding: 6px 4px;
+}
+.dbInspector__rowFields {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.85em;
+}
+.dbInspector__rowDetail {
+  padding: 6px 4px 12px;
+}
+.dbInspector__thumb {
+  max-width: 96px;
+  margin-bottom: 6px;
+  image-rendering: pixelated;
+}
+.dbInspector__json {
+  font-size: 0.78em;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 8px;
+  border-radius: 4px;
+  margin: 0;
+}
+.dbInspector__empty {
+  color: var(--fg-2);
+  padding: 12px;
+}
+.dbInspector__rowsHeader {
+  color: var(--fg-2);
+  font-size: 0.85em;
+  margin-bottom: 6px;
+}
+.dbInspector__headerActions {
+  display: flex;
+  gap: 6px;
+}
+
+/* -------------------------------------------------------------- Loading & boot
+ * Boot state: a single subtle centered card. */
+.bootScreen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.bootScreen__card {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 24px 32px;
+  text-align: center;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--fg-2);
+  font-size: 0.88em;
+  box-shadow: var(--glass-shadow);
+}
+.bootScreen__title {
+  display: block;
+  color: var(--accent);
+  font-size: 1.1em;
+  margin-bottom: 8px;
+}
+
+/* -------------------------------------------------------------- Character panel
+ * Two-column layout inside a modal: portrait/regen on the left, name +
+ * background + appearance + actions on the right. Same chrome as the
+ * inventory panel (.modal__inner) so the two read as siblings. */
+.characterPanel {
+  width: min(720px, 92vw);
+}
+.characterPanel__body {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 22px;
+  align-items: start;
+}
+.characterPanel__portraitWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.characterPanel__portrait {
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: linear-gradient(
+    135deg,
+    rgba(154, 214, 255, 0.18),
+    rgba(255, 196, 136, 0.12)
+  );
+  border: 1px solid var(--glass-border-strong);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 2px rgba(154, 214, 255, 0.10);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fg-2);
+  font-size: 3.2em;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.characterPanel__portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.characterPanel__portraitInitials {
+  user-select: none;
+}
+.characterPanel__regen {
+  font-size: 0.86em;
+  padding: 6px 12px;
+}
+.characterPanel__error {
+  color: var(--danger);
+  font-size: 0.82em;
+  margin: 0;
+  text-align: center;
+  max-width: 200px;
+  word-wrap: break-word;
+}
+.characterPanel__info {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.characterPanel__name {
+  margin: 0;
+  font-size: 1.4em;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+}
+.characterPanel__section h4 {
+  margin: 0 0 4px 0;
+  font-size: 0.74em;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+.characterPanel__section p {
+  margin: 0;
+  color: var(--fg);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+.characterPanel__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.characterPanel__field > span {
+  font-size: 0.74em;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+.characterPanel__field input,
+.characterPanel__field textarea {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.32);
+  color: var(--fg);
+  border: 1px solid var(--glass-border-strong);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 0.95em;
+  line-height: 1.5;
+  resize: vertical;
+}
+.characterPanel__field input:focus,
+.characterPanel__field textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(154, 214, 255, 0.18);
+}
+.characterPanel__actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+@media (max-width: 640px) {
+  .characterPanel__body {
+    grid-template-columns: 1fr;
+  }
+  .characterPanel__portraitWrap {
+    align-items: center;
+  }
+}
+
+/* Side-rail character card: clickable summary that opens the panel. */
+.sideRail__card--character {
+  cursor: pointer;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+.sideRail__card--character:hover,
+.sideRail__card--character:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(154, 214, 255, 0.15), var(--glass-shadow);
+  outline: none;
+}
+.sideRail__charRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.sideRail__charAvatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: linear-gradient(
+    135deg,
+    rgba(154, 214, 255, 0.22),
+    rgba(255, 196, 136, 0.14)
+  );
+  border: 1px solid var(--glass-border-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fg-2);
+  font-weight: 600;
+  font-size: 1em;
+  letter-spacing: 0.04em;
+  flex: 0 0 56px;
+}
+.sideRail__charAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.sideRail__charText {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.sideRail__charText strong {
+  display: block;
+  color: var(--accent);
+  font-size: 1em;
+}
+.sideRail__charText p {
+  margin: 4px 0 0 0;
+  font-size: 0.84em;
+  color: var(--fg-2);
+  line-height: 1.4;
 }

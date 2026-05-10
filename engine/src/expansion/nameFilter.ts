@@ -1,9 +1,13 @@
-import type { PackData } from "../schema/packSchema";
+import type { WorldData } from "../schema/worldSchema";
 import { DeterministicRng } from "../rng/rng";
 
-export function enforceNameFilter(name: string, promptHash: string, pack: PackData): string {
+export function enforceNameFilter(
+  name: string,
+  promptHash: string,
+  world: WorldData,
+): string {
   const [firstName, ...rest] = name.split(" ");
-  const filter = pack.nameFilterSettings[firstName];
+  const filter = world.nameFilterSettings[firstName];
   if (!filter || filter.replacements.length === 0) {
     return name;
   }

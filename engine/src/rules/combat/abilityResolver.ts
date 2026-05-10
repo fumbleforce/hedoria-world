@@ -1,11 +1,14 @@
-import type { PackData } from "../../schema/packSchema";
+import type { WorldData } from "../../schema/worldSchema";
 
 export type ResolvedAbility =
   | { mode: "reference"; abilityId: string; cooldown: number; bonus: number }
   | { mode: "inline"; text: string };
 
-export function resolveNpcAbility(abilityName: string, pack: PackData): ResolvedAbility {
-  const ability = pack.abilities[abilityName];
+export function resolveNpcAbility(
+  abilityName: string,
+  world: WorldData,
+): ResolvedAbility {
+  const ability = world.abilities[abilityName];
   if (ability) {
     return {
       mode: "reference",

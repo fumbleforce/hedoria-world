@@ -1,127 +1,595 @@
 import { create } from "zustand";
-import { createMachine } from "xstate";
-import type { IndexedWorld } from "../world/indexer";
 import type { CombatState } from "../rules/combat/tickModel";
-import type { QuestState } from "../quests/state";
+import type { TileGrid } from "../grid/tilePrimitives";
+import type { TileImageMode } from "../grid/tileImageCache";
+import type { PackInfo } from "../world/loader";
 
-export const combatLifecycleMachine = createMachine({
-  id: "combatLifecycle",
-  initial: "idle",
-  states: {
-    idle: { on: { START: "combat" } },
-    combat: { on: { DEFEAT: "defeat", VICTORY: "idle" } },
-    defeat: { on: { RECOVER: "recovery" } },
-    recovery: { on: { AFTERMATH: "aftermath" } },
-    aftermath: { on: { IDLE: "idle" } },
-  },
-});
+/**
+ * The single Zustand store for the engine. The store contains the
+ * "running game" state — anything the renderer reads to draw a frame, and
+ * anything tool calls mutate. Persistent things (Dexie rows, transcripts,
+ * tile grids, tile images) live in IndexedDB and are read through their
+ * own caches; the store only carries pointers (saveId, currentRegionId)
+ * and hot copies of the active grids.
+ */
 
-type DialogueMessage = {
-  role: "player" | "npc";
+export type Mode = "region" | "location" | "scene";
+
+export type EngagementState = "idle" | "engaged" | "locked";
+
+export type EngagementGroup = {
+  /** Stable id used by tool calls (e.g. "bandit-camp-3"). */
+  id: string;
+  /** Human label for UI cards. */
+  name: string;
+  /** NPC ids drawn from the world. May be empty for crowd-style groups. */
+  npcIds: string[];
+  state: EngagementState;
+  /** Optional one-line summary the dispatcher shows in the engagement card. */
+  summary?: string;
+};
+
+export type Engagement = {
+  /** Map of groupId -> group state. */
+  groups: Record<string, EngagementGroup>;
+  /**
+   * If non-empty, no group can be `disengage`d (the player is locked in
+   * the scene). The reason is surfaced to the player verbatim.
+   */
+  lockReason?: string;
+};
+
+export type DialogueMessage = {
+  role: "player" | "npc" | "system";
   text: string;
+  /** Optional NPC id if the line was spoken by a specific NPC. */
+  npcId?: string;
 };
 
 /**
- * Top-level scene mode. The overworld is the default — the player walks
- * continuously across the regional ground. Interior is a sub-scene render
- * (door-portal exits) that keeps overworld state intact while showing an
- * indoor area as its own SceneSpec.
+ * A single entry in the persistent narration log shown on the left rail.
+ * Every player action and every narrator response produces one or more
+ * StoryEntries in chronological order. The narration panel renders these
+ * with per-kind styling so the player can scan back through what just
+ * happened — their own intent ("You walk west."), the narrator's prose
+ * ("The mud is thick underfoot."), NPC speech, and any system-level
+ * notices (failed actions, rate limits).
  */
-export type SceneMode = "overworld" | "interior";
-
-type GameState = {
-  world: IndexedWorld | null;
-  /** Continuous player position in overworld units (x, z). */
-  playerPos: [number, number];
-  /**
-   * The location whose catchment circle the player currently occupies, or
-   * null when the player is in the wilderness between locations.
-   */
-  nearestLocationId: string | null;
-  /** Region grid cell the player is standing in; null only before boot. */
-  currentRegionId: string | null;
-  /** Which area the player is currently inside (interior mode) or null. */
-  currentAreaId: string | null;
-  /** When in interior mode, which location's interior is being shown. */
-  interiorLocationId: string | null;
-  sceneMode: SceneMode;
-  /**
-   * Camera azimuth around the player, in radians. 0 = camera due south of
-   * player (looking north); π/4 = camera at SE (the default isometric view).
-   * Drives both the 3D camera and the bottom-left compass rotation.
-   */
-  cameraAzimuth: number;
-  /** Legacy: still exposed so the world map / HUD can highlight a target. */
-  selectedLocationId: string | null;
-  combat: CombatState | null;
-  questState: Record<string, QuestState>;
-  dialogue: DialogueMessage[];
-  worldMapOpen: boolean;
-  exportOpen: boolean;
-  activeNpcId: string | null;
-  setWorld: (world: IndexedWorld) => void;
-  setSelectedLocation: (locationId: string | null) => void;
-  setPlayerPos: (x: number, z: number) => void;
-  setNearestLocation: (locationId: string | null) => void;
-  setCurrentRegion: (regionId: string | null) => void;
-  setCurrentArea: (areaId: string | null) => void;
-  setSceneMode: (mode: SceneMode) => void;
-  enterInterior: (locationId: string, areaId: string) => void;
-  exitInterior: () => void;
-  setCameraAzimuth: (azimuth: number) => void;
-  setCombat: (combat: CombatState | null) => void;
-  addDialogue: (message: DialogueMessage) => void;
-  clearDialogue: () => void;
-  upsertQuestState: (quest: QuestState) => void;
-  toggleWorldMap: (open?: boolean) => void;
-  toggleExport: (open?: boolean) => void;
-  setActiveNpcId: (npcId: string | null) => void;
+export type StoryEntry = {
+  /** Stable id for React keys + de-duping. Monotonic per session. */
+  id: string;
+  /** Wall-clock timestamp; primarily used for tooltip "5s ago" hints. */
+  ts: number;
+  kind: "player" | "narration" | "say" | "system" | "error";
+  text: string;
+  /** Optional NPC id for "say" entries so the UI can label the line. */
+  npcId?: string;
 };
 
-export const useGameStore = create<GameState>((set) => ({
-  world: null,
-  playerPos: [0, 0],
-  nearestLocationId: null,
-  currentRegionId: null,
-  currentAreaId: null,
-  interiorLocationId: null,
-  sceneMode: "overworld",
-  cameraAzimuth: Math.PI / 4,
-  selectedLocationId: null,
+export type Currency = { gold: number; silver: number; copper: number };
+
+export type Inventory = {
+  items: Record<string, number>;
+  currency: Currency;
+  /** itemId per equipment slot. Slots match tabs/settings.json itemSettings. */
+  equipped: Partial<Record<EquipmentSlot, string>>;
+};
+
+export type EquipmentSlot =
+  | "head"
+  | "body"
+  | "legs"
+  | "feet"
+  | "hands"
+  | "mainHand"
+  | "offHand"
+  | "trinket1"
+  | "trinket2";
+
+export type ShopState = {
+  /** NPC id whose inventory is being browsed. */
+  npcId: string;
+  /** Items the merchant offers right now. */
+  offers: Array<{ itemId: string; price: number; stock: number }>;
+};
+
+export type SceneTileState = {
+  x: number;
+  y: number;
+  /** The kind of the underlying tile (engine primitive or LLM string). */
+  kind: string;
+  label?: string;
+};
+
+/**
+ * The player-authored adventurer: a name, a backstory blurb, and a
+ * physical description, plus an optional generated portrait. Stored as
+ * a single object because the three text fields are always edited
+ * together in the character creator panel. The portrait is a data URL
+ * (so localStorage can hold it) — at 512×512 PNG ~700 KB it fits well
+ * within the per-origin localStorage quota for a single character.
+ */
+export type Character = {
+  name: string;
+  /** Short backstory / motivations / personality. */
+  background: string;
+  /** Physical description used as the portrait prompt seed. */
+  visual: string;
+  /** Generated portrait as a data: URL. Optional — present once we've
+   *  run the image model at least once for this character. */
+  portraitDataUrl?: string;
+};
+
+/**
+ * Long-running async work that the UI should surface as a "still cooking"
+ * indicator. Only LLM-bound waits live here — tile-image fetches are
+ * already represented by the image cache's per-key pending state and
+ * surface visually as a placeholder shimmer.
+ */
+export type GeneratingState = {
+  /** Region whose grid is currently being generated by `tileFiller`. */
+  regionGridFor?: string;
+  /** Location whose grid is currently being generated by `tileFiller`. */
+  locationGridFor?: string;
+};
+
+export type StoreState = {
+  // ---------------- session
+  saveId: string;
+  bootError: string | null;
+  isLlmReady: boolean;
+  /**
+   * Id of the authored pack the engine booted with (see `packs/<id>/manifest.json`).
+   * Null only briefly during boot before the pack has been chosen.
+   */
+  currentPackId: string | null;
+  /**
+   * Every pack discovered under `/packs/` at boot. The HUD selector
+   * renders this list; switching to a different pack rewrites the URL
+   * and reloads the page so boot starts fresh with the new world.
+   */
+  availablePacks: PackInfo[];
+
+  // ---------------- mode + position
+  mode: Mode;
+  currentRegionId: string;
+  regionPos: [number, number];
+  currentLocationId: string | null;
+  locationPos: [number, number];
+  currentSceneTile: SceneTileState | null;
+
+  // ---------------- grids (live working copies; persisted via tileFiller cache)
+  regionGrid: TileGrid | null;
+  locationGrid: TileGrid | null;
+
+  // ---------------- background work the UI should surface
+  generating: GeneratingState;
+
+  /**
+   * Active tile-image strategy. `per-tile` (default) generates one
+   * image per (kind, biome). `mosaic` generates one image per region
+   * grid and slices it client-side. Persisted in localStorage so the
+   * choice survives a reload.
+   */
+  tileImageMode: TileImageMode;
+
+  // ---------------- engagement + combat
+  engagement: Engagement;
+  combat: CombatState | null;
+
+  // ---------------- inventory + shop
+  inventory: Inventory;
+  shop: ShopState | null;
+
+  // ---------------- player character (name + background + portrait)
+  character: Character | null;
+
+  // ---------------- dialogue + narration
+  dialogue: DialogueMessage[];
+  narrationLog: string[];
+  /**
+   * Unified chronological log of every player intent + narration + NPC
+   * line + system notice, rendered by the persistent narration panel on
+   * the left rail. `appendNarration` and `appendDialogue` mirror into
+   * this list, so legacy callers continue to work and the panel still
+   * sees everything.
+   */
+  storyLog: StoryEntry[];
+  /**
+   * Number of player intents whose LLM narration round-trip is still in
+   * flight. Non-zero means the narrator is composing a response; the
+   * panel surfaces this as a "Narrator responding…" pill. Maintained by
+   * `WorldNarrator`.
+   */
+  pendingNarrations: number;
+
+  // ---------------- quests
+  activeQuestIds: string[];
+  /**
+   * Per-quest objective progress. Schema is `{ questId: { key: number } }`
+   * so quest archetypes can stash whatever counters they need (e.g.
+   * `{ "boar-hunt": { remaining: 3 } }`).
+   */
+  questProgress: Record<string, Record<string, number>>;
+
+  // ---------------- mutators
+  setMode: (mode: Mode) => void;
+  setBootError: (error: string | null) => void;
+  setLlmReady: (ready: boolean) => void;
+  setSaveId: (saveId: string) => void;
+  setCurrentPackId: (packId: string | null) => void;
+  setAvailablePacks: (packs: PackInfo[]) => void;
+
+  setCurrentRegionId: (regionId: string) => void;
+  setRegionPos: (pos: [number, number]) => void;
+  setCurrentLocationId: (locationId: string | null) => void;
+  setLocationPos: (pos: [number, number]) => void;
+  setCurrentSceneTile: (tile: SceneTileState | null) => void;
+
+  setRegionGrid: (grid: TileGrid | null) => void;
+  setLocationGrid: (grid: TileGrid | null) => void;
+
+  setGenerating: (patch: Partial<GeneratingState>) => void;
+
+  setTileImageMode: (mode: TileImageMode) => void;
+
+  setEngagement: (engagement: Engagement) => void;
+  setEngagementGroup: (group: EngagementGroup) => void;
+  removeEngagementGroup: (groupId: string) => void;
+  setLockReason: (reason: string | undefined) => void;
+
+  setCombat: (combat: CombatState | null) => void;
+
+  setInventory: (inventory: Inventory) => void;
+  adjustItem: (itemId: string, delta: number) => void;
+  adjustCurrency: (delta: Partial<Currency>) => void;
+  setEquipped: (slot: EquipmentSlot, itemId: string | undefined) => void;
+
+  openShop: (shop: ShopState | null) => void;
+
+  /** Replace the player character wholesale (or clear it with null). */
+  setCharacter: (character: Character | null) => void;
+  /** Merge a partial update into the existing character, creating an
+   *  empty one if none exists yet. */
+  updateCharacter: (patch: Partial<Character>) => void;
+
+  appendDialogue: (msg: DialogueMessage) => void;
+  appendNarration: (line: string) => void;
+  clearDialogue: () => void;
+
+  /**
+   * The canonical writer for the narration panel. Existing
+   * `appendNarration` and `appendDialogue` call this internally — direct
+   * callers (notably `WorldNarrator`) use it to push player-intent and
+   * system entries that don't fit either of the legacy buckets.
+   */
+  appendStory: (entry: Omit<StoryEntry, "id" | "ts">) => void;
+
+  setPendingNarrations: (delta: number) => void;
+
+  addActiveQuest: (questId: string) => void;
+  removeActiveQuest: (questId: string) => void;
+  setQuestObjective: (questId: string, key: string, value: number) => void;
+};
+
+/**
+ * Monotonic counter used to mint StoryEntry ids. Stable React keys for
+ * a list that grows by appending need only be unique within the session;
+ * a numeric counter is cheaper and easier to debug than `crypto.randomUUID()`.
+ */
+let storyEntryCounter = 0;
+function nextStoryId(): string {
+  storyEntryCounter += 1;
+  return `s${storyEntryCounter}`;
+}
+
+/**
+ * Localstorage key + reader for the persisted tile-image mode. Reading
+ * is best-effort: on any error (private mode, quota, missing browser
+ * APIs in tests) we fall back to the default. Writing is also fire-
+ * and-forget — losing the persistence is at worst an annoyance, not a
+ * correctness issue.
+ */
+const TILE_IMAGE_MODE_LS_KEY = "engine.tileImageMode";
+
+function readPersistedTileImageMode(): TileImageMode {
+  try {
+    const raw = globalThis.localStorage?.getItem(TILE_IMAGE_MODE_LS_KEY);
+    if (raw === "mosaic" || raw === "per-tile") return raw;
+  } catch {
+    // ignore
+  }
+  return "per-tile";
+}
+
+function writePersistedTileImageMode(mode: TileImageMode): void {
+  try {
+    globalThis.localStorage?.setItem(TILE_IMAGE_MODE_LS_KEY, mode);
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Persisted choice of authored pack (the world the engine loads at
+ * boot). The HUD pack selector writes this on switch; boot reads it
+ * after the URL `?pack=` override.
+ */
+const PACK_ID_LS_KEY = "engine.packId";
+
+function readPersistedPackId(): string | null {
+  try {
+    const raw = globalThis.localStorage?.getItem(PACK_ID_LS_KEY);
+    return typeof raw === "string" && raw.length > 0 ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+function writePersistedPackId(packId: string | null): void {
+  try {
+    if (packId === null) {
+      globalThis.localStorage?.removeItem(PACK_ID_LS_KEY);
+    } else {
+      globalThis.localStorage?.setItem(PACK_ID_LS_KEY, packId);
+    }
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Same best-effort persistence pattern for the player character. We
+ * keep it in localStorage rather than a Dexie row because a barebones
+ * one-character setup doesn't need the schema overhead and the JSON
+ * is small enough to comfortably fit (portrait data URL is the only
+ * non-trivial field; 512×512 PNG ≈ 700 KB << 5 MB quota).
+ */
+const CHARACTER_LS_KEY = "engine.character";
+
+function readPersistedCharacter(): Character | null {
+  try {
+    const raw = globalThis.localStorage?.getItem(CHARACTER_LS_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<Character>;
+    if (typeof parsed.name !== "string") return null;
+    return {
+      name: parsed.name,
+      background: typeof parsed.background === "string" ? parsed.background : "",
+      visual: typeof parsed.visual === "string" ? parsed.visual : "",
+      portraitDataUrl:
+        typeof parsed.portraitDataUrl === "string"
+          ? parsed.portraitDataUrl
+          : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writePersistedCharacter(character: Character | null): void {
+  try {
+    if (character === null) {
+      globalThis.localStorage?.removeItem(CHARACTER_LS_KEY);
+    } else {
+      globalThis.localStorage?.setItem(
+        CHARACTER_LS_KEY,
+        JSON.stringify(character),
+      );
+    }
+  } catch {
+    // ignore: localStorage may be unavailable or full
+  }
+}
+
+const initialEngagement = (): Engagement => ({ groups: {}, lockReason: undefined });
+const initialInventory = (): Inventory => ({
+  items: {},
+  currency: { gold: 0, silver: 0, copper: 0 },
+  equipped: {},
+});
+
+export const useStore = create<StoreState>((set) => ({
+  saveId: "",
+  bootError: null,
+  isLlmReady: false,
+  currentPackId: readPersistedPackId(),
+  availablePacks: [],
+
+  mode: "region",
+  currentRegionId: "",
+  regionPos: [0, 0],
+  currentLocationId: null,
+  locationPos: [0, 0],
+  currentSceneTile: null,
+
+  regionGrid: null,
+  locationGrid: null,
+
+  generating: {},
+  tileImageMode: readPersistedTileImageMode(),
+
+  engagement: initialEngagement(),
   combat: null,
-  questState: {},
+
+  inventory: initialInventory(),
+  shop: null,
+
+  character: readPersistedCharacter(),
+
   dialogue: [],
-  worldMapOpen: false,
-  exportOpen: false,
-  activeNpcId: null,
-  setWorld: (world) => set({ world }),
-  setSelectedLocation: (selectedLocationId) => set({ selectedLocationId }),
-  setPlayerPos: (x, z) => set({ playerPos: [x, z] }),
-  setNearestLocation: (nearestLocationId) => set({ nearestLocationId }),
-  setCurrentRegion: (currentRegionId) => set({ currentRegionId }),
-  setCurrentArea: (currentAreaId) => set({ currentAreaId }),
-  setSceneMode: (sceneMode) => set({ sceneMode }),
-  enterInterior: (locationId, areaId) =>
-    set({
-      sceneMode: "interior",
-      interiorLocationId: locationId,
-      currentAreaId: areaId,
+  narrationLog: [],
+  storyLog: [],
+  pendingNarrations: 0,
+
+  activeQuestIds: [],
+  questProgress: {},
+
+  setMode: (mode) => set({ mode }),
+  setBootError: (bootError) => set({ bootError }),
+  setLlmReady: (isLlmReady) => set({ isLlmReady }),
+  setSaveId: (saveId) => set({ saveId }),
+  setCurrentPackId: (currentPackId) => {
+    writePersistedPackId(currentPackId);
+    set({ currentPackId });
+  },
+  setAvailablePacks: (availablePacks) => set({ availablePacks }),
+
+  setCurrentRegionId: (currentRegionId) => set({ currentRegionId }),
+  setRegionPos: (regionPos) => set({ regionPos }),
+  setCurrentLocationId: (currentLocationId) => set({ currentLocationId }),
+  setLocationPos: (locationPos) => set({ locationPos }),
+  setCurrentSceneTile: (currentSceneTile) => set({ currentSceneTile }),
+
+  setRegionGrid: (regionGrid) => set({ regionGrid }),
+  setLocationGrid: (locationGrid) => set({ locationGrid }),
+
+  setGenerating: (patch) =>
+    set((state) => ({ generating: { ...state.generating, ...patch } })),
+
+  setTileImageMode: (tileImageMode) => {
+    writePersistedTileImageMode(tileImageMode);
+    set({ tileImageMode });
+  },
+
+  setEngagement: (engagement) => set({ engagement }),
+  setEngagementGroup: (group) =>
+    set((state) => ({
+      engagement: {
+        ...state.engagement,
+        groups: { ...state.engagement.groups, [group.id]: group },
+      },
+    })),
+  removeEngagementGroup: (groupId) =>
+    set((state) => {
+      const groups = { ...state.engagement.groups };
+      delete groups[groupId];
+      return { engagement: { ...state.engagement, groups } };
     }),
-  exitInterior: () =>
-    set({
-      sceneMode: "overworld",
-      interiorLocationId: null,
-      currentAreaId: null,
-    }),
-  setCameraAzimuth: (cameraAzimuth) => set({ cameraAzimuth }),
+  setLockReason: (reason) =>
+    set((state) => ({ engagement: { ...state.engagement, lockReason: reason } })),
+
   setCombat: (combat) => set({ combat }),
-  addDialogue: (message) => set((state) => ({ dialogue: [...state.dialogue, message] })),
+
+  setInventory: (inventory) => set({ inventory }),
+  adjustItem: (itemId, delta) =>
+    set((state) => {
+      const items = { ...state.inventory.items };
+      const next = (items[itemId] ?? 0) + delta;
+      if (next <= 0) {
+        delete items[itemId];
+      } else {
+        items[itemId] = next;
+      }
+      return { inventory: { ...state.inventory, items } };
+    }),
+  adjustCurrency: (delta) =>
+    set((state) => {
+      const currency: Currency = {
+        gold: state.inventory.currency.gold + (delta.gold ?? 0),
+        silver: state.inventory.currency.silver + (delta.silver ?? 0),
+        copper: state.inventory.currency.copper + (delta.copper ?? 0),
+      };
+      return { inventory: { ...state.inventory, currency } };
+    }),
+  setEquipped: (slot, itemId) =>
+    set((state) => {
+      const equipped = { ...state.inventory.equipped };
+      if (itemId === undefined) {
+        delete equipped[slot];
+      } else {
+        equipped[slot] = itemId;
+      }
+      return { inventory: { ...state.inventory, equipped } };
+    }),
+
+  openShop: (shop) => set({ shop }),
+
+  setCharacter: (character) => {
+    writePersistedCharacter(character);
+    set({ character });
+  },
+  updateCharacter: (patch) =>
+    set((state) => {
+      const base: Character = state.character ?? {
+        name: "",
+        background: "",
+        visual: "",
+      };
+      const next: Character = { ...base, ...patch };
+      writePersistedCharacter(next);
+      return { character: next };
+    }),
+
+  appendDialogue: (msg) =>
+    set((state) => {
+      // Mirror NPC / system speech into the unified story log so the
+      // narration panel reflects everything in one place. `player` lines
+      // are pushed separately by WorldNarrator (the intent text it sends
+      // to the LLM) so we deliberately skip them here to avoid doubling.
+      if (msg.role === "player") {
+        return { dialogue: [...state.dialogue, msg] };
+      }
+      const story: StoryEntry = {
+        id: nextStoryId(),
+        ts: Date.now(),
+        kind: msg.role === "npc" ? "say" : "system",
+        text: msg.text,
+        npcId: msg.npcId,
+      };
+      return {
+        dialogue: [...state.dialogue, msg],
+        storyLog: [...state.storyLog, story],
+      };
+    }),
+  appendNarration: (line) =>
+    set((state) => {
+      const story: StoryEntry = {
+        id: nextStoryId(),
+        ts: Date.now(),
+        kind: "narration",
+        text: line,
+      };
+      return {
+        narrationLog: [...state.narrationLog, line],
+        storyLog: [...state.storyLog, story],
+      };
+    }),
   clearDialogue: () => set({ dialogue: [] }),
-  upsertQuestState: (quest) =>
-    set((state) => ({ questState: { ...state.questState, [quest.questId]: quest } })),
-  toggleWorldMap: (open) =>
-    set((state) => ({ worldMapOpen: typeof open === "boolean" ? open : !state.worldMapOpen })),
-  toggleExport: (open) =>
-    set((state) => ({ exportOpen: typeof open === "boolean" ? open : !state.exportOpen })),
-  setActiveNpcId: (activeNpcId) => set({ activeNpcId }),
+
+  appendStory: (entry) =>
+    set((state) => ({
+      storyLog: [
+        ...state.storyLog,
+        { id: nextStoryId(), ts: Date.now(), ...entry },
+      ],
+    })),
+
+  setPendingNarrations: (delta) =>
+    set((state) => ({
+      // Clamp at zero so a stray decrement (paired by mistake) can't
+      // make the pending counter negative and stick the "responding…"
+      // pill in a permanently-on state.
+      pendingNarrations: Math.max(0, state.pendingNarrations + delta),
+    })),
+
+  addActiveQuest: (questId) =>
+    set((state) => {
+      if (state.activeQuestIds.includes(questId)) return state;
+      return { activeQuestIds: [...state.activeQuestIds, questId] };
+    }),
+  removeActiveQuest: (questId) =>
+    set((state) => ({
+      activeQuestIds: state.activeQuestIds.filter((id) => id !== questId),
+    })),
+  setQuestObjective: (questId, key, value) =>
+    set((state) => {
+      const cur = state.questProgress[questId] ?? {};
+      return {
+        questProgress: {
+          ...state.questProgress,
+          [questId]: { ...cur, [key]: value },
+        },
+      };
+    }),
 }));

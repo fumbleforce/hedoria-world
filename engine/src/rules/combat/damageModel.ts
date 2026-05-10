@@ -1,4 +1,4 @@
-import type { PackData, PackNpcType } from "../../schema/packSchema";
+import type { WorldData, WorldNpcType } from "../../schema/worldSchema";
 
 function parseDice(input: string): { count: number; sides: number; flat: number } {
   const match = input.match(/^(\d+)d(\d+)([+-]\d+)?$/);
@@ -12,18 +12,24 @@ function parseDice(input: string): { count: number; sides: number; flat: number 
   };
 }
 
-function applyTypeModifier(baseDamage: number, damageType: string, npcType?: PackNpcType): number {
+function applyTypeModifier(
+  baseDamage: number,
+  damageType: string,
+  npcType?: WorldNpcType,
+): number {
   if (!npcType) return baseDamage;
   if (npcType.immunities.includes(damageType)) return 0;
-  if (npcType.vulnerabilities.includes(damageType)) return Math.round(baseDamage * 1.5);
-  if (npcType.resistances.includes(damageType)) return Math.max(1, Math.round(baseDamage * 0.5));
+  if (npcType.vulnerabilities.includes(damageType))
+    return Math.round(baseDamage * 1.5);
+  if (npcType.resistances.includes(damageType))
+    return Math.max(1, Math.round(baseDamage * 0.5));
   return baseDamage;
 }
 
 export function rollDamage(
   die: string,
   damageType: string,
-  pack: PackData,
+  world: WorldData,
   targetNpcTypeName?: string,
   random = Math.random,
 ): number {
@@ -32,6 +38,6 @@ export function rollDamage(
   for (let i = 0; i < spec.count; i += 1) {
     total += Math.floor(random() * spec.sides) + 1;
   }
-  const npcType = targetNpcTypeName ? pack.npcTypes[targetNpcTypeName] : undefined;
+  const npcType = targetNpcTypeName ? world.npcTypes[targetNpcTypeName] : undefined;
   return applyTypeModifier(total, damageType, npcType);
 }

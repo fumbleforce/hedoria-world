@@ -1,4 +1,4 @@
-import type { PackData } from "../schema/packSchema";
+import type { WorldData } from "../schema/worldSchema";
 import { LlmAdapter } from "../llm/adapter";
 
 export type RecoveryResult = {
@@ -10,24 +10,24 @@ export type RecoveryResult = {
 
 export async function resolveDeathRecovery(
   adapter: LlmAdapter,
-  pack: PackData,
+  world: WorldData,
   encounterSummary: string,
 ): Promise<RecoveryResult> {
-  const knownLocations = Object.entries(pack.locations)
+  const knownLocations = Object.entries(world.locations)
     .filter(([, loc]) => loc.known)
     .map(([id]) => id);
 
   const transportLocation = knownLocations[0] ?? null;
   const response = await adapter.complete(
     {
-      system: pack.death.instructions || "Narrate defeat and recovery.",
+      system: world.death.instructions || "Narrate defeat and recovery.",
       messages: [{ role: "user", content: encounterSummary }],
     },
     { kind: "death-recovery" },
   );
   return {
     narration: response.text,
-    restoredHealth: !pack.death.permadeath,
+    restoredHealth: !world.death.permadeath,
     transportLocation,
     debuff: { id: "recently-broken", durationDays: 3 },
   };

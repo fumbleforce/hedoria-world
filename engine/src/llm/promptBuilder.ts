@@ -1,4 +1,4 @@
-import type { PackData } from "../schema/packSchema";
+import type { WorldData } from "../schema/worldSchema";
 
 function stringifyInstruction(block: unknown): string {
   if (typeof block === "string") return block;
@@ -6,12 +6,16 @@ function stringifyInstruction(block: unknown): string {
   return "";
 }
 
-export function buildSystemPrompt(pack: PackData, operation: string, context = ""): string {
+export function buildSystemPrompt(
+  world: WorldData,
+  operation: string,
+  context = "",
+): string {
   const worldBackground =
-    typeof pack.storyStarts?.Random === "object"
-      ? JSON.stringify(pack.storyStarts.Random)
+    typeof world.storyStarts?.Random === "object"
+      ? JSON.stringify(world.storyStarts.Random)
       : "";
-  const instruction = stringifyInstruction(pack.aiInstructions[operation] ?? {});
+  const instruction = stringifyInstruction(world.aiInstructions[operation] ?? {});
   return [
     "You are the narration and arbitration model for a deterministic RPG engine.",
     `Operation: ${operation}`,

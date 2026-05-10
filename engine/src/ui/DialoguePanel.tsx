@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { PackNpc } from "../schema/packSchema";
+import type { WorldNpc } from "../schema/worldSchema";
 
 type DialogueMessage = {
   role: "player" | "npc";
@@ -7,7 +7,7 @@ type DialogueMessage = {
 };
 
 type Props = {
-  npc?: PackNpc;
+  npc?: WorldNpc;
   messages: DialogueMessage[];
   onSend: (text: string) => void;
   disabled?: boolean;

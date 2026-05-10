@@ -1,4 +1,4 @@
-import { PackSchema, type PackData } from "../schema/packSchema";
+import { WorldSchema, type WorldData } from "../schema/worldSchema";
 
 export type LoaderDiagnostics = {
   warnings: string[];
@@ -6,27 +6,38 @@ export type LoaderDiagnostics = {
   enumValues: Record<string, string[]>;
 };
 
-export type LoadedPack = {
-  data: PackData;
+export type LoadedWorld = {
+  data: WorldData;
   diagnostics: LoaderDiagnostics;
 };
 
 const enumTrackerFields = [
-  { key: "locations.detailType", getter: (pack: PackData) => Object.values(pack.locations).map((l) => l.detailType) },
-  { key: "locations.complexityType", getter: (pack: PackData) => Object.values(pack.locations).map((l) => l.complexityType) },
-  { key: "npcs.tier", getter: (pack: PackData) => Object.values(pack.npcs).map((n) => n.tier) },
+  {
+    key: "locations.detailType",
+    getter: (world: WorldData) =>
+      Object.values(world.locations).map((l) => l.detailType),
+  },
+  {
+    key: "locations.complexityType",
+    getter: (world: WorldData) =>
+      Object.values(world.locations).map((l) => l.complexityType),
+  },
+  {
+    key: "npcs.tier",
+    getter: (world: WorldData) => Object.values(world.npcs).map((n) => n.tier),
+  },
 ];
 
-export function validatePack(raw: unknown): LoadedPack {
+export function validateWorld(raw: unknown): LoadedWorld {
   const warnings: string[] = [];
   const errors: string[] = [];
-  const parsed = PackSchema.safeParse(raw);
+  const parsed = WorldSchema.safeParse(raw);
 
   if (!parsed.success) {
     for (const issue of parsed.error.issues) {
       errors.push(`${issue.path.join(".")}: ${issue.message}`);
     }
-    throw new Error(`Pack validation failed:\n${errors.join("\n")}`);
+    throw new Error(`World validation failed:\n${errors.join("\n")}`);
   }
 
   const data = parsed.data;
@@ -51,7 +62,9 @@ export function validatePack(raw: unknown): LoadedPack {
 
   for (const [id, quest] of Object.entries(data.quests)) {
     if (quest.questGiverNPC && !data.npcs[quest.questGiverNPC]) {
-      warnings.push(`dangling quest giver ref: quests.${id}.questGiverNPC -> ${quest.questGiverNPC}`);
+      warnings.push(
+        `dangling quest giver ref: quests.${id}.questGiverNPC -> ${quest.questGiverNPC}`,
+      );
     }
     if (quest.questLocation && !data.locations[quest.questLocation]) {
       warnings.push(
@@ -63,11 +76,53 @@ export function validatePack(raw: unknown): LoadedPack {
   return { data, diagnostics: { warnings, errors, enumValues } };
 }
 
-export async function loadPackFromUrl(url: string): Promise<LoadedPack> {
-  const response = await fetch(url);
+/**
+ * Fetches a world JSON from an arbitrary URL and validates it. The two
+ * pack-aware helpers below are the preferred entry points; this exists
+ * for direct use against `/config.json` (legacy) or test fixtures.
+ */
+export async function loadWorldFromUrl(
+  url: string = "/config.json",
+): Promise<LoadedWorld> {
+  const response = await fetch(url, { cache: "no-store" });
   if (!response.ok) {
-    throw new Error(`Failed to fetch pack from ${url} (${response.status})`);
+    throw new Error(`Failed to fetch world from ${url} (${response.status})`);
   }
   const json = await response.json();
-  return validatePack(json);
+  return validateWorld(json);
+}
+
+/**
+ * Lightweight summary of a pack served by `GET /__packs`. The engine
+ * uses these to populate the world-selector dropdown and to choose a
+ * sensible default at boot.
+ */
+export type PackInfo = {
+  packId: string;
+  packName: string;
+  schemaVersion: string | null;
+  engineCompatibility: string | null;
+  seed: string | null;
+};
+
+/**
+ * Discover every pack under `/packs/<id>/manifest.json`. The list is
+ * always sorted by `packId` server-side; we just surface the result.
+ */
+export async function loadPacks(): Promise<PackInfo[]> {
+  const response = await fetch("/__packs", { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Failed to list packs (${response.status})`);
+  }
+  const body = (await response.json()) as { packs: PackInfo[] };
+  return body.packs ?? [];
+}
+
+/**
+ * Load and validate the source config for a specific pack. The Vite
+ * dev plugin resolves the manifest's `sourceConfig` path on the
+ * server side so the client never needs to know the on-disk layout.
+ */
+export async function loadWorldFromPack(packId: string): Promise<LoadedWorld> {
+  return loadWorldFromUrl(`/__pack/${encodeURIComponent(packId)}`);
 }
