@@ -4,16 +4,11 @@ import {
   MockImageProvider,
   type ImageProvider,
 } from "./llm/imageAdapter";
-import {
-  createGeminiProvider,
-} from "./llm/providers";
+import { createGeminiProvider } from "./llm/providers";
 import { MockProvider } from "./llm/mockProvider";
 import type { LlmProvider } from "./llm/types";
 import { loadPacks, loadWorldFromPack, type PackInfo } from "./world/loader";
-import {
-  buildWorldIndex,
-  type IndexedWorld,
-} from "./world/indexer";
+import { buildWorldIndex, type IndexedWorld } from "./world/indexer";
 import { ensureStoragePersistence, getOrCreateSave } from "./persist/saveLoad";
 import { TileImageCache } from "./grid/tileImageCache";
 import { TileFiller } from "./grid/tileFiller";
@@ -157,6 +152,8 @@ async function runBoot(): Promise<BootResult | null> {
       llmProvider: llmProvider.id,
       imageProvider: imageProvider.id,
       live: llmProvider.id !== "mock-local",
+      geminiTextModel: useStore.getState().geminiTextModel,
+      geminiImageModel: useStore.getState().geminiImageModel,
     });
 
     const llm = new LlmAdapter(llmProvider, save.saveId);
@@ -228,7 +225,9 @@ async function runBoot(): Promise<BootResult | null> {
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    diag.error("boot", "boot failed", { error: err instanceof Error ? err : message });
+    diag.error("boot", "boot failed", {
+      error: err instanceof Error ? err : message,
+    });
     store.setBootError(message);
     return null;
   }
@@ -259,12 +258,9 @@ function resolvePackId(
 function resolveLlmProvider(): LlmProvider {
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
   if (apiKey && apiKey.length > 0) {
-    const model =
-      (import.meta.env.VITE_GEMINI_TEXT_MODEL as string | undefined) ??
-      "gemini-2.5-flash-lite";
+    const model = useStore.getState().geminiTextModel.trim() || "gemini-2.5-flash-lite";
     return createGeminiProvider(apiKey, model);
   }
-  // eslint-disable-next-line no-console
   console.warn(
     "[boot] VITE_GEMINI_API_KEY is not set — using MockProvider (deterministic stub responses).",
   );
@@ -274,9 +270,7 @@ function resolveLlmProvider(): LlmProvider {
 function resolveImageProvider(): ImageProvider {
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
   if (apiKey && apiKey.length > 0) {
-    const model =
-      (import.meta.env.VITE_GEMINI_IMAGE_MODEL as string | undefined) ??
-      "gemini-3.1-flash-image-preview";
+    const model = useStore.getState().geminiImageModel.trim() || "gemini-2.5-flash-image";
     return new GeminiImageProvider(apiKey, model);
   }
   return new MockImageProvider();

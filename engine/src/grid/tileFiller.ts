@@ -509,12 +509,14 @@ function systemPromptForLocation(): string {
     "Rules:",
     " 1. Cover EVERY cell. 5x5 = exactly 25 cells.",
     " 2. Reuse a small palette of ~5-8 kinds across the grid.",
-    " 3. If the prose references named sub-areas (rooms, halls, yards), surface each as one cell with a kind that matches the area (kebab-case: 'common-room', 'stable-yard', 'cellar-stair').",
-    " 4. The remaining cells fill in plausible connectors (alleys, gardens, walls) that make the layout coherent.",
-    " 5. `passable=false` for solid walls or sealed rooms. Otherwise true.",
-    " 6. `dangerous=true` only when the cell is itself a hazard (e.g. a vermin nest, a collapsing floor).",
-    " 7. NO `locationId` on location-grid cells; that field is only used at region scope.",
-    " 8. Reply with JSON ONLY. No prose, no markdown, no commentary.",
+    " 3. `kind` must be a FUNCTIONAL/ARCHITECTURAL TYPE in kebab-case, NEVER a proper noun. Good kinds: 'common-room', 'stable-yard', 'cellar-stair', 'kitchen', 'garden-patch', 'inn-courtyard', 'smithy', 'market-stall', 'cottage'. FORBIDDEN kinds: any sub-area's proper-noun ID, e.g. if a sub-area is called 'The Farmer's Rest' the kind 'the-farmer-s-rest' is forbidden — use 'inn-hall' or 'common-room' instead. Same for 'Inn Garden' → use 'garden-patch' or 'inn-courtyard'.",
+    " 4. Same rule for `label`: describe what the cell IS, not what it's named. 'Common room', 'Stable yard', 'Kitchen' are fine. 'The Farmer's Rest', 'Inn Garden', 'Heraldo's Workshop' are NOT — those are proper-noun names that belong only in the engine's data model, never in `kind` or `label`.",
+    " 5. If the prose references named sub-areas (rooms, halls, yards), surface each as one cell with a generic functional kind that matches the area's PURPOSE (e.g. 'The Farmer's Rest' (an inn) → kind 'inn-hall' or 'common-room'; 'Inn Garden' → 'garden-patch').",
+    " 6. The remaining cells fill in plausible connectors (alleys, gardens, walls) that make the layout coherent.",
+    " 7. `passable=false` for solid walls or sealed rooms. Otherwise true.",
+    " 8. `dangerous=true` only when the cell is itself a hazard (e.g. a vermin nest, a collapsing floor).",
+    " 9. NO `locationId` on location-grid cells; that field is only used at region scope.",
+    " 10. Reply with JSON ONLY. No prose, no markdown, no commentary.",
   ].join("\n");
 }
 

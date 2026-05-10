@@ -34,17 +34,22 @@ import type { TileGrid } from "./tilePrimitives";
 
 /**
  * Build the image-generation prompt for a full grid. The prompt
- * enumerates every cell with a TERRAIN-ONLY descriptor so the model
- * knows what to draw at every position. North is described as the top
- * of the image, matching how the renderer displays it.
+ * enumerates every cell with a TERRAIN/FUNCTIONAL descriptor so the
+ * model knows what to draw at every position. North is described as
+ * the top of the image, matching how the renderer displays it.
  *
- * Crucially, we never feed proper nouns to the prompt — when a cell
- * carries a `locationId` (so the engine has marked it a named-place
- * anchor), we substitute a generic "built structure on <terrain>"
- * descriptor that uses `priorKind` as the surrounding biome hint.
- * Without this scrub, the image model happily writes the place name
- * across the cell as cartographic text, which then bleeds into the
- * sliced tile illustrations.
+ * Crucially, we never feed proper nouns to the prompt. Two scrubs:
+ *
+ *  1. At REGION scope, anchor tiles (those carrying a `locationId`)
+ *     are replaced with a generic "built place on <terrain>" line. The
+ *     proper noun (e.g. "Avenor") never reaches the image model.
+ *  2. At LOCATION scope, EVERY cell skips the human label and uses a
+ *     generic functional descriptor derived from the kind, then run
+ *     through a proper-noun cleaner. Location sub-area IDs (e.g.
+ *     "The Farmer's Rest", "Inn Garden") are almost always proper
+ *     nouns by authoring convention, and the location system prompt
+ *     historically did not forbid them — so without this scrub the
+ *     image model wrote them across each tile as text.
  */
 export function composeMosaicPrompt(grid: TileGrid, style: string): string {
   const lines: string[] = [];
@@ -59,7 +64,7 @@ export function composeMosaicPrompt(grid: TileGrid, style: string): string {
   );
   lines.push("");
   lines.push(
-    `Tile composition (north-most row first, west-most column first within each row):`,
+    `Tile composition (${grid.scope === "location" ? "top row first" : "north-most row first"}, west-most column first within each row):`,
   );
   lines.push("");
 
@@ -70,13 +75,21 @@ export function composeMosaicPrompt(grid: TileGrid, style: string): string {
     const cells: string[] = [];
     for (let x = 0; x < grid.width; x += 1) {
       const tile = grid.tiles[y * grid.width + x];
-      cells.push(`col ${x}: ${describeTileForPrompt(tile, grid.biome)}`);
+      cells.push(
+        `col ${x}: ${describeTileForPrompt(tile, grid.biome, grid.scope)}`,
+      );
     }
     lines.push(`${rowLabel}:`);
     for (const c of cells) lines.push(`  ${c}`);
   }
   lines.push("");
-  lines.push(`Biome / region tone: ${prettify(grid.biome)}.`);
+  if (grid.scope === "location") {
+    lines.push(
+      `Setting: top-down view of a single ${prettify(grid.biome)} location's interior layout (courtyards, alleys, room-tops, garden patches). The image is the building/grounds plan as seen from above.`,
+    );
+  } else {
+    lines.push(`Biome / region tone: ${prettify(grid.biome)}.`);
+  }
   lines.push(`Art style: ${style}.`);
   lines.push("");
   lines.push(`Layout rules:`);
@@ -84,47 +97,166 @@ export function composeMosaicPrompt(grid: TileGrid, style: string): string {
     ` - The image is a strict ${grid.width}×${grid.height} lattice. All cells share the same size; the lattice aligns with the image edges so it can be sliced with equal cuts.`,
   );
   lines.push(
-    ` - Each cell's central character should clearly read as the described terrain (e.g. a grain field looks like a grain field; coastal shallows look like shallow water).`,
+    ` - Each cell's central character should clearly read as the described ${grid.scope === "location" ? "function (a yard looks like a yard, a roofed hall looks like a roofed hall)" : "terrain (e.g. a grain field looks like a grain field; coastal shallows look like shallow water)"}.`,
   );
   lines.push(
-    ` - Adjacent cells blend smoothly at their borders — a continuous river flows across river cells, a coastline looks like a coastline, a road connects road cells.`,
+    ` - Adjacent cells blend smoothly at their borders — ${grid.scope === "location" ? "a courtyard flows into the alley next to it, roof-lines align where buildings meet, paths connect across cells" : "a continuous river flows across river cells, a coastline looks like a coastline, a road connects road cells"}.`,
   );
   lines.push(
-    ` - Render purely painted scenery. No labels, no place names, no captions, no compass roses, no scale bars, no legends, no letters, no numbers, no grid lines. Paint the buildings, water, and roads themselves; do not annotate them.`,
+    ` - Render purely painted scenery. No labels, no place names, no captions, no compass roses, no scale bars, no legends, no letters, no numbers, no grid lines, no signage with readable writing. The descriptors above are instructions to YOU; they must NOT appear as text on the image. Paint the buildings, water, and roads themselves; do not annotate them.`,
   );
   return lines.join("\n");
 }
 
 /**
- * Render one tile as a terrain-only line for the prompt. Anchor tiles
- * (those with a `locationId`) get a generic "built structure on
- * <terrain>" treatment — using `priorKind` (the LLM's choice for the
- * surrounding terrain before the engine stamped the anchor) so the
- * built structure sits on the right biome, but stripped of any proper
- * noun so the image model can't latch onto a name to render as text.
+ * Render one tile as a terrain/function-only line for the prompt.
+ *
+ * - Region scope, anchor tile: "built place on <surrounding terrain>".
+ *   The proper noun (the location's name) is dropped on purpose.
+ * - Region scope, non-anchor: kind + safe label (the region system
+ *   prompt forbids proper nouns in kind/label, so the label is
+ *   already terrain-y like "Reed marsh" or "Wheat field").
+ * - Location scope, ANY tile: kind only, with a proper-noun-ish kind
+ *   coerced into a generic structural descriptor (e.g. "the-farmer-s-
+ *   rest" → "small inn building"). Labels are dropped wholesale at
+ *   this scope because they're almost always authored sub-area names
+ *   ("The Farmer's Rest", "Inn Garden") that the image model would
+ *   render as captions.
  */
 function describeTileForPrompt(
-  tile: { kind: string; label?: string; passable: boolean; locationId?: string; priorKind?: string },
+  tile: {
+    kind: string;
+    label?: string;
+    passable: boolean;
+    locationId?: string;
+    priorKind?: string;
+  },
   fallbackBiome: string,
+  scope: "region" | "location",
 ): string {
-  const passable = tile.passable === false ? " (impassable terrain)" : "";
+  const passable = tile.passable === false ? " (impassable)" : "";
 
-  if (tile.locationId) {
+  if (scope === "region" && tile.locationId) {
     const surrounding = prettify(tile.priorKind || fallbackBiome);
-    // We deliberately do NOT pass tile.label or tile.kind — both
-    // contain the proper noun (e.g. "Avenor", "avenor") that the image
-    // model would happily write across the cell as cartographic text.
     return `built place — small cluster of buildings nestled in ${surrounding}${passable}`;
   }
 
-  // Generic terrain. The LLM-invented kind is already a kebab-case
-  // descriptor like "grain-field" or "reed-marsh"; the human label
-  // (when authored) is a short noun phrase like "Grazing meadow".
-  // Both are safe to feed straight to the image prompt — neither
-  // contains a proper noun by construction (see tileFiller's prompt
-  // rule #3 forbidding proper nouns in kind/label).
+  if (scope === "location") {
+    // Map kind to a generic functional descriptor. Anything that still
+    // looks like a proper noun after slug cleanup is collapsed into a
+    // safe fallback so the image model can't latch onto it as text.
+    const generic = genericiseLocationKind(tile.kind);
+    return `${generic}${passable}`;
+  }
+
+  // Region scope, non-anchor terrain. Both kind and label are safe by
+  // the region prompt's own anti-proper-noun rule (#3).
   const label = (tile.label || prettify(tile.kind)).replace(/\s+/g, " ").trim();
   return `${prettify(tile.kind)} — ${label}${passable}`;
+}
+
+/**
+ * Convert a location-grid `kind` into a generic top-down architectural
+ * descriptor. The pipeline:
+ *
+ *   1. Slug → words. ("the-farmer-s-rest" → "the farmer s rest")
+ *   2. Drop English articles / possessives. ("the", "a", "s", "of")
+ *   3. If the remainder is empty OR still contains capitalised-looking
+ *      tokens that don't appear in our common-noun whitelist, fall
+ *      back to a generic "interior building space" descriptor.
+ *   4. Otherwise, decorate with a structural noun phrase so the model
+ *      paints a recognisable feature ("yard" → "small open yard
+ *      between low walls", "garden" → "patch of garden plants").
+ *
+ * Cheap and rule-based on purpose. We're not trying to render every
+ * possible authored kind — just to guarantee that whatever we send
+ * looks like a description, not a name to be lettered onto the tile.
+ */
+function genericiseLocationKind(rawKind: string): string {
+  const cleaned = rawKind
+    .toLowerCase()
+    .replace(/-+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const STOP = new Set(["the", "a", "an", "of", "s", "and"]);
+  const tokens = cleaned.split(" ").filter((t) => t && !STOP.has(t));
+  if (tokens.length === 0) return "small interior space";
+
+  // Look for a "head noun" we recognise as a generic architectural
+  // feature. If we find one, build a descriptor around it. Otherwise
+  // fall back to a structural generic.
+  const HEAD_NOUNS: Record<string, string> = {
+    room: "roofed room interior",
+    rooms: "row of roofed rooms",
+    hall: "long hall with stone or timber floor",
+    halls: "row of long halls",
+    kitchen: "working kitchen with hearth and benches",
+    bath: "tiled bath chamber with steaming water",
+    cellar: "shadowed cellar with barrels and crates",
+    yard: "small open yard between low walls",
+    yards: "open courtyard between low walls",
+    garden: "patch of leafy garden plants and earth beds",
+    gardens: "leafy garden patches with earth beds",
+    courtyard: "wide flagstone courtyard",
+    court: "wide flagstone courtyard",
+    stable: "stable bay with hay and wooden stalls",
+    stables: "row of stable bays with hay",
+    market: "open market stand with awnings",
+    stall: "wooden trading stall with awning",
+    stalls: "row of trading stalls with awnings",
+    inn: "small inn building seen from above",
+    tavern: "small tavern building seen from above",
+    house: "modest house roof and door",
+    cottage: "modest cottage roof and door",
+    smithy: "smithy with forge chimney and anvil",
+    forge: "smithy with forge chimney and anvil",
+    chapel: "tiny chapel with peaked roof",
+    shrine: "small open-air shrine of stones",
+    well: "stone well in an open patch of ground",
+    fountain: "stone fountain in an open patch of ground",
+    gate: "stone gate set into a wall",
+    door: "doorway set into a low wall",
+    wall: "section of stone wall",
+    walls: "run of stone walls",
+    path: "trodden footpath of packed earth",
+    paths: "network of trodden footpaths",
+    road: "narrow paved road of fitted stones",
+    alley: "narrow alley between buildings",
+    alleys: "warren of narrow alleys",
+    square: "small public square of flagstones",
+    plaza: "small public square of flagstones",
+    pond: "small pond surrounded by reeds",
+    bridge: "short stone footbridge",
+    field: "small enclosed working field",
+    fields: "patchwork of small working fields",
+    orchard: "compact orchard of low fruit trees",
+    barn: "barn building with peaked roof",
+    granary: "granary building with peaked roof",
+    library: "small library with shelved roof shadow",
+    workshop: "open workshop with workbenches",
+    foundry: "smoking foundry with chimney",
+    pier: "wooden pier extending over water",
+    quay: "stone quay along the water's edge",
+    docks: "row of wooden docks along the water",
+    dock: "wooden dock along the water",
+    rooftop: "patchwork of building rooftops",
+    rooftops: "patchwork of building rooftops",
+  };
+
+  // Try each token as a possible head noun, last-most wins (so
+  // "kitchen yard" reads as "yard"). This matches English compound
+  // ordering for area names.
+  let chosen: string | null = null;
+  for (const t of tokens) {
+    if (HEAD_NOUNS[t]) chosen = HEAD_NOUNS[t];
+  }
+  if (chosen) return chosen;
+
+  // No recognised head noun — the kind is either an unknown but
+  // plausible word (e.g. "smithy-attic") or a proper-noun slug. In
+  // either case, "small interior space" is a safe top-down filler
+  // that won't be rendered as text.
+  return "small interior space";
 }
 
 function prettify(slugOrPhrase: string): string {

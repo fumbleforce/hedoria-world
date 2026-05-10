@@ -3,6 +3,10 @@ import type { CombatState } from "../rules/combat/tickModel";
 import type { TileGrid } from "../grid/tilePrimitives";
 import type { TileImageMode } from "../grid/tileImageCache";
 import type { PackInfo } from "../world/loader";
+import {
+  defaultGeminiImageModel,
+  defaultGeminiTextModel,
+} from "../llm/geminiModelOptions";
 
 /**
  * The single Zustand store for the engine. The store contains the
@@ -150,6 +154,14 @@ export type StoreState = {
    */
   availablePacks: PackInfo[];
 
+  /**
+   * Gemini text / image model ids for API calls. Persisted in localStorage;
+   * boot reads them when constructing providers. Changing either reloads
+   * the page so adapters and caches pick up the new id cleanly.
+   */
+  geminiTextModel: string;
+  geminiImageModel: string;
+
   // ---------------- mode + position
   mode: Mode;
   currentRegionId: string;
@@ -219,6 +231,8 @@ export type StoreState = {
   setSaveId: (saveId: string) => void;
   setCurrentPackId: (packId: string | null) => void;
   setAvailablePacks: (packs: PackInfo[]) => void;
+  setGeminiTextModel: (modelId: string) => void;
+  setGeminiImageModel: (modelId: string) => void;
 
   setCurrentRegionId: (regionId: string) => void;
   setRegionPos: (pos: [number, number]) => void;
@@ -338,6 +352,45 @@ function writePersistedPackId(packId: string | null): void {
   }
 }
 
+const GEMINI_TEXT_MODEL_LS_KEY = "engine.geminiTextModel";
+const GEMINI_IMAGE_MODEL_LS_KEY = "engine.geminiImageModel";
+
+function readPersistedGeminiTextModel(): string {
+  try {
+    const raw = globalThis.localStorage?.getItem(GEMINI_TEXT_MODEL_LS_KEY)?.trim();
+    if (raw) return raw;
+  } catch {
+    // ignore
+  }
+  return defaultGeminiTextModel();
+}
+
+function readPersistedGeminiImageModel(): string {
+  try {
+    const raw = globalThis.localStorage?.getItem(GEMINI_IMAGE_MODEL_LS_KEY)?.trim();
+    if (raw) return raw;
+  } catch {
+    // ignore
+  }
+  return defaultGeminiImageModel();
+}
+
+function writePersistedGeminiTextModel(modelId: string): void {
+  try {
+    globalThis.localStorage?.setItem(GEMINI_TEXT_MODEL_LS_KEY, modelId);
+  } catch {
+    // ignore
+  }
+}
+
+function writePersistedGeminiImageModel(modelId: string): void {
+  try {
+    globalThis.localStorage?.setItem(GEMINI_IMAGE_MODEL_LS_KEY, modelId);
+  } catch {
+    // ignore
+  }
+}
+
 /**
  * Same best-effort persistence pattern for the player character. We
  * keep it in localStorage rather than a Dexie row because a barebones
@@ -395,6 +448,8 @@ export const useStore = create<StoreState>((set) => ({
   isLlmReady: false,
   currentPackId: readPersistedPackId(),
   availablePacks: [],
+  geminiTextModel: readPersistedGeminiTextModel(),
+  geminiImageModel: readPersistedGeminiImageModel(),
 
   mode: "region",
   currentRegionId: "",
@@ -434,6 +489,14 @@ export const useStore = create<StoreState>((set) => ({
     set({ currentPackId });
   },
   setAvailablePacks: (availablePacks) => set({ availablePacks }),
+  setGeminiTextModel: (geminiTextModel) => {
+    writePersistedGeminiTextModel(geminiTextModel);
+    set({ geminiTextModel });
+  },
+  setGeminiImageModel: (geminiImageModel) => {
+    writePersistedGeminiImageModel(geminiImageModel);
+    set({ geminiImageModel });
+  },
 
   setCurrentRegionId: (currentRegionId) => set({ currentRegionId }),
   setRegionPos: (regionPos) => set({ regionPos }),

@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { boot, type BootResult } from "./boot";
 import { useStore } from "./state/store";
-import { ensureLocationGrid, ensureRegionGrid } from "./dialogue/narrator";
 import { RegionMap } from "./ui/RegionMap";
 import { LocationMap } from "./ui/LocationMap";
 import { SceneView } from "./ui/SceneView";
@@ -12,6 +11,7 @@ import { DbInspector } from "./ui/DbInspector";
 import { NarrationPanel } from "./ui/NarrationPanel";
 import { ActionPrompt } from "./ui/ActionPrompt";
 import { LoadingPill } from "./ui/LoadingPill";
+import { SettingsPanel } from "./ui/SettingsPanel";
 
 /**
  * Top-level mode router + HUD. The map is the only thing that occupies the
@@ -30,6 +30,7 @@ export function App() {
   const [showInventory, setShowInventory] = useState(false);
   const [showCharacter, setShowCharacter] = useState(false);
   const [showDb, setShowDb] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   const mode = useStore((s) => s.mode);
   const currentRegionId = useStore((s) => s.currentRegionId);
@@ -42,10 +43,6 @@ export function App() {
   const inventory = useStore((s) => s.inventory);
   const activeQuestIds = useStore((s) => s.activeQuestIds);
   const generating = useStore((s) => s.generating);
-  const tileImageMode = useStore((s) => s.tileImageMode);
-  const setTileImageMode = useStore((s) => s.setTileImageMode);
-  const regionGrid = useStore((s) => s.regionGrid);
-  const locationGrid = useStore((s) => s.locationGrid);
   const character = useStore((s) => s.character);
   const availablePacks = useStore((s) => s.availablePacks);
   const currentPackId = useStore((s) => s.currentPackId);
@@ -105,52 +102,6 @@ export function App() {
   const isGeneratingRegion = !!generating.regionGridFor;
   const isGeneratingLocation = !!generating.locationGridFor;
 
-  // Keep the cache in lock-step with the store. The HUD button below
-  // calls `setTileImageMode` (store) which re-runs this effect; the
-  // cache's `setMode` notifies subscribers so the rendered grid
-  // immediately re-asks for URLs under the new key scheme.
-  const onToggleTileImageMode = () => {
-    const next = tileImageMode === "mosaic" ? "per-tile" : "mosaic";
-    setTileImageMode(next);
-    tileImageCache.setMode(next);
-  };
-
-  // The image grid the player is currently looking at. Scene mode
-  // shares the location grid (we render the location map underneath
-  // the scene panel), so scene+location both target locationGrid.
-  const activeGrid =
-    mode === "region" ? regionGrid : locationGrid;
-
-  // Wipe every cached image (per-tile + mosaic) for the currently
-  // visible grid so the next paint kicks off a fresh generation.
-  // Useful when the provider 503'd or recitation-filtered the first
-  // call and every cell got stuck on a placeholder.
-  const onRedraw = () => {
-    if (!activeGrid) return;
-    void tileImageCache.clearImagesForGrid(activeGrid);
-  };
-
-  // Full rebuild: drop the cached grid SPEC (the tile-filler's LLM
-  // output) AND the images, then re-run the filler. Use when the
-  // persisted geography no longer matches the authored prose — e.g.
-  // the LLM inferred direction from the anchor positions instead of
-  // the regional prose and put the world upside down.
-  const onRebuild = async () => {
-    if (!activeGrid) return;
-    const { scope, ownerId } = activeGrid;
-    const ctx = { llm, world, tileFiller, tileImageCache };
-    // Order matters: drop the spec first so the ensure* call below
-    // can't hit the now-stale cache. Then wipe images so the next
-    // paint regenerates them under whichever mode is active.
-    await tileFiller.clearGrid(scope, ownerId);
-    await tileImageCache.clearImagesForGrid(activeGrid);
-    if (scope === "region") {
-      await ensureRegionGrid(ctx, ownerId);
-    } else if (scope === "location") {
-      await ensureLocationGrid(ctx, ownerId, activeGrid.biome);
-    }
-  };
-
   // Switching authored worlds rewires everything (config hash, save
   // row, tile cache, region anchors), so the cheapest correct path is
   // to persist the choice and reload. We push `?pack=<id>` to the URL
@@ -172,17 +123,10 @@ export function App() {
     ? (world.regionsById[currentRegionId]?.name ?? currentRegionId)
     : "—";
 
-  // The bottom hint adapts to the current mode so the player always knows
-  // the gesture grammar without the noisy panel hint we used to render
-  // under the map.
   const bottomHint =
-    mode === "region"
-      ? "Click an adjacent cell to walk · click your tile (when ringed) to enter the location"
-      : mode === "location"
-        ? "Click an adjacent cell to move · click your tile to enter the scene"
-        : mode === "scene"
-          ? "Type an action below or use a group button · narration appears in the log"
-          : null;
+    mode === "scene"
+      ? "Type an action below or use a group button · narration appears in the log"
+      : null;
 
   return (
     <div className="app">
@@ -274,38 +218,10 @@ export function App() {
           ) : null}
           <button
             type="button"
-            onClick={onToggleTileImageMode}
-            title={
-              tileImageMode === "mosaic"
-                ? "Currently using a single big image sliced 10×10. Click to revert to one image per (kind, biome)."
-                : "Currently using one image per (kind, biome). Click to ask the model for a single composite image of the whole grid and slice it locally."
-            }
+            onClick={() => setShowSettings(true)}
+            title="Tile images, Gemini models, redraw & rebuild"
           >
-            Tiles: {tileImageMode === "mosaic" ? "mosaic" : "per-tile"}
-          </button>
-          <button
-            type="button"
-            onClick={onRedraw}
-            disabled={!activeGrid}
-            title={
-              activeGrid
-                ? `Discard cached images for ${activeGrid.scope} ${activeGrid.ownerId} and regenerate them.`
-                : "No active grid to redraw yet."
-            }
-          >
-            Redraw
-          </button>
-          <button
-            type="button"
-            onClick={() => void onRebuild()}
-            disabled={!activeGrid}
-            title={
-              activeGrid
-                ? `Wipe BOTH the cached map and the images for ${activeGrid.scope} ${activeGrid.ownerId}, then re-ask the LLM. Use when the geography is wrong (e.g. mountains at south but prose says north).`
-                : "No active grid to rebuild yet."
-            }
-          >
-            Rebuild
+            Settings
           </button>
           <button
             type="button"
@@ -439,6 +355,15 @@ export function App() {
         />
       ) : null}
       {showDb ? <DbInspector onClose={() => setShowDb(false)} /> : null}
+      {showSettings ? (
+        <SettingsPanel
+          onClose={() => setShowSettings(false)}
+          tileImageCache={tileImageCache}
+          tileFiller={tileFiller}
+          llm={llm}
+          world={world}
+        />
+      ) : null}
     </div>
   );
 }

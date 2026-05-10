@@ -95,8 +95,15 @@ export function tileImageKey(
  *             of Avenor inside the region of Avenor) no longer collide
  *             on the same per-position slot. Previously the second
  *             grid to populate would silently overwrite the first.
+ *   v3 -> v4: location-scope mosaic prompts now scrub proper nouns
+ *             from EVERY cell (previously only region anchors were
+ *             scrubbed). Location-grid kinds/labels are typically
+ *             authored sub-area names like "The Farmer's Rest", which
+ *             the image model dutifully rendered as captions across
+ *             each tile. v3 slices for locations therefore contain
+ *             baked-in text and must be regenerated.
  */
-const MOSAIC_PROMPT_VERSION = "v3";
+const MOSAIC_PROMPT_VERSION = "v4";
 
 /**
  * Per-cell mosaic cache key. The first segment `mosaic` is a literal
@@ -258,6 +265,16 @@ export class TileImageCache {
    * Wiping both is the only way to guarantee the next paint actually
    * re-asks the provider, regardless of which mode is currently active.
    *
+   * **Counting / scope:** For an N×M grid this touches **N·M mosaic keys**
+   * (one per cell, private to this `scope` + `ownerId`) **plus** one
+   * per-tile key per *distinct* `(kind, biome)` appearing on the grid.
+   * Per-tile keys are **global** — the same `grain-field|…` image is
+   * reused in every region that has that kind — so "Redraw" on Avenor
+   * may log ~100 + ~20 = ~120 keys even though only 100 of those are
+   * mosaic slices that exist *only* for Avenor. The diagnostic line we
+   * emit breaks those two buckets apart so the number is not mistaken
+   * for "123 separate pictures drawn only for this region".
+   *
    * Per-tile keys are SHARED across grids (same `(kind, biome)` tuple
    * reuses across regions), so clearing a region's per-tile entries
    * also forces any other region that happened to share those kinds
@@ -265,15 +282,17 @@ export class TileImageCache {
    * a manual user-driven action.
    */
   async clearImagesForGrid(grid: TileGrid): Promise<void> {
-    const keys = new Set<string>();
+    const perTileKeys = new Set<string>();
+    const mosaicKeys = new Set<string>();
     for (let y = 0; y < grid.height; y += 1) {
       for (let x = 0; x < grid.width; x += 1) {
         const tile = grid.tiles[y * grid.width + x];
         if (!tile) continue;
-        keys.add(tileImageKey(tile.kind, grid.biome, this.style));
-        keys.add(mosaicTileKey(grid.scope, grid.ownerId, x, y, this.style));
+        perTileKeys.add(tileImageKey(tile.kind, grid.biome, this.style));
+        mosaicKeys.add(mosaicTileKey(grid.scope, grid.ownerId, x, y, this.style));
       }
     }
+    const keys = new Set<string>([...perTileKeys, ...mosaicKeys]);
 
     for (const key of keys) {
       const url = this.memUrls.get(key);
@@ -301,11 +320,19 @@ export class TileImageCache {
       [...keys].map((key) => deleteTileImageRow(this.saveId, key)),
     );
 
-    diag.info("image", `cleared ${keys.size} cached image(s) for ${grid.scope} ${grid.ownerId}`, {
-      scope: grid.scope,
-      ownerId: grid.ownerId,
-      count: keys.size,
-    });
+    diag.info(
+      "image",
+      `cleared ${keys.size} image cache key(s) for ${grid.scope} "${grid.ownerId}" ` +
+        `(${mosaicKeys.size} mosaic cell slot(s) + ${perTileKeys.size} distinct per-tile terrain key(s); ` +
+        `per-tile art is shared across all regions/locations that use the same kind)`,
+      {
+        scope: grid.scope,
+        ownerId: grid.ownerId,
+        totalKeys: keys.size,
+        mosaicCellKeys: mosaicKeys.size,
+        perTileKindKeys: perTileKeys.size,
+      },
+    );
 
     // Notify per cleared key so listening cells re-read peekTile and
     // discover the URL is gone, then kick off regeneration via

@@ -141,6 +141,7 @@ input:focus {
   left: 14px;
   right: 14px;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
   padding: 0;
@@ -576,15 +577,66 @@ input:focus {
 /* The inner grid is positioned absolutely inside the viewport and
  * translated by `TileGridView` so the player's tile lands on the
  * viewport centre. We deliberately don't set width/height here; both are
- * computed by JSX based on the fixed cell pixel size. */
+ * computed by JSX based on the fixed cell pixel size.
+ *
+ * `isolation` gives a predictable stacking context so a single loading
+ * veil (::before, z-index 1) sits below every cell (z-index ≥ 2) and
+ * the portrait. Pending tiles use a slightly translucent placeholder
+ * so that one dark radial film reads through; loaded tiles stay opaque. */
 .tileGrid {
+  isolation: isolate;
   /* `position: absolute` + `top/left: 50%` is applied via inline style. */
+}
+
+/* One map-wide loading film — not 100 separate pseudo-element animations.
+ * Shown only while at least one tile is still waiting on its image
+ * (`.tileGrid__cellImage--pending`). The veil is the grid's first
+ * overlapping layer: dark, low-contrast, and a single `opacity` tween so
+ * the loop is seamless and the compositor does minimal work.
+ *
+ * Previously: per-cell ::before/::after + a viewport-wide `--pulse` custom
+ * property that still forced every pending cell to repaint each frame,
+ * felt bright/cyan-heavy, and restarting the viewport animation whenever
+ * the `:has()` state toggled caused visible jumps. */
+.tileGrid:has(.tileGrid__cellImage--pending)::before {
+  content: "";
+  grid-column: 1 / -1;
+  grid-row: 1 / -1;
+  /* Below every `.tileGrid__cell` (z-index ≥ 2) so terrain / labels
+   * paint on top; above the canvas so the film is actually visible. */
+  z-index: 1;
+  pointer-events: none;
+  min-width: 0;
+  min-height: 0;
+  justify-self: stretch;
+  align-self: stretch;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  background: radial-gradient(
+    ellipse 82% 78% at 50% 48%,
+    transparent 34%,
+    rgba(4, 7, 12, 0.75) 100%
+  );
+  opacity: 0.18;
+  animation: mapImagesLoadingVeil 4.2s linear infinite;
+}
+@keyframes mapImagesLoadingVeil {
+  0%,
+  100% {
+    opacity: 0.14;
+  }
+  50% {
+    opacity: 0.26;
+  }
 }
 
 /* Cells: still 1:1 squares, but more refined chrome. Subtle inner shadow
  * gives each tile depth without competing with the LLM-generated image. */
 .tileGrid__cell {
   position: relative;
+  /* Stack above the map-wide loading ::before (z-index: 1). */
+  z-index: 2;
   aspect-ratio: 1 / 1;
   width: 100%;
   /* No background — the tile image OR the canvas dark fill behind
@@ -617,7 +669,7 @@ input:focus {
   transform: translateY(-1px);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.10),
     0 6px 14px rgba(0, 0, 0, 0.4);
-  z-index: 1;
+  z-index: 3;
 }
 .tileGrid__cell--here {
   border-color: var(--accent);
@@ -625,7 +677,7 @@ input:focus {
     inset 0 0 0 1px var(--accent),
     0 0 0 2px rgba(154, 214, 255, 0.45),
     0 0 22px var(--accent-glow);
-  z-index: 2;
+  z-index: 4;
 }
 .tileGrid__cell--adjacent {
   border-color: rgba(154, 214, 255, 0.35);
@@ -732,66 +784,12 @@ input:focus {
   background-position: center;
   background-repeat: no-repeat;
 }
-/* "Still cooking" indicator — a slow opacity/brightness pulse over a
- * coloured overlay so the player can see at a glance which cells are
- * still awaiting an image. The overlay is a separate ::before drawn on
- * top of the placeholder background-color (set inline by TileGridCell
- * as `kindColor`) so we don't have to redeclare positioning on the
- * base .tileGrid__cellImage rule (overriding its `position: absolute`
- * with `position: relative` collapses the inset:0 sizing and the cell
- * disappears entirely — that bug ate the previous version of this
- * indicator).
- *
- * - The ::before is a translucent accent-blue wash that animates
- *   opacity + scale, giving a clear "breathing" feel against the
- *   per-kind background. Strong enough to be obvious even on a
- *   bright tile colour.
- * - The ::after is the older diagonal sweep, kept as a subtle
- *   secondary indicator of forward motion. */
+
+/* Let the single grid-wide loading film (`.tileGrid::before`) read
+ * through the flat colour placeholders; once a real image URL is
+ * wired, the non-pending class drops this and the tile is opaque again. */
 .tileGrid__cellImage--pending {
-  /* Keep the base rule's `position: absolute; inset: 0` intact —
-   * we add overlays via pseudo-elements rather than re-positioning. */
-  overflow: hidden;
-}
-.tileGrid__cellImage--pending::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: rgba(154, 214, 255, 0.55);
-  mix-blend-mode: screen;
-  pointer-events: none;
-  animation: tilePulse 1.4s ease-in-out infinite;
-  z-index: 1;
-}
-.tileGrid__cellImage--pending::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    115deg,
-    transparent 0%,
-    transparent 40%,
-    rgba(255, 255, 255, 0.18) 50%,
-    transparent 60%,
-    transparent 100%
-  );
-  background-size: 220% 100%;
-  animation: tileShimmer 1.8s linear infinite;
-  pointer-events: none;
-  z-index: 2;
-}
-@keyframes tileShimmer {
-  0% { background-position: 100% 0; }
-  100% { background-position: -100% 0; }
-}
-@keyframes tilePulse {
-  0%,
-  100% {
-    opacity: 0.18;
-  }
-  50% {
-    opacity: 0.85;
-  }
+  opacity: 0.86;
 }
 
 .tileGrid__cellLabel {
@@ -845,8 +843,12 @@ input:focus {
  * background-image) without changing the layout or animation here.
  */
 .tileGrid__portrait {
-  width: 88px;
-  height: 88px;
+  /* Smaller than a full tile so the cell underneath is still visible
+   * around the marker — a tile is TILE_PX (currently 92px) wide, and
+   * a 56px disc leaves a comfortable ring of terrain around the
+   * character so the player can still see where they're standing. */
+  width: 56px;
+  height: 56px;
   /* `left/top/transform` are set inline in TileGridView so the portrait
      can transition between cell centres in tile-space coordinates. */
 }
@@ -854,18 +856,42 @@ input:focus {
   width: 100%;
   height: 100%;
   border-radius: 50%;
+  /* Default (no portrait): soft accent gradient so the silhouette glyph
+   * still reads. Overridden by an inline background-image when the
+   * player has generated a portrait. */
   background:
     radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.18), transparent 55%),
     radial-gradient(circle at 50% 50%, var(--accent) 0%, #1a3a4a 70%, #0a1a26 100%);
-  border: 3px solid rgba(255, 255, 255, 0.85);
+  border: 2px solid rgba(255, 255, 255, 0.85);
   box-shadow:
-    0 0 0 2px rgba(0, 0, 0, 0.6),
-    0 0 18px var(--accent-glow),
-    0 6px 14px rgba(0, 0, 0, 0.55);
+    0 0 0 1px rgba(0, 0, 0, 0.55),
+    0 0 12px var(--accent-glow),
+    0 4px 10px rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
+  /* `background-size: cover` is set inline when a portrait is present;
+   * declaring it here as well means hot-swapping between the fallback
+   * gradient and an image works without a layout shift. */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   animation: portraitPulse 3s ease-in-out infinite;
+}
+/* When an actual portrait fills the disc, tighten the styling: a
+ * slimmer ring and a stronger drop shadow read better around a
+ * detailed image than the soft accent halo, which was tuned for the
+ * gradient placeholder. */
+.tileGrid__portrait--withImage .tileGrid__portraitDisc {
+  border-color: rgba(255, 255, 255, 0.9);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.7),
+    0 0 10px rgba(0, 0, 0, 0.4),
+    0 5px 12px rgba(0, 0, 0, 0.55);
+  /* Drop the breathing animation when there's a face inside — a
+   * pulsing face reads as a glitch, not a marker. The position glow
+   * around the disc edge is plenty of "you are here" emphasis. */
+  animation: none;
 }
 .tileGrid__portraitGlyph {
   width: 56%;
@@ -1116,6 +1142,102 @@ input:focus {
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--fg-2);
+}
+
+.settingsPanel {
+  width: 100%;
+  max-width: 480px;
+}
+.settingsPanel__section {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--glass-border);
+}
+.settingsPanel__section:first-of-type {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+.settingsPanel__heading {
+  margin: 0 0 6px;
+  font-size: 0.82em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+.settingsPanel__hint {
+  margin: 0 0 12px;
+  font-size: 0.86em;
+  line-height: 1.45;
+  color: var(--fg-3);
+}
+.settingsPanel__primaryBtn {
+  display: block;
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.settingsPanel__primaryBtn:hover {
+  border-color: var(--accent);
+  background: rgba(154, 214, 255, 0.08);
+}
+.settingsPanel__btnRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.settingsPanel__btnRow button {
+  flex: 1;
+  min-width: 120px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--fg);
+  font: inherit;
+  cursor: pointer;
+}
+.settingsPanel__btnRow button:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+.settingsPanel__btnRow button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.settingsPanel__field {
+  display: block;
+  margin-bottom: 12px;
+}
+.settingsPanel__field:last-child {
+  margin-bottom: 0;
+}
+.settingsPanel__label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.78em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+.settingsPanel__select {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--glass-border);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--fg);
+  font: inherit;
+  font-size: 0.88em;
+}
+.settingsPanel__select:disabled {
+  opacity: 0.5;
 }
 
 .inventoryPanel ul,

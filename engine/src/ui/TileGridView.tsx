@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { Tile, TileGrid } from "../grid/tilePrimitives";
 import { isEngineKind } from "../grid/tilePrimitives";
 import type { TileImageCache } from "../grid/tileImageCache";
+import { useStore } from "../state/store";
 
 /**
  * Shared map renderer for both RegionMap and LocationMap. Each cell shows
@@ -173,14 +174,25 @@ export function TileGridView(props: TileGridViewProps) {
  * That offset between portrait-arrival and camera-arrival is what gives
  * a single step real weight.
  *
- * The artwork is a placeholder for now (a soft gradient disc with a
- * silhouette glyph); a future pass can swap in an AI-generated character
- * image without touching the layout / animation code here.
+ * When the player has generated a character portrait in the character
+ * panel, that image fills the disc. Otherwise we fall back to a neutral
+ * gradient + silhouette so the marker is still visible (boot-time, or
+ * if the portrait generation failed). Reading `portraitDataUrl` from
+ * the store via a selector means a freshly-generated portrait shows up
+ * the moment the character panel updates the store, no remount needed.
  */
 function PlayerPortrait({ focusX, focusY }: { focusX: number; focusY: number }) {
+  const portraitDataUrl = useStore((s) => s.character?.portraitDataUrl);
+  const characterName = useStore((s) => s.character?.name);
+  const hasPortrait = typeof portraitDataUrl === "string" && portraitDataUrl.length > 0;
+
   return (
     <div
-      className="tileGrid__portrait"
+      className={
+        hasPortrait
+          ? "tileGrid__portrait tileGrid__portrait--withImage"
+          : "tileGrid__portrait"
+      }
       style={{
         // Positioned in the same coordinate space as cells: (focusX, focusY)
         // is the centre of the player's tile, so we pull the portrait
@@ -189,21 +201,35 @@ function PlayerPortrait({ focusX, focusY }: { focusX: number; focusY: number }) 
         left: `${focusX}px`,
         top: `${focusY}px`,
         transform: "translate(-50%, -50%)",
-        transition: "left 320ms cubic-bezier(0.34, 1.56, 0.64, 1), top 320ms cubic-bezier(0.34, 1.56, 0.64, 1)",
+        transition:
+          "left 320ms cubic-bezier(0.34, 1.56, 0.64, 1), top 320ms cubic-bezier(0.34, 1.56, 0.64, 1)",
         pointerEvents: "none",
         zIndex: 10,
       }}
-      aria-label="You are here"
+      aria-label={characterName ? `${characterName} is here` : "You are here"}
     >
-      <div className="tileGrid__portraitDisc">
-        <svg
-          className="tileGrid__portraitGlyph"
-          viewBox="0 0 32 32"
-          aria-hidden="true"
-        >
-          <circle cx="16" cy="12" r="5" />
-          <path d="M6 28 C 6 20, 26 20, 26 28 Z" />
-        </svg>
+      <div
+        className="tileGrid__portraitDisc"
+        style={
+          hasPortrait
+            ? {
+                backgroundImage: `url("${portraitDataUrl}")`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+              }
+            : undefined
+        }
+      >
+        {hasPortrait ? null : (
+          <svg
+            className="tileGrid__portraitGlyph"
+            viewBox="0 0 32 32"
+            aria-hidden="true"
+          >
+            <circle cx="16" cy="12" r="5" />
+            <path d="M6 28 C 6 20, 26 20, 26 28 Z" />
+          </svg>
+        )}
       </div>
     </div>
   );
@@ -358,9 +384,9 @@ function TileGridCell({
     .filter(Boolean)
     .join(" ");
 
-  // The tile has no real image yet — show a subtle shimmer so the player
-  // can tell at a glance which cells are still being generated vs. which
-  // ones have settled on a (cached or fallback) illustration.
+  // No image yet — flat colour placeholder; a single map-wide loading
+  // film on `.tileGrid` (CSS :has) reads through at slightly reduced
+  // opacity (see `.tileGrid__cellImage--pending`).
   const imageClass = url
     ? "tileGrid__cellImage"
     : "tileGrid__cellImage tileGrid__cellImage--pending";
