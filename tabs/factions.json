@@ -1,0 +1,35 @@
+{
+  "factions": {
+    "Iron-Core Consortium": {
+      "name": "Iron-Core Consortium",
+      "basicInfo": "The primary Vorok trade house, controlling vast mining interests and holding exclusive contracts across the human kingdoms. They are renowned for their proprietary geological knowledge and rigorous, if strictly transactional, auditing standards.",
+      "factionType": "major",
+      "hiddenInfo": "Maintains covert breeding compounds in deep, unmapped galleries where the line between contract and involuntary servitude blurs significantly.",
+      "known": true,
+      "embeddingId": "r8ear-Tt"
+    },
+    "Stone-Singer Syndicate": {
+      "name": "Stone-Singer Syndicate",
+      "basicInfo": "A medium-sized house specializing in high-risk prospecting and structural shoring for deeper, unstable mines. They are often hired by desperate kingdoms to reclaim lost tunnels or reach untouched veins.",
+      "factionType": "minor",
+      "hiddenInfo": "Known for harboring blacklisted Vorok exiles as low-cost labor, fueling the persistent rumors of banditry associated with their independent crews.",
+      "known": true,
+      "embeddingId": "KOSHNQh2"
+    },
+    "Slate-Bound Guild": {
+      "name": "Slate-Bound Guild",
+      "basicInfo": "An influential association of Vorok contract-miners that manages labor disputes and negotiates hourly rates for members working in foreign territories. They are notoriously loud and favor public disputes to ensure transparency in their contracts.",
+      "factionType": "minor",
+      "known": true,
+      "embeddingId": "0F_tZsHq"
+    },
+    "Royal Line": {
+      "name": "Royal Line",
+      "basicInfo": "A reclusive and diminished faction composed of the direct descendants of the first witch queen, Avenoria. They maintain a shadowy existence within Avenor, obsessed with reclaiming their ancestral right to rule all of Hedoria. Their influence is felt primarily through ancient magical covenants and surviving loyalist noble houses.",
+      "factionType": "minor",
+      "hiddenInfo": "They are actively sabotaging diplomatic efforts between human kingdoms to reignite total war, believing only chaos will restore their lost crown. They possess forbidden artifacts from before the Wartide, which they use to enforce absolute secrecy among their followers.",
+      "known": true,
+      "embeddingId": "r6SJE1sr"
+    }
+  }
+}

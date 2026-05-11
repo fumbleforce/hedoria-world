@@ -1,0 +1,113 @@
+{
+  "regions": {
+    "Avenor": {
+      "name": "Avenor",
+      "basicInfo": "A wide low river-plain bisected by a slow broad river fed by smaller tributaries running down from the mountains to the north. The land is among the most fertile on the continent: deep loam, long arcs of grain country, vineyards on the lower slopes, orchards along the watercourses, and grazing meadows on the higher ground. Wetlands and reed-marshes line the river's lower reach where it meets the sea. The coastline runs in long sand and shingle beaches broken by tidal estuaries. Inland, the plain rises gradually into rolling foothills before breaking against the mountains at the northern edge.",
+      "x": 0,
+      "y": -1,
+      "realm": "",
+      "factions": [],
+      "hiddenInfo": "",
+      "known": true,
+      "embeddingId": "T1s40h02",
+      "imageUrl": "https://images.aidungeon.com/generated_content/0/images/generated/31cb680d-f68f-4090-b0ba-22ae4feb6586.png"
+    },
+    "The Reach": {
+      "name": "The Reach",
+      "basicInfo": "A vast forest of layered character. The margins are open woodland and forest-edge country — scattered birch and oak, brush, fern-heavy clearings where the canopy thins and sunlight reaches the floor. The interior is deep old-growth: closed canopy, damp ground, moss-thick trunks, shadowed valleys where the light never reaches midday strength. River-valleys thread between, cutting wide grass-lined corridors through the trees. Seasonal change is dramatic: lush green in spring and summer, russet and gold through autumn, sparse and dark in winter when the bracken dies back. Game is plentiful — deer, boar, larger forest predators, and the great elk of the river meadows. The Fernwarg hold the open and edge country. The Raknid hold the deep old-growth.",
+      "x": 0,
+      "y": 0,
+      "factions": [],
+      "hiddenInfo": "Pre-Wartide ruins stand in some of the deeper valleys, mostly overgrown.",
+      "known": false,
+      "embeddingId": "SVbys2OK",
+      "imageUrl": "https://images.aidungeon.com/generated_content/0/images/generated/fa0cd2e3-afe6-4374-a1f2-4bd0b18f1048.png"
+    },
+    "Hinderance Highlands": {
+      "name": "Hinderance Highlands",
+      "basicInfo": "Rough high country at the foot of the great northern mountains. The land is broken and uneven — rocky grassland giving way to bare scree slopes, cut by deep gullies, narrow ravines, and sudden cliff-faces where the underlying stone breaks through. Wind is constant and the weather is hard year-round. Winters are long and severe, with deep snow that lingers into late spring. Summers are short, bright, and cold at night. Tarns and small lakes sit in glacier-cut hollows. Heather, stiff grass, and stunted thorn cover the lower slopes; bare stone and lichen the higher. The country grades upward into the mountains proper. Travel is slow on foot and worse by wagon. Inhabited by the human kingdom of Kelmar, with its capital at Shield's End on the lower steppe.",
+      "x": 1,
+      "y": 1,
+      "factions": [],
+      "hiddenInfo": "",
+      "known": true,
+      "embeddingId": "gdFTzf8d"
+    },
+    "The Sun-Scoured Plateau": {
+      "name": "The Sun-Scoured Plateau",
+      "basicInfo": "A harsh broken desert of deep sandstone canyons and towering flat-topped plateaus. The stone runs in rust, copper, ochre, and deep gold tones that catch the late-afternoon sun and glow. Days are searing; nights are bitter cold. Water is scarce and where it is known it is fiercely held — seasonal washes at the canyon floors, hidden seeps in the cliffs, the rare deep pool in shadowed defiles. Vegetation is sparse: thorn-scrub, hardy succulents, the occasional ancient juniper clinging to a ledge. Wind has shaped the rock into spires, arches, and slot canyons that cut deep into the plateau. Travel follows old paths along the canyon floors and the high mesa tops; there are no roads. Inhabited by the Draklid in their cliff-cut clan-holds.",
+      "x": 1,
+      "y": 2,
+      "factions": [],
+      "hiddenInfo": "",
+      "known": true,
+      "embeddingId": "1dNnlGcy"
+    },
+    "Lake Wildering": {
+      "name": "Lake Wildering",
+      "basicInfo": "A great inland lake dominating the region, with a long irregular shoreline of bays, headlands, and reed-fringed shallows. The water is deep and cold at the center and shelves into wide marshy flats at the margins. Smaller lakes and bog-pools dot the surrounding country, connected by slow streams and stretches of fen. Mixed forest of birch, alder, and pine ranges across the dry ground between the wetlands; meadows open where the soil drains better. Waterfowl are abundant. Lake-fish, eel, and freshwater shellfish fill the shallows. Wild country runs hard against the settled shore — much of the back-country is unclaimed in any practical sense and difficult to patrol. Inhabited by the human kingdom of Nadorim, with its capital at the north end of the lake and smaller towns and villages strung along the shoreline.",
+      "x": -1,
+      "y": 0,
+      "factions": [],
+      "hiddenInfo": "",
+      "known": true,
+      "embeddingId": "DZQhUM2-",
+      "imageUrl": "https://images.aidungeon.com/generated_content/0/images/generated/a194a843-6dcc-4e55-a8f1-83f5d45b053e.png"
+    },
+    "Whitestone coast": {
+      "name": "Whitestone coast",
+      "basicInfo": "A mixed coastal region named for the chalk cliffs that face the sea along long stretches of the shore. Above the cliffs lie open chalk uplands — short grass, sheep-cropped turf, hawthorn windbreaks, and the occasional standing stone. Below them the shoreline runs in alternating cliffs, shingle beaches, and tidal flats. Inland the country drops into wide coastal wetlands: salt-marsh near the sea, freshwater fen further in, threaded by slow rivers and old drainage channels. Surviving farmland sits on the fen-edges and the chalk uplands. Reed-beds and bog-iron pans run through the marsh interior. At low tide the foundations of flooded villages remain visible along sections of the coast, the relics of dike-works lost in the Wartide. Inhabited by the human kingdom of Udorath.",
+      "x": -1,
+      "y": -1,
+      "factions": [],
+      "hiddenInfo": "",
+      "known": true,
+      "embeddingId": "gCIYs5YK",
+      "imageUrl": "https://images.aidungeon.com/generated_content/0/images/generated/a3400c00-807c-4381-a6dd-2779ca019a70.png"
+    },
+    "Shieldcap Mountains": {
+      "name": "Shieldcap Mountains",
+      "basicInfo": "A wild high mountain range. Sheer ridges, broken passes, ice-bound peaks, glacier valleys, and weather that turns hard without warning even in summer. The lower slopes are heavy pine forest and scree; the middle ranges are bare rock and snowfields; the heights are stone and ice. Streams run fast and cold out of every valley. A handful of passes are travelled in season by those with means and guides; most of the range is left alone. Wild predators range the upper passes — great wolves, snow-bears, raptors, and worse. The foothills hold scattered Vorok pit-works under contract with the surrounding kingdoms. The high country is otherwise unsettled.",
+      "x": 1,
+      "y": 0,
+      "factions": [],
+      "hiddenInfo": "Old structures stand in the high country — pre-Wartide ruins, abandoned watch-posts, and at least one site that prospectors will not enter for any contract price.",
+      "known": false,
+      "imageUrl": "https://images.aidungeon.com/generated_content/0/images/generated/085d0177-c3b7-488b-ae9a-c71887ad2fae.png",
+      "embeddingId": "QShvxORD"
+    },
+    "Impasse": {
+      "name": "Impasse",
+      "basicInfo": "A near-impassable region where the southern arm of the mountains falls into the sea. The terrain is a tangled mess of steep cliff-faces, sea-cut ravines, fractured bedrock, and storm-beaten coastline. Salt spray reaches far inland. There are no roads and no clear passes. A few sheltered coves and defensible upland pockets hold extremely remote villages, trading rarely with the world outside. Wild predators range the rocks and the high broken country. Smugglers know tracks the kingdoms do not. Ruins, some pre-Wartide, stand in the deeper ravines.",
+      "x": 1,
+      "y": -1,
+      "factions": [],
+      "hiddenInfo": "Not all of the ruins are empty.",
+      "known": true,
+      "imageUrl": "https://images.aidungeon.com/generated_content/0/images/generated/544921b5-6f5d-4c47-8d35-ec7a587a6f42.png",
+      "embeddingId": "R2Oi63Mh"
+    },
+    "Long Steppe": {
+      "name": "Long Steppe",
+      "basicInfo": "Open grassland running wide and flat under a tall sky. The landscape is rolling rather than featureless — long shallow swells, broad shallow valleys, scattered stands of wind-bent trees in the hollows where water collects. Grass runs from knee-high in the wet spring to shoulder-high by late summer, browning and laying down through autumn into the brown stubble of winter. Streams are infrequent but reliable, fed from the high country to the east, running in cut channels across the plain. Seasonal flowers wash colour across the country in spring. Wind is constant. Game runs to grouse, hare, antelope, and the larger steppe predators. Hofnar wagon-cycles cross the region on long seasonal routes, with established encampment sites along the way.",
+      "x": 0,
+      "y": 1,
+      "factions": [],
+      "hiddenInfo": "",
+      "known": false,
+      "imageUrl": "https://images.aidungeon.com/generated_content/0/images/generated/2a453baa-7e91-46da-abd9-ee617b87be5b.png",
+      "embeddingId": "n-4hVahd"
+    },
+    "Deep Steppes": {
+      "name": "Deep Steppes",
+      "basicInfo": "Vast open grassland reaching into the deep interior, wider and wilder than the Long Steppe to the east. The country runs flat to the horizon in most directions, broken only by shallow river valleys and the occasional rocky outcrop. Grass is dense and tall through the warm months, cured to standing hay by autumn, buried deep under snow in winter. Great wild herds — aurochs and proto-horse-folk known as the Far-Herds — range the deep interior in vast moving columns. Wolves and the larger steppe cats follow them. In the summer months the great Hofnar wagon-cities encamp here in formation, hundreds of vast wagons drawn up in long avenues; in winter the wagon-cities have moved south and the country is left to the herds and the weather.",
+      "x": -1,
+      "y": 1,
+      "factions": [],
+      "hiddenInfo": "",
+      "known": false,
+      "imageUrl": "https://images.aidungeon.com/generated_content/0/images/generated/4c306736-12d9-4110-9b1f-e474044b0aaa.png",
+      "embeddingId": "59xz1a7R"
+    }
+  }
+}

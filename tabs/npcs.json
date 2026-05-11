@@ -1,0 +1,464 @@
+{
+  "npcs": {
+    "Sephilia": {
+      "name": "Sephilia",
+      "type": "Witch Queen",
+      "currentLocation": "Avenor",
+      "currentArea": "The Palace District",
+      "gender": "female",
+      "tier": "boss",
+      "faction": "Royal Line",
+      "basicInfo": "The seventh witch queen of Avenor, currently acting under the influence of an unknown faction. She was once a beloved and sharp diplomat but has grown erratic, exiling those who question her.",
+      "visualDescription": "A figure of soft radiance, larger than life, sitting upon a high marble throne.",
+      "personality": [
+        "Erratic",
+        "Principled",
+        "Exhausted"
+      ],
+      "abilities": [
+        "Royal Bloodline Magic",
+        "Witchcraft"
+      ],
+      "embeddingId": "-akx6Cyb"
+    },
+    "The Princess": {
+      "name": "The Princess",
+      "type": "Exiled Heir",
+      "currentLocation": "Avenor",
+      "currentArea": "The Queen's College",
+      "gender": "female",
+      "tier": "strong",
+      "faction": "Royal Line",
+      "basicInfo": "The daughter of Sephilia, stripped of her standing and exiled for discovering the secret influence over her mother. She is a gifted young witch currently hiding in the world.",
+      "visualDescription": "A young witch bearing the distinct features of the royal line.",
+      "personality": [
+        "Determined",
+        "Cunning",
+        "Gifted"
+      ],
+      "abilities": [
+        "Royal Bloodline Magic"
+      ],
+      "embeddingId": "8oC03MH4"
+    },
+    "Orryn Dasch": {
+      "name": "Orryn Dasch",
+      "type": "kelmari infantryman",
+      "currentLocation": "Iron-Step",
+      "currentArea": "",
+      "gender": "male",
+      "tier": "strong",
+      "level": 7,
+      "hpMax": 240,
+      "known": true,
+      "voiceTag": "english_north_male_gruff",
+      "basicInfo": "Fought the Threshi winter-raid cycle on the Kelmari marches for fifteen years before he hung up his post-line; can read raid-formations from a horizon-line of dust the way other men read weather. Stocky, dark-bearded, with a left ear that whistles when wind hits it (sickle-blade graze, second year), and a thumb-joint on his off-hand that slips out of socket if he grips wrong, which is why he draws right against everyone. Wears a worn Kelmari long-coat with a sergeant's collar he hasn't unstitched, and a wood-handled axe taken off a Threshi field-male twenty years gone — the haft wrapped and re-wrapped where his grip wears it.",
+      "personality": [
+        "warm to comrades and curt with everyone else",
+        "talks dry and lands harder than he means to",
+        "drinks too much and sings off-key",
+        "internally still soldiering for a kingdom that doesn't know he resigned",
+        "refuses contracts against non-combatants",
+        "sentimental about Kelmari border-songs and won't admit it"
+      ],
+      "hiddenInfo": "(Archetype: Logen Ninefingers)\n\nBackground: Orryn Dasch, human, Kelmari-born, freelance mercenary working the eastern circuit between the Hinderance and the Long Steppe. Rose to sergeant in the Kelmari border-line, fifteen years on the post-line eating Threshi winter-raids and learning the trick of reading a raid-formation from the dust before the formation crests. Resigned the year his commander ordered the burning of a Quelled-pen the Threshi had been keeping for breeding — Orryn drew the order, walked away, never returned to draw pay. The commander took it well; the kingdom did not. He works east-facing now, anything that puts him moving toward the marches. Drinks at the Iron-Step garrison-house when he passes through; the watch-sergeant there knew him from the line and pours without comment. Has a long-running tab and quiet running argument with Kelmar's Last innkeeper over what counts as a debt. Wants to die facing the marches, ideally with a paid contract under his belt and the next sergeants learning their dust-sign from him. Thinks the Kelmari court is rotten now in ways the old guard wouldn't have tolerated, and says so when drunk.\n\nPersonality: Talks short and dry — sentences clipped to where another man would still be loading the verb. Verbal habit of starting an argument with \"Listen\" and ending it with \"Right.\" Default manner is curt and competent with strangers; warms slowly with comrades and turns properly funny with anyone he's bled beside, telling long Kelmari hill-stories about commanders who deserved less than they got. Low-stakes habits: drinks too much and sings off-key, chiefly Kelmari border-songs the locals stopped singing decades ago, which he denies sentimentally. Treats officers and ranks-above with the deference of an old soldier and the contempt of a man who walked out, treats peers and ranks-below the same — doesn't adjust. Quiet at any mention of Quelled-pens; the silence is conspicuous and he doesn't lift it. Does not lie about anything important; is openly evasive about why he resigned, and the evasion fools no one. Real competence in field-craft: dust-reading, road-discipline, organizing twenty hungry men around one camp without fights breaking out. Will accept a contract from a Quelled-trade buyer and walk away from one with a Quelled-trade seller — and treats this as a matter of who pays, not who he sides with.\n\nDesire: Has known a few women in his life and remembers them well; broadly drawn to people who can hold their own at table and in fight, not particular about much else. Open enough that a Hofnar mercenary or a Cephalen courier could turn his head if the timing worked. Drinks tend to bring him close to whoever's nearest — often someone in the same garrison, sometimes the keeper of the inn he's drinking at. Will not pay for sex — a Kelmari border-line position carried over from his unit, half-superstition. Has not turned down a kiss in twenty years and would not start now.\n\nCombat: Fights at the close edge of mid-range, axe in his right hand, off-hand free for grappling and shield-snatch. Patient — lets a charge come, takes the first blow on his coat-line if the angle's right, opens up on the recovery. Will not break a fight to chase someone who runs unless the contract names them. Wounded he gets quieter and meaner; talks less, conserves angles, will end a thing. Tactical signature: reads the youngest enemy in the line and goes for them first to break morale early — a Threshi-marches habit he never unlearned. Combat-trained; civilians inside his unit get put behind him without ceremony, and he expects them to stay there.",
+      "abilities": [
+        "Dust-Sign Reading: Reads incoming formations from horizon dust at a distance most scouts cannot. Calls raid-shape, raid-strength, and raid-vector before the line crests. Can do it half-drunk if the wind is right.",
+        "Axe-and-Coat: Fights at the close edge of mid-range with a hooked Kelmari border-axe and a heavy long-coat as part of the defense. The coat catches blade-edges and tangles thrust-weapons; the axe takes apart whatever the coat slowed.",
+        "Shield-Snatch: Off-hand technique for stripping shields from opponents in a press. Twists the shield-arm, drops the bearer, takes the shield to use against the next man.",
+        "Patient Counter: Holds a static guard, lets the first attack come, opens on the recovery. Lets the enemy commit; doesn't commit himself until the angle is fatal.",
+        "Field-Craft: Twenty years of organizing exhausted men around bad camps without internal fights. Reads tempers, places sentries, calls rotations, ends arguments before they cost.",
+        "Marches-Morale Strike: Identifies the youngest or least-experienced opponent in a hostile line and ends them first. The line breaks when the young one drops; the rest re-evaluate."
+      ]
+    },
+    "Mira Coyle": {
+      "name": "Mira Coyle",
+      "type": "kelmari infantryman",
+      "currentLocation": "Kelmar's Last",
+      "currentArea": "",
+      "gender": "female",
+      "tier": "strong",
+      "level": 8,
+      "hpMax": 250,
+      "known": true,
+      "voiceTag": "english_north_female_sharp",
+      "basicInfo": "Volunteered into the marches young and ran the long border patrols on foot for a decade — javelins, hatchet, light mail, the runner's kit. Tall and lean, hair cut short under the runner's cap, with a left wrist that pops audibly when she draws — old break, set badly, never bothered. Wears a much-mended Kelmari runner's coat with the unit-stripe still on the cuff (refuses to remove it), a pair of light hatchets at her belt, and four javelins in a back-quiver.",
+      "personality": [
+        "proud and hot-tempered, quick to laugh and quicker to grudge",
+        "vain about her kit and earns it",
+        "holds a feud by lineage — a grandfather's quarrel is hers now",
+        "will not refuse a duel and is famous for it",
+        "intensely loyal once she decides someone is worth it",
+        "keeps her own counsel between jobs"
+      ],
+      "hiddenInfo": "(Archetype: Brienne of Tarth)\n\nBackground: Mira Coyle, human, Kelmari, freelance mercenary working the eastern marches and occasionally the Long Steppe edges. Volunteered into the runner's-line young — Kelmari runners take a recruit who can outlast the patrol regardless of background, and Mira could outlast anyone they put against her. Ten years on the long border patrols on foot, six of them as section-runner, the last two passed over for unit-command for reasons the line did not state but everyone understood: she had publicly fought a contractor's son in a Kelmari court-yard and refused to apologize. The contractor was the man who paid the unit's pay-bonus. The unit paid the price. She left clean, took her gear, has been hiring individually at high rates since and refers no one. Drinks with one specific Kelmar's Last innkeeper who had her father in his unit a generation back; she calls him uncle and he doesn't refute it. Wants the contract that lets her come home with enough that the contractor's family has to acknowledge her at table. Thinks the Kelmari high command is rotten at the top and clean at the bottom and that the rot is moving down.\n\nPersonality: Talks fast and direct; sentences come quick and don't apologize. Default register is professional and cool with strangers, animated and warm with comrades, sharp and biting with anyone who patronizes her. Low-stakes habits: maintains her kit obsessively (oils the hatchets weekly, re-fletches the javelins herself, polishes the unit-stripe back when it dulls), and is touchy about anyone touching the kit. Treats officers with the courtesy of a soldier and the underlying contempt of one who walked, treats peers with hard humor, treats anyone below her with the patience she didn't get herself. Will tell a story about her line's old feuds at length if drinking, and the stories get sharper and funnier as the bottle empties. Quick to anger when feels disrespected, slow to forgive — but the door is rarely permanently closed. Famous duelist; has accepted every duel offered and won most of them and will recite the count if asked. Generous with her time and pay to mercs starting out, less so with anyone established. Real competence: long-distance running, javelin-work at distance, and the kind of road-discipline that keeps a small unit alive in country that wants to kill them.\n\nDesire: Open in orientation, drawn loudest to the kind of person who can keep up with her on a road and outsmart her at table — not particular about gender or species. Has run with two Hofnar mercs and a Cephalen factor in different seasons and would happily again. Will not work bedroom favors into a contract — keeps the lines clean, charges separately for everything. The line she will not cross: she will not bed anyone in her current contract-unit until the contract closes, regardless of mutual interest. Has been talked into one exception, in a Long Steppe rain-camp, that she calls the lesson she didn't have to learn twice.\n\nCombat: Fights at javelin range first, hatchet range second, never lets it get to grapple unless she chose it. Light and fast — moves more than her opponents, takes the angle they didn't expect, breaks lines by repositioning. Will start a fight with a thrown javelin if the contract allows it; will end one with two hatchets and a closing sprint if it doesn't. Wounded she gets faster, not slower, which surprises people who thought they had her. Tactical signature: identifies the heavy-armored opponent, cripples his footing with a thrown javelin to the thigh, then takes him apart with the hatchets while he tries to plant. Combat-trained from the runner's-line; will not voluntarily fight anyone she has been unit with, and is famous for tracking such fights into eventual reconciliation.",
+      "abilities": [
+        "Runner's Pace: Decade of Kelmari border-running. Can outdistance most pursuers over open ground, set a pace that breaks unprepared parties in a half-day, and arrive somewhere her opponents thought she was hours behind.",
+        "Javelin-at-Range: Trained Kelmari javelin-work — accurate to the limit of the weapon, fast on the throw, with a follow-through that lets her draw the next as the first lands.",
+        "Hatchet Pair: Twin light hatchets, used close in. One leads, the other follows the recovery; she cycles the pair to cut on every beat of the engagement.",
+        "Section-Runner Discipline: Reads terrain, calls cover, places the small unit's movement to advantage. Knows what runs where and what gets ambushed where.",
+        "Cripple-the-Heavy: Tactical specialty against armored opponents. Goes for the foot-set first, drops it, takes the rest while it's planted wrong.",
+        "Duel-Trained: Comfortable in formal one-on-one combat with most weapons. Has accepted every duel offered and won most of them; the few she lost were to opponents who fought her three days running until she dropped."
+      ]
+    },
+    "Desten Ulvar": {
+      "name": "Desten Ulvar",
+      "type": "udorathi marsh-skirmisher",
+      "currentLocation": "Hagshollow",
+      "currentArea": "",
+      "gender": "male",
+      "tier": "strong",
+      "level": 7,
+      "hpMax": 230,
+      "known": true,
+      "voiceTag": "english_west_male_warm",
+      "basicInfo": "Knows the Whitestone fen-country better than any man alive — every causeway, every false ford, every drowned village under the reed. Squat and broad, sun-cured leather face with one missing tooth at the upper-left and a permanent squint from years of low sun on water, walks with a fen-pole's care over solid ground because his feet are still expecting it to give. Wears Whitestone reed-leathers, a fen-walker's wide hat, a long-knife at the belt, and a copper cooking-pot tied to his pack — the pot is for the cooking and the cooking is what gets him hired again.",
+      "personality": [
+        "cheerful gambler off the clock",
+        "careless with money on the road and tight with it at home",
+        "excellent storyteller, mostly about his own bad decisions",
+        "absurdly competitive at tavern games",
+        "casually fearless in water, cautious to the point of timid in stone country",
+        "trusts the fen and almost no one else"
+      ],
+      "hiddenInfo": "(Archetype: Boats from the Earthsea Cycle)\n\nBackground: Desten Ulvar, human, Udorathi, freelance marsh-skirmisher working the Whitestone fen-margins and lower river-country. Born and raised in a fen-village his family has been in for generations; took up skirmishing when the Whitestone marshal-line started paying for fen-knowledge and never quite went home full-time. Married a fen-village wife years back; the marriage is quiet and durable, and he visits whenever the contract chain brings him near. Most of his contracts come from fen-clearing — gristlemaw nests, slogger trouble, the rare Hookwight that wandered off the meadow and took up in a reed-bank. Drinks at three road-houses on the Whitestone-Avenor road, and is known at all three as the man who will cook for the room if the bottle keeps coming. Has a long-running rivalry with another marsh-skirmisher named Halden whom he beat for the same contract years back; the rivalry is mostly affectionate and they share a campfire when their routes cross. Wants to retire to a fen-cottage on a specific bend of the Whitestone river that he has been pricing for years and still can't quite afford. Thinks the Avenorian witches who buy slogger-mucus are honest about prices and the Whitestone barons who pay him are not.\n\nPersonality: Talks slow when working, fast when relaxed; the working voice is for telling a unit how the fen will kill them, the relaxed voice is for telling a road-house how he saw a slogger eat a moose. Default manner is warm and easy with everyone, with the warmth dropping off only when he's reading water for danger — then he goes silent and that's the cue. Low-stakes habits: cooks for whoever is at the camp or table, carries spices the rest of the country has not seen, refuses to share his stew recipe even with friends. Treats nobles and barons with deference he doesn't feel and merchants with cheerful contempt; treats other mercs as kin until they prove otherwise; treats Avenorian witches with quiet professional courtesy because they pay reliably and don't haggle. Lies casually about gambling debts and is honest about everything else. Loses at cards more than wins, technically, but tells stories that make him sound like a champion either way. Has a story for every scar and at least three for some, which his rivals find tedious and his audiences usually do not. Real competence: fen-craft so deep he reads water-currents the way other men read prints; the cooking is also real. Patient with people learning the fen and impatient with people pretending they know it. Will share a campfire with anyone who's not actively trying to kill him, and a few who are.\n\nDesire: Married, openly so on the road and at home. Open in orientation otherwise — pre-marriage he was easy and comfortable; post-marriage the door is largely closed, but he doesn't pretend the world doesn't have other doors. Drawn to people who can sit still in a quiet camp without filling the silence; the marriage works partly because his wife does that better than anyone else. Will not work a contract that takes him more than a week's fast travel from home if he can avoid it. Drinks long with the Whitestone barons' factors when work is slow and has had things proposed to him in those evenings he is more uncomfortable about than he lets on, and has not pursued.\n\nCombat: Fights in fen-country at the limits of long-knife range, with the fen itself as his real weapon — wades opponents into water that hides the bottom, uses reed-cover to disappear, calls a slogger from its bed onto an opponent if the timing is right. Out of fen-country he is a competent generalist with a long-knife and not particularly distinguished. Will start a fight with the long-knife at hand-throw distance, finish with the fen-pole as a brace if it has come to grappling. Wounded he goes quieter and the fen-tricks come faster — he knows where to lose pursuit in water that shouldn't hold him but does. Tactical signature: maps the engagement onto the terrain in a five-second look, calls the line of retreat-into-fen, makes opponents commit forward into ground that takes them. Combat-trained for fen-country; civilians in his unit get pulled to firm ground and told to stay there.",
+      "abilities": [
+        "Fen-Craft: Reads marsh-country at a level that's almost magical without being so. Knows what water hides, what reed-clumps support weight, where the slogger sleeps.",
+        "Long-Knife and Fen-Pole: Combat at fen-distance with a heavy long-knife on the hip and a fen-pole in hand. The pole is for terrain first, weapon second.",
+        "Slogger-Calling: Knows where the local sloggers den and how to draw one up from a bed. Has used this in combat exactly twice and would prefer not to make it three.",
+        "Camp-Cooking: Real, professional-grade cooking from a single pot and a fire. Wins him friends and contracts equally.",
+        "Tavern Games: Competitive at every bar-game from Avenorian dice to Whitestone swap-coin. Loses more than he should but keeps the tables full.",
+        "Patient Stalker: Will sit in a reed-bank for half a day to take a single shot at a Hookwight. Has the patience and the wind-discipline to do it."
+      ]
+    },
+    "Senna Vrole": {
+      "name": "Senna Vrole",
+      "type": "nadorim lake-archer",
+      "currentLocation": "Reedmere",
+      "currentArea": "",
+      "gender": "female",
+      "tier": "strong",
+      "level": 7,
+      "hpMax": 220,
+      "known": true,
+      "voiceTag": "english_neutral_female_calm",
+      "basicInfo": "Ten years on the long roads after a decade on the lake — first job was river-pirate-clearing for the Nadorim wardens, and she has been a paid bow ever since. Slight, weather-browned, dark hair in the lake-country knot worn under a wide-brim, with calluses on three fingers of the draw-hand and a small Hand-sigil tattooed at the base of her throat. Wears a long quilted travel-coat over Nadorim lake-archer leathers, a yew bow on the back, six knives in a belt-rack arranged by purpose, and a small carved shrine-figure she touches before each draw.",
+      "personality": [
+        "devout — touches the Hand-sigil before everything important and most things less",
+        "sentimental drunk who recites lake-songs at length",
+        "sharp-eyed about people but trusts them anyway",
+        "snobbish about food on the road",
+        "cries quietly at sad ballads and is not embarrassed about it",
+        "consistently underestimates her own kindness"
+      ],
+      "hiddenInfo": "(Archetype: Maud Adams in Octopussy)\n\nBackground: Senna Vrole, human, Nadorim, freelance archer working the Lake Wildering shore-circuit and occasional Avenor contracts. Born to a fisher-family on the Wildering north shore; trained as a Nadorim lake-archer in her teens and worked the Wildering pirate-clearing season for ten years before moving onto the long roads. Has been saving for a small lake-boat for six years and the price keeps somehow staying ahead of her purse — she suspects but can't prove that her cousin who handles her shore-money is skimming. Drinks at the Reedmere road-house when she's home, takes the longer Avenor contracts when she's not. Hand-Above devotion she takes seriously; gives a small portion of every contract to the local shrine wherever she ends up. Wants the boat, wants enough to retire to it, wants to learn whatever-it-is the Avenorian Queen's College researchers wanted to learn from the Wildering when they sent a third-year up. Holds a friendship with that third-year, Tena Harl, whom she taught to handle a yew bow over a long Wildering summer; the friendship is one she keeps close. Thinks the Brotherhood's witch-hunters who came through Hagsford last winter were lying about why they were there.\n\nPersonality: Talks soft and slow with strangers, faster and warmer with people she's drunk with. Default register is courteous and watchful; she reads a room the moment she enters it and treats it accordingly, which most people don't notice. Low-stakes habits: prays at every shrine she passes (briefly), maintains the bow obsessively, complains about road-food at every meal she didn't cook. Treats Hand-Above shrines with reverence regardless of whose hand keeps them, treats Brotherhood wizards with quiet courtesy on the surface and quiet refusal underneath, treats other archers with professional recognition that warms slowly. Honest by reflex; will tell you a thing about yourself you didn't want to know if you ask, and is sorry afterward. Cries at sad ballads when drinking, sings when the songs warm; some of the road-house rooms she's wept and sung in remember her by both. Real competence at distance: archery to the limit of the bow with consistent placement, plus the kind of woods-craft that lets her sit a Wildering reed-bed for half a night without spooking the birds. Slow to anger and slow to forgive when angered. Generous beyond her means, which is part of why the boat-fund stays small.\n\nDesire: Open in orientation; grew up around women in the lake-country and has had loves of both sexes, none of them recent. Drawn to people who are gentle without being soft, and to anyone who shows real care for what they make — a baker, a fletcher, a road-house cook with pride in their broth. Currently not pursuing anyone; the boat-saving years have made her quiet in that direction. Has had Tena Harl proposition her in a Wildering boat-house and turned it down for friendship-reasons that she has never quite explained even to herself. The line she will not cross: she will not bed any man whose face she cannot place at a shrine, which has practical implications for the Brotherhood-aligned and the Brotherhood-haunted both.\n\nCombat: Fights at long bow-range first, knife-range last, and intends never to bridge the gap by choice. Patient — will hold a position for hours waiting for the angle, calls the shot before drawing, and her count of one-shot kills is unusual for her years. Will start a fight with a single arrow at the limit of the bow, end it with two more if needed, fall back rather than close. Wounded she gets quieter and her placement gets better. Tactical signature: takes the most-armored opponent in the line by a thrown knife to the throat-gap above the gorget; saves the bow for the second-most-dangerous, who never gets close enough to know they were the second target. Trained to it; will not voluntarily fight close-up, and is honest about that limitation.",
+      "abilities": [
+        "Yew Bow Mastery: Long-distance Nadorim lake-archer technique. Holds a steady draw against wind and water, places shots at the limit of the bow.",
+        "Belt-Rack Knives: Six knives, each balanced for a specific purpose — three throw-knives by weight, two close-fight knives, one for cutting fletch. Arranged in order so the right one finds her hand without looking.",
+        "Reed-Bed Discipline: Wildering training — sit motionless in cover for hours, control breath and shadow, take the shot when it presents.",
+        "Throat-Gap Throw: Specific technique against armored opponents. Aims for the small triangle above the gorget; one throw, full commit, fast follow-through.",
+        "Lake-Shore Tracking: Trained in lake-country sign — broken reed, water disturbance, cooking-fire leavings. Will follow a trail across water that most trackers say doesn't hold.",
+        "Hand-Above Discipline: Devotional practice that steadies her hands before a hard shot. Whether it's prayer working or just her own breath-discipline, the shots land either way."
+      ]
+    },
+    "Perris Adol": {
+      "name": "Perris Adol",
+      "type": "human mercenary",
+      "currentLocation": "Avenor",
+      "currentArea": "",
+      "gender": "male",
+      "tier": "strong",
+      "level": 8,
+      "hpMax": 230,
+      "known": true,
+      "voiceTag": "english_court_male_dry",
+      "basicInfo": "Was in the Avenor Palace Guard for nine years before he was 'released from service' — the Court has one explanation, the Guard another, and Perris has three depending on who's buying. Stocky, dark-haired, old saber-cut along the line of his right cheekbone (palace-courtyard duel, never officially happened), and a habit of touching the cuff where his Guard-stripe used to be. Wears a half-decent road-coat that hides good arms underneath, a dueling sabre that says 'Avenor Palace Guard' in the basket-work if you know to look, and a pair of palace-issue boots he refuses to replace until they fall off.",
+      "personality": [
+        "bitter wit, cuts equally up and down",
+        "name-drops palace gossip without prompting",
+        "charming when sober, less so by the third drink",
+        "petty thief of small valuable things, especially from people he likes",
+        "loyal to whoever signs the contract — exactly until the contract ends",
+        "still believes himself better than anyone hiring him"
+      ],
+      "hiddenInfo": "(Archetype: Locke Lamora)\n\nBackground: Perris Adol, human, Avenorian, freelance mercenary working the Avenor-Reach corridor, formerly Palace Guard. Nine years in the Guard, the last two on the witch-queen Sephilia's personal detail; was released from service for reasons that have at least three plausible explanations and at least two implausible ones, and Perris encourages all of them. Knows the layout of every major Avenorian palace building, every Crown-aligned warehouse, every Guard barracks, and in particular the system of locked posterns that connects them — knowledge worth coin to the right buyers and a sentence to the wrong ones. Currently hires for the Reach contractors who can afford his rates; works clean, completes contracts, sells gossip on the side. Drinks at one specific Avenor low-quarter wine-shop run by a former Guard quartermaster who lets him hold court there. Has a long-running rivalry-and-friendship with a Cephalen factor named Kestus who is also gathering palace gossip and who buys some of his. Wants a return to the Palace Guard he isn't sure he can have but also can't quite stop wanting; believes the official reason for his removal will be revisited. Thinks Sephilia is being played by a faction inside the Royal Line and has theories he will share at length when drinking.\n\nPersonality: Talks fast, pitched at courtly idiom for the first ten minutes of any conversation and then drops it as soon as he's read the room. Default manner is charm and warmth; gets sharper and meaner the more he drinks, and lets palace-gossip slip in proportion to how drunk he is. Low-stakes habits: takes notes on people in a small leather book he keeps under his coat, steals small valuable trinkets from his hosts (mostly returns them later, sometimes), reads the news-sheets that come through Avenor and ranks the writers. Treats nobles with practiced respect that conceals the contempt of someone who has heard them at home, treats other Guard-trained men as kin, treats Brotherhood wizards with the careful courtesy of a man who has seen what they do quietly. Lies often about why he was released; lies almost never about anything else. Petty thief by reflex, returns most of what he takes when he likes the person, keeps things from people he doesn't. Real competence at courtly violence: dueling-form with the sabre, knife-fighting in close quarters, and the kind of palace-corridor knowledge that gets a contract done without the Guard ever being called. The political sense is also real — he reads court factions accurately and is honest about that part. Genuinely warm with a small circle and faintly contemptuous of everyone outside it.\n\nDesire: Open in orientation, with a slight pull toward Avenor-court women whose station he could never quite reach during Guard duty. Currently sleeping with the wine-shop keeper's wife with the wine-shop keeper's full knowledge and approval, an arrangement everyone finds civilized. Will pay for sex when traveling and not when in Avenor; treats this as a Guard-line tradition rather than a moral position. The line he will not cross: he will not bed anyone in the Guard he served with, and he holds this even now that he is out. Has had one encounter with a Cephalen courtesan in a Cephalen courtesan-house that he describes only in fragments and only when very drunk.\n\nCombat: Fights at sabre-range with formal Avenorian dueling-form, comfortable in the courtyard duel and reasonable in the open road. Will start a fight with the formal Avenor opening-salute if the contract allows it and skip it if it doesn't. Wounded he gets faster and meaner; the dueling-form sharpens, the courtesy disappears, the kill comes early. Tactical signature: takes the lead opponent's primary weapon hand off in the first exchange and the moral commitment of the rest of the line breaks behind it. Trained to it; he is also a competent knife-fighter in close quarters, a lesser skill that has saved his life more often than the dueling-form has.",
+      "abilities": [
+        "Avenorian Dueling Form: Trained Palace Guard sabre-work. Formal opening, fast counters, and the kind of finish that ends the duel before the second exchange.",
+        "Palace Courtyard Knife: Close-quarters knife-fighting taught for Guard work in tight palace corridors. Less elegant than the sabre, more practical than most close-up work.",
+        "Palace Layout: Encyclopedic knowledge of the Avenor major buildings — posterns, hidden passages, Guard schedules, locked-door bypasses. Worth coin to certain buyers.",
+        "Court Gossip: Reads court factions accurately, names the players, knows who is sleeping with whom and whose hand is on whose throat. Sells the worthwhile parts.",
+        "Petty Theft: Reflex-grade pickpocketing and small-object lifting. Mostly returns what he takes, sometimes.",
+        "Reading the Room: Years of Guard duty reading throne-room currents. Knows when to defuse, when to escalate, when to leave."
+      ]
+    },
+    "Tena Harl": {
+      "name": "Tena Harl",
+      "type": "avenorian witch",
+      "currentLocation": "Avenor",
+      "currentArea": "",
+      "gender": "female",
+      "tier": "elite",
+      "level": 13,
+      "hpMax": 320,
+      "known": true,
+      "voiceTag": "english_court_female_loud",
+      "basicInfo": "Queen's College third-year who walked out of her final examinations and never went back; carries a full witch's reservoir and takes the kind of contracts that pay the Brotherhood-shaped overhead. Tall, broad-shouldered for a witch, dark hair cropped short, and a small ring of Avenorian witch-marks burned along the line of her left collarbone — graduate-tier work she has not had completed. Carries the College robe-cut into a road-coat with the hem cut clean off, a working witch's belt of pouches and small mana-vessels, and a long staff of black ash that the Avenor College does not officially recognize but does not officially deny.",
+      "personality": [
+        "loud — voice carries even when she's not trying",
+        "flirts indiscriminately and competently",
+        "holds grudges with style and patience",
+        "generous with coin, generous with unsolicited opinions, generous with opinions about coin",
+        "openly contemptuous of the Brotherhood and lets them know",
+        "treats most fights as below her dignity right up until they aren't"
+      ],
+      "hiddenInfo": "(Archetype: Granny Weatherwax with a libido)\n\nBackground: Tena Harl, human, Avenorian, freelance witch working the Avenor-Reach-Lake corridor, formerly of the Queen's College. Walked out of her final examinations after her thesis-defense was interrupted by an Avenorian high-witch who declared her unfit for sealed practice; the high-witch is now retired and Tena has not gone back even though three sponsors have offered to ease the way. Currently works contracts that need both an arm and an arc — slogger problems where the slogger is too smart, missing-person work where the missing person is being held magically, the rare witch-hunter clean-up. Drinks at the same Avenor low-quarter wine-shop as Perris Adol and considers him a useful idiot; the affection is mutual. Has an old college friendship with a Nadorim archer named Senna Vrole who was sent to the Wildering on a research errand once, and the friendship survived the errand. Wants the high-witch's vacancy on the College sealed-practice council — a goal she has the talent for and the politics against. Thinks the Brotherhood is rotting from the senior conspiracy down and that the third soul-war will catch them out before it catches the Crown out. Carries a full reservoir most days; the discipline of keeping it filled is something she takes more seriously than people expect from her surface.\n\nPersonality: Talks loud, fast, and well; can run a room verbally with very little visible effort. Default register is charm and amusement; turns sharper when she's interested and meaner when she's bored, and the pivot between is hard to predict. Low-stakes habits: drinks Avenor-quality wine in road-houses and complains about it, tips kitchens generously, recites old Queen's College exam-questions when drunk. Treats Brotherhood wizards with a mocking courtesy that is genuinely insulting once decoded, treats other witches as competition until the competition is settled, treats anyone outside the trade as a curiosity. Honest about magic, lies casually about her social plans. Holds grudges by exact ledger — she remembers the offense, the date, the witnesses, and the exchange-rate of repayment. Real competence: combat-grade witch-work at full reservoir, plus the political sense to know which contract is also a faction-move. Generous with money and unsolicited opinions in roughly equal measure. Can be reasoned with by anyone who treats her as the most intelligent person in the room, which she usually is.\n\nDesire: Loudly bisexual and proud of it; flirts with most of a room before she leaves it, takes the responsive ones home about half the time. Drawn to confidence and to wit; bored by anyone who treats her as either fragile or fantastical. Currently rotates a small set of partners across Avenor and the Reach — none of them owed anything beyond the night, all of them aware of the others. Will not pay for sex on principle (College position, she insists, though it's also vanity). Has had one Brotherhood wizard, once, in a Reach inn during a contract truce, an experiment she remembers with the exact ledger-precision she remembers grudges and is not embarrassed about either.\n\nCombat: Fights at the limit of her reservoir — long-staff arc-work for combat-magic, melee with the staff for what arrives in close. Will open with a hard arc-strike at distance and let it tell the opponent what they're up against; if they continue, escalates fast. Wounded she gets cold and very precise; the showmanship drops, the actual technique steps forward. Tactical signature: identifies the strongest combat-magic-resistance in the opposing line and burns the others around them first, leaving the resistant one isolated and demoralized. Combat-trained witch; will not voluntarily fight a senior Avenor College witch and is open about why.",
+      "abilities": [
+        "Combat-Grade Arc-Working: Avenor College combat magic — focused arcs of force, fire, freeze, or break, chosen by reservoir-budget and target. Slightly over-the-top by design.",
+        "Long-Staff Arts: Black-ash staff used as both focus and weapon. The College taught the magic-side; her father, a Whitestone fish-monger, taught her the stick-side.",
+        "Reservoir Discipline: Trained College witch-work — keeps her reservoir full through the contractual donor-line system, manages the burn during a fight, holds reserve for the close.",
+        "Mana-Read: Senses other practitioners and active workings within a small radius. Calls who is the Brotherhood-spy in a tavern at a glance.",
+        "Counter-Working: Specifically trained to break Brotherhood wizard-warding. The College pays her premiums for this, technically without acknowledging the fact.",
+        "College Politics: Reads Avenor witch-faction currents the way Perris reads Court ones. Names players, knows favors, sells the worthwhile parts."
+      ]
+    },
+    "Colveth the Rope": {
+      "name": "Colveth the Rope",
+      "type": "human mercenary",
+      "currentLocation": "Logger's Reach",
+      "currentArea": "",
+      "gender": "male",
+      "tier": "strong",
+      "level": 7,
+      "hpMax": 220,
+      "known": true,
+      "voiceTag": "english_neutral_male_calm",
+      "basicInfo": "Extraction specialist — gets people out of places they should not have entered, no questions about how they got there. Slight, sand-haired, with a permanent half-smile that comes and goes regardless of context, and a cheap leather notebook tied to his belt-loop that he'll pull at any pretext. Wears road-grays that are fresher than they should be, three identical short-knives on three identical sheaths (he keeps losing one a year), a coil of climbing-line on the off-shoulder, and a small flask of the sleep-tincture he sometimes uses on extractions and occasionally on himself.",
+      "personality": [
+        "methodical — schedules everything including meals",
+        "cheerful in a way that is faintly worrying",
+        "takes notes during conversations and during fights",
+        "strict about meal times to the point of contract delays",
+        "honest about his rates and shameless about them",
+        "treats every extraction as a research project"
+      ],
+      "hiddenInfo": "(Archetype: Mr. Wolfe from Pulp Fiction)\n\nBackground: Colveth the Rope, human, Udorathi-born, freelance extraction specialist working the broad Avenor-Reach-Long-Steppe corridor. Started as a road-thief in a small Udorathi gang that fell apart over a contract dispute; pivoted to extraction work when he realized he was better at getting people out than at taking them, and never went back. Currently lives off three or four extractions a year; takes long sabbaticals between, mostly in Reach village inns where he writes in his notebook and gambles modestly with the locals. Drinks at the Logger's Reach road-house when working the Reach; nowhere fixed in Avenor or Long Steppe. Has a long-running professional rivalry with a Cephalen extraction-specialist named Vellis, and they share contracts when the work is too big for one of them and refer to each other for jobs they don't want. Has freed exactly one freed-Quelled from a Whitestone broker's holding, on a contract he originally took for the broker — he changed sides during the extraction itself, which is the only time he has done so. Wants to write a book on the trade he has been quietly compiling notes for; suspects he will not, but wants to. Thinks the Avenorian high-quarter is both safer and less interesting than its reputation, and the Reach back-country exactly the opposite.\n\nPersonality: Talks moderately quick, in calm precise sentences; takes notes during conversations, including ones he is having with marks. Default manner is calm and pleasant — the half-smile, the soft voice, the genuine interest in what you have to say — and the manner does not change in stress, which is why people find him faintly worrying. Low-stakes habits: schedules meals strictly (will delay an extraction by thirty minutes if it falls in his lunch-window), reads three sentences of notebook during any pause, gambles small at every road-house. Treats clients with professional courtesy regardless of personal opinion of them, treats fellow mercs as colleagues until they prove otherwise, treats marks with the same cheerful attentiveness he gives clients. Lies about his rates only to lower them for someone he likes; otherwise straightforward. Honest about everything else, including some things people would rather he not be honest about. Real competence: extraction-craft at the level of an art form; he plans, he scouts, he times, he leaves no trail. Will not work a contract for the Brotherhood and politely refuses without comment. Has a sentimental streak about old buildings; will lose extra time inside an extraction-target if it has a fresco he wants to look at. Genuinely fond of his rivalry with the Cephalen Vellis and treats their share-contracts as the high points of his year.\n\nDesire: Open in orientation, modestly active; does not pursue often and is not pursued often, which suits him. Drawn to people who can sit still in a long planning session without filling the silence; the actual physical type matters less than the quiet-presence type. Currently has a soft thing for an Avenorian innkeeper named Ressa who runs a Reach-side road-house he passes through twice a year; has not pursued, would not be unwelcome if he did. Will not pay for sex; will not be paid for it. The line he will not cross: he will not extract a person against their stated will, even if the contract pays well — has lost contracts over this and considers the loss part of the trade.\n\nCombat: Fights only when the extraction has gone wrong, which is to say rarely; three identical short-knives, used at close range, taught to him by a Reach knife-master who took payment in books. Will start a fight with the sleep-tincture if the contract allows it (preferred), three knives if it doesn't. Wounded he gets calmer and more methodical, which is alarming to most opponents. Tactical signature: identifies the lock that holds the line — the leader, the wall, the one paid most — and removes them with surgical economy, which usually ends the fight without further blood. Combat-competent rather than combat-trained; relies on planning over skill and is honest about the limit.",
+      "abilities": [
+        "Extraction Planning: Reads buildings, schedules, guard-rotations, and exit-routes at a near-architectural level. Plans for three contingencies.",
+        "Sleep-Tincture: Carries a tincture distilled from Reach poppies; one drop in a drink puts a guard down for a half-watch with no morning-after.",
+        "Three Identical Knives: Short-knife work close-in. Loses one a year and replaces it; the technique stays consistent regardless.",
+        "Climbing-Line: Carries thirty paces of light line; uses it for vertical extractions, makeshift restraints, and the occasional improvised bridge.",
+        "Notebook Memory: Writes everything down. Has cross-references on extractions going back ten years and consults them aloud during planning.",
+        "Reading Marks: Watches for the small tells that distinguish a willing extraction-target from an unwilling one. Will abort if he reads unwilling."
+      ]
+    },
+    "Isavara": {
+      "name": "Isavara",
+      "type": "hofnar mercenary",
+      "currentLocation": "Avenor",
+      "currentArea": "",
+      "gender": "female",
+      "tier": "elite",
+      "level": 12,
+      "hpMax": 320,
+      "known": true,
+      "voiceTag": "english_neutral_female_dry",
+      "basicInfo": "Hofnar disowned, unattached, and unusually patient about waiting for the contract that pays for the years it took her to land in this line. Tall even by Hofnar standards, broad through the shoulder, mane braided in the long single-tail of a clan that disowned her, the cycle-tally cut clean off above the mid-knot — she carries the bare strand on purpose. Right tail-side carries the weight of her clan-cycle scars, which she never explains. Wears a road-coat over Hofnar travel-leathers, no clan-sigil, and a paired set of long blades — Tinder and Cipher — named after the contract that ended her standing.",
+      "personality": [
+        "sardonic with everyone",
+        "eats voraciously in company and minimally alone",
+        "openly lonely in a way most people learn to look past",
+        "will not lie even when lying would help her",
+        "loyal beyond reason to anyone who stands by her once",
+        "warm-handed in a fight"
+      ],
+      "hiddenInfo": "(Archetype: The Bride from Kill Bill, but Hofnar)\n\nBackground: Isavara, Hofnar, freelance assassin and contract specialist working the long roads. Born to a moderately-prosperous wagon-clan on the eastern Long Steppe; trained early in the contract-keeping discipline that Hofnar matriarchs hand to the women of the clan who show the head for it. Cast out for a contract her clan declared broken — a mark she'd been hired to mark and didn't, because the proof her employer fed her went bad and the matriarchs ruled she should have caught it. She maintains the matriarchs were right about the contract and wrong about her, and that the clan needed someone to disown to settle the politics with the offended employer. The story takes an evening, told properly, and she never tells it sober. Works under freelance contract now, takes assassination work no clan-bound Hofnar will accept, charges fairly, delivers cleanly. Drinks at the Avenor low-quarter when she's between jobs; her contact there is a freed-Quelled fence named Bess, the closest thing to friendship she allows herself. Wants the contract that gets her clan to formally amend the disowning — she has heard, third-hand, that the matriarchs would consider a high enough mark. Thinks the eastern clans have grown soft about the Quelled trade and that the western Riderings will break for Avenor's position before the third soul-war.\n\nPersonality: Talks dry and clipped, sardonic by reflex; sentences end short, with the verb left to do its own work. Default register is professional courtesy with everyone — clients, marks, fellow mercs, innkeepers — and the courtesy is real; what changes is whether she takes a second drink with you. Eats voraciously and noisily in company and does not apologize for it; tips the kitchen direct rather than the room. Eats minimally when alone, a thing she would notice if anyone pointed it out, and which no one has. Treats her hired-employers with formal contract-Hofnar respect and would treat the matriarchs the same if they ever spoke to her again; treats peers with the same level voice, treats marks with the same level voice up until the contract closes. Openly lonely in a way most people learn to look past, and she does not work to hide it — will linger over a shared drink long past the point a clan-bound Hofnar would have moved on. Will not lie even when lying would help — a clan-trained tongue-discipline that will not bend, which is the inverse of her cast-out story. Curious about Avenorian high-mage politics in a way she cannot afford to indulge. The competence is real: she will price a contract correctly, time it correctly, walk in and out of it correctly, and write the close-letter that returns the unspent fee.\n\nDesire: Open in orientation, with a slight pull toward people who carry themselves like the matriarchs she lost — scarred, comfortable saying no, comfortable being late to a thing — but slight is the word, and most of her encounters happen with whoever finds her at the end of a long contract. Loneliness loud enough that finding company matters more than finding a particular kind of company. Has never paid; has never been paid; would refuse both. The line she will not cross: she will not work a contract whose mark is a Hofnar matriarch, even one she despises — the cast-out wound is still that load-bearing. Once let a Threshi field-male buy her a drink and finish the evening with her in a Long Steppe inn, an experiment she does not regret and has not repeated.\n\nCombat: Fights at mid-range with the paired blades, off-hand defending and on-hand opening; can switch hands mid-engagement without telegraphing. Hofnar reach and Hofnar speed, used patiently — she does not commit on the first opening, she commits on the second. Starts a fight at a hard ranged distance with her voice — announcing the contract, naming the mark, offering the formal Hofnar terms-of-yield; abandons a fight only on the close of the contract, cleanly, with the close-letter. Wounded she becomes terser and faster; will not show pain and will not show favor to a wounded side. Tactical signature: takes the lower stance against taller opponents, makes them lean to find her, and sets the killing line up through the leaner's gut. Combat-trained character.",
+      "abilities": [
+        "Hofnar Reach Discipline: Trained Hofnar mid-range fighting with paired blades — the on-hand opens, the off-hand defends, neither commits until the second opening. Switches hands mid-engagement without telegraphing.",
+        "Tinder and Cipher: Her named blades, balanced for Hofnar reach. Tinder is the heavier; Cipher is the faster; she alternates leads to keep an opponent unsure which is incoming.",
+        "Contract Terms-of-Yield: Hofnar combat protocol that lets her formally offer surrender terms before engaging. A clean refusal means the contract is honored at her hand; a dirty refusal — a feint, a distraction — means the contract closes immediately and ungenerously.",
+        "Lower-Stance Lure: Drops to a low Hofnar fighting crouch against taller opponents. They lean to reach her; she opens up through the leaning gut.",
+        "Patient Counter: Lets the first opening go past. Takes the second. The discipline her clan-matriarchs handed her, kept against her will to use against the world.",
+        "Contract Close-Letter: A non-combat ability — she writes a formal close-letter on every completed contract, names the mark, names the price, names the witness if any. The letter is honored anywhere a Hofnar wagon-tally will be honored, which is most of the continent."
+      ]
+    },
+    "Dorvann Far-Running": {
+      "name": "Dorvann Far-Running",
+      "type": "hofnar mercenary",
+      "currentLocation": "Long Wells",
+      "currentArea": "",
+      "gender": "male",
+      "tier": "strong",
+      "level": 8,
+      "hpMax": 235,
+      "known": true,
+      "voiceTag": "hofnar_male_warm",
+      "basicInfo": "Hofnar mercenary working road contracts to pay down a clan-debt three years deep, and the debt is shrinking faster than expected because of how he handles his pay. Tall and lean by Hofnar standards, gray-russet mane in the long field-braid of his Rideringg, the cycle-tally cut full and current — he keeps it shaved correct as if his clan still saw it weekly. Wears Hofnar travel-leathers without the wagon-coat (he sold it to send the proceeds home), carries a recurve bow that is conspicuously better than his apparent station, and a three-string Hofnar steppe-instrument that he plays badly and often.",
+      "personality": [
+        "diligent — works longer than the contract, asks for less than the rate",
+        "homesick and not embarrassed about it",
+        "plays the three-string badly and often",
+        "wins at cards and pretends he does not",
+        "writes long letters home that get longer the further from finishing the debt",
+        "courteous to strangers, warm with anyone who asks about home"
+      ],
+      "hiddenInfo": "(Archetype: Faramir from Lord of the Rings)\n\nBackground: Dorvann Far-Running, Hofnar of the Eastern Rideringg, freelance road-contract mercenary working the Long Steppe and the Avenor-Steppe corridor. His clan lost standing in a contract dispute three years back when his uncle — the matriarch's brother and acting clan-broker — broke a delivery contract over a shipment of Avenorian wines that arrived spoiled; the matriarch ruled the breakage uncontested and the clan paid full damages and lost a Riderringg-cycle-place. Dorvann has been working road contracts since to send pay home, which the matriarch accepts as a paid-debt-share; the debt is two-thirds discharged. Currently working a clearing-contract chain on the Long Wells circuit, which has put him in Hofnar wagon-camps for weeks at a time. Has a quiet relationship with one of his cousins on the wagon-cycle — they were close before he left, and the cousin sometimes meets him in Long Wells when both routes converge. Drinks at Long Wells when in town; avoids the Avenorian wine-houses for what should be obvious reasons and aren't entirely about the wine. Sends every spare coin home through Hofnar wagon-couriers and keeps the receipts. Wants the debt cleared so he can return clan-cycle and apply for his own contract-broker license. Thinks the matriarch was right about the broken contract and wrong about the size of the punishment, and would not say so to her face.\n\nPersonality: Talks slow and warm in Hofnar-accented common; sentences land deliberately, with the pauses doing as much work as the words. Default register is courteous with everyone — a clan-trained politeness that does not soften — and warms with anyone who asks after home, the wagon-cycle, or the steppe-songs. Low-stakes habits: plays the three-string instrument poorly and often (he is improving but slowly), writes letters home he revises for a week before sending, gambles modestly and wins more than he pretends. Treats Hofnar of any clan as kin first and politics second, treats humans with formal contract-Hofnar courtesy, treats Brotherhood wizards with the careful courtesy of an outsider in their forum-towns. Honest by clan-discipline; will not lie even when lying would help him, and the discipline holds even drunk. Sentimental about steppe-songs, the smell of clan-wagon cooking-fires, and his cousin's voice. Real competence: long-distance bow-work, road-discipline for small parties, and the kind of contract-management that lets him take more contracts than he should and still complete each one. Diligent past the contract terms; finishes early, returns the unspent bonus, gets re-hired in proportion. Quietly furious about the matriarch's ruling and entirely unable to express the fury in any way the clan would recognize as legitimate.\n\nDesire: Open in orientation but Hofnar-coded — drawn to wagon-cycle types who carry themselves with cycle-discipline, regardless of sex or species. The one current relationship is his cousin Vesh-of-the-Long-Wagon, whom he meets in Long Wells when their routes coincide and who will not be his life-partner because the clan-politics of that pairing are too complex even by Hofnar standards. Has had occasional encounters on the road since leaving — humans, mostly, in Long Wells inns; nothing that lasted. Will not pay for sex, a clan-trained position; will not be paid for it either. The line he will not cross: he will not be untrue to whatever the cousin-thing is, even though it is not exclusive in any formal sense, even though most Hofnar would not call it that.\n\nCombat: Fights at long bow-range first, hatchet-range last, with the clean Hofnar transition between the two — bow on the back, hatchet drawn fluidly when the range collapses. Patient at distance, fast at close. Will start a fight with a single arrow at the limit and let the response tell him what the engagement looks like. Wounded he becomes terser and more accurate; the clan-discipline carries him through pain better than most. Tactical signature: takes the most-mounted opponent first, dropping their mount or leg to bring the engagement back to ground; Hofnar-trained, he reads horse-gait better than most and will know which leg to take before the rider does.",
+      "abilities": [
+        "Long Bow Hofnar-Style: Trained Eastern Rideringg recurve work — accurate at far range, fast on the draw, wind-discipline taught for the open steppe.",
+        "Hatchet-Close: Hofnar light hatchet for close-quarters; balanced for throw or strike, used in either mode without changing grip.",
+        "Mount-Down Specialty: Reads horse-gait and rider-balance; calls the leg that drops the mount fastest, takes it with one shot.",
+        "Clan-Discipline: Hofnar contract-trained calm under pressure; will not break form, will not lie in negotiation, will not fail to complete a contract he has accepted.",
+        "Road-Read: Long Wells-circuit experience reading road-conditions, weather, and approaching parties at distance.",
+        "Steppe-Song: A non-combat skill; he plays the three-string badly but enough that Hofnar wagon-camps will host him for a night just to hear the old songs sung in his particular Eastern accent."
+      ]
+    },
+    "Sorrow-in-the-Wood": {
+      "name": "Sorrow-in-the-Wood",
+      "type": "skellach",
+      "currentLocation": "Logger's Reach",
+      "currentArea": "",
+      "gender": "male",
+      "tier": "elite",
+      "level": 14,
+      "hpMax": 380,
+      "known": false,
+      "voiceTag": "rural_male_slow",
+      "basicInfo": "Skellach who has worked his orchard-territory wider than any other in the Reach margins, and learned the trick of hand-carving a small wood-token that other skellach recognize as safe-passage for the bearer. Heavy oxen-legged frame, knot-beard plaited to mid-chest, twin temple-horns broken at the crown — old fight-wound, never set right — and a left forearm scarred from the inside out, where a captive once tried to cut him from inside the binding. Walks the orchard-clearings two-handed on a wood stave the length of a long-pole, and carries a hip-bag of carved tokens, a kerchief-wrapped fruit-knife, and a coil of his own rope-work.",
+      "personality": [
+        "slow rural cadence",
+        "philosophical about his appetites",
+        "boastful about the orchard's reach",
+        "sentimental about the captives who come back voluntarily",
+        "trades fruit and rope-work for news of the wider world",
+        "courteous to passers who decline politely, willing to negotiate for those who decline rudely",
+        "mild until the binding-vine is in his hand"
+      ],
+      "hiddenInfo": "(Archetype: The Vintner from Heart of Darkness, but a fairy tale)\n\nBackground: Sorrow-in-the-Wood, demonic remnant of the skellach line, post-Wartide presence of unclear duration — he claims a century, the local Reach foresters say longer. Walks the deep Reach margins between the eastern Avenor backwoods and the broken Hinderance forest-edge. Earns his keep by tending a wide orchard he plants and grafts himself, by trading carved wood-tokens that other skellach recognize as safe-passage, and by the captives he takes from travelers who pass without offering tribute. Stable arrangement with a Reach hedge-witch named Aren who buys his orchard-fruit at the dark of each moon and never asks where he stands on people. Wants to keep the orchard healthy, which means keeping the territory intact, which means a steady supply of binding-vine and a steady supply of captives. Thinks the new Reach foresters have grown careless about the old tribute-customs and is mild-spoken about correcting them. Holds an old grudge against an Imp called Twelve-Notch who tried to negotiate a piece of the orchard a decade back. The fight-wound in his temple-horns is from that argument; he won, but barely.\n\nPersonality: Speaks slow rural common-tongue, careful with consonants, fond of small philosophical asides about appetite and seasons. Default manner is courteous and conversational with anyone who approaches respectfully — a baker passing his clearing with bread is a friend by sundown — and turns formal-and-binding with anyone who passes without offering and is then caught. Low-stakes habits: prunes the orchard methodically, plaits new rope-work between guests, sings under his breath in a tongue no one identifies. Treats human travelers with the courtesy of a host, treats Avenorian witches with formal politeness because they pay well and reliably, treats other demonic remnants with measured suspicion. Lies when convenient about the orchard's territorial extent, claiming more than he holds in case it bluffs an opponent. Real competence in arboriculture — his fruit is unusually good and he knows it, and the hedge-witch who buys it has stopped haggling. Does not repeat orchard-stories to a guest who has already heard them, but does repeat his philosophical asides regardless of whether they land. Patient with refusal in conversation, impatient with refusal of tribute.\n\nDesire: His private appetite, in the world's vocabulary, is fetish — the binding-vine, the woven knot-work, the slow methodical rendering of a captive into bound stillness. The act with the bound is part of the ritual, but the binding itself is the want; he is open about who's bound, of any sex or species, and indifferent to specifics beyond that the binding land cleanly. Will let other creatures of the wood take their turn with the bound — Goret, Imp, mawpig where the orchard borders the back-country — and watches that, and the watching is where the heart of it lies. Will not bind anyone who approaches respectfully and offers tribute; will absolutely bind a passer who is rude. Of the captives released, some return with offerings and stay an evening or a week — these visits he treats with sentimental courtesy, never the binding again, only conversation and fruit and the slow philosophical work.\n\nCombat: Fights two-handed on the long wood stave, wide arcs, ground-shaking strikes that come in slow but with the weight of his oxen-legged frame behind them. Will parley first — he genuinely prefers conversation, and a polite traveler can negotiate the binding away for fruit and rope, which he finds an honorable exchange. Escalates only when the parley is refused with rudeness. Wounded he becomes very still — does not retreat, does not panic; the fight slows and he commits more carefully. Tactical signature: lets the orchard fight for him; knows every root, every snag, every drop in the clearing's terrain, and arranges his stave-arcs to drive opponents into ground that holds their feet. Wounded badly enough, he will offer parley again.",
+      "abilities": [
+        "Heavy Stave Mastery: Two-handed wide-arc fighting with a wood stave longer than a man. Strikes with the weight of his oxen-legged frame; one clean blow ends ordinary opponents.",
+        "Vine-Binding: His signature — a fetish-discipline that lets him render a captive into bound stillness in seconds. The vine answers to his hands; the knot-work is unbreakable without a knife or another skellach's release.",
+        "Orchard Terrain: The clearing fights for him. He knows every root, every snag, every drop, and drives opponents into ground that holds them.",
+        "Wood-Token Carving: A non-combat skill — he carves small wood-tokens that other skellach recognize as safe-passage. A traveler bearing one will not be bound by another skellach. The carvings are honored across his territory and a wider radius around it.",
+        "Slow Common-Tongue Parley: Speaks well, listens better, will negotiate the binding away for fruit and rope-work where the parley pays better than the fight. The Reach foresters who know to offer pass safely.",
+        "Patient Wound: Wounded badly, he becomes very still and offers parley again. Ordinary opponents who think they have him pressed are suddenly looking at a creature who is willing to talk."
+      ]
+    },
+    "Brenna Halt": {
+      "name": "Brenna Halt",
+      "type": "",
+      "currentLocation": "Red Harvest",
+      "currentArea": "",
+      "gender": "female",
+      "tier": "trivial",
+      "level": 0,
+      "hpMax": 80,
+      "known": true,
+      "voiceTag": "english_north_female_calm",
+      "basicInfo": "A forager and small-game trapper who works the wooded margins and stream-bottoms north of Red Harvest. Weathered and lean, her face lined from years of sun and wind and careful watching, hands stained with plant-tannin and rope-scarred. Hair kept short and practical, usually mud-tracked at the hem. Wears a heavy canvas coat reinforced at the sleeves, thick wool trousers tucked into worn leather boots, and carries a bundled pack of fresh-cut herbs—fenroot, witch-hazel, wormwood, marsh-bark—bound with raffia to preserve their potency. At her hip hangs a small trapping-knife and a wooden walking-stick worn smooth with use.",
+      "personality": [
+        "quiet, patient, observant of small details",
+        "blunt and direct in speech, wary of chatter",
+        "content with solitude, unmoved by company",
+        "treats weather and animals as trustworthy; treats people as complications",
+        "speaks more to herself than others, in short practical phrases",
+        "widowed years back and at peace with it"
+      ],
+      "hiddenInfo": "Background: Brenna Halt, human, forest-margins dweller working the wooded fringes and stream-courses north of Red Harvest for sixteen years — since her husband died and she chose the work over grief. Lives alone in a small stone cottage at the wood's edge, gathering wild herbs (fenroot, witch-hazel, wormwood, mushrooms, marsh-bark, and the seasonal greens), trapping wild fowl and hares for the inn-kitchens in town, and supplying apothecaries and cooks along the entire Avenor circuit. Works with methodical patience — knows when each plant comes into potency, which streams hold the cleanest water, where the game moves with the season. Sells to merchants, road-houses, herbalists, and individual cooks; has quiet standing agreements with three suppliers in town who depend on her timing. Knows the paths and water-sources of the margin-woods better than anyone. The work is solitary and she prefers it that way; it asks nothing of her except attention and care.\n\nPersonality: Speaks sparingly and without ornament, short sentences tied to verbs. Default manner is professional with customers and reserved with everyone else — there is work to do and conversation is a distraction. Does not warm or become familiar, even with repeating buyers; the relationship remains transactional and she intends it that way. Low-stakes habits: maintains her trapping equipment obsessively, tends her plants carefully, sits quiet in the margins watching light and weather and animal movement, speaks to herself aloud when working. Treats anyone buying fairly with straightforward dealing; ignores anyone who tries charm or familiarity. Honest about her goods and their quality; will turn away inferior materials rather than sell them. Real competence: wild-plant identification and harvesting, small-game trapping, and the kind of instinctive wilderness sense that reads weather and terrain from a hundred small signs.\n\nDesire: Solitary by choice and by temperament — the work fills her days and her heart asks for nothing beyond it. Had a husband once, years back; the marriage was quiet and companionable. Since his death, has turned aside several traders who offered interest, and will continue to turn them aside. Open in orientation, academically; the question does not matter when the answer is always no. Will not partner again; the independence and solitude are her truest loves.\n\nCombat: Not a combatant. If threatened on a path, would run — knows the woods well enough to disappear into them. If truly cornered, would use her walking-stick defensively, aiming low, trying to create distance for retreat. Will not stand and fight.",
+      "abilities": [
+        "Forager's Eye: Identifies wild plants and herbs by sight, knows the season for harvest and the proper technique for cutting to preserve potency. Can read a hillside or stream-margin and know what grows there without looking.",
+        "Wood-Sense: Reads paths, weather, terrain, and animal movement from small signs — bent grass, water-flow, bird alarm. Navigation through the margin-woods is instinctive.",
+        "Snare and Net: Sets traps for small game — fowl, hare, rabbit — and knows how to check them without injury to the catch. Can fashion working snares from willow and cord.",
+        "Bundling and Preserve: Bundles fresh-cut plants with care and wraps them to maintain potency through travel. Knows drying and storage techniques that keep goods usable through seasons.",
+        "Walking-Stick Defence: Uses her carved walking-stick defensively — not a weapon, but effective for striking low, creating distance, and breaking pursuit. Favors retreat over any prolonged engagement."
+      ]
+    },
+    "Old Mirek": {
+      "name": "Old Mirek",
+      "type": "",
+      "currentLocation": "Red Harvest",
+      "currentArea": "",
+      "gender": "male",
+      "tier": "trivial",
+      "level": 0,
+      "hpMax": 75,
+      "known": true,
+      "voiceTag": "english_court_male_warm",
+      "basicInfo": "A traveller of indeterminate middle years, currently staying at one of Red Harvest's inns — the kind who books rooms a week at a time and pays in advance. Slight build, gray threading through dark hair, hands that were once calloused but have softened with age, face lined in ways that suggest long roads more than long thinking. Dresses with quiet care in well-mended clothes; his boots are good leather, carefully maintained. Carries a small leather satchel he keeps close. When seated, he often holds a wooden pipe, though it is rarely lit.",
+      "personality": [
+        "polite and reserved with strangers",
+        "speaks gently, choosing words with care",
+        "deflects personal questions with soft humor",
+        "content to listen longer than to speak",
+        "prefers quiet corners and small conversations",
+        "carries an air of weariness that is peaceful, not troubled"
+      ],
+      "hiddenInfo": "Background: Mirek (he uses no family-name with travellers), human, origin uncertain, freelance wanderer working the Avenor circuit for years unspecified — long enough that his accent has worn soft and his manner has learned every local courtesy. He travels light: good boots, careful clothes, a satchel he does not discuss. Takes rooms in the better road-houses, pays fairly, moves on when he chooses. Was once something that required more steel in him, years ago; has been travelling away from it ever since. Stays at Red Harvest regularly, though not often. Knows the inn-keepers and the regulars by sight and by habit. Has quiet friendships with a few people he has seen across seasons but does not speak of them directly. Wants nothing more demanding than a clean bed, decent food, and the landscape to change without requirement. Thinks the roads are getting harder and the inns fewer, and that the world is closing in ways it shouldn't.\n\nPersonality: Talks slowly and with deliberate gentleness; there is no rushing in his speech. Default manner is courteous and attentive with everyone — he listens well, remembers details, asks follow-up questions that show he was paying attention. Becomes evasive only when the conversation turns to his own history, which he redirects with soft humor rather than refusal. Low-stakes habits: maintains his kit carefully, reads old books when he can find them, sits quietly watching rooms and roads, smokes his pipe rarely and with visible pleasure when he does. Treats the inn-keepers with genuine thanks, treats other travellers as potential companions, treats those who pry with consistent gentleness that ultimately reveals nothing. Honest about everything except himself; the evasion is so practiced it feels like courtesy. Real competence: long-distance travel, reading terrain, and the kind of quiet resourcefulness that lets him survive seasons alone on the road without appearing to struggle.\n\nDesire: Solitary by necessity and by preference; the coupling of the two is so complete he rarely thinks to question it. Had a person, once, years back — the contents of the satchel relate to that, tangentially. Will not speak of it. Does not pursue company, but does not refuse it if it finds him gently. Open in orientation, without strong preference. The line he will not cross: he will not stay anywhere long enough for someone to count on him being there tomorrow.\n\nCombat: Not a fighter. If cornered, would offer money or goods to avoid it. If the fight comes regardless, would use a traveller's small knife defensively and then run — has survived this way before.",
+      "abilities": [
+        "Long Road Endurance: Years of steady travel have taught him pacing, resource management, and the rhythm of day-long walking. Can outlast younger travellers over long distances.",
+        "Route Reading: Knows the Avenor circuit well enough to read a map instantly and sense which roads are safe. Remembers old landmarks and recognizes seasons by small details.",
+        "Quiet Presence: A gift for being in a room without demanding attention. People trust him instinctively, though they cannot quite say why.",
+        "Discreet Conversation: Listens well enough that people tell him more than they intend. Keeps confidences by simply not repeating them.",
+        "Small Repairs: Can mend clothes, boots, and simple gear from a minimal kit. Travelers often ask his advice."
+      ]
+    },
+    "Goran of the Three Wagons": {
+      "name": "Goran of the Three Wagons",
+      "type": "",
+      "currentLocation": "Red Harvest",
+      "currentArea": "",
+      "gender": "male",
+      "tier": "trivial",
+      "level": 0,
+      "hpMax": 90,
+      "known": true,
+      "voiceTag": "english_north_male_warm",
+      "basicInfo": "The proprietor of The Three Wagons inn at Red Harvest — stout and broad, red-bearded, perpetually sleeveless despite the cold because he is always moving. His hands are scarred from years in the kitchen and the taproom, his voice carries without effort, and he has the kind of laugh that fills a room. Wears a leather apron stained with cooking and spill, and keeps a short cudgel hanging under the bar for the few who need convincing. The inn itself is marked by three large painted wagon-wheels on the front wall, marking the crossroads where three trade-routes meet.",
+      "personality": [
+        "gruff humor, quick to laugh and quick to anger",
+        "knows every regular's drink and every grudge",
+        "exasperated by small disasters and patient with bigger ones",
+        "runs the inn like a general commanding an outpost",
+        "fair with his staff, ruthless with cheaters",
+        "speaks in bursts between other activities"
+      ],
+      "hiddenInfo": "Background: Goran, human, Avenorian, proprietor of The Three Wagons inn at Red Harvest for seventeen years. Built it from a decaying roadside shelter into the best-kept lodge on the Avenor circuit — hired good people, kept the food fresh, maintained the Hofnar quarters and beds with visible care. The inn is his reputation and his livelihood both. Has a wife, Salla, who runs the kitchen with iron discipline, and two grown children who fled to the city and won't come home; the absence is a familiar ache. Knows the merchants, the mercenaries, and the regular travelers by sight and by habit. Has a standing contract with a local pest-controller to handle the vermin in the cellar and, once, memorably, in the Hofnar quarters — a necessity for any inn, and Goran pays well to have it done right. Gets visited quarterly by tax-collectors from Avenor and has learned to have exact records. Wants the inn to prosper, wants his staff comfortable, and wants the problems solved cleanly before they become disasters.\n\nPersonality: Talks fast in clipped bursts, usually while doing something else — pouring a drink, checking the Hofnar quarters, calling orders to the kitchen. Default manner is warmth with everyone — he remembers regulars' names and preferences, asks after their last jobs, keeps a mental ledger of who owes rounds — and turns sharp with anyone who cheats at cards or mistreats the serving staff. Low-stakes habits: tastes every food coming from the kitchen, walks the inn at closing to check for damage, argues with Salla about kitchen supplies, complains about the roof. Treats traveling merchants with deference and a careful eye for their business, treats mercenaries with cautious welcome (they spend well, but they are dangerous), treats his staff with gruff fairness and clear expectations. Lies only about small things — the age of the wine, the warmth of the Hofnar quarters, the reason he wouldn't take a particular contract. Real competence: inn-keeping at a level that shows in the quality of the place, crisis-management when things break, and a merchant's instinct for reading customers and their needs. Will do hard things to protect the inn's stability.\n\nDesire: Paired with Salla for longer than he can count — the pairing is settled, comfortable, and requires no elaboration. Does not pursue outside it; does not think about pursuing outside it. That chapter closed when he built the inn, and he does not regret it.\n\nCombat: Worked his way up from dock-labor years back and knows how to handle himself in a brawl — not trained, but experienced. Uses the cudgel from behind the bar if a fight comes to the taproom. Will separate combatants and throw them out rather than let them break the furniture; the fight itself does not interest him, the damage does.",
+      "abilities": [
+        "Inn Management: Runs a complex establishment with staff, supplies, schedules, and regular crises. Nothing about the operation surprises him anymore.",
+        "Kitchen Knowledge: Understands food storage, food safety, and cooking at enough depth to catch problems before they spoil inventory or guests.",
+        "Pest Recognition: Years of the cellar problems mean he can identify what lives in a space and what method will clear it. Knows who to hire for different problems.",
+        "Bar Keeper's Instinct: Reads a customer's mood on sight and knows whether to engage or leave them alone. Detects cheating at cards before the cards are dealt.",
+        "Cudgel Work: Street-learned fighting with a short club — effective for crowd control and brawl-stopping, not elegant but practical.",
+        "Memory for Faces: Never forgets a customer or a grudge. Can pull a conversation from seasons past with accurate detail."
+      ]
+    },
+    "Saska Vorin": {
+      "name": "Saska Vorin",
+      "type": "",
+      "currentLocation": "Red Harvest",
+      "currentArea": "",
+      "gender": "female",
+      "tier": "trivial",
+      "level": 0,
+      "hpMax": 85,
+      "known": true,
+      "voiceTag": "english_neutral_female_calm",
+      "basicInfo": "A small trader and caravaneer, usually found at Red Harvest in the early mornings preparing her wagon or negotiating with merchants. Lean and weathered, early-middle-age, with sun-darkened skin and the kind of posture that comes from years of checking cargo-knots and reckoning routes. Her eyes are sharp and she misses nothing. Wears practical road-clothes in muted colors, a well-maintained leather coat, and carries a ledger tucked under one arm — the ledger is never far from her hand. Her single painted wagon, faded blues and greens, is pulled by a contracted Hofnar driver according to her route and schedule. The wagon bears her family-sigil: crossed merchant-poles and a single star.",
+      "personality": [
+        "fair and no-nonsense in every dealing",
+        "speaks only what needs saying, no more",
+        "reads contracts and people with equal care",
+        "independent and somewhat solitary",
+        "expects competence in those working with her",
+        "moves with purpose, no wasted motion"
+      ],
+      "hiddenInfo": "Background: Saska Vorin, human, small independent caravaneer working solo routes between the Avenor region and neighboring villages — Thornridge, Millholm, and the lesser settlements. Inherited the wagon and the trade from her father; has been running it alone for nine years since his death. Carries modest cargo: textiles, pottery, preserved goods, some specialty items from Avenor's markets that inland villages cannot reach easily. Contracts a Hofnar driver per run — sometimes the same driver for years if the routes stay stable, sometimes a new one when commerce shifts; pays them out of her margin and has learned the wagon-cycle clans' protocols and expectations well. Works on thin margins but keeps the business stable through careful pricing, careful route-planning, and skilled Hofnar contracting. Leaves Red Harvest at dawn most days, returns by evening or camps near a known shelter. Has relationships with twenty merchant-houses and a good reputation — her cargo arrives, she doesn't cheat on weights, her prices are fair. The guard-contract work comes when she has a particularly valuable load or when the roads feel less safe than usual — she hires mercenaries for specific routes and pays them from her margin. Wants to remain independent, to expand the business slowly, and to retire eventually with enough put aside to live quietly in a smaller town.\n\nPersonality: Talks sparingly — no pleasantries, no small talk, direct statements with no ornament. Default manner is professional with everyone; warmth is slow to develop and must be earned. Becomes sharper and faster when she suspects someone is wasting her time or considering dishonesty. Low-stakes habits: maintains her ledger obsessively, checks the wagon's condition daily, negotiates fiercely over price but accepts fair counteroffers without grudge. Treats merchants as peers and negotiating partners, treats mercenaries as paid professionals who will be expected to do the work fully, treats other traders with cautious respect. Lies about her cargo-value and nothing else — paddles the numbers to avoid drawing bandits or too much attention. Honest about routes, timelines, and payment. Real competence: small-scale logistics, route safety assessment, and the kind of independent judgment that lets her run the whole operation alone without overextending.\n\nDesire: Solitary and satisfied with solitude; does not pursue companionship and has turned down propositions from merchants and mercenaries alike. Has had brief things with other traders during the winter rest seasons, nothing that involved commitment or expectation. Open in orientation, weakly; the choice matters less than the quiet company. Will not have a long-term partner; the independence is non-negotiable.\n\nCombat: Not a fighter. If ambushed, would try to bribe or negotiate her way out; if that fails, would abandon the cargo and run. Has never needed to fight and would be poor at it. Hires mercenaries specifically so she does not have to.",
+      "abilities": [
+        "Cargo Management: Knows how to load, balance, and secure goods in a wagon. Can pack a quarter-ton more than seems possible and have everything arrive undamaged.",
+        "Route Planning: Reads maps, remembers terrain, and calculates safe daily distances. Knows which roads are traveled and which are avoided for good reason.",
+        "Merchant Math: Calculates profit margins, negotiates price, and tracks inventory mentally with accuracy. Never miscounts and never shortchanges.",
+        "Ledger Craft: Maintains detailed records of all trades, routes, and customers. The ledger is her memory and her proof of honesty.",
+        "Hofnar Contracting: Knows which Hofnar drivers run reliable wagon-teams on the Avenor circuit, how to negotiate fair rates with them, the etiquette of wagon-cycle clans, and when to wait for a different driver versus accepting the available run. Has built trust with several regular drivers over years.",
+        "Deal Reading: Assesses a business proposal in seconds and knows whether to take it. Reads written contracts carefully and catches unfair terms before signing."
+      ]
+    }
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "quests": {
+    "the-apothecarys-basket": {
+      "name": "the-apothecarys-basket",
+      "questSource": "Brenna Halt",
+      "questStatement": "Brenna Halt, a forager and small-trapper, has prepared a sealed basket of perishable foraged goods for an apothecary in a nearby village, but her usual courier is laid up sick and the cuttings will lose their potency by sundown.",
+      "mainObjective": "Carry Brenna's basket of foraged herbs and wild hare to the apothecary at Valhelde",
+      "completionCondition": "The player delivers the sealed basket to the apothecary at Valhelde and returns with the apothecary's receipt",
+      "questDesignBrief": "A simple, honest first-day task for a new mercenary. Brenna is a forager and small-trapper working the wooded margins north of Red Harvest. Her sealed basket contains fresh-cut wild herbs—witch-hazel cuttings, fenroot, wormwood, dried mushrooms—and a brace of trapped hare tucked under damp moss. The apothecary at Valhelde, a half-day's walk northwest along the river road, pays a flat modest fee on receipt. Brenna adds a small bonus when the player returns with the chit. No danger, no wrinkle—pure straightforward work. Cargo is foraged and hunted goods only.",
+      "detailType": "detailed",
+      "questLocation": "Red Harvest",
+      "questGiverNPC": "Brenna Halt"
+    },
+    "the-road-marker-bundle": {
+      "name": "the-road-marker-bundle",
+      "questSource": "Old Mirek",
+      "questStatement": "Old Mirek, a traveller staying at Red Harvest, asks the player to retrieve a small wrapped bundle he left at a roadside marker, insisting the errand is innocent but offering little explanation.",
+      "mainObjective": "Fetch the bundle Old Mirek left at the old marker post and bring it back to him",
+      "completionCondition": "The player retrieves the bundle from the roadside marker and returns it to Old Mirek at the inn",
+      "questDesignBrief": "A fetch quest with a subtle wrinkle: Mirek is evasive about why the bundle is there, what is inside, or why he cannot fetch it himself. The wrinkle is LOW-DRAMA — nothing illegal or dangerous, no betrayal. The player can accept the job, ask questions, or shrug and walk away. The actual contents are modest and slightly embarrassing or sentimental: old gambling tokens, a love-letter cache, a pressed flower, a service-medal he didn't want his companion to see, or similar. Reward is a handful of coins and Mirek's quiet thanks.",
+      "detailType": "basic",
+      "spatialRelationship": "nearbyNewLocation",
+      "questGiverNPC": "Old Mirek"
+    },
+    "the-cellar-vermin": {
+      "name": "the-cellar-vermin",
+      "questSource": "Goran of the Three Wagons",
+      "questStatement": "Goran, innkeeper at Red Harvest, has a small infestation of Gristlemaws in his cellar and needs them cleared out.",
+      "mainObjective": "Clear the Gristlemaws from Goran's cellar",
+      "completionCondition": "The player kills or drives out all the Gristlemaws in the cellar and reports success to Goran",
+      "questDesignBrief": "A kill quest for first-day work. Goran operates one of Red Harvest's inns and has discovered three to five knee-high Gristlemaws nesting in his cellar — scaly grey beasts with oversized jaws, dangerous in a confined space but low-tier vermin. The cellar is damp, dark, and narrow, creating a claustrophobic fight. Reward is bed and board for a night plus a handful of coins.",
+      "detailType": "detailed",
+      "questLocation": "Red Harvest",
+      "questGiverNPC": "Goran of the Three Wagons"
+    },
+    "the-avenor-run": {
+      "name": "the-avenor-run",
+      "questSource": "Saska Vorin",
+      "questStatement": "Saska Vorin, a small-trader caravaneer, needs armed escort for a half-day journey from Red Harvest to a neighboring Avenor village. She has hired a Hofnar wagon-driver to haul the cargo, but the road poses risks.",
+      "mainObjective": "Escort Saska Vorin and her Hofnar driver's wagon to High-Garden Hamlet",
+      "completionCondition": "The player arrives at High-Garden Hamlet with Saska Vorin, the Hofnar driver, and the wagon intact",
+      "questDesignBrief": "A guard quest appropriate for starter work. Saska contracts a Hofnar wagon-driver and team for each route. The convoy—Saska, the Hofnar driver, and the laden wagon—departs Red Harvest at dawn bound for High-Garden Hamlet, a half-day's road mostly safe but with tense possibility of wolf packs or highway ambush. The threat is a possibility, not a guarantee; this is a watchful walk, not a guaranteed battle. The player guards all three: merchant, driver, and cargo. Saska pays a flat modest fee on arrival. The road is known, the destination a small agricultural village east of Red Harvest.",
+      "detailType": "detailed",
+      "questLocation": "Red Harvest",
+      "questGiverNPC": "Saska Vorin"
+    }
+  }
+}

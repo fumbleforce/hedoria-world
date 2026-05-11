@@ -1,0 +1,2076 @@
+{
+  "locations": {
+    "Avenor": {
+      "name": "Avenor",
+      "basicInfo": "Avenor is the oldest continuous city of human Hedoria — a city-state of white marble rising from a wide river-plain. It is the seat of the witch queen, the heart of human magical learning, and the only kingdom where witchcraft is practiced openly and lawfully. To its admirers, Avenor is the surviving fragment of human greatness from before the Wartide. To its detractors among the other human kingdoms, it is the realm that betrayed humanity when the other races were ensouled, broke with its kind, and harbors the founder's line still. Avenor's old heart is a great city of fluted columns, vaulted halls, and broad colonnaded avenues. The central districts are organized around three vast plazas: the Plaza of the Queen before the palace, the Plaza of the Open Hand at the commercial heart, and the Plaza of the Listening Stones at the entrance to the great archive. Aqueducts older than living memory still carry mountain water to the public fountains and witch-academies. Whole quarters are paved in pale stone polished by generations of feet. The architecture is restrained where other human capitals are gaudy. Avenor's grandeur is in proportion, in light, in the long vistas — not in gilt. Even the witch queen's palace sits within the city's geometry rather than above it. The throne hall is reached by stairs wide enough for ten abreast, worn shallow by centuries of use. Newer districts ring the old core in concentric layers — narrower streets, taller buildings of stone and timber, foreign quarters where each people maintains its own architecture in miniature, and great mixed neighborhoods where Avenorians of every race live and work together in ways no other human city permits. The river crossing the city is wide and slow, spanned by nine bridges. The oldest, the Witch's Span, is said to have been built by Avenoria herself and is closed to ordinary traffic, used only by the queen and her household for ceremony.\nOut toward the crowded outskirts, Avenor has its shadowed corners. The queen's writ runs thinner there. The night watch moves only in pairs. The realm's many refugees have made lives in those streets that the central court does not always wish to look at directly.\n",
+      "x": 4,
+      "y": -10,
+      "radius": 3,
+      "region": "Avenor",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "areas": {
+        "The Palace District": {
+          "description": "This central area houses the queen's palace, the Plaza of the Queen, and the great vaulted halls of the government.",
+          "paths": [
+            "The Queen's College"
+          ]
+        },
+        "The Queen's College": {
+          "description": "An academy where witches and consort-wizards study cooperative magic under master-witches.",
+          "paths": [
+            "The Palace District",
+            "The Old Archive"
+          ]
+        },
+        "Plaza of the Queen": {
+          "description": "A new area in the location.",
+          "paths": []
+        },
+        "Plaza of the Open Hand": {
+          "description": "A new area in the location.",
+          "paths": []
+        },
+        "Plaza of the Listening Stones": {
+          "description": "A new area in the location.",
+          "paths": []
+        },
+        "The Outwall": {
+          "description": "The outer slum, packed against the city's old earthworks. Quelled refugees, exiled witches, and stranded soldiers from old wars share narrow streets that the watch travels in pairs. Cookfires in the alleys, washing strung across the lanes, a constant low murmur even at night.",
+          "paths": [
+            "Foreign Quarter"
+          ]
+        },
+        "Foreign Quarter": {
+          "description": "A district pressed against the river wall where each foreign people maintains its own ground. A Hofnar caravan-yard with stabling for the great wagon-teams. A Cephalen factor-hall with a half-flooded lower floor for visiting captains. Lodging-houses for Prime envoys, Draklid traders, and the rest.",
+          "paths": [
+            "The Outwall",
+            "Witch's Span"
+          ]
+        },
+        "Witch's Span": {
+          "description": "Avenoria's bridge, closed to ordinary traffic. Stone older than the rest of the city, fitted without visible mortar, the rail carved with figures whose meaning has been argued over for centuries. A single old gatehouse on the city side admits the queen's household for ceremony.",
+          "paths": [
+            "Foreign Quarter"
+          ]
+        },
+        "The Old Archive": {
+          "description": "Avenor's great archive, halls of fluted stone running deep into the bedrock. The upper galleries hold law, custom, and pre-Wartide records open to licensed scholars. The lower stacks descend further than most readers know and require a senior witch's seal to enter.",
+          "paths": [
+            "The Queen's College"
+          ]
+        }
+      },
+      "known": true,
+      "embeddingId": "XZ-044Qn"
+    },
+    "Draklid Clan-Holds": {
+      "name": "Draklid Clan-Holds",
+      "basicInfo": "A network of sandstone cliff-cut holds carved into the orange-hued stone of the Sun-Scoured Plateau.",
+      "x": 1.4,
+      "y": -35.7,
+      "radius": 3,
+      "region": "The Sun-Scoured Plateau",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": true,
+      "areas": {
+        "Clan Halls": {
+          "description": "Formal chambers adorned with gold and layered silks where matriarchs conduct sovereign clan business.",
+          "paths": [
+            "Sun-Gate Entry"
+          ]
+        },
+        "Sun-Gate Entry": {
+          "description": "The primary canyon entrance marked by clan-sigils, serving as a point of negotiation for trade and travel.",
+          "paths": [
+            "Clan Halls"
+          ]
+        }
+      },
+      "embeddingId": "5YDC1-6M"
+    },
+    "Molvar Mound-Tunnels": {
+      "name": "Molvar Mound-Tunnels",
+      "basicInfo": "Lush, earthen mounds concealing intricate tunnel networks in the Verdant Reach.",
+      "x": 6,
+      "y": 11,
+      "radius": 2,
+      "region": "The Reach",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "embeddingId": "CwT2Dr8x"
+    },
+    "Fernwarg village": {
+      "name": "Fernwarg village",
+      "basicInfo": "A small, secluded settlement nestled within the dense undergrowth of the Verdant Reach. It is a quiet village where Fernwarg live in harmony with the shifting forest flora.",
+      "x": -18,
+      "y": -11,
+      "radius": 2,
+      "region": "The Reach",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "areas": {
+        "The Pack-Mother's Lodge": {
+          "description": "The central longhouse, low and broad, walls of woven branch and pelt over a timber frame. The pack-mother's seat stands at the back, marked by the layered fern-headdresses of her predecessors hung on the wall behind it.",
+          "paths": [
+            "The Whelping Yard"
+          ]
+        },
+        "The Whelping Yard": {
+          "description": "An enclosed clearing at the rear of the village where cubs are raised and watched by their assigned aunts. Fenced with thorn and woven brush. Strangers are not admitted.",
+          "paths": [
+            "The Pack-Mother's Lodge"
+          ]
+        }
+      },
+      "known": false,
+      "embeddingId": "muhZ_HHL"
+    },
+    "The Winterspring": {
+      "name": "The Winterspring",
+      "basicInfo": "A cold lake in the high mountains",
+      "x": 4,
+      "y": 15,
+      "radius": 1,
+      "region": "Shieldcap Mountains",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "hiddenInfo": "Home to cold-blooded fish, various harsh climate minor monsters",
+      "embeddingId": "qGMwH1xo"
+    },
+    "Leador's pass west entry": {
+      "name": "Leador's pass west entry",
+      "basicInfo": "A description of this location that will appear in the journal.",
+      "x": -12,
+      "y": -34,
+      "radius": 1,
+      "region": "Shieldcap Mountains",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "embeddingId": "dTZOmiQ0"
+    },
+    "Leador's pass east entry": {
+      "name": "Leador's pass east entry",
+      "basicInfo": "A description of this location that will appear in the journal.",
+      "x": 40,
+      "y": -20,
+      "radius": 1,
+      "region": "Shieldcap Mountains",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "embeddingId": "VAGd292N"
+    },
+    "Leador's pass main path": {
+      "name": "Leador's pass main path",
+      "basicInfo": "A description of this location that will appear in the journal.",
+      "x": 16,
+      "y": -14,
+      "radius": 1,
+      "region": "Shieldcap Mountains",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "embeddingId": "O2NQxqd9"
+    },
+    "Valhelde": {
+      "name": "Valhelde",
+      "basicInfo": "A large, old town closely related to Avinor, featuring a megastructure bridge across the Orteliol river",
+      "x": -23,
+      "y": 22,
+      "radius": 2,
+      "region": "Avenor",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": true,
+      "embeddingId": "yxu0-tPm"
+    },
+    "Cliffrend": {
+      "name": "Cliffrend",
+      "x": 13,
+      "y": 7,
+      "radius": 3,
+      "region": "Whitestone coast",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": true,
+      "basicInfo": "Capital of Udorath. Built on a tall chalk bluff above the inland fen, the city looks out over miles of marsh and reed. The court, garrison, and noble houses occupy the heights; the lower districts spill down a series of switchbacks to a long causeway that runs out across the marsh. Linen warehouses, salt stores, and the Quelled-houses sit at the inland end of the causeway.",
+      "hiddenInfo": "The crown's strategy is grain. Avenor's river-valley to the south is the most productive grain country on the continent, and Udorath claims it as historical human territory. The Cliffrend court has pressed the claim diplomatically for three generations; the marches lords push for it militarily and grow louder. The chartered Quelled-houses concentrated in the lower city are politically weighty in their own right and oppose any Avenor war that would close their southern markets.",
+      "areas": {
+        "The Bluff": {
+          "description": "The high city. Royal court, fortress, noble quarter, and the old chapter-house of the Hand. The walls follow the cliff edge and need no further fortification on the seaward side. Long views across the fen.",
+          "paths": [
+            "The Switchbacks"
+          ]
+        },
+        "The Switchbacks": {
+          "description": "Terraced lower districts cut into the chalk in steep zig-zags. Workshops, lodgings, the trade-halls of the linen guilds, and the open-air markets where chalk-upland and fen produce meet. Always wind, always dust.",
+          "paths": [
+            "The Bluff",
+            "The Causeway"
+          ]
+        },
+        "The Causeway": {
+          "description": "An elevated stone road running out across the marsh from the foot of the switchbacks. Customs gates at the inland end. Warehouses for salt, reed, eel, and finished iron stand in tight rows on the firm ground. A second checkpoint covers the lowland approach.",
+          "paths": [
+            "The Switchbacks",
+            "The Pens"
+          ]
+        },
+        "The Pens": {
+          "description": "Chartered Quelled-houses occupy the firm ground at the marsh end of the causeway. Wooden pens, slaughter-yards, salting-sheds, and the offices of the houses themselves. Drovers come and go with herds bound for inland buyers and the Hofnar caravans.",
+          "paths": [
+            "The Causeway"
+          ]
+        }
+      }
+    },
+    "Raknid treetop village": {
+      "name": "Raknid treetop village",
+      "basicInfo": "A description of this location that will appear in the journal.",
+      "x": 21,
+      "y": -11,
+      "radius": 1,
+      "region": "The Reach",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "areas": {
+        "The Canopy Walk": {
+          "description": "The connecting platform-network of the village. Plank walkways and silk-bound bridges run between the great trunks at three heights. Movement is constant but quiet — the Raknid step softly even at home.",
+          "paths": [
+            "The Bound Archive"
+          ]
+        },
+        "The Bound Archive": {
+          "description": "The village's scriptorium and library, carried in a deep bough hollowed and floored with planking. Scroll-cases and bound tomes hang on silk lines along the walls, ordered by a system the archivists do not fully explain to outsiders. Scholars work at standing desks, taking notes in the Raknid script.",
+          "paths": [
+            "The Canopy Walk"
+          ]
+        }
+      },
+      "known": false,
+      "embeddingId": "ERweimf3"
+    },
+    "Red Harvest": {
+      "name": "Red Harvest",
+      "basicInfo": "A crossroads community with several inns and taverns and some tradesfolk catering to travellers in the region of Avenor",
+      "x": -5,
+      "y": 4,
+      "radius": 1,
+      "region": "Avenor",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": true,
+      "embeddingId": "lmy35OXC"
+    },
+    "Riverwatch": {
+      "name": "Riverwatch",
+      "basicInfo": "A strategic river outpost located on the outskirts of Avenor, designed to monitor trade traffic and magical currents. It serves as a vital customs house for the city-state.",
+      "x": 15,
+      "y": 19,
+      "radius": 2,
+      "region": "Avenor",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "areas": {
+        "Customs Pier": {
+          "description": "A bustling wooden dock where officials inspect goods arriving by barge. It connects to the fortified command tower.",
+          "paths": [
+            "Command Tower"
+          ]
+        },
+        "Command Tower": {
+          "description": "A tall, stone structure overlooking the river that houses the garrison and magical sentries. It provides a clear view of the surrounding river-plains.",
+          "paths": [
+            "Customs Pier"
+          ]
+        }
+      },
+      "embeddingId": "fLEcYw-m"
+    },
+    "High-Garden Hamlet": {
+      "name": "High-Garden Hamlet",
+      "basicInfo": "A picturesque agricultural village situated on a low ridge near Avenor, known for its terraced flower fields and medicinal herbs. It supplies the capital's apothecaries.",
+      "x": 26,
+      "y": 4,
+      "radius": 1,
+      "region": "Avenor",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "areas": {
+        "Flower Terraces": {
+          "description": "Vibrant rows of colorful blooms maintained by local farmers. It is the primary production area for the village.",
+          "paths": [
+            "Village Commons"
+          ]
+        },
+        "Village Commons": {
+          "description": "A small square surrounded by cottage homes where locals exchange goods and news. It is the social heart of the hamlet.",
+          "paths": [
+            "Flower Terraces"
+          ]
+        }
+      },
+      "embeddingId": "gfjhDlD5"
+    },
+    "Echoing Hollow": {
+      "name": "Echoing Hollow",
+      "basicInfo": "A deep, wooded valley within the Avenor region, rumored to have been a minor site of the Wartide era. Ancient ruins peek through the moss and heavy canopy.",
+      "x": -27,
+      "y": -7,
+      "radius": 1,
+      "region": "Avenor",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "areas": {
+        "Sunken Sanctum": {
+          "description": "A half-collapsed stone chamber partially reclaimed by forest roots. It is filled with faint, residual magical energy.",
+          "paths": [
+            "Overgrown Path"
+          ]
+        },
+        "Overgrown Path": {
+          "description": "A trail choked with brambles that leads into the center of the hollow. It is difficult to navigate without local knowledge.",
+          "paths": [
+            "Sunken Sanctum"
+          ]
+        }
+      },
+      "embeddingId": "dXC2YDow"
+    },
+    "Cinder-Reach Outpost": {
+      "name": "Cinder-Reach Outpost",
+      "basicInfo": "A rugged mining camp located on the stony edges of the Avenor territory, extracting rare ores from the cliffs. It is a harsh, industrious place that barely resembles the capital's elegance.",
+      "x": 11,
+      "y": -24,
+      "radius": 2,
+      "region": "Avenor",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "areas": {
+        "The Smelter": {
+          "description": "A fire-lit facility where extracted ores are processed into raw metals. The heat is oppressive day and night.",
+          "paths": [
+            "Mine Entrance"
+          ]
+        },
+        "Mine Entrance": {
+          "description": "A dark, gaping hole cut into the cliff face where miners venture daily. A rickety scaffolding surrounds the opening.",
+          "paths": [
+            "The Smelter"
+          ]
+        }
+      },
+      "embeddingId": "fzrXhMMi"
+    },
+    "Deep-Galleries Citadel": {
+      "name": "Deep-Galleries Citadel",
+      "basicInfo": "A sprawling subterranean hub built by the Iron-Core Consortium to manage their primary mining interests. It serves as the central administrative and breeding facility for Vorok contract labor.",
+      "x": 25.1,
+      "y": -25.4,
+      "radius": 3,
+      "region": "Long Steppe",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "areas": {
+        "Contract Hall": {
+          "description": "A massive, echo-filled chamber where thousands of Vorok miners review their hourly rate audits and house contracts. The air is thick with the scent of ozone and the rhythmic scratching of stone-quills.",
+          "paths": [
+            "Breeding Compound"
+          ]
+        },
+        "Breeding Compound": {
+          "description": "A heavily guarded series of subterranean cells where the next generation of Vorok workers are managed. Only high-ranking principals and authorized staff are permitted entry.",
+          "paths": [
+            "Contract Hall"
+          ]
+        }
+      },
+      "embeddingId": "MRdvIOpy"
+    },
+    "Prospector's Rest": {
+      "name": "Prospector's Rest",
+      "basicInfo": "A rocky outpost operated by the Stone-Singer Syndicate, specializing in shoring up unstable veins and reclaiming abandoned claims. It is a loud, chaotic camp where off-duty miners gather to trade gear and news.",
+      "x": 30,
+      "y": 27,
+      "radius": 2,
+      "region": "Lake Wildering",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "areas": {
+        "Shoring Wharf": {
+          "description": "A staging ground where massive timber beams and magical shoring equipment are prepped for descent into volatile mines. Skilled Vorok engineers constantly check stress loads on the support structures.",
+          "paths": [
+            "The Grinder's Tavern"
+          ]
+        },
+        "The Grinder's Tavern": {
+          "description": "A smoke-filled, subterranean tavern known for its deafening volume and obscene singing. It is the primary place for blacklisted exiles and independent crews to find work or gamble their shares.",
+          "paths": [
+            "Shoring Wharf"
+          ]
+        }
+      },
+      "embeddingId": "5LyyDY7z"
+    },
+    "Iron-Core Consortium Deep-Gallery": {
+      "name": "Iron-Core Consortium Deep-Gallery",
+      "basicInfo": "A sprawling subterranean mining complex operated by the Iron-Core Consortium within the Avenor region.",
+      "x": -38,
+      "y": -14,
+      "radius": 3,
+      "region": "Avenor",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "areas": {
+        "Ore Processing Floor": {
+          "description": "A loud, soot-covered chamber where raw ore is refined into tradeable ingots.",
+          "paths": [
+            "Overseer's Office"
+          ]
+        },
+        "Overseer's Office": {
+          "description": "A sterile, quiet room where trade contracts are signed by the Consortium's agents.",
+          "paths": [
+            "Ore Processing Floor"
+          ]
+        }
+      },
+      "embeddingId": "AZ9Z22TP"
+    },
+    "Whitestone Coastal Vein": {
+      "name": "Whitestone Coastal Vein",
+      "basicInfo": "A cliff-side mining operation overlooking the salt-sprayed rocks of the Whitestone coast.",
+      "x": 1,
+      "y": -13,
+      "radius": 2,
+      "region": "Whitestone coast",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "areas": {
+        "Damp Tunnel": {
+          "description": "A sea-level entrance that floods during high tide, forcing miners to work in rhythmic shifts.",
+          "paths": [
+            "Foreman's Outpost"
+          ]
+        },
+        "Foreman's Outpost": {
+          "description": "A small shelter perched on the cliff edge, serving as a trade spot for independent prospectors.",
+          "paths": [
+            "Damp Tunnel"
+          ]
+        }
+      },
+      "embeddingId": "vRMTrVzZ"
+    },
+    "Bozeryn": {
+      "name": "Bozeryn",
+      "x": 8,
+      "y": -3,
+      "radius": 1,
+      "region": "Avenor",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "basicInfo": "Small river-port town two days upriver from Avenor, where the river slows through low farmland. A free-trade hub for goods moving between the capital and the inland country, built mostly of brick with timber wharves along the riverfront.",
+      "hiddenInfo": "Customs are formally subordinate to Avenor but operate with broad discretion. The town's ledgers do not always match the city's records. A Syndicate factor has kept rooms above the river-master's office for years.",
+      "areas": {
+        "The Wharves": {
+          "description": "Timber wharves along the slow river. Barges and shallow-draft craft load and unload at all hours. The river-master's office stands above the main quay.",
+          "paths": [
+            "Market Street"
+          ]
+        },
+        "Market Street": {
+          "description": "The town's main thoroughfare, brick-paved and narrow, lined with trade-halls, eating-houses, and lodgings. Inland produce comes down on carts and goes back up the river as worked goods.",
+          "paths": [
+            "The Wharves"
+          ]
+        }
+      }
+    },
+    "Vedorath": {
+      "name": "Vedorath",
+      "x": -2,
+      "y": -1,
+      "radius": 1,
+      "region": "Avenor",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "basicInfo": "Agricultural town on the inland road, the last large settlement before the road climbs into Reach country. Stone walls, a market square, granaries oversized for the local population.",
+      "hiddenInfo": "The granaries supply Avenor through the lean months and provision parties heading north. The town's elders maintain quiet relations with the Fernwarg pack-mothers whose territory begins a day's walk further on. Logging contracts are not signed here without those relations being consulted.",
+      "areas": {
+        "The Market Square": {
+          "description": "A broad cobbled square ringed by trade-halls, the town hall, and the largest of the granaries. Carts come in from the surrounding farms in the early hours.",
+          "paths": [
+            "The Inland Gate"
+          ]
+        },
+        "The Inland Gate": {
+          "description": "The northern gate, where the road climbs out of farm country toward the Reach. A small garrison, a customs hut, and a roadside shrine to the Hand stand together.",
+          "paths": [
+            "The Market Square"
+          ]
+        }
+      }
+    },
+    "Mossfont": {
+      "name": "Mossfont",
+      "x": 1,
+      "y": -4,
+      "radius": 1,
+      "region": "Avenor",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Roadside Hand shrine on the inland road. A stone basin fed by a moss-grown spring, a low altar, and a battered offering-bowl. Pilgrims and travelers leave coins.",
+      "hiddenInfo": "The shrine predates the road. A travelling caretaker visits from Vedorath every few weeks to clear the bowl and the basin."
+    },
+    "Burnpost": {
+      "name": "Burnpost",
+      "x": -15,
+      "y": 6,
+      "radius": 1,
+      "region": "Avenor",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "basicInfo": "Old border-keep from the First Soul-War, partly ruined. Walls breached on two sides, the courtyard overgrown, the tower's upper floors burned out.",
+      "hiddenInfo": "The cellars were bricked over after the war and have not been opened since. The bricking is original work and intact.",
+      "areas": {
+        "The Courtyard": {
+          "description": "A cobbled yard half-reclaimed by grass and ash saplings. Old crates and the iron skeletons of carts lie where they were left. The walls show the marks of a hard fight on the way out.",
+          "paths": [
+            "The Tower"
+          ]
+        },
+        "The Tower": {
+          "description": "Three floors of stone shell, roofless, the upper levels accessible only by climbing the inside walls. The cellar entrance in the courtyard is sealed with brick and mortar that have not weathered as the rest has.",
+          "paths": [
+            "The Courtyard"
+          ]
+        }
+      }
+    },
+    "Tarn's Reach": {
+      "name": "Tarn's Reach",
+      "x": 10,
+      "y": -16,
+      "radius": 1,
+      "region": "Avenor",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Hillside camp around a freshwater spring. Three retired witches live there under royal license, in stone cottages with shared workshops between them.",
+      "hiddenInfo": "All three were senior figures in the queen's court a decade ago. None will speak of the reasons they left."
+    },
+    "Lod'Tenach": {
+      "name": "Lod'Tenach",
+      "x": -8,
+      "y": -4,
+      "radius": 2,
+      "region": "Avenor",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "basicInfo": "Pre-Wartide ruin two days inland from Avenor. A colonnade of fluted columns rises from the grass; a sunken processional way leads to the foundations of a great hall; toppled statuary lies where it fell. The cleared portion is small.",
+      "hiddenInfo": "The interior chambers run further than the cleared portion. Surveyors have mapped passages on three descending levels and stopped where the air goes wrong. The figures of the toppled statues do not match any race living on the continent today.",
+      "areas": {
+        "The Colonnade": {
+          "description": "A long line of fluted columns, most still standing, framing what was once a processional way. The paving stones run between them, cracked but largely intact. Fallen statuary lies along the verges.",
+          "paths": [
+            "The Sunken Hall"
+          ]
+        },
+        "The Sunken Hall": {
+          "description": "The foundations of a great hall, descended into by a wide stair. Walls survive to chest height. The floor mosaic is cracked but the design — concentric rings broken by a single radial line — is still legible.",
+          "paths": [
+            "The Colonnade",
+            "The Lower Passage"
+          ]
+        },
+        "The Lower Passage": {
+          "description": "A doorway in the hall's far wall opens onto a stair descending into worked stone passages. The first level is mapped and partly cleared. Below that, the air thickens and lanterns gutter without obvious cause.",
+          "paths": [
+            "The Sunken Hall"
+          ]
+        }
+      }
+    },
+    "The Black Stack": {
+      "name": "The Black Stack",
+      "x": 22,
+      "y": -18,
+      "radius": 1,
+      "region": "Avenor",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Solitary basalt sea-stack off the eastern coast, three hundred feet high, sheer on three sides. A small smuggler-cove sits in its lee on the landward shore.",
+      "hiddenInfo": "Cephalen ships anchor in the stack's lee when their cargo cannot pass through Avenor's customs. The cove villagers do not ask what comes ashore."
+    },
+    "Saltreach": {
+      "name": "Saltreach",
+      "x": 5,
+      "y": -3,
+      "radius": 2,
+      "region": "Whitestone coast",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "basicInfo": "Second port of Udorath, set on a sheltered bay south of Cliffrend. Salt-pans cover the flats behind the town. Smoked-eel houses, linen-warehouses, and a small fleet of coastal traders.",
+      "hiddenInfo": "The Saltreach merchants are quietly aligned against the war-faction in Cliffrend. Their trade depends on Avenorian linen markets and a Cephalen route that runs through Avenor's anchorages.",
+      "areas": {
+        "The Pans": {
+          "description": "Wide flats divided into evaporation pans by low stone walls. Free workers tend the rakes and the harvest in season. Storehouses ring the pans on the landward side.",
+          "paths": [
+            "The Quay"
+          ]
+        },
+        "The Quay": {
+          "description": "A stone quay along the inner bay, lined with smoked-eel houses, salt-warehouses, and the trade-halls of the linen factors. Coastal traders and the occasional Cephalen-built vessel berth here.",
+          "paths": [
+            "The Pans"
+          ]
+        }
+      }
+    },
+    "Qerrun": {
+      "name": "Qerrun",
+      "x": -2,
+      "y": 3,
+      "radius": 1,
+      "region": "Whitestone coast",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "basicInfo": "Inland marches-keep of a senior border-lord, set on a chalk rise overlooking the bog-iron country. Stone walls, a single tower, a yard for the lord's household guard.",
+      "hiddenInfo": "The lord here is one of the loudest voices in the Cliffrend court for a southern war. His household guard runs to twice the size his lands require.",
+      "areas": {
+        "The Yard": {
+          "description": "A walled yard with the keep at its back, the household guard's barracks along one side, and stables opposite. Drilling at all hours.",
+          "paths": [
+            "The Tower Hall"
+          ]
+        },
+        "The Tower Hall": {
+          "description": "The lord's hall on the tower's first floor, hung with old banners from the soul-wars and trophies of the marches. A long table for the household, a smaller one at the back for the lord and his captains.",
+          "paths": [
+            "The Yard"
+          ]
+        }
+      }
+    },
+    "Drowndike": {
+      "name": "Drowndike",
+      "x": 16,
+      "y": 0,
+      "radius": 1,
+      "region": "Whitestone coast",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "basicInfo": "Half-flooded ruin of a pre-Wartide town on the coast. Stone foundations, the stumps of dike-walls, and the lower courses of a temple stand exposed at low tide. Mudlarkers and antiquaries work the flats.",
+      "hiddenInfo": "Ulks lair in the flooded basements. The temple's lowest course is intact and watertight, and the floor below it has not been entered since the dikes failed.",
+      "areas": {
+        "The Tide-Flats": {
+          "description": "Mud and sand flats exposed twice a day. Foundations and lower walls show through, marked by stakes the mudlarkers have left for orientation. Wading is required to reach the further parts.",
+          "paths": [
+            "The Temple Stump"
+          ]
+        },
+        "The Temple Stump": {
+          "description": "The lower courses of a stone temple, walls standing waist-high, the floor still flagged. A stair descends through a sealed trap-door at the centre of the floor.",
+          "paths": [
+            "The Tide-Flats"
+          ]
+        }
+      }
+    },
+    "Hawthorn": {
+      "name": "Hawthorn",
+      "x": 8,
+      "y": 12,
+      "radius": 1,
+      "region": "Whitestone coast",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Coaching inn at the chalk-road / salt-road crossing. A two-storey stone house with stables, a wagon-yard, and a small forge. Travelers in either direction stop here.",
+      "hiddenInfo": "The innkeeper is a retired marches-soldier who keeps quiet ledgers of who passes through and in what company. Several of his ledgers leave Hawthorn under separate covers."
+    },
+    "Stone-Still": {
+      "name": "Stone-Still",
+      "x": 4,
+      "y": 16,
+      "radius": 1,
+      "region": "Whitestone coast",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "basicInfo": "Chalk-upland village built around a pre-Ensoulment standing-stone ring. Sheep country. The ring stands on the rise above the village, twelve stones, the tallest twice a man's height.",
+      "hiddenInfo": "The stones do something at midwinter. The villagers do not all agree on what. Several keep the old observances; the rest stay indoors with the shutters closed.",
+      "areas": {
+        "The Village": {
+          "description": "A scattering of chalk-and-thatch cottages around a green and a single inn. Wind across the open downs.",
+          "paths": [
+            "The Ring"
+          ]
+        },
+        "The Ring": {
+          "description": "Twelve standing stones on a low rise above the village, irregularly spaced, the tallest leaning slightly outward. The grass inside the ring is shorter than the grass outside it.",
+          "paths": [
+            "The Village"
+          ]
+        }
+      }
+    },
+    "Wreckers' Cove": {
+      "name": "Wreckers' Cove",
+      "x": -2,
+      "y": -8,
+      "radius": 1,
+      "region": "Whitestone coast",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "basicInfo": "Sheltered cove village known for taking salvage from grounded ships. A few stone houses on the shingle, drying frames, a cliff-path up to the chalk uplands.",
+      "hiddenInfo": "Cephalen captains avoid the coast for thirty miles in either direction. The villagers' wealth is unaccountable for the size of the settlement.",
+      "areas": {
+        "The Shingle": {
+          "description": "A curve of grey shingle inside the cove. Boats pulled up high on the slope, drying frames hung with lines, salvage stacked under tarps along the back of the beach.",
+          "paths": [
+            "The Houses"
+          ]
+        },
+        "The Houses": {
+          "description": "A dozen stone-and-turf houses set against the cliff. Doors low, windows shuttered. The headman's house at the back has a deeper cellar than its size accounts for.",
+          "paths": [
+            "The Shingle"
+          ]
+        }
+      }
+    },
+    "The Lost Steading": {
+      "name": "The Lost Steading",
+      "x": 0,
+      "y": 4,
+      "radius": 1,
+      "region": "Whitestone coast",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Abandoned dike-farm being reclaimed by the marsh. The farmhouse stands roofless. The outbuildings are partly drowned. The track in is silted to ankle depth.",
+      "hiddenInfo": "Brood-spider sign on the path up to the door. Egg-cases in the loft."
+    },
+    "Bog-Pans": {
+      "name": "Bog-Pans",
+      "x": -3,
+      "y": 7,
+      "radius": 1,
+      "region": "Whitestone coast",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Bog-iron smelter in the inner fen. Free human workers, a single stone smelt-hall, a cluster of huts on raised ground. Charcoal stacks at the edge of the dry land.",
+      "hiddenInfo": "The smelter's output is steady and modest. The workers winter in Saltreach and return in spring."
+    },
+    "Pleat": {
+      "name": "Pleat",
+      "x": -4,
+      "y": -3,
+      "radius": 1,
+      "region": "Whitestone coast",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Fishing hamlet on a tidal flat. Reachable on foot at low tide and cut off twice a day. A dozen houses on stilts, a single boat-shed, drying frames everywhere.",
+      "hiddenInfo": "The villagers maintain a path of stones that shifts seasonally. Without local guidance the route is not obvious."
+    },
+    "Whalebone Cave": {
+      "name": "Whalebone Cave",
+      "x": -8,
+      "y": -10,
+      "radius": 1,
+      "region": "Whitestone coast",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Sea cave at the chalk-cliff base. Whale skeletons lie deep inside, driven there by old storm tides and never washed back out. The cave runs further than the bones.",
+      "hiddenInfo": "The bones at the back of the cave are not all whale. A passage at the rear continues into the cliff."
+    },
+    "Black Mire": {
+      "name": "Black Mire",
+      "x": -1,
+      "y": 11,
+      "radius": 2,
+      "region": "Whitestone coast",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Deep peat bog inland of the marsh. Marsh-lights at night. Several search parties unaccounted for. The locals will not cross it after dark.",
+      "hiddenInfo": "The peat preserves bodies. Some of the bodies are very old."
+    },
+    "The Tor": {
+      "name": "The Tor",
+      "x": 19,
+      "y": 13,
+      "radius": 1,
+      "region": "Whitestone coast",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Solitary chalk hill rising above the sheep-uplands. Wind-bent thorn at the summit. Visible from the sea on a clear day.",
+      "hiddenInfo": "A single dressed stone is set into the hilltop, its face turned downward. It has not been turned over in living memory."
+    },
+    "Drowned Wood": {
+      "name": "Drowned Wood",
+      "x": 8,
+      "y": 4,
+      "radius": 1,
+      "region": "Whitestone coast",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Submerged oakwood in a flooded fen-arm. Dead trunks still stand above the waterline, branches grey and bare. Punts can be poled between them.",
+      "hiddenInfo": "Sloggers nest in the deeper hollows of the larger trunks."
+    },
+    "White Falls": {
+      "name": "White Falls",
+      "x": -10,
+      "y": 1,
+      "radius": 1,
+      "region": "Whitestone coast",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Chalk stream falling a hundred feet over an undercut cliff. The pool beneath is deep and milky with suspended chalk.",
+      "hiddenInfo": "A cave entrance behind the falls is reachable only at low water in summer. The villagers of Stone-Still leave offerings on the ledge inside."
+    },
+    "Hagshollow": {
+      "name": "Hagshollow",
+      "x": 22,
+      "y": 17,
+      "radius": 1,
+      "region": "Whitestone coast",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Ravine in the chalk uplands where a Hookwight is known to lair. Shepherds avoid grazing within sight of the cleft. Bones at the bottom.",
+      "hiddenInfo": "The Hookwight is large and old. Several previous bounty parties have failed to return."
+    },
+    "Singing Stump": {
+      "name": "Singing Stump",
+      "x": -8,
+      "y": 9,
+      "radius": 1,
+      "region": "The Reach",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "basicInfo": "Molvar mound-village on the forest margin, named for the great hollow stump at its centre that hums in certain winds. Known across the southern Reach for honey-mead and open hospitality.",
+      "hiddenInfo": "The village's bright-lit tunnels run for miles under the meadows. The Molvar do not always tell visitors how far the network extends.",
+      "areas": {
+        "The Stump": {
+          "description": "The hollow stump at the village's centre, the size of a small house, its interior lined with benches and lanterns. Travellers are received here. The wind sets it humming on certain days.",
+          "paths": [
+            "The Mound Doors"
+          ]
+        },
+        "The Mound Doors": {
+          "description": "Round wooden doors set into the side of grass-covered mounds, lit from within by the soft Molvar light-glass. Each door admits to a different family's tunnel-network. Visitors are admitted by invitation.",
+          "paths": [
+            "The Stump"
+          ]
+        }
+      }
+    },
+    "Border Stones": {
+      "name": "Border Stones",
+      "x": 5,
+      "y": -9,
+      "radius": 1,
+      "region": "The Reach",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "A line of old stones set along a low ridge marking the boundary between Fernwarg open-wood country and Raknid old-growth. Both peoples maintain the marks.",
+      "hiddenInfo": "Pack-mothers and Raknid elders meet along this line once a year to walk the routes and confirm the compact. The meeting is unannounced and outsiders are not welcome."
+    },
+    "Logger's Reach": {
+      "name": "Logger's Reach",
+      "x": -25,
+      "y": -3,
+      "radius": 1,
+      "region": "The Reach",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "basicInfo": "Udorathi woodcutters' camp on the western Reach edge. Repeatedly burned, repeatedly rebuilt under Cliffrend license. Stockaded, hard-staffed, in active dispute.",
+      "hiddenInfo": "The license under which the camp operates cuts further into Fernwarg territory than the agreed border. The packs have warned twice this year already.",
+      "areas": {
+        "The Stockade": {
+          "description": "Heavy timber palisade around a yard of cut timber, sleeping huts, and a small mess-hall. Watchmen on every corner.",
+          "paths": [
+            "The Cutting"
+          ]
+        },
+        "The Cutting": {
+          "description": "The active logging ground beyond the stockade. Stumps fresh, branches in piles, oxen hauling trunks back along a track.",
+          "paths": [
+            "The Stockade"
+          ]
+        }
+      }
+    },
+    "Brood Hollow": {
+      "name": "Brood Hollow",
+      "x": 15,
+      "y": -3,
+      "radius": 1,
+      "region": "The Reach",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Old-growth ravine in deep Raknid country. The Raknid have ceded it to a Brood-spider clutch and marked the approaches.",
+      "hiddenInfo": "The clutch is large. Living captives have been recovered from its larders before."
+    },
+    "Fern-Ford": {
+      "name": "Fern-Ford",
+      "x": -12,
+      "y": 5,
+      "radius": 1,
+      "region": "The Reach",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "basicInfo": "Hofnar caravan-stop at the only Reach-ford the pack-mothers permit through their territory in summer. A timber-and-stone toll-house, a stable, a corral for the great Hofnar wagon-teams.",
+      "hiddenInfo": "The toll is paid in goods to the local Fernwarg pack as well as in coin to the Hofnar agent. The arrangement is renegotiated each spring.",
+      "areas": {
+        "The Crossing": {
+          "description": "A wide shallow ford with stone causeway-stones laid across the riverbed. Wagons cross slowly. The water is cold and clear.",
+          "paths": [
+            "The Toll-House"
+          ]
+        },
+        "The Toll-House": {
+          "description": "A timber building on stone foundations on the southern bank. A Hofnar agent and his clerks work here. A separate room at the back receives the Fernwarg envoy when the pack sends one.",
+          "paths": [
+            "The Crossing"
+          ]
+        }
+      }
+    },
+    "The Burnt Range": {
+      "name": "The Burnt Range",
+      "x": -5,
+      "y": 14,
+      "radius": 2,
+      "region": "The Reach",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "A band of forest the human kingdoms torched in the First Soul-War. Open ground now, scrub and thin saplings, the soil thin and ash-grey under the surface.",
+      "hiddenInfo": "The Fernwarg raise pups here on purpose. Cubs born on the burnt ground are considered marked."
+    },
+    "Marvath": {
+      "name": "Marvath",
+      "x": 10,
+      "y": -7,
+      "radius": 2,
+      "region": "The Reach",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "basicInfo": "Pre-Wartide ruin in a deep Reach valley. A stepped pyramid, mostly buried, with root-cracked stairs descending into the earth. The visible stonework is white, fine-grained, and unweathered.",
+      "hiddenInfo": "Raknid hunters mark a wide circle around it. Sound carries badly inside; lanterns burn green at the lower levels.",
+      "areas": {
+        "The Stair": {
+          "description": "A stepped face of the pyramid exposed by root-fall and erosion. The steps descend at a steeper angle than they appear, and continue below the visible level.",
+          "paths": [
+            "The Antechamber"
+          ]
+        },
+        "The Antechamber": {
+          "description": "A square chamber at the foot of the visible stair, walls white stone, the ceiling intact. Three further passages lead deeper. The air is still and the sound of one's own breath does not return.",
+          "paths": [
+            "The Stair"
+          ]
+        }
+      }
+    },
+    "Drowndell": {
+      "name": "Drowndell",
+      "x": 3,
+      "y": 4,
+      "radius": 1,
+      "region": "The Reach",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Flooded sinkhole in the deep old-growth, a black pool ringed by leaning trees. The Raknid mark the trees on the approaches.",
+      "hiddenInfo": "Sloggers in the shallows. Something larger uses the deeper water."
+    },
+    "River-Meadow Camp": {
+      "name": "River-Meadow Camp",
+      "x": -22,
+      "y": 16,
+      "radius": 1,
+      "region": "The Reach",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Fernwarg summer hunting encampment on the Reach's northern edge, where the open woodland gives way to the Long Steppe grass. Hide tents, racks of drying meat, fires kept low.",
+      "hiddenInfo": "The camp moves each year. Outsiders who reach it without escort are watched until they leave."
+    },
+    "The Hangtree": {
+      "name": "The Hangtree",
+      "x": -15,
+      "y": -2,
+      "radius": 1,
+      "region": "The Reach",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Solitary great oak on a Reach hilltop, used by the Fernwarg as a territorial marker. Bones and bound bones hang in the branches.",
+      "hiddenInfo": "Some of the bones are not animal. The packs renew the hangings each spring."
+    },
+    "Vortspike": {
+      "name": "Vortspike",
+      "x": 8,
+      "y": -22,
+      "radius": 2,
+      "region": "Shieldcap Mountains",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "basicInfo": "Vorok pit-town on the Shieldcap's southern slopes. Hourly-wage contract miners under Iron-Core sub-contract. Loud, dirty, well-lit at all hours.",
+      "hiddenInfo": "The town runs three shifts and never closes. The Iron-Core principal here keeps a private guard separate from the hourly-rate workers.",
+      "areas": {
+        "The Pit-Head": {
+          "description": "The main shaft entrance, fenced and floodlit. Ore-carts run from the dark on iron rails. Shift-foremen check tallies at a long shed by the gate.",
+          "paths": [
+            "The Town"
+          ]
+        },
+        "The Town": {
+          "description": "Bunkhouses, mess-halls, a contract-office, and three drinking establishments crowded along a single muddy street. The principal's house stands separately, walled.",
+          "paths": [
+            "The Pit-Head"
+          ]
+        }
+      }
+    },
+    "Cold-Spring": {
+      "name": "Cold-Spring",
+      "x": 3,
+      "y": -28,
+      "radius": 1,
+      "region": "Shieldcap Mountains",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "A small Hand Above hermitage on the only year-round road between Avenor and Cliffrend. A single stone house, a chapel, and a freshwater spring beside the road.",
+      "hiddenInfo": "The hermitage takes travellers in any weather. The current hermit is a former marches-captain who does not say which kingdom he served."
+    },
+    "The Hermit's Step": {
+      "name": "The Hermit's Step",
+      "x": 33,
+      "y": -22,
+      "radius": 1,
+      "region": "Shieldcap Mountains",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "High terrace where a single Prime monk keeps a watch-shrine. A stone hut, a small bone-cairn, a fire-pit. Long views in three directions.",
+      "hiddenInfo": "The monk is one of several Primes posted to unsanctioned watch-shrines along the range. The senior bone-vaults of the Seven Monasteries do not formally know about these stations."
+    },
+    "Lost Vault": {
+      "name": "Lost Vault",
+      "x": 28,
+      "y": -38,
+      "radius": 1,
+      "region": "Shieldcap Mountains",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "A destroyed pre-Ensoulment Prime bone-vault from the Unmade era. The mountainside fell on it. Bones and broken stone scatter the slope below.",
+      "hiddenInfo": "Some of the bones are visible only from certain angles in certain light. Young Prime scholars climb up to study what remains, against their elders' instruction."
+    },
+    "Wolf-Maw": {
+      "name": "Wolf-Maw",
+      "x": 22,
+      "y": -28,
+      "radius": 1,
+      "region": "Shieldcap Mountains",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Secondary pass through the range. Impassable five months of the year. A single ruined refuge marks the high point.",
+      "hiddenInfo": "The smugglers who use the pass in season have an arrangement with a snow-leopard pack that lairs in the upper crags."
+    },
+    "The Frozen Battle": {
+      "name": "The Frozen Battle",
+      "x": 24,
+      "y": -18,
+      "radius": 1,
+      "region": "Shieldcap Mountains",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "High snowfield where a Wartide skirmish was lost. The dead are still where they fell, preserved in the ice. Several hundred bodies, in ranks.",
+      "hiddenInfo": "The bodies do not all match. Some are human. Some are larger, longer-limbed, and not human at all."
+    },
+    "Cinderdrop": {
+      "name": "Cinderdrop",
+      "x": -3,
+      "y": -27,
+      "radius": 1,
+      "region": "Shieldcap Mountains",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "basicInfo": "Failed Vorok pit-works abandoned after a vein collapse. The shafts are open. The surface buildings are stripped to the foundations.",
+      "hiddenInfo": "Something in the deeper galleries uses the shafts. Surface birds avoid the air above the site.",
+      "areas": {
+        "The Surface": {
+          "description": "Foundations of long-gone buildings, an ore-cart on its side rusting, the headframe of the main shaft still standing. Wind through the gaps.",
+          "paths": [
+            "The Open Shaft"
+          ]
+        },
+        "The Open Shaft": {
+          "description": "The main shaft, descending vertically. The cage is gone; a knotted rope someone has lowered remains tied off at the top. The shaft floor is not visible from the rim.",
+          "paths": [
+            "The Surface"
+          ]
+        }
+      }
+    },
+    "The Throat": {
+      "name": "The Throat",
+      "x": 12,
+      "y": -28,
+      "radius": 1,
+      "region": "Shieldcap Mountains",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "basicInfo": "Narrow defile on the main range crossing where every caravan pays toll to a Vorok consortium that has held the chokepoint for two centuries. A stone gatehouse spans the cleft.",
+      "hiddenInfo": "The consortium's rate-table is detailed enough to fill a ledger. The senior principal here is the second-highest-ranking Vorok in the region.",
+      "areas": {
+        "The Gate": {
+          "description": "A stone gatehouse built into the walls of the defile, with two iron-bound gates and a row of murder-holes. A toll-clerk's office occupies the lower level.",
+          "paths": [
+            "The Defile"
+          ]
+        },
+        "The Defile": {
+          "description": "The narrow passage itself, walls rising three hundred feet on either side. Sound carries strangely. The road is paved.",
+          "paths": [
+            "The Gate"
+          ]
+        }
+      }
+    },
+    "Vedhrun": {
+      "name": "Vedhrun",
+      "x": -7,
+      "y": -22,
+      "radius": 1,
+      "region": "Shieldcap Mountains",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "basicInfo": "Hillside ruin of an unknown people's tower, predating the dwarves' arrival in the range. Three storeys still stand, the upper levels open to the sky.",
+      "hiddenInfo": "The tower's stones are fitted to a tolerance no living mason matches. The cellar door has not been opened in centuries; the hinges are intact.",
+      "areas": {
+        "The Tower": {
+          "description": "A hexagonal tower of fitted stone, three storeys, the floors mostly fallen in. The stairs run inside the wall, intact. The view from the top is wide.",
+          "paths": [
+            "The Cellar Door"
+          ]
+        },
+        "The Cellar Door": {
+          "description": "An iron-banded stone door at ground level, set into the tower's base. Sealed. The stone around it shows no weathering.",
+          "paths": [
+            "The Tower"
+          ]
+        }
+      }
+    },
+    "Skein Cave": {
+      "name": "Skein Cave",
+      "x": -2,
+      "y": -16,
+      "radius": 2,
+      "region": "Shieldcap Mountains",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "basicInfo": "Large limestone cave system on the lower west slopes. The mouth is wide, the ceiling vaulted. Smugglers' fires near the entrance, cave-bears in the middle galleries, deeper passages no one has mapped.",
+      "hiddenInfo": "Several galleries connect to passages cut by hands. The cut passages do not lead anywhere known on the surface.",
+      "areas": {
+        "The Mouth": {
+          "description": "A wide cave entrance at the foot of a cliff, the ceiling rising into shadow. Old fire-rings, scratched markings on the walls, a smell of woodsmoke and something else.",
+          "paths": [
+            "The Middle Galleries"
+          ]
+        },
+        "The Middle Galleries": {
+          "description": "Branching passages of natural limestone, columns and curtains of flowstone. Bear scat in places. Several of the side-passages narrow to worked-stone openings.",
+          "paths": [
+            "The Mouth"
+          ]
+        }
+      }
+    },
+    "Stormfoot": {
+      "name": "Stormfoot",
+      "x": -16.6,
+      "y": -15.9,
+      "radius": 1,
+      "region": "Impasse",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "basicInfo": "Smuggler-village in one of the few sheltered coves of the Impasse coast. Stone houses on the slope, a single shingle beach, a Cephalen-built stone jetty.",
+      "hiddenInfo": "The village is a Cephalen contact-point for cargo that cannot pass through the Avenor or Cliffrend customs. The arrangement has held for two generations.",
+      "areas": {
+        "The Cove": {
+          "description": "A sheltered crescent of dark shingle below the cliffs. The Cephalen jetty extends from the south end. Boats of every type lie pulled up.",
+          "paths": [
+            "The Houses"
+          ]
+        },
+        "The Houses": {
+          "description": "Stone houses on the slope above the cove, set close together against the wind. The lower floors are storehouses; living quarters above.",
+          "paths": [
+            "The Cove"
+          ]
+        }
+      }
+    },
+    "The Broken Road": {
+      "name": "The Broken Road",
+      "x": -1.4,
+      "y": -0.7,
+      "radius": 1,
+      "region": "Impasse",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Pre-Wartide stone road that runs out into a sheared sea-cliff. Paving stones intact to the edge, then nothing. The road does not appear on later maps.",
+      "hiddenInfo": "The road continues underwater for some distance and resurfaces along the cliff face miles further on. Cephalen swimmers have followed it."
+    },
+    "The Quiet Tower": {
+      "name": "The Quiet Tower",
+      "x": 23.8,
+      "y": 19.5,
+      "radius": 1,
+      "region": "Impasse",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Pre-Wartide ruin in a deep ravine. A round tower of dark stone, intact to its full height, with a single door at ground level. Prospectors will not enter it.",
+      "hiddenInfo": "Locals do not name the tower aloud and refuse to discuss what they have seen there."
+    },
+    "Salt-Stair": {
+      "name": "Salt-Stair",
+      "x": -31.7,
+      "y": 9.4,
+      "radius": 1,
+      "region": "Impasse",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Old smugglers' path cut into a cliff face, partly collapsed. The lower section requires rope; the upper section requires nerve.",
+      "hiddenInfo": "The collapsed section can be bypassed by a route through a small sea-cave at the cliff's base, accessible only at low tide."
+    },
+    "Striglaw Ground": {
+      "name": "Striglaw Ground",
+      "x": 8.7,
+      "y": 34.6,
+      "radius": 1,
+      "region": "Impasse",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "A stretch of broken upland inhabited by a known Striglaw. Travellers go around. The detour adds two days.",
+      "hiddenInfo": "The Striglaw here has killed at least four named hunters over the years. Trophies have been seen on its lair, none recovered."
+    },
+    "The Boneflats": {
+      "name": "The Boneflats",
+      "x": -6.5,
+      "y": -31,
+      "radius": 1,
+      "region": "Impasse",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Sea-cut tidal shelf where a Wartide army was driven into the surf. Bones still wash in. Wreck-iron and broken weapons exposed at low tide.",
+      "hiddenInfo": "Among the human bones are bones that match no race living on the continent. Antiquaries pay well for those."
+    },
+    "Gull-Lord's Nest": {
+      "name": "Gull-Lord's Nest",
+      "x": 23.8,
+      "y": -15.9,
+      "radius": 1,
+      "region": "Impasse",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Solitary sea-stack rookery in the Impasse waters. White with droppings, loud with gulls. A single stone marker at its summit.",
+      "hiddenInfo": "Cephalen sometimes leave drop-cargo in a sealed niche near the stack's base for inland buyers to retrieve at the next low tide."
+    },
+    "Nadorim": {
+      "name": "Nadorim",
+      "x": -32,
+      "y": 18,
+      "radius": 3,
+      "region": "Lake Wildering",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": true,
+      "basicInfo": "Capital of the lake kingdom, the largest of the pile-towns. Built almost entirely on pilings extending out over the deep water at the lake's north end. Streets of plank and stone connect the shore districts to the open-water districts where the wealthier houses stand.",
+      "hiddenInfo": "The kingdom has neither the men nor the appetite for the war the Cliffrend court is pushing toward. Court policy is to follow Cliffrend and Shield's End publicly while making no preparation. Several senior factor-families are quietly exposed if the war comes and would not survive a closure of southern markets.",
+      "areas": {
+        "The Two Quays": {
+          "description": "The working waterfront, two long quays running out into deep water, lined with smoked-fish houses, boat-sheds, and the offices of the lake-trading factors. The fishing fleet ties up here in the evenings.",
+          "paths": [
+            "The Wooden Palace"
+          ]
+        },
+        "The Wooden Palace": {
+          "description": "The royal hall, pile-built over the deep water at the centre of the open-water districts. Long-roofed, timber-framed, decorated with carved waterfowl along the eaves. Reached by a single broad plank-bridge from the shore.",
+          "paths": [
+            "The Two Quays",
+            "Shore-Temples"
+          ]
+        },
+        "Shore-Temples": {
+          "description": "Three Hand-shrines along the shoreline, none larger than a private house. Travellers and fishers leave coins and small carvings.",
+          "paths": [
+            "The Wooden Palace"
+          ]
+        }
+      }
+    },
+    "Reedmere": {
+      "name": "Reedmere",
+      "x": -25,
+      "y": 5,
+      "radius": 2,
+      "region": "Lake Wildering",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "basicInfo": "Second pile-town of Nadorim, set on the lake's southern shore where the road from Cliffrend reaches the water. Smoked-fish trade. The kingdom's main caravanserai for Hofnar caravans heading east to Kelmar.",
+      "hiddenInfo": "The town is the kingdom's true commercial centre. Most trade decisions that matter to Nadorim are taken here, not in the capital.",
+      "areas": {
+        "The Caravanserai": {
+          "description": "A walled compound on the firm ground above the pile-town, with stabling for Hofnar wagon-teams, sleeping quarters, and a mess-hall. Hofnar agents work the trade-floor at the front.",
+          "paths": [
+            "The Pile-Town"
+          ]
+        },
+        "The Pile-Town": {
+          "description": "Plank-streets running out over the shallows. Smoked-fish houses, lake-pearl factor-halls, a long market on the central quay.",
+          "paths": [
+            "The Caravanserai"
+          ]
+        }
+      }
+    },
+    "Pearl Beds": {
+      "name": "Pearl Beds",
+      "x": -30,
+      "y": 8,
+      "radius": 1,
+      "region": "Lake Wildering",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Chartered fishery-village above the lake's pearl-shoals. Diver-houses on stilts, a single warden's keep, a small Hand-shrine. Thin margins.",
+      "hiddenInfo": "Lake-bandits raid the village every few years. The warden's garrison is paid out of the divers' shares and is undermanned."
+    },
+    "Sloggermarsh": {
+      "name": "Sloggermarsh",
+      "x": -22,
+      "y": 12,
+      "radius": 1,
+      "region": "Lake Wildering",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Fen village along a shallow arm of the lake. A standing slogger bounty paid by the kingdom. A small Blade-trade lives off the work.",
+      "hiddenInfo": "The bounties have not kept up with the population. The deeper bog-pools have not been cleared in a decade."
+    },
+    "Long Reed": {
+      "name": "Long Reed",
+      "x": -20,
+      "y": 4,
+      "radius": 1,
+      "region": "Lake Wildering",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Ferry, inn, and customs post where the Cliffrend road meets the lake road. A single stone ferry-house, a long timber inn, a small garrison.",
+      "hiddenInfo": "The customs officer here keeps a private register of who passes east with what. Several copies of the register have been bought over the years."
+    },
+    "Dead-Quarter": {
+      "name": "Dead-Quarter",
+      "x": -28,
+      "y": 12,
+      "radius": 1,
+      "region": "Lake Wildering",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Small island in the deep lake. A plague-village abandoned during the Wartide. Stone walls still standing, roofs long fallen, no one resettled.",
+      "hiddenInfo": "Fishers do not work the waters within sight of the island. The water around it is colder than the surrounding lake."
+    },
+    "The Drowned Lodge": {
+      "name": "The Drowned Lodge",
+      "x": -26,
+      "y": 16,
+      "radius": 1,
+      "region": "Lake Wildering",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Pre-Wartide hunting lodge half-submerged in a flooded valley arm. The lodge's stone chimneys and upper storeys stand above water. Visible on calm days.",
+      "hiddenInfo": "The lodge's main hall is intact below the waterline. Cephalen-trained divers have brought up worked silver from inside it, none with marks anyone can match."
+    },
+    "Wildering Watch": {
+      "name": "Wildering Watch",
+      "x": -18,
+      "y": 8,
+      "radius": 1,
+      "region": "Lake Wildering",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "basicInfo": "Fortified bridge-tower on the inland river, the kingdom's only proper military post. A stone tower over the river, a barracks below, a small wharf for the river-patrol's boats.",
+      "hiddenInfo": "The garrison is undermanned and underfunded. Several positions are filled by retired marches-veterans on personal contract.",
+      "areas": {
+        "The Bridge": {
+          "description": "A stone bridge with a tower built astride it, the road passing through an arched gate at the tower's base. Small windows above watch the approaches.",
+          "paths": [
+            "The Wharf"
+          ]
+        },
+        "The Wharf": {
+          "description": "A low timber wharf on the lake-side of the bridge, with mooring for the river-patrol's two long-boats. A boatshed with repairs in progress.",
+          "paths": [
+            "The Bridge"
+          ]
+        }
+      }
+    },
+    "The Strand": {
+      "name": "The Strand",
+      "x": -30,
+      "y": 2,
+      "radius": 1,
+      "region": "Lake Wildering",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Informal landing on a marshy shore, used by smugglers crossing escaped Quelled north on their way to Avenor. A few hidden boat-sheds, a hut, a path inland.",
+      "hiddenInfo": "Nadorim does not officially know the landing exists. The local magistrate has known about it for fifteen years."
+    },
+    "Ironreed": {
+      "name": "Ironreed",
+      "x": -24,
+      "y": 14,
+      "radius": 1,
+      "region": "Lake Wildering",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Bog-iron camp in the inner fen. A single timber smelt-hall, charcoal stacks, a dozen workers' huts on raised ground.",
+      "hiddenInfo": "Free human workers, none on chartered contract. Output goes to Reedmere by punt."
+    },
+    "Hagsford": {
+      "name": "Hagsford",
+      "x": -32,
+      "y": 11,
+      "radius": 1,
+      "region": "Lake Wildering",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Ford on a back-country river. A bandit camp is suspected in the alder thicket above the ford. Travellers have gone missing in numbers over the past two years.",
+      "hiddenInfo": "The camp is real and larger than the kingdom suspects. They have a fence in Reedmere who handles the goods."
+    },
+    "Long Wells": {
+      "name": "Long Wells",
+      "x": -11.4,
+      "y": -0.8,
+      "radius": 1,
+      "region": "Long Steppe",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Hofnar summer-encampment site centred on a line of deep wells dug generations ago. Hundreds of wagons in season, empty stone-marked yards in winter.",
+      "hiddenInfo": "The wells were dug by Hofnar engineers in cooperation with a Vorok crew. The arrangement is not advertised."
+    },
+    "Three Hollows": {
+      "name": "Three Hollows",
+      "x": 1.4,
+      "y": 4.2,
+      "radius": 1,
+      "region": "Long Steppe",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Hofnar summer-encampment site in three shallow valleys where streams reliably run. Stone-marked yards, fire-rings, picket-lines.",
+      "hiddenInfo": "The southernmost hollow holds a Hofnar shrine maintained by a single family and not generally opened to outsiders."
+    },
+    "Stoneline": {
+      "name": "Stoneline",
+      "x": 9.3,
+      "y": 2.2,
+      "radius": 1,
+      "region": "Long Steppe",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Hofnar summer-encampment site beside an outcrop of standing stones. The stones are pre-Ensoulment and the camp is laid out to respect them.",
+      "hiddenInfo": "The Hofnar do not camp inside the line of stones. The reason is given to children and not generally to outsiders."
+    },
+    "Aurochs Fork": {
+      "name": "Aurochs Fork",
+      "x": -16.3,
+      "y": 9.1,
+      "radius": 2,
+      "region": "Long Steppe",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Disputed grazing where Hofnar herds, Far-Herd outliers from the Deep Steppes, and Threshi raiding parties have all been seen in the same season.",
+      "hiddenInfo": "The Hofnar will not push into the Fork without a strong escort. Several wagon-trains have been lost there over the last decade."
+    },
+    "Beetlebull Run": {
+      "name": "Beetlebull Run",
+      "x": -1.5,
+      "y": 6.1,
+      "radius": 1,
+      "region": "Long Steppe",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Broad shallow valley where a Beetlebull pair lairs. Caravans take the long way around, adding most of a day.",
+      "hiddenInfo": "The pair has been the same individuals for at least fifteen years. Hofnar elders advise against taking them out, citing what filled the valley before they arrived."
+    },
+    "The Old Telegraph": {
+      "name": "The Old Telegraph",
+      "x": 5.4,
+      "y": -3.7,
+      "radius": 2,
+      "region": "Long Steppe",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "A chain of pre-Wartide signal towers running west to east across the steppe. Some half-standing, some reduced to stumps. The interval is regular and the bearings are still readable.",
+      "hiddenInfo": "Two of the towers are still functional. The Brotherhood has known this for some years."
+    },
+    "Standing Hollow": {
+      "name": "Standing Hollow",
+      "x": -3.5,
+      "y": 1.2,
+      "radius": 1,
+      "region": "Long Steppe",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Ring of pre-Ensoulment stones on a low rise. Hofnar do not camp inside it.",
+      "hiddenInfo": "The grass inside the ring is shorter than the grass outside it, and a slightly different colour."
+    },
+    "The Burnt Wagon": {
+      "name": "The Burnt Wagon",
+      "x": -8.4,
+      "y": 7.1,
+      "radius": 1,
+      "region": "Long Steppe",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Single wrecked Hofnar wagon left where it fell in a Threshi raid generations ago. Kept as a marker. The bones beneath have been lifted to a small cairn beside it.",
+      "hiddenInfo": "Hofnar children are walked past it once. The story told over the wagon is not the same in every clan."
+    },
+    "The Anchorage": {
+      "name": "The Anchorage",
+      "x": 2,
+      "y": -8.6,
+      "radius": 3,
+      "region": "Deep Steppes",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "basicInfo": "Principal winter-ground of one of the great Hofnar wagon-cities. When occupied, hundreds of vast wagons drawn up in long avenues, a city in itself. Empty in summer except for a small caretaker camp.",
+      "hiddenInfo": "The wagon-city's senior council holds court here in the cold months. Many of the continent's quietest negotiations happen between wagons.",
+      "areas": {
+        "The Avenues": {
+          "description": "When the wagon-city is in residence, long straight avenues of wagons drawn up wheel-to-wheel, four storeys tall, awnings between them making roofed streets.",
+          "paths": [
+            "The Caretaker Camp"
+          ]
+        },
+        "The Caretaker Camp": {
+          "description": "A small permanent encampment at the Anchorage's centre, manned year-round, where a few families maintain the wells, the wagon-roads, and the shrine.",
+          "paths": [
+            "The Avenues"
+          ]
+        }
+      }
+    },
+    "Far-Herd Range": {
+      "name": "Far-Herd Range",
+      "x": -28.3,
+      "y": 21.7,
+      "radius": 3,
+      "region": "Deep Steppes",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Wide interior where the proto-horse-folk move in their columns. Hofnar do not enter without invitation.",
+      "hiddenInfo": "The Far-Herds are not lifted, but they are not what they once were either. They communicate among themselves in ways the Hofnar recognise and do not explain to outsiders."
+    },
+    "The Wind-Shrine": {
+      "name": "The Wind-Shrine",
+      "x": 17.2,
+      "y": -8.6,
+      "radius": 1,
+      "region": "Deep Steppes",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Hofnar holy site, a low cleft in the grass where the wind sounds wrong. Visited at need, not on a schedule.",
+      "hiddenInfo": "The cleft descends further than visitors are shown. The Hofnar elders who tend it carry no light when they go down."
+    },
+    "Burnground": {
+      "name": "Burnground",
+      "x": -13.1,
+      "y": -29.8,
+      "radius": 2,
+      "region": "Deep Steppes",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Stretch of steppe where a Wartide army was destroyed. The grass grows different colours over the bones beneath. Hofnar children are walked past it once.",
+      "hiddenInfo": "The bones lie in the patterns the army died in. Aerial views show formations still legible after the centuries."
+    },
+    "Lone Tor": {
+      "name": "Lone Tor",
+      "x": 20.2,
+      "y": 12.6,
+      "radius": 1,
+      "region": "Deep Steppes",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Solitary rock outcrop visible for thirty miles in clear weather. A navigational landmark and informal meeting place between wagon-trains.",
+      "hiddenInfo": "A flat stone at the tor's base bears scratched messages updated by passing parties. A second message-system, in Hofnar shorthand, runs beneath the visible one."
+    },
+    "Cairn Field": {
+      "name": "Cairn Field",
+      "x": 2,
+      "y": 12.6,
+      "radius": 2,
+      "region": "Deep Steppes",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Hofnar burial ground. Several thousand low stone cairns across a shallow valley.",
+      "hiddenInfo": "The cairns at the western edge are older and larger than the rest. Several have been opened, none recently."
+    },
+    "Shield's End": {
+      "name": "Shield's End",
+      "x": -13.9,
+      "y": 5.6,
+      "radius": 3,
+      "region": "Hinderance Highlands",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": true,
+      "basicInfo": "Capital of Kelmar, fortress-city built where the Shieldcap range falls away into the steppes. Stone walls, a long defensive ridge above the town, the High Forum of Telinor on a rock spur to the north.",
+      "hiddenInfo": "Court policy is nominally war-ready but actually deferred. The marches lords oppose any redeployment from the Threshi line, which means the kingdom's military weight cannot be turned west even if Cliffrend asks for it.",
+      "areas": {
+        "The High Gate": {
+          "description": "The main fortress-gate at the head of the long climbing road. Towers either side, killing-grounds within. The garrison wears Kelmar's grey.",
+          "paths": [
+            "The Forum Spur",
+            "The Agoge Yards"
+          ]
+        },
+        "The Forum Spur": {
+          "description": "A rock spur rising above the city to the north, holding Telinor in its walled compound. A separate road climbs to it from the High Gate. Telinor's authority is not the kingdom's.",
+          "paths": [
+            "The High Gate"
+          ]
+        },
+        "The Agoge Yards": {
+          "description": "Open Brotherhood training grounds visible from the city below. Apprentices drill in formation. Senior wizards observe from a stone platform.",
+          "paths": [
+            "The High Gate"
+          ]
+        }
+      }
+    },
+    "Telinor": {
+      "name": "Telinor",
+      "x": 1.4,
+      "y": -6.7,
+      "radius": 2,
+      "region": "Hinderance Highlands",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": true,
+      "basicInfo": "The High Forum of the Brotherhood of Wizards, principal seat of the wizard organisations of Hedoria. A walled compound on a rock spur above Shield's End. Maintained at Kelmari expense, governed by Brotherhood rules, not subject to royal authority.",
+      "hiddenInfo": "The Brotherhood's founding grievance is against Avenoria and her line. The senior figures here have been quietly aligned with the Cliffrend war-faction for two generations. They are the institutional pressure for a third soul-war that the Cliffrend court draws on.",
+      "areas": {
+        "The Outer Compound": {
+          "description": "Walled grounds with the apprentice halls, the agoge yards, the libraries, and the lecture-halls. Open to Brotherhood members and authorised guests. Wards on every gate.",
+          "paths": [
+            "The Inner Compound"
+          ]
+        },
+        "The Inner Compound": {
+          "description": "A second walled enclosure within the first, where the senior figures of the Brotherhood meet and the deeper archives are kept. Access by seal only.",
+          "paths": [
+            "The Outer Compound"
+          ]
+        }
+      }
+    },
+    "Hardholm": {
+      "name": "Hardholm",
+      "x": 1.4,
+      "y": 11.7,
+      "radius": 2,
+      "region": "Hinderance Highlands",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "basicInfo": "March-keep on the Threshi line, the westernmost of three. Stone walls, a tower, a fortified town below it. Seasonal heavy fighting in autumn and winter.",
+      "hiddenInfo": "The march-lord here has lost his eldest son to a winter raid. He is the loudest of the three march-lords against any war that would draw forces west.",
+      "areas": {
+        "The Keep": {
+          "description": "A square stone keep on a low rise above the town. Three storeys, slate-roofed, the upper floors barracks. A walled yard with stables and a small chapel.",
+          "paths": [
+            "The Town"
+          ]
+        },
+        "The Town": {
+          "description": "A fortified town below the keep, walled, with a single market square. Soldiers' families, suppliers, the regimental smiths.",
+          "paths": [
+            "The Keep"
+          ]
+        }
+      }
+    },
+    "Iron-Step": {
+      "name": "Iron-Step",
+      "x": 25.8,
+      "y": 14.7,
+      "radius": 2,
+      "region": "Hinderance Highlands",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "basicInfo": "Central march-keep on the Threshi line. The largest of the three, anchoring the line. Stone walls thick enough to take siege.",
+      "hiddenInfo": "The keep stands on the foundation of a pre-Wartide fortress. Some of the lower courses are not Kelmari work and not entirely understood.",
+      "areas": {
+        "The Outer Wall": {
+          "description": "A stone curtain wall enclosing the keep and its inner works. Mural towers at intervals, a single fortified gate. The masonry of the lower courses is older and finer than the upper.",
+          "paths": [
+            "The Inner Keep"
+          ]
+        },
+        "The Inner Keep": {
+          "description": "The central tower-keep, four storeys, the upper levels housing the march-lord's household. The cellars descend further than the visible foundations would suggest.",
+          "paths": [
+            "The Outer Wall"
+          ]
+        }
+      }
+    },
+    "Kelmar's Last": {
+      "name": "Kelmar's Last",
+      "x": 25.8,
+      "y": -9.7,
+      "radius": 2,
+      "region": "Hinderance Highlands",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "basicInfo": "Easternmost march-keep on the Threshi line, the smallest and most exposed. Lost ground last winter; the line is now a half-day's ride west of the keep itself.",
+      "hiddenInfo": "The keep is held by a reduced garrison and is functionally untenable in a serious push. The court has not formally acknowledged this.",
+      "areas": {
+        "The Walls": {
+          "description": "Low stone walls patched with timber where breaches were made and not properly repaired. Watchmen in worn grey at every turn.",
+          "paths": [
+            "The Yard"
+          ]
+        },
+        "The Yard": {
+          "description": "A muddy yard inside the walls, with the keep's hall, a barracks, and a small chapel. A standing list of names on the chapel wall has been added to in fresh chalk.",
+          "paths": [
+            "The Walls"
+          ]
+        }
+      }
+    },
+    "Greypaddock": {
+      "name": "Greypaddock",
+      "x": -26.1,
+      "y": -15.8,
+      "radius": 2,
+      "region": "Hinderance Highlands",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "basicInfo": "Major Quelled-herd town on the rocky grasslands west of Shield's End. Chartered chattel-house seat. Pens, slaughter-yards, tanneries, smoke-houses. The largest Quelled population on the continent.",
+      "hiddenInfo": "Two Risings have started here in the last fifty years. The chartered houses run a private guard substantial enough to put down most local trouble without calling for the army.",
+      "areas": {
+        "The Pens": {
+          "description": "Wide stone-walled pens divided by lineage and use. Drovers and overseers move between them on foot and on horse. The smell carries.",
+          "paths": [
+            "The Houses"
+          ]
+        },
+        "The Houses": {
+          "description": "The chartered houses' offices, set apart from the pens on a small rise. Stone-built, walled. A private guardhouse beside the main offices.",
+          "paths": [
+            "The Pens"
+          ]
+        }
+      }
+    },
+    "The Long Ditch": {
+      "name": "The Long Ditch",
+      "x": 13.6,
+      "y": -12.8,
+      "radius": 2,
+      "region": "Hinderance Highlands",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Wartide-era earthwork running for miles along an old front. Sheep graze the inner face. The outer face is steeper than weather alone would have made it.",
+      "hiddenInfo": "Sections of the ditch were faced with stone that has since been quarried out by local builders. A few stretches remain intact and partly buried."
+    },
+    "Telin's Field": {
+      "name": "Telin's Field",
+      "x": 7.5,
+      "y": 20.8,
+      "radius": 1,
+      "region": "Hinderance Highlands",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Battle-site of the Second Soul-War, marked by a single Brotherhood-raised pillar of dark stone. Open field, no other monument.",
+      "hiddenInfo": "The Brotherhood lost more wizards on this field than they admit. Several of the dead are not formally recorded in their archives."
+    },
+    "Ash Steading": {
+      "name": "Ash Steading",
+      "x": -13.9,
+      "y": -12.8,
+      "radius": 1,
+      "region": "Hinderance Highlands",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Burned chartered estate where the Quelled herd rose, killed the chartered house, and was put down by Greypaddock's private guard. Walls and chimneys still standing. Unrebuilt.",
+      "hiddenInfo": "The chartered house's records were burned with the estate. Several debts the house held were not recovered."
+    },
+    "Hookwight Run": {
+      "name": "Hookwight Run",
+      "x": -35.3,
+      "y": 5.6,
+      "radius": 1,
+      "region": "Hinderance Highlands",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Meadow country where Hookwights regularly lair. A standing local bounty, paid in Kelmari coin. Bone-piles at the verges.",
+      "hiddenInfo": "The bounty has not been raised in twenty years. The local Blade-trade has thinned accordingly."
+    },
+    "Halmar's Cairn": {
+      "name": "Halmar's Cairn",
+      "x": 13.6,
+      "y": -0.6,
+      "radius": 1,
+      "region": "Hinderance Highlands",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Solitary ridgetop cairn named for a marches-lord killed there in a winter raid. A pilgrimage point for soldiers heading east to the line.",
+      "hiddenInfo": "The cairn has grown noticeably over the last century. Each soldier passing east is expected to add a stone."
+    },
+    "Sand-Gate": {
+      "name": "Sand-Gate",
+      "x": -15.9,
+      "y": 0.4,
+      "radius": 2,
+      "region": "The Sun-Scoured Plateau",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "basicInfo": "Main caravan entry to the plateau, Draklid-controlled. The only place a stranger can buy water and a guide. A gate of dressed sandstone closes the canyon mouth.",
+      "hiddenInfo": "The clan that holds Sand-Gate rotates by Draklid agreement every twelve years. The current holders are a clan whose matriarch has been asking pointed questions about Brotherhood activity on the plateau.",
+      "areas": {
+        "The Gate": {
+          "description": "Dressed sandstone walls closing the canyon mouth, with a single gate-arch wide enough for two wagons. Carved clan-sigils above the arch.",
+          "paths": [
+            "The Caravan Yard"
+          ]
+        },
+        "The Caravan Yard": {
+          "description": "A wide flat yard inside the gate, with water-cisterns, guide-houses, and trade-halls along three sides. Caravans form up here before crossing the plateau.",
+          "paths": [
+            "The Gate"
+          ]
+        }
+      }
+    },
+    "Slot of Bones": {
+      "name": "Slot of Bones",
+      "x": -1.4,
+      "y": -2.5,
+      "radius": 1,
+      "region": "The Sun-Scoured Plateau",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Narrow slot canyon where a Wartide army died of thirst. Bones still present, weathered into the canyon walls in places. Draklid clan-mothers walk children through it once.",
+      "hiddenInfo": "The Draklid keep the canyon clear of scavengers. The bones in the deepest section are not all human."
+    },
+    "High Mesa": {
+      "name": "High Mesa",
+      "x": 8.6,
+      "y": 7.7,
+      "radius": 2,
+      "region": "The Sun-Scoured Plateau",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Open mesa-top above the canyon network where the matriarchs of the great Draklid clans meet for inter-clan business. A ring of seat-stones at the centre. Otherwise bare.",
+      "hiddenInfo": "The seat-stones are not Draklid work. They predate the clan-network and were here when the first Draklid arrived."
+    },
+    "Dryspring Hold": {
+      "name": "Dryspring Hold",
+      "x": -5.8,
+      "y": 12,
+      "radius": 2,
+      "region": "The Sun-Scoured Plateau",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "basicInfo": "Minor cliff-cut hold above a deep pool that supplies three clans through the dry season. Smaller than the great holds. A constant low-grade dispute.",
+      "hiddenInfo": "The pool is the only source of permanent water for a day's travel in any direction. The matriarch of the holding clan has held the place for four decades through a careful rotation of access agreements.",
+      "areas": {
+        "The Cliff Face": {
+          "description": "Doors and windows cut into the orange sandstone of the cliff. Stairs zig-zag down the face to the pool. Sentries on the upper galleries.",
+          "paths": [
+            "The Pool"
+          ]
+        },
+        "The Pool": {
+          "description": "A deep stone pool at the base of the cliff, fed by a slow seep. The water is cold and good. A stone wall encloses it; a gate is staffed at all hours.",
+          "paths": [
+            "The Cliff Face"
+          ]
+        }
+      }
+    },
+    "Glass-Field": {
+      "name": "Glass-Field",
+      "x": 5.9,
+      "y": 1.9,
+      "radius": 2,
+      "region": "The Sun-Scoured Plateau",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Desert plain where Wartide magic fused the sand into glass. Walks like ice and breaks like it. The Draklid mark a route across with iron stakes.",
+      "hiddenInfo": "Beneath the glass surface, dim shapes can be seen at certain angles of light. Some of the shapes are not stone."
+    },
+    "Painted Caves": {
+      "name": "Painted Caves",
+      "x": 13.1,
+      "y": 6.2,
+      "radius": 1,
+      "region": "The Sun-Scoured Plateau",
+      "complexityType": "complex",
+      "detailType": "detailed",
+      "known": false,
+      "basicInfo": "Pre-Ensoulment cave-art site in a side-canyon. Walls covered in figures of ochre and charcoal — hunters, animals, and figures that are neither. Draklid sacred ground. No outsider permitted without a clan-mother's word.",
+      "hiddenInfo": "The deepest paintings show figures that match the toppled statuary at Lod'Tenach. The Draklid have not advertised this fact and do not let scholars copy the deeper galleries.",
+      "areas": {
+        "The Outer Galleries": {
+          "description": "The first painted chambers, accessible from the canyon floor. Large galleries of ochre figures hunting deer-shapes, river-shapes, and sun-shapes. Most visitors are taken only this far.",
+          "paths": [
+            "The Deep Galleries"
+          ]
+        },
+        "The Deep Galleries": {
+          "description": "A narrow passage at the back of the outer galleries leads down into a series of smaller chambers. The figures here are different — taller, longer-limbed, with the heads turned aside. The clan-mothers' word is required to enter.",
+          "paths": [
+            "The Outer Galleries"
+          ]
+        }
+      }
+    },
+    "Burned Watch": {
+      "name": "Burned Watch",
+      "x": -7.2,
+      "y": -2.5,
+      "radius": 1,
+      "region": "The Sun-Scoured Plateau",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Brotherhood expedition outpost built on the plateau without Draklid permission. Abandoned within a season. Stone walls, roofless, the wells dry.",
+      "hiddenInfo": "The Draklid did not attack the outpost. They cut its supply line. The two events are not the same and the Brotherhood has not, in print, drawn the distinction."
+    },
+    "Vethar": {
+      "name": "Vethar",
+      "x": 1.3,
+      "y": 0.4,
+      "radius": 1,
+      "region": "The Sun-Scoured Plateau",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Solitary sandstone spire used as a clan-territory marker, visible for two days' walk in clear weather. A single carved sigil at its base.",
+      "hiddenInfo": "The sigil is renewed each generation. The original is older than any Draklid record."
+    },
+    "The Sink": {
+      "name": "The Sink",
+      "x": 0,
+      "y": 12,
+      "radius": 1,
+      "region": "The Sun-Scoured Plateau",
+      "complexityType": "complex",
+      "detailType": "basic",
+      "known": false,
+      "basicInfo": "Dry depression in the deep plateau where flash floods occasionally pool after a storm. Bandit camps at the edges in wet years.",
+      "hiddenInfo": "The bandits in the Sink are mostly exiled Draklid males who could not find a clan to take them. The clans tolerate their presence at a distance and will not aid travellers who run into them."
+    }
+  }
+}

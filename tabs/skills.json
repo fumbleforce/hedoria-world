@@ -1,0 +1,158 @@
+{
+  "skills": {
+    "acrobatics": {
+      "name": "acrobatics",
+      "type": "utility",
+      "attribute": "dexterity",
+      "description": "Tumbling, balance, and quick recovery from a fall or a bad position. Perform tricks on a stage, drop into a chamber through a window, regain footing on an unstable surface, slip a grasp, roll under a swung blade.",
+      "startingItems": []
+    },
+    "athletics": {
+      "name": "athletics",
+      "type": "utility",
+      "attribute": "strength",
+      "description": "Running, jumping, climbing, swimming, hauling, holding ground. The whole-body physical skill that handles every demand of moving the body or moving things with the body. Spends stamina for sustained effort.",
+      "startingItems": []
+    },
+    "intimidation": {
+      "name": "intimidation",
+      "type": "utility",
+      "attribute": "charisma",
+      "description": "Using fear, presence, or the implied threat of force to bend an outcome. The drawn weapon that doesn't have to be used, the stare that backs a bandit down, the quiet sentence in a noble's hall that lands harder than a shout. Draklid stillness, Vorok grinding voice, and Fernwarg display are all native modes of this skill.",
+      "startingItems": []
+    },
+    "investigation": {
+      "name": "investigation",
+      "type": "utility",
+      "attribute": "intelligence",
+      "description": "Patient examination of a place, a person, or a problem. Find clues, read tracks, follow a thread of conversation back to its source, spot the discrepancy in a story, follow ledgers, read body-flicker on a Cephalen, find the herbal traces of a hidden hedge-witch's practice, work out where a thing has been hidden.",
+      "startingItems": []
+    },
+    "performance": {
+      "name": "performance",
+      "type": "utility",
+      "attribute": "charisma",
+      "description": "Holding a room — song, dance, story, instrument, formal ceremony, a sermon at the Hand-shrine, the recital of an ancestor-lineage at a Prime gathering. Useful for coin in a tavern, for diplomacy in a hall, and for the ritual register of any race that takes ceremony seriously.",
+      "startingItems": []
+    },
+    "persuasion": {
+      "name": "persuasion",
+      "type": "utility",
+      "attribute": "charisma",
+      "description": "Moving people through speech and bearing — argument, reason, charm, flattery, the slow build of a contract negotiation, the bartered favor at a tavern table. Easy where the request aligns with what the target already wants. Hard where it conflicts with their loyalties. Impossible where it asks them to abandon core identity.",
+      "startingItems": []
+    },
+    "survival": {
+      "name": "survival",
+      "type": "utility",
+      "attribute": "constitution",
+      "description": "Living off the land — finding food and water, building shelter, making fire, reading weather, judging trail, handling the cold of the Hinderance or the dry of the Plateau. Includes basic plantcraft and the field knowledge a hunter or scout carries. Molvar root-speech is layered on this skill; Vorok stone-sense too.",
+      "startingItems": []
+    },
+    "melee": {
+      "name": "melee",
+      "type": "combat",
+      "attribute": "strength",
+      "description": "Fighting in close quarters with any handheld weapon — sword, spear, axe, mace, club, knife, or anything else taken in hand. The skill that gets used when the fight is at arm's length and steel or wood meets armor or flesh. Easy: striking an unarmed civilian. Medium: a competent soldier. Hard: a veteran or skilled duelist. Very hard: legendary fighter, supernatural opponent, or a Prime warden. Used by every fighter, soldier, mercenary, and guard in the world; not used by wizards, who wield the staff under their own skill.",
+      "startingItems": []
+    },
+    "ranged": {
+      "name": "ranged",
+      "type": "combat",
+      "attribute": "dexterity",
+      "description": "Loosing or throwing missiles at a distance — bow, crossbow, sling, javelin, hatchet, knife. The skill that handles the entire family of ranged weapons; choose the kind that fits the moment. Easy: stationary target at short range, no wind. Medium: moving target, line of sight, mild wind. Hard: contested shot, weather, or moving from cover to cover. Very hard: shot through a crowd without hitting allies, or a single arrow that has to count. Used by hunters, archers, scouts, marines.",
+      "startingItems": []
+    },
+    "unarmed": {
+      "name": "unarmed",
+      "type": "combat",
+      "attribute": "strength",
+      "description": "Fighting with the body — fists, kicks, knees, elbows, headbutts, grapples, throws, holds. Also handles natural weapons where the race carries them: Draklid claw, Threshi sickle-blade forearms, Fernwarg bite. Useful when disarmed, when a kill is not the goal, or when the moment is too close for steel.",
+      "startingItems": []
+    },
+    "staff-work": {
+      "name": "staff-work",
+      "type": "combat",
+      "attribute": "intelligence",
+      "description": "The Brotherhood's applied martial magic — body, staff, and working as one close-range practice. Spends mana.\n\nFour domains: striking (driving the staff blow with the working behind it, breaking plate or shield), bracing (holding ground that should have broken — stand a charge, anchor a doorway), warding (hardening self, ally, weapon, or armor for a turn), and motion (calling wind, slowing a volley, stopping a blade in mid-arc, stepping where the ground will not hold).\n\n### The staff is delivery, not discount\n\nThe bonded battlestaff is the wizard's *delivery mechanism* for magical damage. The metaphor that runs in the agoge: a poisoned blade kills with a small amount of poison applied at the point of impact. A pot of poison thrown at the enemy mostly spills on the ground. The staff is the blade. The mana is the poison. The strike is what makes it land.\n\nWith the staff in hand the working travels through wood and contact and arrives where the wizard meant it to arrive. A small spend through a clean strike does what a much larger spend in raw working could not.\n\n### Without the staff\n\nA wizard separated from his bonded staff is not helpless — the working still leaves him. He can ward himself, slow wind, harden a doorway, step through bad ground, conduct most utility wizardry at modestly reduced effect. What he cannot do is *deliver* — without the staff, the working diffuses on its way to the target, and combat-staff abilities (Hardened Strike, Standing Wall, Stop the Blade, Staff Through Plate) are unavailable until the staff is recovered or rebuilt. Recovery is the doctrinally preferred answer; rebuilding is years of attunement.\n\nA staff-less wizard in active combat is, by Brotherhood reckoning, a man with the spark and a problem. He is sent to the rear, given an apprentice's stick to make a substitute, and watched for whether the cooperative tradition starts to look attractive to him in his diminishment.\n\n### Projection\n\nThis skill does not project at distance in ordinary practice — without a focus the working dissipates over distance, and the staff is built for impact at contact. A wizard who tries to throw fire pours mana into something that mostly won't reach. The Brotherhood considers this a doctrinal proof that projection is the witches' line; the truer reason is the focus. With enough mana and a sufficient prepared rite a wizard could in principle throw a working at distance, the way he could in principle do anything that mana can buy. He never does, because the staff is what he was trained around, and the training is the man.\n\nUsed by Brothers of Telinor, hedge-wizards, and Avenorian consorts. Brotherhood doctrine calls it 'channeling.' Brothers call it the staff or the work.",
+      "startingItems": []
+    },
+    "witchcraft": {
+      "name": "witchcraft",
+      "type": "magic",
+      "attribute": "wisdom",
+      "description": "The witch's tradition. Spends from the reservoir. The skill is bounded by what mana can buy and by what the witch can be taught — not by category. The practical menu falls into five domains; the extreme tier is reachable but expensive and morally weighted.\n\n### The five practical domains\n\n- **Projection**: light, flame, cold, force at distance. Witchlight, conjured flame, conjured cold, the lance of force across a hall.\n- **Glamour**: concealment, false impressions, the gaze that slides past. Pass unseen, hold another woman's face for an hour, glamour a small group through a checkpoint.\n- **Sight**: scrying, intent-reading, divination of the present and recent past. Distance-sight, read the working on an object, trace a thread of intent.\n- **Body**: healing, mending, fevers, contraception, birth. The hedge-witch's daily trade and the College's quiet specialty.\n- **Hand**: telekinesis, the moving of weight. Hurl a weapon, lift a beam, drag a door, hold a falling body for a beat.\n\nThe same skill covers cantrip and boss-fight finisher; the difference is reservoir spent. A witch's working takes time and focus when she works alone — combat workings are not as quick as a wizard's strike, and a witch caught mid-cast is vulnerable. Cooperative work with a willing wizard partner is faster and bigger.\n\n### The extreme tier\n\nWith enough mana, the boundary of what witchcraft can do softens. The College does not teach these workings in ordinary curriculum.\n\n- **Restoration of body**: regrow a lost limb, restore an organ, mend a body the standard work cannot. Cost in the high hundreds; requires Body specialty and time.\n- **Resurrection**: bring back a recently dead. Cost in the thousands.\n- **Memory alteration**: rewrite a memory in a living person. Cost in the hundreds.\n- **Aggregated continental working**: many witches and consorts pooling reservoirs on a single rite, the way Avenoria did. Cost in the thousands or tens of thousands. Continent-shaping. Done once, by Avenoria, against the Wartide.\n\nA witch attempting any of these is doing something the world will notice.\n\n### What sits outside witchcraft regardless of mana\n\nTrue-naming is Prime work — anchored in ancestor-bone, not witch-mana. A witch cannot learn it because she does not have the lineage. Time does not bend in any tradition; the past does not return.\n\n### Where it is practiced\n\nThe Queen's College in Avenor is the premier institution for the craft, with the best curriculum, the supply network of mana-hunters and apothecaries that keeps its graduates filled, and political cover to practice openly. The hedge-witch tradition runs everywhere else: village apothecaries, traveling root-gatherers, mentor-and-apprentice lineages passed in private. A hedge-witch may be narrower than a Collegian, occasionally better in one craft and worse in the rest; the College credential is prestige and access more than monopoly. The College trains a smaller cohort of non-human witches — Draklid, Cephalen, Raknid, the rare freed Quell — using the same reservoir model. Other races (Hofnar, Molvar, Vorok, Threshi, Fernwarg) have no witch tradition. Primes do not become witches. Outside Avenor a witch caught working publicly is arrested, tried, exiled, or quietly killed.",
+      "startingItems": []
+    },
+    "ancestor-work": {
+      "name": "ancestor-work",
+      "type": "magic",
+      "attribute": "wisdom",
+      "description": "The Prime monastic magic — slow, exact conversation with named ancestors, conducted through bone-relics worn at throat, chest, wrists, and belt. Each invocation is a specific dead person doing a specific thing.\n\nDoes not spend a mana resource. Each portable relic is its own item, with its own ancestor and its own charges. A Prime carries three or four relics on the road and works through whichever fits the moment — a Healer-line, a True-Namer-line, a Bone-Reader-line, the rare warrior-line. At a monastery with full vault access, the practice opens far wider; on the road, it is what the Prime brought.\n\nExcellent at knowledge, healing, divination, true-naming, untangling curses, and long-time work. Useless for battle-magic — there is no Prime fireball, no Prime lightning. A Prime mage in a fight is slow, considered, and works through what the relics can do.\n\nBlack-market grave-robbing of Prime bones exists; the magic does not work for thieves, and the families involved suffer untraceable misfortunes across generations.",
+      "startingItems": []
+    },
+    "craft": {
+      "name": "craft",
+      "type": "utility",
+      "attribute": "intelligence",
+      "description": "Making and repairing the made things of the world — smithing, carpentry, weaving, leatherwork, masonry, brewing, cooking, instrument-making, bonesetting, herbalism, mana-potion brewing where the practitioner has the knowledge. One skill rather than twelve, because the same patient hands and eye for material run across most trades. The specifics live in description: a smith works iron, a weaver works wool, a healer works herbs and bone. Easier in a proper workshop with good tools; harder with improvised materials.",
+      "startingItems": []
+    },
+    "deception": {
+      "name": "deception",
+      "type": "utility",
+      "attribute": "charisma",
+      "description": "Lying convincingly. Holding a false story under questioning, conning a stranger, passing as someone you are not, stealing the word out of an opponent's negotiation. Distinct from persuasion, which is honest moving of people; deception is the working misrepresentation. Cephalen masters of color-discipline are native experts; humans manage by craft. A skilled liar reads which lies will hold and which won't, and invents accordingly.",
+      "startingItems": []
+    },
+    "insight": {
+      "name": "insight",
+      "type": "utility",
+      "attribute": "wisdom",
+      "description": "Reading people — what they want, what they are hiding, what they are about to do. The opposite face of deception. Cephalen Readers are the unmatched practitioners, trained from childhood to read another Cephalen's chromatophore-flicker; outsiders work from posture, voice, hesitation, the small tells the body can't suppress. A witch's intent-sight with no reservoir behind it.",
+      "startingItems": []
+    },
+    "stealth": {
+      "name": "stealth",
+      "type": "utility",
+      "attribute": "dexterity",
+      "description": "Moving unseen, unheard, and unconsidered. Slipping a sentry, holding still in cover, crossing a room behind a guard's back, taking a position above a doorway and being part of the ceiling. Distinct from acrobatics; stealth is the discipline of going where you are not noticed. Fernwarg in fern-country and Raknid in deep wood are native experts.",
+      "startingItems": []
+    },
+    "thievery": {
+      "name": "thievery",
+      "type": "utility",
+      "attribute": "dexterity",
+      "description": "The trades of the cutpurse and the housebreaker. Pick a lock, lift a coinpurse, palm a small object off a table, slip a knife from a sheath without the wearer feeling the weight change, defeat a simple trap. Common to drifters, smugglers, courtiers with a particular history, and (occasionally and unexpectedly) hedge-witches who have had to live by it.",
+      "startingItems": []
+    },
+    "alchemy": {
+      "name": "alchemy",
+      "type": "utility",
+      "attribute": "intelligence",
+      "description": "The handling of essences, distillates, reagents, and the slow chemistry of potion-craft. The closest thing to magic that most non-magical people in Hedoria can practice. An alchemist cannot cast a spell, but they can brew the potion that does the casting for the drinker — healing draughts that mend wounds, mana potions that fill a witch's reservoir, contraceptive draughts, sleeping draughts, smoke that kindles a snare, philtres that ease pain or lift mood.\n\nMost magical reagents are creature-sourced: lampfowl tail-feathers and eggs that take a working better than ordinary material, naia parts that potentiate a brew, shed stagling antlers from the licensed Reach harvests, ingredients off the back of any greater creature a hunter has brought down. Material does not carry mana on its own; it is what the alchemist works the working *into*.\n\nAlchemy is also the discipline that handles the world's surviving magical artifacts. Most enchanted items in Hedoria are pre-Ensoulment — old swords whose edge will not dull, charms that warm a winter cottage, scrolls that hold a single working until they burn. New enchantment is rare and only strong witches manage it. Identifying what an old item does, how to safely activate it, and how to repair it is alchemy's province; old apothecaries who have spent their lives at it command serious prices for the assessment alone.\n\nThe Queen's College runs a sanctioned alchemy school for the consort-line preparations and the College's own potion supply. Outside Avenor, alchemy is broadly legal — most kingdoms regulate it loosely — but the brewing of mana potions specifically is a witch-line crime where the kingdom can prove it.",
+      "startingItems": []
+    },
+    "medicine": {
+      "name": "medicine",
+      "type": "utility",
+      "attribute": "intelligence",
+      "description": "The hands-on care of bodies — wound-cleaning, bone-setting, fever-management, birth-attending, the slow rebuilding of someone who has come close to dying. Distinct from craft and alchemy. Apothecaries and midwives lean on medicine; Raknid healers are quietly the best practitioners on the continent; many village wisefolk practice medicine and hedge-witchcraft interchangeably without distinguishing for the patient.",
+      "startingItems": []
+    },
+    "lore": {
+      "name": "lore",
+      "type": "utility",
+      "attribute": "intelligence",
+      "description": "Knowing things about the world that aren't immediately in front of you. Histories of the Wartide and the soul-wars, the lineages of noble houses, the rites of the Hand and the Prime monasteries, the kinds of creatures that haunt the Hollows and what their tracks look like, the names of the seven great Prime monasteries, the contract-customs of the Hofnar Riderings. Scribes, archivists, College witches, and Prime monastic scholars carry the deepest lore; veteran mercenaries and old hunters carry the practical kind.",
+      "startingItems": []
+    },
+    "carnal-arts": {
+      "name": "carnal-arts",
+      "type": "utility",
+      "attribute": "charisma",
+      "description": "The practiced art of seduction, intimacy, and the body's use as instrument of pleasure, leverage, and combat pressure. Covers the working-craft of courtesans and tavern companions, the seductive register that shakes a foe's Willpower in a fight, and the carnal channel by which a witch can fill her reservoir directly from a partner. The last is the older direct-fill method, used in private by hedge-witches without potion access and by the College consort-line tradition; refined witch practice has drifted toward distilled potion-use over the last generation. Bounded by what the body can endure, by the discretion the practice demands, and by the open hostility it meets from the Brotherhood and the harder reform kingdoms.",
+      "startingItems": []
+    }
+  }
+}

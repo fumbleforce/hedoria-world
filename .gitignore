@@ -3,9 +3,6 @@
 
 # World specific files
 config-backups/
-images/
-stuff/
-tabs/
 config.json
 
 # Internal-only or unpolished reference docs

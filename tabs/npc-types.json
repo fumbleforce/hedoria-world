@@ -1,0 +1,1579 @@
+{
+  "npcTypes": {
+    "auroch": {
+      "name": "auroch",
+      "description": "[Tier 1] [Common] Massive bovine with bull-shoulders and a horn-spread the width of a wagon. Charges with crushing weight when threatened.",
+      "vulnerabilities": [
+        "piercing"
+      ],
+      "resistances": [
+        "bludgeoning"
+      ],
+      "immunities": []
+    },
+    "tuskboar": {
+      "name": "tuskboar",
+      "description": "[Tier 1] [Common] Foul-tempered, plague-carrying boar with curved tusks. Charges on sight.",
+      "vulnerabilities": [
+        "piercing"
+      ],
+      "resistances": [],
+      "immunities": [
+        "poisoning"
+      ]
+    },
+    "crag-cat": {
+      "name": "crag-cat",
+      "description": "[Tier 1] [Common] Pale-furred lynx with ear-tufts. Stalks from above and commits in a single leap.",
+      "vulnerabilities": [
+        "piercing"
+      ],
+      "resistances": [],
+      "immunities": []
+    },
+    "rhok": {
+      "name": "rhok",
+      "description": "[Tier 1] [Common] Tall flightless bird with a single splitting claw on each foot. Runs down prey, kicks to disembowel.",
+      "vulnerabilities": [
+        "piercing"
+      ],
+      "resistances": [],
+      "immunities": []
+    },
+    "wisent": {
+      "name": "wisent",
+      "description": "[Tier 1] [Common] Heavy-shouldered forest bison. Charges if approached past its tolerance.",
+      "vulnerabilities": [
+        "piercing"
+      ],
+      "resistances": [
+        "bludgeoning"
+      ],
+      "immunities": []
+    },
+    "throatworm": {
+      "name": "throatworm",
+      "description": "[Tier 2] [Common] Knee-thick segmented burrower with hooked feeding-mouths. Erupts from below and fights through.",
+      "vulnerabilities": [
+        "bludgeoning"
+      ],
+      "resistances": [
+        "piercing",
+        "slashing"
+      ],
+      "immunities": []
+    },
+    "husk": {
+      "name": "husk",
+      "description": "[Tier 2] [Common] Pale, bent, milky-eyed remnant of a drained human. Reduced to primal instincts—hunger, fear, the urge to return.",
+      "vulnerabilities": [
+        "light",
+        "fire"
+      ],
+      "resistances": [
+        "dark"
+      ],
+      "immunities": []
+    },
+    "gristlemaw": {
+      "name": "gristlemaw",
+      "description": "[Tier 2] [Common] Knee-high scaly grey lurker with an oversized hinged jaw. Bites and drags.",
+      "vulnerabilities": [
+        "light"
+      ],
+      "resistances": [],
+      "immunities": []
+    },
+    "pinker": {
+      "name": "pinker",
+      "description": "[Tier 2] [Uncommon] Hairless pale primate the size of a large dog. Climbs walls, pries, uses simple tools.",
+      "vulnerabilities": [
+        "fire"
+      ],
+      "resistances": [],
+      "immunities": []
+    },
+    "drakehound": {
+      "name": "drakehound",
+      "description": "[Tier 3] [Common] Waist-high scaled war-dog. Mute pack-hunter, three to five, no baying.",
+      "vulnerabilities": [
+        "fire"
+      ],
+      "resistances": [
+        "piercing",
+        "dark"
+      ],
+      "immunities": []
+    },
+    "cliff-wyrm": {
+      "name": "cliff-wyrm",
+      "description": "[Tier 3] [Uncommon] Limbless serpent the length of three wagons. Constricts and swallows whole.",
+      "vulnerabilities": [
+        "piercing"
+      ],
+      "resistances": [
+        "slashing"
+      ],
+      "immunities": []
+    },
+    "mawpig": {
+      "name": "mawpig",
+      "description": "[Tier 3] [Common] Calf-sized tusked carrion-beast. Mouth that splits the skull horizontally. Charges on sight.",
+      "vulnerabilities": [
+        "light"
+      ],
+      "resistances": [
+        "dark"
+      ],
+      "immunities": [
+        "poisoning"
+      ]
+    },
+    "striglaw": {
+      "name": "striglaw",
+      "description": "[Tier 3] [Uncommon] Tall thin biped with two pairs of arms—upper gripping, lower barbed. Picks fights with anything it crosses.",
+      "vulnerabilities": [
+        "bludgeoning"
+      ],
+      "resistances": [
+        "slashing"
+      ],
+      "immunities": []
+    },
+    "ulk": {
+      "name": "ulk",
+      "description": "[Tier 3] [Uncommon] Semi-firm amber slime, dog-sized to bull-sized. Cuts under a blade. Engulfs prey to implant seed-pearls.",
+      "vulnerabilities": [
+        "fire"
+      ],
+      "resistances": [
+        "piercing",
+        "slashing",
+        "bludgeoning",
+        "water"
+      ],
+      "immunities": [
+        "poisoning"
+      ]
+    },
+    "slogger": {
+      "name": "slogger",
+      "description": "[Tier 3] [Uncommon] Calf-sized aggressive slug with acid mucus. Blunt charge breaks bone.",
+      "vulnerabilities": [
+        "fire"
+      ],
+      "resistances": [
+        "piercing",
+        "slashing",
+        "water"
+      ],
+      "immunities": [
+        "poisoning"
+      ]
+    },
+    "brood": {
+      "name": "brood",
+      "description": "[Tier 3] [Uncommon] Cart-sized spider-thing with heavy abdomen. Paralytic bite, ovipositor implants regardless of host's gender. Vulnerable from below.",
+      "vulnerabilities": [
+        "fire"
+      ],
+      "resistances": [
+        "piercing",
+        "slashing",
+        "dark"
+      ],
+      "immunities": [
+        "poisoning"
+      ]
+    },
+    "hookwight": {
+      "name": "hookwight",
+      "description": "[Tier 3] [Common] Pallid serpent the length of two men, hinged jaw. Strikes from cover, slackness-venom, fights through.",
+      "vulnerabilities": [
+        "bludgeoning"
+      ],
+      "resistances": [
+        "piercing"
+      ],
+      "immunities": [
+        "poisoning"
+      ]
+    },
+    "beetlebull": {
+      "name": "beetlebull",
+      "description": "[Tier 3] [Common] Ox-sized horned beetle. Charges with a single great horn, plated back, slow to turn.",
+      "vulnerabilities": [
+        "bludgeoning"
+      ],
+      "resistances": [
+        "piercing",
+        "slashing"
+      ],
+      "immunities": [
+        "poisoning"
+      ]
+    },
+    "mauler": {
+      "name": "mauler",
+      "description": "[Tier 4] [Uncommon] Twelve-foot ogre, slab-shouldered, club-armed. Lone road-keeper. Sets simple ambushes, takes captives.",
+      "vulnerabilities": [
+        "piercing"
+      ],
+      "resistances": [
+        "bludgeoning"
+      ],
+      "immunities": []
+    },
+    "bridge-troll": {
+      "name": "bridge-troll",
+      "description": "[Tier 4] [Uncommon] Squat broad troll under bridges and culverts. Speaks basic common-tongue, demands toll. Regenerates except from fire.",
+      "vulnerabilities": [
+        "fire"
+      ],
+      "resistances": [
+        "piercing",
+        "slashing",
+        "bludgeoning"
+      ],
+      "immunities": []
+    },
+    "skarn": {
+      "name": "skarn",
+      "description": "[Tier 4] [Rare] Two-headed stone-skinned troll of high country. Slow on flat ground, terrifying on broken ground.",
+      "vulnerabilities": [
+        "bludgeoning"
+      ],
+      "resistances": [
+        "piercing",
+        "slashing",
+        "fire"
+      ],
+      "immunities": []
+    },
+    "skellach": {
+      "name": "skellach",
+      "description": "[Tier 5] [Uncommon] Oxen-legged horned humanoid, tall as a man. Speaks fluently. Wields heavy wood stave two-handed. Binds captives with woven vine in an orchard-camp.",
+      "vulnerabilities": [
+        "light"
+      ],
+      "resistances": [
+        "dark",
+        "piercing"
+      ],
+      "immunities": []
+    },
+    "imp": {
+      "name": "imp",
+      "description": "[Tier 5] [Uncommon] Knee-high demonic remnant. Red or ash-grey skin, vestigial wings, prehensile tail. Small fire-magic. Negotiates first.",
+      "vulnerabilities": [
+        "light",
+        "water"
+      ],
+      "resistances": [
+        "fire",
+        "dark"
+      ],
+      "immunities": [
+        "poisoning"
+      ]
+    },
+    "succor": {
+      "name": "succor",
+      "description": "[Tier 5] [Rare] Female-form demonic remnant. Beautiful in a wrong way. Charms by voice and touch, drains charmed over a single night to a Husk. Claws when forced.",
+      "vulnerabilities": [
+        "light"
+      ],
+      "resistances": [
+        "dark",
+        "arcane"
+      ],
+      "immunities": [
+        "psychic"
+      ]
+    },
+    "goret": {
+      "name": "goret",
+      "description": "[Tier 5] [Uncommon] Waist-high demonic remnant, thickset, broken horns, drools coal-smoke. Crude iron weapon, used well. Haggles before fighting.",
+      "vulnerabilities": [
+        "light",
+        "water"
+      ],
+      "resistances": [
+        "fire",
+        "dark",
+        "slashing"
+      ],
+      "immunities": []
+    },
+    "glimmercat": {
+      "name": "glimmercat",
+      "description": "[Tier 6] [Common] House-cat-sized magical beast with opalescent fur and inner-lit eyes. Skittish but curious. Minor mana-bearing.",
+      "vulnerabilities": [
+        "piercing"
+      ],
+      "resistances": [
+        "arcane"
+      ],
+      "immunities": []
+    },
+    "lumefox": {
+      "name": "lumefox",
+      "description": "[Tier 6] [Common] Fox with russet-and-silver shifting coat. Solitary, mana-bearing, the staple of the Avenorian witch-trade.",
+      "vulnerabilities": [
+        "piercing"
+      ],
+      "resistances": [
+        "arcane"
+      ],
+      "immunities": []
+    },
+    "lampfowl": {
+      "name": "lampfowl",
+      "description": "[Tier 6] [Common] Pheasant-sized flightless ground bird. Tail feathers glow soft yellow at dusk. Runs and fights with spurred legs and hooked beak.",
+      "vulnerabilities": [
+        "piercing"
+      ],
+      "resistances": [
+        "arcane"
+      ],
+      "immunities": []
+    },
+    "sylvan": {
+      "name": "sylvan",
+      "description": "[Tier 6] [Rare] Male humanoid magical creature, slight-man-sized, pearl or moss-green skin. Mute. Bone knife, minor water-magic. Highly mana-rich.",
+      "vulnerabilities": [
+        "piercing",
+        "fire"
+      ],
+      "resistances": [
+        "water",
+        "arcane"
+      ],
+      "immunities": []
+    },
+    "naia": {
+      "name": "naia",
+      "description": "[Tier 6] [Rare] Female humanoid magical creature, slight-woman-sized, pearl or moss-green skin. Mute. Bone knife, minor water-magic. Reagent-source, not filling-source.",
+      "vulnerabilities": [
+        "piercing",
+        "fire"
+      ],
+      "resistances": [
+        "water",
+        "arcane"
+      ],
+      "immunities": []
+    },
+    "stagling": {
+      "name": "stagling",
+      "description": "[Tier 6] [Common] Fawn-sized horned magical beast. Antlers carry visible mana-glow at first light. Runs but does not flee far.",
+      "vulnerabilities": [
+        "piercing"
+      ],
+      "resistances": [
+        "arcane"
+      ],
+      "immunities": []
+    },
+    "pyrelynx": {
+      "name": "pyrelynx",
+      "description": "[Tier 6] [Uncommon] Wolf-sized cat with banked-coal coat, warm to the touch. Solitary. Ambushes once, fights through.",
+      "vulnerabilities": [
+        "water"
+      ],
+      "resistances": [
+        "fire",
+        "arcane"
+      ],
+      "immunities": []
+    },
+    "maulerbear": {
+      "name": "maulerbear",
+      "description": "[Tier 7] [Rare] Wartide-bred bear, twice the size of a true bear. Bony jaw-ridges. Speaks slow common-tongue, mostly to taunt.",
+      "vulnerabilities": [
+        "light",
+        "fire"
+      ],
+      "resistances": [
+        "piercing",
+        "slashing",
+        "dark"
+      ],
+      "immunities": [
+        "poisoning"
+      ]
+    },
+    "bloodthane": {
+      "name": "bloodthane",
+      "description": "[Tier 7] [Rare] Wartide-officer remnant, tall and chitin-plated. Drains humans to Husks by long touch. Speaks any tongue heard, holds court, commands lesser Wartide kin.",
+      "vulnerabilities": [
+        "light"
+      ],
+      "resistances": [
+        "dark",
+        "arcane",
+        "slashing"
+      ],
+      "immunities": [
+        "poisoning",
+        "psychic"
+      ]
+    },
+    "kelker": {
+      "name": "kelker",
+      "description": "[Tier 7] [Very Rare] Twelve-foot stilt-legged horror with a crown of arms around a feeding-orifice. Strides at impossible speed. Asks old questions.",
+      "vulnerabilities": [
+        "bludgeoning"
+      ],
+      "resistances": [
+        "piercing",
+        "slashing",
+        "dark"
+      ],
+      "immunities": [
+        "poisoning",
+        "psychic"
+      ]
+    },
+    "loam-drinker": {
+      "name": "loam-drinker",
+      "description": "[Tier 7] [Very Rare] Vast burrowing worm. Surfaces in old pit-works. Speaks through the ground in low resonant common-tongue. Eats soil and what's in it.",
+      "vulnerabilities": [
+        "light"
+      ],
+      "resistances": [
+        "piercing",
+        "slashing",
+        "bludgeoning",
+        "dark"
+      ],
+      "immunities": [
+        "poisoning",
+        "psychic"
+      ]
+    },
+    "centaur-thane": {
+      "name": "centaur-thane",
+      "description": "[Tier 7] [Rare] Wartide-bred centauroid, bull-thick. Bands of three to five under a thane. Parleys when it pays. Heavy axe, staggering war-cry.",
+      "vulnerabilities": [
+        "piercing"
+      ],
+      "resistances": [
+        "bludgeoning",
+        "dark"
+      ],
+      "immunities": []
+    },
+    "human warrior": {
+      "name": "human warrior",
+      "description": "A common soldier of one of the human kingdoms, drilled in the line-fighting styles of his region. Wears the regional kit — Udorathi linen-and-mail, Kelmari saddle-plate, Nadorim oiled leathers. Carries a sword or spear and the discipline of a man who has stood in a shield-wall and held.",
+      "vulnerabilities": [
+        "arcane"
+      ],
+      "resistances": [
+        "bludgeoning"
+      ],
+      "immunities": []
+    },
+    "kelmari infantryman": {
+      "name": "kelmari infantryman",
+      "description": "A veteran infantryman of the Kelmari marches, who has fought the Threshi raid cycle every winter for years. Light lance, riding-axe, mail under a heavy coat. Speaks little and reads ground for ambush by reflex. The most experienced field soldier in human Hedoria.",
+      "vulnerabilities": [
+        "arcane"
+      ],
+      "resistances": [
+        "piercing",
+        "bludgeoning"
+      ],
+      "immunities": []
+    },
+    "udorathi marsh-skirmisher": {
+      "name": "udorathi marsh-skirmisher",
+      "description": "A light infantryman of the Udorathi fen-edge, equipped for ambush and withdrawal in flooded country. Short bow, gutting knife, oiled leathers. Knows every drainage channel and which footing will hold a horse and which won't.",
+      "vulnerabilities": [
+        "arcane"
+      ],
+      "resistances": [],
+      "immunities": []
+    },
+    "nadorim lake-archer": {
+      "name": "nadorim lake-archer",
+      "description": "A levied bowman of the Nadorim lake-country, recruited from fishing villages and trained at the seasonal musters. Yew bow, long arrows fletched with waterfowl feathers. Quietly devout — pauses to touch the Hand-sigil before each volley.",
+      "vulnerabilities": [
+        "arcane"
+      ],
+      "resistances": [],
+      "immunities": []
+    },
+    "brotherhood wizard": {
+      "name": "brotherhood wizard",
+      "description": "A trained brother of the High Forum of Telinor in dark uniform, weapons over robes. Carries the imbued battlestaff made for him during apprenticeship. Drives staff-strikes through plate, stands walls against charges, calls wind to slow a volley. Magic is applied at the swing — no fireballs, no projection.",
+      "vulnerabilities": [],
+      "resistances": [
+        "arcane",
+        "piercing",
+        "slashing",
+        "bludgeoning"
+      ],
+      "immunities": []
+    },
+    "brotherhood archmagus": {
+      "name": "brotherhood archmagus",
+      "description": "A senior master of the Brotherhood, told the truth about the magic on his elevation and too deep to walk away. The dark uniform is the same as any brother's. The battlestaff is older, deeper-attuned, and has been used on things that frightened the men around him. He fights like a wall and speaks laconically, except about witches.",
+      "vulnerabilities": [],
+      "resistances": [
+        "arcane",
+        "piercing",
+        "slashing",
+        "bludgeoning"
+      ],
+      "immunities": []
+    },
+    "avenorian witch": {
+      "name": "avenorian witch",
+      "description": "A trained witch of the Queen's College, walking openly in Avenor and discreetly anywhere else. Carries a full reservoir or close to it — at the ceiling, witches outmatch wizards, and she knows it. Spells are showy where his are restrained: light, flame, cold, the moving of weight at distance. Visually indistinguishable from any other woman until the working starts.",
+      "vulnerabilities": [],
+      "resistances": [
+        "arcane"
+      ],
+      "immunities": []
+    },
+    "hedge-witch": {
+      "name": "hedge-witch",
+      "description": "A village practitioner working in quiet violation of kingdom law. Helps with births, fevers, contraceptive draughts, and the small protective workings the local lord pretends not to notice. Mana reservoir is modest, filled where she can manage it. Lives in constant low-grade danger and has rehearsed the fire she will set in the cottage if the Brotherhood comes for her.",
+      "vulnerabilities": [],
+      "resistances": [
+        "poisoning"
+      ],
+      "immunities": []
+    },
+    "hofnar caravan-guard": {
+      "name": "hofnar caravan-guard",
+      "description": "A male Hofnar from a trading clan, riding contract security on the long routes. Tall, broad-shouldered, mane bound back for the road. Heavy bow, long-hafted axe, lamellar over road-leathers. Speaks the trade-tongue of every region the caravan crosses and pays bribes more readily than he draws.",
+      "vulnerabilities": [],
+      "resistances": [
+        "piercing"
+      ],
+      "immunities": []
+    },
+    "hofnar trade-mistress": {
+      "name": "hofnar trade-mistress",
+      "description": "A Hofnar female of senior standing in her clan, conducting business at a foreign capital or a moot encampment. Lighter-built than the males, faster on her feet, and the one who actually drafts the contracts. Speaks plainly, listens longer than the person across from her expects, and never signs the first version of anything.",
+      "vulnerabilities": [],
+      "resistances": [
+        "psychic"
+      ],
+      "immunities": []
+    },
+    "hofnar wagon-driver": {
+      "name": "hofnar wagon-driver",
+      "description": "A Hofnar of the working ranks, driving an ox-team across the long routes. Broad through the chest, hooves split in the southern lineage. Carries the route by memory and can name every river crossing, toll station, and corrupt official between two capitals.",
+      "vulnerabilities": [],
+      "resistances": [],
+      "immunities": []
+    },
+    "hofnar matriarch": {
+      "name": "hofnar matriarch",
+      "description": "An elder female of a great clan, seated at the head of the wagon-council. Mane gone silver, beadwork heavy, voice low and slow. Has watched her granddaughters' contracts run for thirty years and knows where every current debt sits. Foreign envoys are routed to her when the matter is serious.",
+      "vulnerabilities": [],
+      "resistances": [
+        "psychic"
+      ],
+      "immunities": []
+    },
+    "cephalen factor": {
+      "name": "cephalen factor",
+      "description": "A junior agent of one of the Houses, posted at a foreign port to manage shipping, tariffs, and the steady pressure of monopoly. Skin in muted slates and pearls, shifting visibly when he is not paying attention. Polite to the point of opacity. Tells the literal truth and nothing else.",
+      "vulnerabilities": [
+        "bludgeoning"
+      ],
+      "resistances": [
+        "psychic"
+      ],
+      "immunities": []
+    },
+    "cephalen house-principal": {
+      "name": "cephalen house-principal",
+      "description": "A senior of one of the great Houses, conducting business on the upper streets of a port-capital or in a foreign court. Layered silks, jewelry of pearl and sea-metal, skin held to a deliberate calm pearl-grey by long practice. Negotiates contracts that other races spend decades discovering they have signed.",
+      "vulnerabilities": [
+        "bludgeoning"
+      ],
+      "resistances": [
+        "psychic"
+      ],
+      "immunities": []
+    },
+    "cephalen marine": {
+      "name": "cephalen marine",
+      "description": "A boarding fighter of the House fleets, equipped for action above and below water. Curved blade, weighted net, harpoon. Compresses through gun-port and hatchway, drops into a hold from impossible angles. Vulnerable to crushing damage and difficult to keep dry-bound for long inland operations.",
+      "vulnerabilities": [
+        "bludgeoning"
+      ],
+      "resistances": [
+        "water"
+      ],
+      "immunities": []
+    },
+    "cephalen reader": {
+      "name": "cephalen reader",
+      "description": "A specialist of the Houses, trained from childhood to read another Cephalen's chromatophore-flicker and to school her own to perfect stillness. Sits at the elbow of senior negotiators. Rarely speaks. When she does, the foreign delegation has already lost.",
+      "vulnerabilities": [
+        "bludgeoning"
+      ],
+      "resistances": [
+        "psychic"
+      ],
+      "immunities": []
+    },
+    "draklid duelist": {
+      "name": "draklid duelist",
+      "description": "A clan warrior travelling under contract, recognizable by clan-sigil belt and the long curved blade at the hip. Lean, narrow-waisted, tail held in the watchful neutral. Strikes in explosive short-range pursuit, the way the body remembers it. Will not break a contract. Will not extend it without renegotiation.",
+      "vulnerabilities": [],
+      "resistances": [
+        "fire"
+      ],
+      "immunities": []
+    },
+    "draklid clan-patriarch": {
+      "name": "draklid clan-patriarch",
+      "description": "An elder male of a clan-hold, fifth century or beyond, in the formal mantle of layered silks and heavy gold at throat and wrists. Has watched dynasties rise and fall and has opinions about each. Conducts diplomacy in longer timeframes than whoever is sitting across from him, and notices everything. The clan sigil he wears was carried by his grandfather and will be carried by his grandson, and he does not let the negotiation forget this.",
+      "vulnerabilities": [],
+      "resistances": [
+        "fire"
+      ],
+      "immunities": []
+    },
+    "draklid hold-warrior": {
+      "name": "draklid hold-warrior",
+      "description": "A clan-hold soldier defending the cliff-cut fortresses of his lineage. Layered scale and silk over the natural armor of his hide, tail-mace at the hip, the clan markings showing along flank and forearm. Knows every approach to his territory and the patient ambush positions his ancestors cut into the rock.",
+      "vulnerabilities": [],
+      "resistances": [
+        "fire",
+        "piercing"
+      ],
+      "immunities": []
+    },
+    "draklid retainer": {
+      "name": "draklid retainer",
+      "description": "A Draklid abroad, oath-bound to a foreign principal who can afford the absolute reliability a Draklid oath provides. Stands behind his charge in foreign halls in extravagant desert silks, scrupulously polite, attentive to detail in ways the principal does not always notice. The oath ends precisely when the contract says it does.",
+      "vulnerabilities": [],
+      "resistances": [
+        "fire"
+      ],
+      "immunities": []
+    },
+    "prime mage": {
+      "name": "prime mage",
+      "description": "A monastery-trained ancestor-worker, white-furred and lion-muzzled, in deep blue robes heavy with embroidery and ancestor-tokens. Carries a carved staff of bone and wood. Magic is the slow conversation with the dead — sits in stillness, sometimes speaking quietly, while wounds close and intentions become clear. Few have ever seen him angry.",
+      "vulnerabilities": [],
+      "resistances": [
+        "arcane",
+        "psychic",
+        "cold"
+      ],
+      "immunities": []
+    },
+    "prime warden": {
+      "name": "prime warden",
+      "description": "A Prime monastery-warrior, broad-shouldered and twelve feet of cold-country muscle, in heavy blue and crimson over layered fur. Bearded ancestor-token at the chest, two-handed mace or polearm sized to the body. The monasteries do not project force outward. When the wardens come down from the mountains, something has gone seriously wrong.",
+      "vulnerabilities": [],
+      "resistances": [
+        "cold",
+        "bludgeoning"
+      ],
+      "immunities": [
+        "psychic"
+      ]
+    },
+    "prime elder": {
+      "name": "prime elder",
+      "description": "A senior of one of the seven great monasteries, white fur gone yellow at the muzzle, robes layered for ceremony. Remembers events from before any human kingdom currently standing was founded. Speaks slowly, answers carefully, and does not discuss what the Primes were before the Ensoulment.",
+      "vulnerabilities": [],
+      "resistances": [
+        "arcane",
+        "psychic",
+        "cold"
+      ],
+      "immunities": [
+        "psychic"
+      ]
+    },
+    "molvar tunnelwarden": {
+      "name": "molvar tunnelwarden",
+      "description": "A defending Molvar in his own warren, layered plate over the broad tuber-body, short spear and axe. Knows the tunnel down to the last branching, the false passages, the collapse-triggers. Surprisingly fast in a sprint. Cheerful before the fight, terrible during it, cheerful again afterward if you survive.",
+      "vulnerabilities": [
+        "fire"
+      ],
+      "resistances": [
+        "bludgeoning",
+        "piercing"
+      ],
+      "immunities": []
+    },
+    "molvar root-speaker": {
+      "name": "molvar root-speaker",
+      "description": "A Molvar gardener of unusual range — the affinity for plants extended past food into something closer to working. Coaxes root-walls across passages overnight, calls fungi from bare earth, makes the meadow above a settlement bloom or wither. Not a sorcerer, by Molvar reckoning. Just a very good gardener.",
+      "vulnerabilities": [
+        "fire"
+      ],
+      "resistances": [],
+      "immunities": [
+        "psychic"
+      ]
+    },
+    "molvar host": {
+      "name": "molvar host",
+      "description": "An ordinary Molvar householder, plump and warm-faced, root-arms busy with the next dish. Receives strangers with extraordinary warmth. Will feed you before questioning you, introduce you to the neighbors within the hour, and send you on your way with provisions and a vague sincere invitation to return.",
+      "vulnerabilities": [
+        "fire"
+      ],
+      "resistances": [],
+      "immunities": []
+    },
+    "threshi raid-male": {
+      "name": "threshi raid-male",
+      "description": "A young Threshi male of the seasonal war-bands, lean and fast, chitin in dust-brown and pale ochre. Folding sickle-blade forearms held forward in the running attack. Crosses ground partly on foot, partly in long buzzing glides. Drives at granaries, pens, and isolated villages and falls back before organized response can form.",
+      "vulnerabilities": [
+        "arcane"
+      ],
+      "resistances": [
+        "piercing"
+      ],
+      "immunities": []
+    },
+    "threshi warlord": {
+      "name": "threshi warlord",
+      "description": "A male warlord of a noble-house, older and heavier, the sickle-blades thicker through the wrist and ridged with combat-scarring. House-marks in dark dye at chest and shoulder. Directs the season's campaigns, honors the formal challenges from rivals, and has not died peacefully.",
+      "vulnerabilities": [
+        "arcane"
+      ],
+      "resistances": [
+        "piercing",
+        "slashing"
+      ],
+      "immunities": []
+    },
+    "threshi consort-matron": {
+      "name": "threshi consort-matron",
+      "description": "A senior Threshi female of a noble-house, large and broad through the shoulders, chitin shovels held formally folded. Manages the agricultural side of the holding — the harvest, the granaries, the field-workers — without which the warlord cannot field his band. Handles foreign envoys when those envoys are women, which they almost never are.",
+      "vulnerabilities": [
+        "arcane"
+      ],
+      "resistances": [
+        "bludgeoning"
+      ],
+      "immunities": []
+    },
+    "threshi field-rebel": {
+      "name": "threshi field-rebel",
+      "description": "A field-worker risen against her hold-master, shovel-arms still caked with the season's dirt, chitin scarred from the granary fight. Speaks no foreign tongue. Knows the rising will be put down in the end and is fighting anyway. The next rising comes a generation later.",
+      "vulnerabilities": [
+        "arcane"
+      ],
+      "resistances": [],
+      "immunities": []
+    },
+    "threshi envoy": {
+      "name": "threshi envoy",
+      "description": "An older Threshi male, campaigns behind him, posted to a human capital for prisoner exchanges and formal protests. Wears layered fabric he has not learned to drape correctly. Speaks the foreign tongue with effort. Treats the position as exile and his counterparts as barely-tolerated necessities.",
+      "vulnerabilities": [
+        "arcane"
+      ],
+      "resistances": [],
+      "immunities": []
+    },
+    "raknid scholar": {
+      "name": "raknid scholar",
+      "description": "A Raknid copyist or archivist in muted earth-tones, walking on four spidery legs in the four-beat gait of her kind. Voice soft and slightly clicking. Carries the patience of a people whose communities have been burned out at least once in living memory. Will not return violence under any circumstance short of immediate physical defense.",
+      "vulnerabilities": [],
+      "resistances": [
+        "psychic"
+      ],
+      "immunities": []
+    },
+    "raknid healer": {
+      "name": "raknid healer",
+      "description": "A Raknid practitioner of the patient healing arts, six-eyed and slow-spoken, satchel of muted earth-tone leather at the hip. Travels under the queen's writ where the writ is recognized and quietly where it isn't. Mortality among her kind has taught her which wounds matter and which can wait.",
+      "vulnerabilities": [],
+      "resistances": [
+        "psychic",
+        "poisoning"
+      ],
+      "immunities": []
+    },
+    "raknid witch": {
+      "name": "raknid witch",
+      "description": "One of the small cohort of Raknid witches the Queen's College has produced over the last century. Pale chitin under the dark blue of the College, silken mantle bound back for working. Reputation for exacting practice and fierce loyalty to the realm that took her people in.",
+      "vulnerabilities": [],
+      "resistances": [
+        "arcane",
+        "psychic"
+      ],
+      "immunities": []
+    },
+    "vorok seam-laborer": {
+      "name": "vorok seam-laborer",
+      "description": "A House-enrolled Vorok at the seam-face, slab-shouldered from decades of pit-work, lower tusks worn from the steady grind. Heavy work-leathers, tool-rig at the belt, House-sigil hammered in metal at the chest. Speaks little, eats hugely, takes his turn in the rotation when it comes.",
+      "vulnerabilities": [],
+      "resistances": [
+        "bludgeoning",
+        "poisoning"
+      ],
+      "immunities": []
+    },
+    "vorok foreman": {
+      "name": "vorok foreman",
+      "description": "A lean narrow-built Vorok in long coat and waistcoat, House-sigil in metal at the lapel, tally-board under one arm. Runs a crew at one of the consortium concessions and knows to the day when his men are due rotation. Foreign clients sometimes mistake his reserve for stupidity. They learn.",
+      "vulnerabilities": [],
+      "resistances": [
+        "psychic"
+      ],
+      "immunities": []
+    },
+    "vorok principal": {
+      "name": "vorok principal",
+      "description": "A senior of one of the great Houses, gaunt almost from a career at the contract table, house-coat heavy with sigils. Negotiates concessions with foreign kingdoms in deep slow common-tongue and never raises his voice. The kingdoms dislike him and renew the contracts.",
+      "vulnerabilities": [],
+      "resistances": [
+        "psychic"
+      ],
+      "immunities": []
+    },
+    "vorok bandit": {
+      "name": "vorok bandit",
+      "description": "A drifter from a free crew that has crossed the line, working a stretch of trade-road with charges, picks, and the contempt of his former House. The skills are transferable. A crew that can blast a tunnel can blast a road. The Houses do not pursue him; foreign authorities are quoted on the cost of contracted security.",
+      "vulnerabilities": [],
+      "resistances": [
+        "bludgeoning"
+      ],
+      "immunities": []
+    },
+    "fernwarg pack-mother": {
+      "name": "fernwarg pack-mother",
+      "description": "An elder female of a Fernwarg pack, denser and heavier-built than her males, ceremonial mane-headdress of layered dark fronds. Conducts the pack's diplomacy — border treaties, logging rights, the refusal to return Quelled escapees who have crossed into the forest. Negotiates hard, slowly, and from the territory.",
+      "vulnerabilities": [],
+      "resistances": [],
+      "immunities": []
+    },
+    "fernwarg mercenary": {
+      "name": "fernwarg mercenary",
+      "description": "A young Fernwarg male working a foreign contract, lean, polite in the formal manner of a man who has been raised not to assume his standing in a room. Tunics and breeches over the green-fern coat, weapons sized for his reach. Honors the contract his pack-mother arranged for him. Disappears when the contract ends.",
+      "vulnerabilities": [
+        "fire"
+      ],
+      "resistances": [],
+      "immunities": []
+    },
+    "fernwarg consort": {
+      "name": "fernwarg consort",
+      "description": "An honored male of a pack, chosen by the pack-mother for the season or longer. Has the bearing of a man whose standing comes from his selection and not his deeds. Hunts with the pack, fathers cubs, and stands aside on questions of pack policy because that is not his work.",
+      "vulnerabilities": [
+        "fire"
+      ],
+      "resistances": [],
+      "immunities": []
+    },
+    "quelled field-hand": {
+      "name": "quelled field-hand",
+      "description": "A working Quell of one of the chartered farms, lineage usually cow or pig, hunched and broad. Speaks in the small vocabulary the household has taught him, fills in with gesture. Does the work he is set. Does not look at the overseer's face. Most rural humans grew up around this and find no part of it unusual.",
+      "vulnerabilities": [],
+      "resistances": [
+        "bludgeoning"
+      ],
+      "immunities": []
+    },
+    "quelled escapee": {
+      "name": "quelled escapee",
+      "description": "A Quell who has run an estate and is moving, by night, toward Avenor or a sympathetic forest. Underfed, the brand of his trade-house showing through worn cloth. Hunted by the chartered houses, taken in by the Fernwarg if he reaches their forests, granted standing under the queen's writ if he reaches Avenor. Most do not reach Avenor.",
+      "vulnerabilities": [],
+      "resistances": [],
+      "immunities": []
+    },
+    "free quelled": {
+      "name": "free quelled",
+      "description": "A Quell living openly in Avenor under the queen's writ, in plain Avenorian dress with the small civic token the realm grants him. Speaks slowly, learns letters at the rate his lineage permits, holds a minor apprenticeship or trade. A handful of stranger cases exist that travelers come back speaking of with a kind of unease.",
+      "vulnerabilities": [],
+      "resistances": [],
+      "immunities": []
+    },
+    "human laborer": {
+      "name": "human laborer",
+      "description": "A working hand of one of the human kingdoms — farmhand, dockworker, porter, drover. Plain wool and linen, weathered hands, the steady fatigue of a person whose body is the tool. In Udorath works the marsh-edge fields; in Kelmar the upland herds; in Nadorim the lake-trade and reed-cutting; in Avenor a wider mix of paid trades.",
+      "vulnerabilities": [],
+      "resistances": [
+        "bludgeoning"
+      ],
+      "immunities": []
+    },
+    "human craftsperson": {
+      "name": "human craftsperson",
+      "description": "A skilled tradesman of one of the human towns — smith, carpenter, weaver, mason, tanner, miller, baker, potter, cooper. Apron over working clothes, tools of the trade close to hand, sign of the guild or the lord's license at the shop-front. Knows everyone in the parish and is owed by half of them.",
+      "vulnerabilities": [],
+      "resistances": [
+        "fire"
+      ],
+      "immunities": []
+    },
+    "human trader": {
+      "name": "human trader",
+      "description": "A town merchant or stall-keeper, ledger close, scales calibrated for the realm's coinage. Stocks cloth, salt, hardware, dried goods — whatever the local market demands. Has dealt with Hofnar caravans for years and knows which Cephalen factor to send for when the cargo justifies it. Quotes a price, listens, quotes a different one.",
+      "vulnerabilities": [
+        "bludgeoning"
+      ],
+      "resistances": [
+        "psychic"
+      ],
+      "immunities": []
+    },
+    "human innkeeper": {
+      "name": "human innkeeper",
+      "description": "Keeper of a tavern, road-house, or post-inn. Apron over working clothes, hair tied back, eye on the door. Knows which travelers to give the back rooms, which regulars are in debt to which others, and what the local lord prefers not to hear discussed too loudly. Hand-shrine kept in the hearth-corner.",
+      "vulnerabilities": [
+        "bludgeoning"
+      ],
+      "resistances": [
+        "psychic"
+      ],
+      "immunities": []
+    },
+    "human wisefolk": {
+      "name": "human wisefolk",
+      "description": "A literate or learned person of one of the human kingdoms — apothecary, midwife, herbalist, bonesetter, scribe, schoolmaster, archivist, town clerk. Sober dress, ink-stained fingers or herb-stained, depending on practice. Many village wisewomen are also hedge-witches, but the village does not ask, and the local lord pretends not to know.",
+      "vulnerabilities": [
+        "bludgeoning"
+      ],
+      "resistances": [
+        "psychic",
+        "poisoning"
+      ],
+      "immunities": []
+    },
+    "human noble": {
+      "name": "human noble",
+      "description": "A landed lord or lady of one of the human kingdoms, dressed in regional cut — Udorathi sober, Kelmari with house-colors at the shoulder, Nadorim with waterfowl-feather trim, Avenorian in dark blue or grey. Manages tenants, levies, and the slow politics of marriage and inheritance. Most are not personally cruel. The system is.",
+      "vulnerabilities": [
+        "psychic"
+      ],
+      "resistances": [],
+      "immunities": []
+    },
+    "human servant": {
+      "name": "human servant",
+      "description": "A household worker in livery — kitchen, hall, chamber, stable, depending on the position. Sees everything, reports what is asked, edits what is not. The senior servants of a great house outlast three generations of masters and remember every embarrassing moment.",
+      "vulnerabilities": [],
+      "resistances": [],
+      "immunities": []
+    },
+    "human guard": {
+      "name": "human guard",
+      "description": "A soldier of one of the human kingdoms — town watch, household guard, kingdom levy. Mail or scale, sword or spear, regional kit. Kelmari marches-riders are the most experienced, hardened by the Threshi raid cycle; Udorathi marsh-skirmishers favor ambush and withdrawal; Nadorim lake-archers volley from boats and pier-heads.",
+      "vulnerabilities": [
+        "arcane"
+      ],
+      "resistances": [
+        "piercing",
+        "bludgeoning"
+      ],
+      "immunities": []
+    },
+    "human mercenary": {
+      "name": "human mercenary",
+      "description": "A free-company soldier between contracts, kit assembled across years of campaigns — Kelmari mail, Udorathi sword, a Cephalen-ported helmet someone took off a corpse. Drinks at the road-houses, signs on with whoever is paying. Will not break a contract during the season. Considers winter his own.",
+      "vulnerabilities": [
+        "arcane"
+      ],
+      "resistances": [
+        "bludgeoning"
+      ],
+      "immunities": []
+    },
+    "human hunter": {
+      "name": "human hunter",
+      "description": "A trapper or game-hunter working the kingdoms' forests and uplands, oilskins and leather, bow or crossbow at the back, knife and skinning kit at the belt. Knows the trails, the seasons, the local lord's hunting laws and which of them are enforced. Trades pelts and meat at the seasonal markets.",
+      "vulnerabilities": [],
+      "resistances": [],
+      "immunities": []
+    },
+    "human drifter": {
+      "name": "human drifter",
+      "description": "An unrooted person of the towns and roads — traveling musician, beggar, gambler, sex-worker, pickpocket, off-season laborer. Makes a living from the edges of settled life. Knows which inns will turn him away, which will not, and which of the parish constables is corruptible.",
+      "vulnerabilities": [],
+      "resistances": [
+        "psychic"
+      ],
+      "immunities": []
+    },
+    "hofnar laborer": {
+      "name": "hofnar laborer",
+      "description": "A working hand of a clan-wagon — loader, drover, ox-handler, water-carrier on the long routes. Mane bound back for the work, road-leathers stained dust-grey. Strong by the standards of any race and casual about the kind of physical work that breaks human porters within a season.",
+      "vulnerabilities": [],
+      "resistances": [
+        "bludgeoning"
+      ],
+      "immunities": []
+    },
+    "hofnar craftsperson": {
+      "name": "hofnar craftsperson",
+      "description": "A clan tradesman working from the wagon-cities — smith, harness-maker, wheel-builder, cooper, leatherworker. Travels with the migration and sets up at each established encampment. Specializes in the work no fixed shop can replace at speed: route-tools, wagon-fittings, the metal of the long road.",
+      "vulnerabilities": [],
+      "resistances": [
+        "fire"
+      ],
+      "immunities": []
+    },
+    "hofnar trader": {
+      "name": "hofnar trader",
+      "description": "A working clan-trader at a market stall or trading post, tally-board on a strap, contract-pouches at the belt. Speaks several trade-tongues at a working level. Quotes by the wagon-load, never on the spot — the conversation will continue tomorrow.",
+      "vulnerabilities": [],
+      "resistances": [
+        "psychic"
+      ],
+      "immunities": []
+    },
+    "hofnar wisefolk": {
+      "name": "hofnar wisefolk",
+      "description": "A clan healer, road-scholar, route-archivist, or keeper of clan-history. Satchel of regional remedies and tools of practical road-medicine, or wax tablets and a stylus, depending on practice. Has set bones from every fall a long migration produces and knows the symptoms of every bad-water disease between the southern and northern grasslands.",
+      "vulnerabilities": [],
+      "resistances": [
+        "poisoning",
+        "psychic"
+      ],
+      "immunities": []
+    },
+    "hofnar servant": {
+      "name": "hofnar servant",
+      "description": "An attendant of one of the great clan-wagons — chamber-keeper, stove-tender, child-minder, body-servant to a matriarch. Bound to the household for life by long custom rather than contract. Knows the wagon's secrets and shares none of them.",
+      "vulnerabilities": [],
+      "resistances": [],
+      "immunities": []
+    },
+    "hofnar guard": {
+      "name": "hofnar guard",
+      "description": "A male Hofnar of a trading clan, riding contract security on the long routes or guarding a wagon-city at rest. Tall, broad-shouldered, mane bound back. Heavy bow, long-hafted axe, lamellar over road-leathers. Pays bribes more readily than he draws but draws very well when he must.",
+      "vulnerabilities": [],
+      "resistances": [
+        "piercing"
+      ],
+      "immunities": []
+    },
+    "hofnar mercenary": {
+      "name": "hofnar mercenary",
+      "description": "A Hofnar male of a clan that has fallen on hard standing, working a foreign contract to pay debts home. Heavy bow, long-hafted axe, the road-leathers of the long migrations. Will fight cleanly through the contract season and ride home at first thaw. The clan-mark on his collar is checked by every Hofnar he meets.",
+      "vulnerabilities": [],
+      "resistances": [
+        "piercing"
+      ],
+      "immunities": []
+    },
+    "cephalen laborer": {
+      "name": "cephalen laborer",
+      "description": "A working hand of one of the port-capitals — dock-loader, net-hauler, lower-gallery porter. Wet-weave under stained workclothes, skin held to a careful neutral grey for the shift. Compresses through hatchway and gangway in ways that confuse foreign supervisors.",
+      "vulnerabilities": [
+        "bludgeoning"
+      ],
+      "resistances": [
+        "water"
+      ],
+      "immunities": []
+    },
+    "cephalen craftsperson": {
+      "name": "cephalen craftsperson",
+      "description": "A worker of pearl, coral, sea-metal, or wet-weave in one of the lower-gallery craft-halls. Soft fingers shaping by feel as much as sight. Cephalen jewelry, textiles, and small crafts are prized across the continent; the foreigners who buy them rarely understand what the patterns mean.",
+      "vulnerabilities": [
+        "bludgeoning"
+      ],
+      "resistances": [
+        "water"
+      ],
+      "immunities": []
+    },
+    "cephalen trader": {
+      "name": "cephalen trader",
+      "description": "A factor of one of the Houses, posted at a foreign port or working an upper-street office in a port-capital. Skin in muted slates and pearls, shifting visibly when he is not paying attention. Polite to the point of opacity. Tells the literal truth and nothing else.",
+      "vulnerabilities": [
+        "bludgeoning"
+      ],
+      "resistances": [
+        "psychic"
+      ],
+      "immunities": []
+    },
+    "cephalen innkeeper": {
+      "name": "cephalen innkeeper",
+      "description": "Keeper of a foreign-trade hospitality establishment in the upper streets of one of the port-capitals — restaurant, drinking-hall, the small lodgings where foreign delegates take dinner. Skin trained to a calm welcoming pearl. Recipes inherited across House lineages. Pricing politely opaque.",
+      "vulnerabilities": [
+        "bludgeoning"
+      ],
+      "resistances": [
+        "water"
+      ],
+      "immunities": []
+    },
+    "cephalen wisefolk": {
+      "name": "cephalen wisefolk",
+      "description": "A Cephalen physician, archivist, scribe, or specialist of the soft-tissue medicine the Houses cultivate. Treats injuries the foreign races' surgeons cannot manage and the dryness-damage of overland travel. Charges accordingly. Keeps records in a script foreign scholars have spent generations failing to fully decode.",
+      "vulnerabilities": [
+        "bludgeoning"
+      ],
+      "resistances": [
+        "water",
+        "psychic"
+      ],
+      "immunities": []
+    },
+    "cephalen servant": {
+      "name": "cephalen servant",
+      "description": "A household attendant of one of the great Houses, in close-fitting wet-weave under formal robes. Moves quietly through the lower galleries on errands the principals do not commit to writing. Reads the senior Houses' chromatophore-flicker by reflex and edits her own to perfect stillness when the work demands it.",
+      "vulnerabilities": [
+        "bludgeoning"
+      ],
+      "resistances": [
+        "water",
+        "psychic"
+      ],
+      "immunities": []
+    },
+    "cephalen guard": {
+      "name": "cephalen guard",
+      "description": "An armed retainer of one of the Houses or a patroller of the lower-gallery district. Curved blade, weighted net, harpoon. Compresses through gun-port and grille in ways foreign attackers do not anticipate. Vulnerable to crushing damage and difficult to keep dry-bound for long inland operations.",
+      "vulnerabilities": [
+        "bludgeoning"
+      ],
+      "resistances": [
+        "water"
+      ],
+      "immunities": []
+    },
+    "cephalen mercenary": {
+      "name": "cephalen mercenary",
+      "description": "A Cephalen working outside House sanction, on the discreet payroll of a foreign principal who needs someone who can compress through a window-grille or a sewer-pipe. Wet-weave under foreign clothes, weighted blade at the belt, a small clay flask of brine kept close. The Houses pretend not to know he exists.",
+      "vulnerabilities": [
+        "bludgeoning"
+      ],
+      "resistances": [
+        "water",
+        "psychic"
+      ],
+      "immunities": []
+    },
+    "draklid laborer": {
+      "name": "draklid laborer",
+      "description": "A working hand of one of the clan-holds — terrace-tender, stone-hauler, water-carrier on the cliff-stairs, herder of the desert goats. Layered work-cloth in dust-faded clan colors, scales marked grey by the day's labor. The clan sigil at the belt confirms his standing.",
+      "vulnerabilities": [],
+      "resistances": [
+        "fire"
+      ],
+      "immunities": []
+    },
+    "draklid craftsperson": {
+      "name": "draklid craftsperson",
+      "description": "A skilled artisan of one of the clan-holds — silk-weaver, brass-worker, ceramicist, leather-shaper, dye-master. Layered work-silks, tail held neutral, scales dust-marked from the day. Quotes by the piece, delivers when promised, corrects errors at his own cost. The reputation for fairness travels.",
+      "vulnerabilities": [],
+      "resistances": [
+        "fire"
+      ],
+      "immunities": []
+    },
+    "draklid trader": {
+      "name": "draklid trader",
+      "description": "A clan-licensed merchant of one of the hold markets, conducting business at the painted facades of the courtyard stalls. Layered silks in clan colors, ledger close, the gold ornament at throat and wrist a deliberate display of the hold's wealth. Negotiates patiently. Notices everything.",
+      "vulnerabilities": [],
+      "resistances": [
+        "fire"
+      ],
+      "immunities": []
+    },
+    "draklid innkeeper": {
+      "name": "draklid innkeeper",
+      "description": "Keeper of a clan-hold rest-house or a desert caravanserai on the trade routes between holds. Ornate silks, the clan-hold sigil over the door, a hospitality formal enough that foreign visitors mistake it for ceremony. The ceremony is the hospitality.",
+      "vulnerabilities": [],
+      "resistances": [
+        "fire"
+      ],
+      "immunities": []
+    },
+    "draklid wisefolk": {
+      "name": "draklid wisefolk",
+      "description": "A clan healer, scribe, hold-archivist, or keeper of the lineage histories that govern Draklid honor. Long-lived, slow-spoken, attentive. The archives reach back centuries, and the keeper of them remembers personally events that human kingdoms know only as history.",
+      "vulnerabilities": [],
+      "resistances": [
+        "fire",
+        "psychic"
+      ],
+      "immunities": []
+    },
+    "draklid servant": {
+      "name": "draklid servant",
+      "description": "A household attendant of one of the hold matriarchs or warriors, in clean simple silks with the household sigil at the shoulder. Bound to the lineage by long custom. Moves silently through the painted corridors and is paid attention to by exactly nobody, which is how the lineage prefers it.",
+      "vulnerabilities": [],
+      "resistances": [
+        "fire"
+      ],
+      "immunities": []
+    },
+    "prime servant": {
+      "name": "prime servant",
+      "description": "A monastery attendant or lay-helper, white-furred and broad-shouldered, in plain undyed robes. Tends the kitchens, the libraries, the ancestor-token niches. Does not work the magic but knows the rhythms of those who do, and which of the senior masters are not to be disturbed before noon.",
+      "vulnerabilities": [],
+      "resistances": [
+        "cold",
+        "psychic"
+      ],
+      "immunities": []
+    },
+    "molvar laborer": {
+      "name": "molvar laborer",
+      "description": "A working Molvar of a tunnel-settlement — root-tender, mushroom-gardener, oil-lamp keeper, brewing-hand, kitchen-laborer. Plump and warm-faced, root-arms busy. Cheerful at the work and inclined to stop for the next meal regardless of who is watching.",
+      "vulnerabilities": [
+        "fire"
+      ],
+      "resistances": [],
+      "immunities": []
+    },
+    "molvar craftsperson": {
+      "name": "molvar craftsperson",
+      "description": "A skilled Molvar artisan — root-furniture builder, brewer, lamp-maker, basket-weaver, dye-tender. Works in the bright tunnel-galleries with tools sized for the stubby root-arms. The fermented mushroom liquors and fungal wines that travel poorly across the continent come from this work.",
+      "vulnerabilities": [
+        "fire"
+      ],
+      "resistances": [],
+      "immunities": []
+    },
+    "molvar trader": {
+      "name": "molvar trader",
+      "description": "A rare Molvar working the small surface-markets at the meadow edges, trading mushrooms, root-vegetables, brewed liquors, and dyed cloth for what the tunnel cannot provide. Travels reluctantly, returns happily, considers each trip abroad an ordeal that must be redeemed by an extraordinary meal upon return.",
+      "vulnerabilities": [
+        "fire"
+      ],
+      "resistances": [],
+      "immunities": []
+    },
+    "molvar innkeeper": {
+      "name": "molvar innkeeper",
+      "description": "A Molvar householder who has, by the slow accident of being unusually generous, ended up running something a foreigner would call an inn. The visitor will be fed before being questioned, introduced to the neighbors within the hour, given a place to sleep and more food in the morning, and sent on with provisions and a sincere invitation to return.",
+      "vulnerabilities": [
+        "fire"
+      ],
+      "resistances": [],
+      "immunities": []
+    },
+    "molvar wisefolk": {
+      "name": "molvar wisefolk",
+      "description": "A Molvar healer, herb-keeper, or storyteller of the long communal traditions. Herb-knowledge runs deep — the plants of the meadows, the fungi of the tunnels, the slow remedies a body shaped from tuber tissue requires. Storytellers are honored at the great feasts and paid in second helpings.",
+      "vulnerabilities": [
+        "fire"
+      ],
+      "resistances": [
+        "poisoning"
+      ],
+      "immunities": []
+    },
+    "molvar elder": {
+      "name": "molvar elder",
+      "description": "A senior Molvar of a tunnel-settlement, plumper than the working pack, fur-rind softened by age. Mediates the small disputes, remembers the lineage of every household, and presides over the seasonal feasts. Outsiders are introduced to the elder before any matter of consequence is discussed.",
+      "vulnerabilities": [
+        "fire"
+      ],
+      "resistances": [
+        "psychic"
+      ],
+      "immunities": []
+    },
+    "molvar guard": {
+      "name": "molvar guard",
+      "description": "A Molvar of the working pack pressed into defense when the warning goes round, in layered plate over the broad tuber-body, short spear and axe. Surprisingly fast in a sprint. Cheerful before the fight, terrible during it, cheerful again afterward if you survive.",
+      "vulnerabilities": [
+        "fire"
+      ],
+      "resistances": [
+        "bludgeoning",
+        "piercing"
+      ],
+      "immunities": []
+    },
+    "molvar mercenary": {
+      "name": "molvar mercenary",
+      "description": "A rare Molvar abroad on contract, bodyguard work for someone who has learned that a Molvar is faster and tougher than the silhouette suggests. Quiet, food-loving, professional. Sends a portion of his earnings home toward a return feast that grows more elaborate in his imagination with each contract season.",
+      "vulnerabilities": [
+        "fire"
+      ],
+      "resistances": [
+        "bludgeoning"
+      ],
+      "immunities": []
+    },
+    "threshi laborer": {
+      "name": "threshi laborer",
+      "description": "A field-worker of one of the noble holdings, female, large and broad through the shoulders, chitin shovels caked with the season's dirt. Brings the harvest in. Speaks no foreign tongue. Has never seen a Threshi king and will not.",
+      "vulnerabilities": [
+        "arcane"
+      ],
+      "resistances": [
+        "bludgeoning"
+      ],
+      "immunities": []
+    },
+    "threshi craftsperson": {
+      "name": "threshi craftsperson",
+      "description": "A specialist of one of the noble-houses — chitin-armorer, plow-fitter, weaver of the dust-colored fabrics the Threshi wear, granary-builder. Working forelimbs heavy with combat-scarring or shovel-callus depending on caste; the fine-manipulator secondary arms do the precision work.",
+      "vulnerabilities": [
+        "arcane"
+      ],
+      "resistances": [],
+      "immunities": []
+    },
+    "threshi wisefolk": {
+      "name": "threshi wisefolk",
+      "description": "A noble-house specialist — bureaucrat, scribe, healer, archivist of the warlord's claims and grievances. Older male or senior consort-female, the mandibles slow and precise in formal speech. Handles the diplomacy of prisoner exchanges and the paperwork of the seasonal raids.",
+      "vulnerabilities": [
+        "arcane"
+      ],
+      "resistances": [
+        "psychic"
+      ],
+      "immunities": []
+    },
+    "threshi servant": {
+      "name": "threshi servant",
+      "description": "A low-house Threshi attached to a noble-house in domestic service — kitchen, household, attendant on the consort-matron's daily work. Smaller than the field-workers, neater in dress, the chitin polished. The family connection runs back generations and is the household's status as much as the household's.",
+      "vulnerabilities": [
+        "arcane"
+      ],
+      "resistances": [],
+      "immunities": []
+    },
+    "threshi mercenary": {
+      "name": "threshi mercenary",
+      "description": "A rare Threshi working under foreign contract — almost certainly a dissident who reached Avenor under the queen's writ and now hires out where his folding sickle-blades and the panic he provokes in human levies are useful. Cannot return home. The writ is what makes him sanctioned for foreign work; without it he would be a bandit and treated as one.",
+      "vulnerabilities": [
+        "arcane"
+      ],
+      "resistances": [
+        "piercing"
+      ],
+      "immunities": []
+    },
+    "raknid laborer": {
+      "name": "raknid laborer",
+      "description": "A working Raknid of one of the small communities — farmer, builder, gatherer, hauler. Pale chitin under muted earth-tone work-cloth, the four-beat gait of her kind making the work look unhurried even when it isn't. Voice soft and slightly clicking. Does not draw attention if she can avoid it.",
+      "vulnerabilities": [],
+      "resistances": [
+        "psychic"
+      ],
+      "immunities": []
+    },
+    "raknid craftsperson": {
+      "name": "raknid craftsperson",
+      "description": "A skilled Raknid artisan — silk-spinner, weaver, woodcarver, copyist, illuminator, instrument-maker. The fine claws and slow patient temperament suit careful work. Raknid silk goods are quietly valued by those who know to look for them and are sold through trusted intermediaries because direct trade brings burnings.",
+      "vulnerabilities": [],
+      "resistances": [
+        "psychic"
+      ],
+      "immunities": []
+    },
+    "raknid trader": {
+      "name": "raknid trader",
+      "description": "A Raknid working the small markets at the edges of human country, selling craft goods and bought stock under a quietly assumed name. Hooded cloak, voice kept low. Pays double the posted price for room and board and is followed out of any town she enters at dusk.",
+      "vulnerabilities": [],
+      "resistances": [
+        "psychic"
+      ],
+      "immunities": []
+    },
+    "raknid innkeeper": {
+      "name": "raknid innkeeper",
+      "description": "A keeper of a small Raknid waystation — a forest-edge guesthouse, a hill-country room-letting, a quiet hostel that serves the small population of travelers who know to look for it. Hosts other Raknid, the occasional Hofnar driver, and the rare friendly outsider. The location is not advertised.",
+      "vulnerabilities": [],
+      "resistances": [
+        "psychic"
+      ],
+      "immunities": []
+    },
+    "raknid wisefolk": {
+      "name": "raknid wisefolk",
+      "description": "A Raknid scholar, archivist, healer, herbalist, copyist, linguist, or translator. Many of the continent's surviving older texts are kept by Raknid hands. The Queen's College in Avenor employs them in the archive; outside Avenor they work quietly for those who know to find them.",
+      "vulnerabilities": [],
+      "resistances": [
+        "psychic",
+        "poisoning"
+      ],
+      "immunities": []
+    },
+    "raknid elder": {
+      "name": "raknid elder",
+      "description": "A senior of one of the small Raknid communities, century or more in the bones, mantle gone silver-white. Speaks for the village in the rare formal contacts. Has begun, in the last decade, to take meetings with Fernwarg pack-mothers — the first such coordination in a hundred years.",
+      "vulnerabilities": [],
+      "resistances": [
+        "psychic"
+      ],
+      "immunities": []
+    },
+    "raknid servant": {
+      "name": "raknid servant",
+      "description": "A Raknid in service to an Avenorian household or one of the rare foreign principals who employ them openly. Plain dark dress, the small civic token of the queen's writ at the throat where the realm permits. Performs the work asked, edits what is not, holds her tongue about the burnings she has survived.",
+      "vulnerabilities": [],
+      "resistances": [
+        "psychic"
+      ],
+      "immunities": []
+    },
+    "raknid hunter": {
+      "name": "raknid hunter",
+      "description": "A Raknid hunting the deer and boar of the forests her people share with the Fernwarg, in dark hunting-cloak and soft leathers. Climbs with the four-leg gait and waits with the patience the body remembers. Honors the protocol with the Fernwarg parties — first to the prey claims it, the other turns aside.",
+      "vulnerabilities": [],
+      "resistances": [
+        "psychic"
+      ],
+      "immunities": []
+    },
+    "raknid mercenary": {
+      "name": "raknid mercenary",
+      "description": "A Raknid who has broken with the elders' teaching and takes violent contracts. Six-eyed, fast, deeply patient, in the dark close-fitting kit of a person who works alone. Her own people regard her with grief or quiet horror, which she has learned to live with. She is very good at the work.",
+      "vulnerabilities": [],
+      "resistances": [
+        "psychic"
+      ],
+      "immunities": []
+    },
+    "vorok craftsperson": {
+      "name": "vorok craftsperson",
+      "description": "A House-enrolled Vorok specialist — tool-fitter, charge-maker, scaffolder, ore-assayer, foundry-hand. Heavy work-leathers, House-sigil hammered in metal at the chest, calipers or hammer or charge-pouch at the belt depending on trade. The work is dangerous and the rates reflect it.",
+      "vulnerabilities": [],
+      "resistances": [
+        "fire",
+        "bludgeoning"
+      ],
+      "immunities": []
+    },
+    "vorok wisefolk": {
+      "name": "vorok wisefolk",
+      "description": "A House physician, geologist, contract-clerk, or compound medical officer. Lean, narrow-built, in long coat and waistcoat with the House-sigil at the lapel. The medical staff serve the breeding compounds and the crews; the geologists and clerks serve the operations and the contract table. Both are valued.",
+      "vulnerabilities": [],
+      "resistances": [
+        "psychic"
+      ],
+      "immunities": []
+    },
+    "vorok elder": {
+      "name": "vorok elder",
+      "description": "A retired Vorok foreman or principal kept on by his House as advisor, contract-witness, or teacher of apprentices. Slab-shouldered to the end despite the lean trade-coat, lower tusks worn smooth, voice slowed further by age. Remembers operations and contracts the current principals were too young to see.",
+      "vulnerabilities": [],
+      "resistances": [
+        "psychic"
+      ],
+      "immunities": []
+    },
+    "vorok mercenary": {
+      "name": "vorok mercenary",
+      "description": "A House-sanctioned Vorok working a foreign security contract under House charter — escort of high-value cargo, guard at a foreign principal's holdings, specialist consultant for an operation the Houses themselves are not running. House-sigil at the lapel, contract pouches at the belt. Distinct from the bandits and exiles of the back country.",
+      "vulnerabilities": [],
+      "resistances": [
+        "bludgeoning",
+        "psychic"
+      ],
+      "immunities": []
+    },
+    "fernwarg craftsperson": {
+      "name": "fernwarg craftsperson",
+      "description": "A working Fernwarg of the pack, female, fur-coat darker for the season, hands shaping leather, sinew, woven plant-fiber, carved bone. Pack-craft is communal — what one makes is for all who need it. The bone-and-bead work in a pack-mother's mane comes from these hands.",
+      "vulnerabilities": [
+        "fire"
+      ],
+      "resistances": [],
+      "immunities": []
+    },
+    "fernwarg packwoman": {
+      "name": "fernwarg packwoman",
+      "description": "A working female of a Fernwarg pack — hunter, gatherer, defender, raiser of cubs. Larger and heavier-built than the males, dense fern-coat lifting at the shoulders with mood, bow over one shoulder and short blade at the hip. Knows the forest down to the moss and is invisible standing still in summer bracken.",
+      "vulnerabilities": [
+        "fire"
+      ],
+      "resistances": [],
+      "immunities": []
+    },
+    "far-herd bull": {
+      "name": "far-herd bull",
+      "description": "An unensouled great-aurochs of the deep steppe, the wild cousin the Hofnar call Grandfather. Ten feet at the shoulder, horns sweeping out a span wider than that, eyes unreadable. The Hofnar do not hunt them. Outsiders who try learn why.",
+      "vulnerabilities": [],
+      "resistances": [
+        "bludgeoning"
+      ],
+      "immunities": []
+    },
+    "highwayman": {
+      "name": "highwayman",
+      "description": "A common road-bandit working a stretch between human kingdoms, equipped with whatever was taken from the last caravan. Saddle-axe, short bow, mismatched mail. Will run if the convoy is professional. Will kill or capture if it isn't.",
+      "vulnerabilities": [
+        "arcane"
+      ],
+      "resistances": [],
+      "immunities": []
+    },
+    "smuggler": {
+      "name": "smuggler",
+      "description": "A small-trade operator running cargoes the chartered houses or the Cephalen tariff regime do not permit — black-market mana potions, undeclared luxuries, sometimes Quelled escapees moving toward Avenor. Polite, well-traveled, and prone to vanishing if the conversation turns to specifics.",
+      "vulnerabilities": [],
+      "resistances": [
+        "psychic"
+      ],
+      "immunities": []
+    },
+    "mana-potion dealer": {
+      "name": "mana-potion dealer",
+      "description": "A black-market trader in the bottled goods that fill a witch's reservoir outside Avenor. Stock ranges from licensed Avenorian production smuggled north to outright atrocity decanted from beast-source extractions. Knows where the unicorn buyers gather and does not ask too closely about where the rest comes from.",
+      "vulnerabilities": [],
+      "resistances": [],
+      "immunities": []
+    },
+    "hofnar progressive driver": {
+      "name": "hofnar progressive driver",
+      "description": "A Hofnar of one of the families that has refused the chattel contracts for a generation. Rides the long routes the same as any other, but his manifest will not include a single Quelled cargo and his clan-mark is one the southern markets have learned to recognize and resent.",
+      "vulnerabilities": [],
+      "resistances": [
+        "psychic"
+      ],
+      "immunities": []
+    },
+    "draklid disowned": {
+      "name": "draklid disowned",
+      "description": "A Draklid stripped of clan-sigil and walking the wider continent without honor. Belt is bare where the metal should be, tail-set still betrays the hold he was raised in. Takes work no clan-bound Draklid would touch and is more dangerous for it. The reason for the disowning is never asked.",
+      "vulnerabilities": [],
+      "resistances": [
+        "fire"
+      ],
+      "immunities": []
+    },
+    "threshi dissident": {
+      "name": "threshi dissident",
+      "description": "A Threshi who fled a warlord, escaped a failed rising, or could not bear the life she was hatched into. Most have reached Avenor. Recognizable on sight — chitin-bodied, work-arms carried awkwardly, in human clothes she has not learned to wear well — taking what labor her forelimbs can manage and not going back.",
+      "vulnerabilities": [
+        "arcane"
+      ],
+      "resistances": [],
+      "immunities": []
+    },
+    "border-lord woodcutter": {
+      "name": "border-lord woodcutter",
+      "description": "A human laborer pushed past the agreed line by his lord's permission, taking timber the Fernwarg have not granted. Axe, saw, hand-cart, a great deal of nervous looking-over-the-shoulder. Each generation tests the borders, and each generation is reminded what the forests are.",
+      "vulnerabilities": [],
+      "resistances": [],
+      "immunities": []
+    },
+    "Witch Queen": {
+      "name": "Witch Queen",
+      "description": "The hereditary sorceress-monarch of Avenor, keeper of the oldest magical lineage on the continent and executor of rites that bind the kingdom's welfare to her personal strength. Born into the royal line that descends from Avenoria herself, a witch queen is a figure of splendid isolation — waited upon by her household, advised by her college, feared by her rivals. She wears the robes of her office in white silk and gold, and sits upon the high throne in the fashion of her predecessors. Her responsibilities are absolute: to guard the magical covenants, to settle disputes in the lower courts, to commune with the Old Powers through ritual and working, and to produce an heir of sufficient gift to inherit. The role confers immense power and equal vulnerability — a witch queen erratic in her judgments, influenced by hidden hands, or failing in her duties shakes the foundations of the kingdom itself. Most of Avenor trusts her implicitly. Some whisper that they should not.",
+      "vulnerabilities": [],
+      "resistances": [
+        "arcane"
+      ],
+      "immunities": []
+    },
+    "Exiled Heir": {
+      "name": "Exiled Heir",
+      "description": "A noble heir cast out from succession and lineage, stripped of standing in the eyes of the court though not of the blood that still marks them. An exiled heir walks the world carrying the weight of a name that is now a liability — known to be of great houses or ancient lines, yet cast adrift, forbidden return except on terms they cannot meet. Some are exiles for discovering dangerous truths; others for failing tests of loyalty; still others for offenses real or manufactured. In Hedoria, an exiled heir retains the education and polish of their birth but must make their own way, often through cunning or illicit work, always aware that return to favor is possible but costly. They bear the haunting duality of those who once had everything and nothing at once.",
+      "vulnerabilities": [],
+      "resistances": [],
+      "immunities": []
+    }
+  }
+}

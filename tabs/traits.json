@@ -1,0 +1,2154 @@
+{
+  "traitCategories": {
+    "RacialHeritage": {
+      "name": "RacialHeritage",
+      "maxSelections": 1,
+      "traits": [
+        "Hofnar",
+        "Draklid",
+        "Cephalen",
+        "Molvar",
+        "Raknid",
+        "Primes",
+        "Fernwarg",
+        "Threshi",
+        "Quelled",
+        "Vorok",
+        "Human"
+      ]
+    },
+    "Profession": {
+      "name": "Profession",
+      "maxSelections": 1,
+      "traits": [
+        "Recruit",
+        "Free-Hand",
+        "Wizard Aspirant",
+        "Witch Initiate",
+        "Wagon-Hand",
+        "Runner",
+        "Courtesan",
+        "Soldier",
+        "Mercenary",
+        "Hedge-Wizard",
+        "Hedge-Witch",
+        "Consort of the College",
+        "Mana-Hunter",
+        "Prime Ancestor-Mage",
+        "Prime Warden",
+        "Hold-Warrior",
+        "Hunter",
+        "Crafter",
+        "Healer",
+        "Drifter",
+        "Apothecary",
+        "Wizard",
+        "Witch",
+        "Trader",
+        "Diplomat",
+        "Spy",
+        "Pit-Foreman",
+        "Sailor",
+        "Pilot",
+        "Scribe",
+        "Watch-Officer",
+        "Outlaw",
+        "Caravan Guard"
+      ]
+    },
+    "Talent": {
+      "name": "Talent",
+      "maxSelections": 2,
+      "traits": [
+        "Quelled-Marked",
+        "Drawing Witch",
+        "Forbidden Working",
+        "School of Projection",
+        "School of the Hidden",
+        "School of Sight",
+        "School of the Body",
+        "School of the Hand",
+        "Marches Drilled",
+        "Marsh Skirmisher",
+        "Lake Archer",
+        "Free-Company Veteran",
+        "Duelist Trained",
+        "Pair-Bonded Brother",
+        "Hollow-Touched",
+        "Pinnacle of the Reservoir",
+        "Pinnacle of Mana",
+        "Disowned",
+        "Refugee under the Writ",
+        "Wagon-Born",
+        "Cephalen-Schooled",
+        "Quick-Witted",
+        "Iron Stomach",
+        "Sharp-Eyed",
+        "Light-Footed",
+        "Silver-Tongued",
+        "Apprenticed Under a Master",
+        "Survived a Wasting",
+        "Lost to Captivity",
+        "Crossed the Unforgiving",
+        "Late Arrival"
+      ]
+    }
+  },
+  "traits": {
+    "Hofnar": {
+      "name": "Hofnar",
+      "description": "Equine-humanoid; tall, broad-shouldered, mane-haired, hoof-toed, slight muzzle, some lineages with small temple horns. Males barrel-chested and heavy; females slimmer and faster. Lifted from steppe herds. Live in painted clan-wagon-cities that migrate seasonally — no fixed capitals. Organized by clan, confederated into seven Riderings led by elder councils. The continent's overland traders: neutral by reputation, scrupulously contract-bound, indispensable to everyone, allied with no one. Reliability is identity; a broken contract destroys standing for generations. Participate in the Quelled trade, which is splitting progressive and traditional clans toward an open break.",
+      "quirk": "Your word is your bond, and others perceive your scrupulous honesty as a sign of deep, ancestral reliability.",
+      "skills": [
+        {
+          "skill": "athletics",
+          "modifier": 10
+        }
+      ],
+      "attributes": [
+        {
+          "attribute": "strength",
+          "modifier": 2
+        },
+        {
+          "attribute": "constitution",
+          "modifier": 1
+        }
+      ],
+      "resources": [
+        {
+          "resource": "health",
+          "modifier": 10
+        }
+      ],
+      "startingItems": [],
+      "abilities": [
+        "Trade-Tongue Negotiator"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Draklid": {
+      "name": "Draklid",
+      "description": "Draklid. Drake-descended; tall, lean, sinewy, digitigrade, long active tail, scales in rust/copper/ochre/bronze (rare black), clan-marked along the flanks. Long narrow muzzle, slit-pupil amber/yellow/red eyes, sweeping fan of horns, hooked claws, small vestigial wings useless for flight but expressive in display and adorned in ceremony. Live in cliff-cut sandstone clan-holds in the high desert and broken plateau. Each clan is sovereign; never been unified, openly hostile to the suggestion. Long-lived (matriarchs into their fifth century). Patient, calculating, formally polite, scrupulously fair, terrifying to cheat. Younger sons travel as mercenaries, bodyguards, and oath-bound retainers. Dress in layered desert silks, gold at throat and wrists, clan sigils at the belt.",
+      "quirk": "Your patient and calculating demeanor makes it unnervingly difficult for others to detect when you are displeased.",
+      "skills": [
+        {
+          "skill": "intimidation",
+          "modifier": 10
+        }
+      ],
+      "attributes": [
+        {
+          "attribute": "intelligence",
+          "modifier": 2
+        },
+        {
+          "attribute": "dexterity",
+          "modifier": 1
+        }
+      ],
+      "resources": [
+        {
+          "resource": "health",
+          "modifier": 10
+        }
+      ],
+      "startingItems": [],
+      "abilities": [
+        "Calculating Gaze"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Cephalen": {
+      "name": "Cephalen",
+      "description": "Cephalopod-descended; humanoid silhouette but soft and near-boneless, can squeeze through gaps a third their size. Pearl-and-slate rubbery skin that involuntarily shifts color with emotion. Slit-pupil eyes, webbed long-fingered hands, scalp-tentacles in place of hair (semi-prehensile, used for fine work). Amphibious. Live in half-submerged coastal cities of mother-of-pearl, coral, and worked shell, with flooded lower floors and canal streets. Color-control is the central cultural discipline: children are transparent, adults hold steady, masters project false emotional states with precision. Took the seas by blockade two centuries ago after the human admiralties tried to subordinate them; control all open-water trade by treaty since. Sly as a Cephalen and Cephalen-honest are continental idioms. They do not deny the reputation.",
+      "quirk": "Your skin involuntarily ripples with color when you feel strong emotions, often betraying your true thoughts.",
+      "skills": [
+        {
+          "skill": "persuasion",
+          "modifier": 10
+        }
+      ],
+      "attributes": [
+        {
+          "attribute": "charisma",
+          "modifier": 2
+        },
+        {
+          "attribute": "dexterity",
+          "modifier": 1
+        }
+      ],
+      "resources": [
+        {
+          "resource": "health",
+          "modifier": 10
+        }
+      ],
+      "startingItems": [],
+      "abilities": [
+        "Emotional Projection"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Molvar": {
+      "name": "Molvar",
+      "description": "Molvar. Tuber-and-root people; low-slung quadrupedal body with two stubby root-fingered upper arms, dense fibrous flesh under thick rind-skin in browns/ochres/umbers, pig-and-mole face with bright forward eyes and whisker-tendrils. Short-lived (~60 years). Live in brightly-lit tunnel-networks under low earthen mounds in central meadows and forest margins. No ruling class — neighborhood councils, decisions made over long meals. Hedonists: eat, drink, brew, garden, couple prolifically; plumpness admired, fatness more so. Genderless — any two can couple, either or both can produce a spud (planted in family soil, sprouts a child after half a year). Speak to roots and plants — coax tunnels into shape, persuade crops to thrive; sometimes hired by surface farmers. Not warlike, but devastating in tunnel defense — broke human armies in the First Soul-War and have been left alone since. Inter-network defensive pact is unwritten and absolute.",
+      "quirk": "You have a natural, soothing presence that causes nearby plants to thrive and grow slightly faster in your presence.",
+      "skills": [
+        {
+          "skill": "survival",
+          "modifier": 10
+        }
+      ],
+      "attributes": [
+        {
+          "attribute": "constitution",
+          "modifier": 3
+        }
+      ],
+      "resources": [
+        {
+          "resource": "health",
+          "modifier": 10
+        }
+      ],
+      "startingItems": [],
+      "abilities": [
+        "Plant Whisperer"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Raknid": {
+      "name": "Raknid",
+      "description": "Raknid. Redeemed wartide race — the brood-line that turned during the Ensoulment and fought the rest of the Wartide alongside Avenoria's allies. Spider-derived: tall, slender, pale chitin-plated bodies in ivory, bone-white, soft grey, or glossy black. Two human-set arms plus two long jointed clawed spider-legs descending from the lower body — walk in a four-beat gait. Six eyes (large humanlike upper pair, four smaller lower), small folding chelicerae at the mouth, scalp grows a webbed mantle of pale silken fibers. Soft clicking voices, long-lived (comparable to Draklid). No homeland — their parent-race's high country was scoured and remains uninhabited. Live in scattered small communities of dozens to a few hundred in marginal hill country and forest edges. Most Hedorians do not distinguish them from what they came from: refused service, charged double, run out of towns at dusk. Communities are routinely burned out by neighboring lords or witch-hunters, and they rebuild elsewhere — they teach their children against returning violence. Take patient work: scholars, archivists, healers, translators, the occasional witch. Avenor accepts them as full citizens; the Queen's College has trained Raknid witches for over a century, who serve the realm with exacting practice and fierce loyalty. Dress simply in muted earth-tones — undyed linens, soft leathers, layered scarves and travel-cloaks — sometimes ornamented with small objects woven from their own silk.",
+      "quirk": "Your movements are unnervingly silent and precise, causing others to notice you only when you intend them to.",
+      "skills": [
+        {
+          "skill": "investigation",
+          "modifier": 10
+        }
+      ],
+      "attributes": [
+        {
+          "attribute": "wisdom",
+          "modifier": 2
+        },
+        {
+          "attribute": "intelligence",
+          "modifier": 1
+        }
+      ],
+      "resources": [
+        {
+          "resource": "health",
+          "modifier": 10
+        }
+      ],
+      "startingItems": [],
+      "abilities": [
+        "Web-Sense"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Primes": {
+      "name": "Primes",
+      "description": "The elders of Hedoria — already a people before the Ensoulment, with histories that run further back than any other race's. Tall, heavy-built, bear-bodied and broad-shouldered, dense white fur thickening at chest, neck, and tail. Pale chimpanzee-like face with a long lion muzzle, long furry tail used for balance and gesture, dexterous five-fingered hands, broad padded snow-feet. Robe in deep blue, ochre, vermilion, and gold, layered and embroidered with clan, monastery, and lineage markings — small bone relics (finger-bones, teeth, jaw fragments bound in worked metal) worn at throat, chest, wrists, and belt. Live in great cliff-cut monasteries terraced into the base of cold mountains, hung with banners and skull-iconography, with bone-vaults cut deep into the rock. Seven great monasteries currently active; lost vaults from the Unmade era are recovered across generations. Practice ancestor-magic: a slow, exact, unflashy art of invoking specific named dead by rite and offering, drawing on chained lineages of ancestors back across millennia. Excellent at knowledge, healing, divination, true-naming, untangling curses, and long-time work — useless for battle-magic. Power is anchored: a Prime at home with full vault-access is enormously powerful; a Prime on the road, carrying only three or four portable relics (named ancestors in their own right), is a fraction of that. The wizard colleges fear them quietly — Primes hold the actual historical record the colleges have spent centuries rewriting. Black-market grave-robbing of Prime bones exists; the magic does not work for thieves, and the families involved suffer untraceable misfortunes across generations. Did not fight the first Wartide alongside Avenoria; the bone-vaults that made that decision still hold the magic, still counsel preservation, and still resist young Primes who want to commit to the second. Long-standing peerage with Avenor has gone quiet under Sephilia's reordering. The Primes will warn, document, and watch. Their monasteries will survive whatever comes.",
+      "quirk": "You occasionally hear the soft, indistinct whispers of your ancestors when you are in dire need of guidance.",
+      "skills": [
+        {
+          "skill": "performance",
+          "modifier": 10
+        }
+      ],
+      "attributes": [
+        {
+          "attribute": "wisdom",
+          "modifier": 3
+        }
+      ],
+      "resources": [
+        {
+          "resource": "health",
+          "modifier": 10
+        }
+      ],
+      "startingItems": [],
+      "abilities": [
+        "Ancestor-Call"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Fernwarg": {
+      "name": "Fernwarg",
+      "description": "Wolf-and-fern people of the central forests. Tall, lean, upright, digitigrade, clawed hands and feet. Wolf-derived face — long muzzle, mobile ears, amber/yellow eyes, full canid expression-register. Coat is fur grown in fern-frond layers along back/shoulders/arms/tail, deep green to forest-dark, seasonally shifting; perfect camouflage in undergrowth. Spinal mane lifts in display, woven with bones, beads, and trophies — its size reads standing. Matriarchal by anatomy: females are larger, heavier, more muscular, with denser manes; pack-mothers carry headdresses of layered fronds. First birth is dangerous and the central passage of a female's life. Females choose mates. Males cannot lead their birth-pack — the most ambitious never will — so the ambitious leave and serve abroad as mercenaries, scouts, retainers. Packs are extended matrilines of 12–50, organized into forest-confederations. Share their forests with the Raknid by ancient unwritten compact (Fernwarg in open woodland, Raknid in deep old-growth). Two voices: long-carrying howls between packs, and an evening pack-laughter — a rising chittering chorus that disturbs human visitors. Locked in long political dispute with the bordering human kingdoms over forest rights; pressure building toward the third soul-war.",
+      "quirk": "Your coat subtly shifts color with the seasons, providing you with natural camouflage in forest environments.",
+      "skills": [
+        {
+          "skill": "survival",
+          "modifier": 10
+        }
+      ],
+      "attributes": [
+        {
+          "attribute": "dexterity",
+          "modifier": 2
+        },
+        {
+          "attribute": "constitution",
+          "modifier": 2
+        }
+      ],
+      "resources": [
+        {
+          "resource": "health",
+          "modifier": 0
+        }
+      ],
+      "startingItems": [],
+      "abilities": [
+        "Pack-Laughter Chorus"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Threshi": {
+      "name": "Threshi",
+      "description": "Locust-mantis people, chitin-plated in dust-browns/tans/ochres/sand-yellows. Tall and narrow-bodied, triangular head with compound eyes and folding mandibles, segmented wing-panels along the back (short flights, long glides). Wartide race that held its ground when the working caught it. Strongly dimorphic: females are larger, broader, with chitin shovel-forearms (plowing, sowing, egg-laying — clutches of 20–40 several times yearly); males are leaner with folding sickle-blade forearms (harvest and war — same instrument). High mortality, faster replacement, surplus of unattached males every season. Aristocratic, ruled by warrior-king from a central capital; succession by challenge or claim, no king dies peacefully. Closed to outside trade. After every harvest, landless males ride out to take land, grain, and Quelled from the human borders — three centuries of inches has put significant former human territory under Threshi grain. Periodic field-worker risings, brutally suppressed.",
+      "quirk": "Your folding mandibles and compound eyes make it difficult for others to read your intentions during negotiations.",
+      "skills": [
+        {
+          "skill": "athletics",
+          "modifier": 10
+        }
+      ],
+      "attributes": [
+        {
+          "attribute": "strength",
+          "modifier": 2
+        },
+        {
+          "attribute": "constitution",
+          "modifier": 2
+        }
+      ],
+      "resources": [
+        {
+          "resource": "health",
+          "modifier": 0
+        }
+      ],
+      "startingItems": [],
+      "abilities": [
+        "Chitinous Glide"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Quelled": {
+      "name": "Quelled",
+      "description": "Youngest race, lifted from the domesticated livestock of pre-Wartide human farms. Several lineages: pig-quell (broad, snouted, bristled), cow-quell (tall, horned, long-faced), sheep-quell (small, fleece-haired, soft-faced), fowl-quell (lean, sharp, feather-down). Strongly animal in feature; not all stand fully upright. Crude tongues, no writing, no shared history beyond a few generations, no civilization. Bred, slaughtered, and worked as livestock and labor across the human kingdoms outside Avenor — the agricultural foundation of human society there. Avenor outlawed the trade two generations ago and grants escapees citizenship under the queen's writ; this is one of the chief reasons the rest of human Hedoria considers Avenor a traitor realm. Free Quelled elsewhere are isolated individuals — rare, hidden, short-lived.",
+      "quirk": "Your humble origins grant you an unassuming presence that causes others to often overlook you in a crowd.",
+      "skills": [
+        {
+          "skill": "persuasion",
+          "modifier": 10
+        }
+      ],
+      "attributes": [
+        {
+          "attribute": "constitution",
+          "modifier": 3
+        },
+        {
+          "attribute": "wisdom",
+          "modifier": 1
+        }
+      ],
+      "resources": [
+        {
+          "resource": "health",
+          "modifier": 0
+        }
+      ],
+      "startingItems": [],
+      "abilities": [
+        "Livestock Endurance"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Vorok": {
+      "name": "Vorok",
+      "description": "Wartide-blooded miners, the continent's primary source of minerals, possess bodies that adapt to heavy labor over a lifetime. They operate under a complex system of house contracts and possess a supernatural ore-sense that makes them peerless prospectors.",
+      "quirk": "Your deep, grinding voice and casual use of obscene language make you stand out in formal social settings.",
+      "skills": [
+        {
+          "skill": "athletics",
+          "modifier": 10
+        }
+      ],
+      "attributes": [
+        {
+          "attribute": "strength",
+          "modifier": 2
+        },
+        {
+          "attribute": "constitution",
+          "modifier": 1
+        }
+      ],
+      "resources": [
+        {
+          "resource": "health",
+          "modifier": 10
+        }
+      ],
+      "startingItems": [],
+      "abilities": [
+        "Ore-Sense"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Human": {
+      "name": "Human",
+      "description": "Humans. Pre-Ensoulment majority race of Hedoria, dominant before the Wartide and reduced by it to four peripheral kingdoms — Avenor on the southern river-coast, Udorath on the western Whitestone, Nadorim in the northern lake-country, and Kelmar at the north end of the Shieldcap mountains. The interior of the continent is held by the lifted and wartide races. Still among the most numerous peoples on the continent. Shorter than Hofnar, Prime, or Draklid; taller than Molvar. Lifespan around seventy years. Coloring and build vary by region: pale and dark-haired in Udorath, ruddy and broad in Kelmar, fairer and lighter-built in Nadorim, mixed in Avenor. Dress varies by kingdom — Udorathi in well-cut linen and wool with chalk and salt-blue dyes; Kelmari in heavy practical garments for cold and the saddle, with house-colors at the shoulder and worked metal at belt and collar; Nadorim in plain tough cloth and oiled leathers against lake-damp, waterfowl-feather trim on formal wear; Avenorians in the restrained palette of the marble city.",
+      "quirk": "Your sheer tenacity often compels you to find solutions to problems that others have long since abandoned as hopeless.",
+      "skills": [
+        {
+          "skill": "persuasion",
+          "modifier": 10
+        }
+      ],
+      "attributes": [
+        {
+          "attribute": "intelligence",
+          "modifier": 1
+        },
+        {
+          "attribute": "charisma",
+          "modifier": 2
+        }
+      ],
+      "resources": [
+        {
+          "resource": "health",
+          "modifier": 0
+        }
+      ],
+      "startingItems": [],
+      "abilities": [
+        "Adaptive Learning"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Soldier": {
+      "name": "Soldier",
+      "description": "A drilled fighter of one of the kingdom levies, household guards, town watches, or marches forces. Has stood in a line, held a position, and come out of an engagement at less than full strength more than once. The discipline carries.",
+      "skills": [
+        {
+          "skill": "melee",
+          "modifier": 8
+        },
+        {
+          "skill": "ranged",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "stamina",
+          "modifier": 10
+        }
+      ],
+      "quirk": "You read tactical ground without consciously meaning to.",
+      "startingItems": [],
+      "abilities": [
+        "Veteran"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Mercenary": {
+      "name": "Mercenary",
+      "description": "A free-company fighter taking contracts wherever the work is. Kit assembled across years of campaigns, loyalties priced by season, the season itself respected — a mercenary who breaks a contract while it runs is not a mercenary anyone hires next year.",
+      "skills": [
+        {
+          "skill": "melee",
+          "modifier": 8
+        },
+        {
+          "skill": "athletics",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "stamina",
+          "modifier": 10
+        }
+      ],
+      "quirk": "You honor a signed contract through the season. Off-contract, you make your own choices.",
+      "startingItems": [],
+      "abilities": [
+        "Veteran",
+        "Hold the Contract"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Hedge-Wizard": {
+      "name": "Hedge-Wizard",
+      "description": "A man with the spark who slipped through, was trained privately, or learned what he could from a retired brother gone unsanctioned. Independent, unsanctioned, watched. The Brotherhood absorbs him where it can; where it cannot, it pays attention. He carries whatever staff he can get — a homemade one, an inherited piece, a smith-bought instrument, occasionally something stolen or scavenged; he upgrades when he can afford to or when fortune brings him a better one.",
+      "skills": [
+        {
+          "skill": "staff-work",
+          "modifier": 8
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "mana",
+          "modifier": 20
+        }
+      ],
+      "quirk": "You watch the road behind you. The Brotherhood watches you back.",
+      "startingItems": [],
+      "abilities": [
+        "Standing Wall"
+      ],
+      "unlockedBy": [],
+      "excludedBy": [
+        "Wizard"
+      ]
+    },
+    "Hedge-Witch": {
+      "name": "Hedge-Witch",
+      "description": "A village practitioner working in quiet violation of kingdom law (or openly in Avenor as a freelance outside the College). Helps with births, fevers, contraceptive draughts, locks, the small protective workings the local lord pretends not to notice. Modest reservoir filled where she can manage it — black-market potion, careful partner, rare beast-source. Lives in constant low-grade danger and has rehearsed the fire she will set in the cottage if the Brotherhood comes for her.",
+      "skills": [
+        {
+          "skill": "witchcraft",
+          "modifier": 8
+        },
+        {
+          "skill": "craft",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "reservoir",
+          "modifier": 30
+        }
+      ],
+      "quirk": "You read every visitor for what they are, especially the polite ones.",
+      "startingItems": [],
+      "abilities": [
+        "Hedge-Working",
+        "Apothecary's Touch"
+      ],
+      "unlockedBy": [],
+      "excludedBy": [
+        "Wizard",
+        "Consort of the College"
+      ]
+    },
+    "Consort of the College": {
+      "name": "Consort of the College",
+      "description": "A male wizard of Avenor, contracted under the Queen's College donor-line system as a partner to one or more witches. The original cooperative tradition the Brotherhood broke from. Honored, lawful in Avenor, doctrinally unthinkable in the three kingdoms. A consort generates mana like any wizard and donates it to his contracted witches; senior consorts work cooperatively in the field, multiplying the witch's range past anything the Brotherhood can match alone.",
+      "skills": [
+        {
+          "skill": "staff-work",
+          "modifier": 8
+        },
+        {
+          "skill": "persuasion",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "mana",
+          "modifier": 30
+        }
+      ],
+      "quirk": "You think of mana as something to give. The Brotherhood has a different word for what you are.",
+      "startingItems": [],
+      "abilities": [
+        "Standing Wall",
+        "Cooperative Filling"
+      ],
+      "unlockedBy": [],
+      "excludedBy": [
+        "Wizard",
+        "Witch",
+        "Hedge-Witch"
+      ]
+    },
+    "Mana-Hunter": {
+      "name": "Mana-Hunter",
+      "description": "A specialist tracker and forager of magical-creature essence for the witch trade. The work runs across a moral range. The clean end is licensed: Avenorian houses keep stagling-meadows and managed sylvan groves and pay foresters to maintain the herds; lampfowl-egg gatherers and antler-foragers work the seasonal cycle. The ugly end is the captive trade — sylvans and glasshorns trapped and held for repeated milking — officially forbidden in most kingdoms, licensed in most kingdoms, ugly and known to be ugly. A given mana-hunter sits somewhere on that range, and most of them have stories from both ends.",
+      "skills": [
+        {
+          "skill": "survival",
+          "modifier": 8
+        },
+        {
+          "skill": "ranged",
+          "modifier": 5
+        },
+        {
+          "skill": "alchemy",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "stamina",
+          "modifier": 10
+        }
+      ],
+      "quirk": "You see a creature first by the size of its essence.",
+      "startingItems": [],
+      "abilities": [
+        "Mana-Hunter Track",
+        "Brew Mana Potion"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Prime Ancestor-Mage": {
+      "name": "Prime Ancestor-Mage",
+      "description": "A monastery-trained Prime working through the bone-line of named ancestors. White fur, lion-muzzled face, deep blue robes heavy with embroidery and ancestor-tokens. Carries three or four portable relics on the road — far less than vault-access at home, but the bones know their work. Excellent at knowledge, healing, divination, true-naming, untangling curses. Useless in a battle of rates.",
+      "skills": [
+        {
+          "skill": "ancestor-work",
+          "modifier": 12
+        },
+        {
+          "skill": "performance",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [],
+      "quirk": "You consult the relic before you commit to anything that matters.",
+      "startingItems": [],
+      "abilities": [
+        "Ancestor-Call",
+        "Mend by Lineage",
+        "Bone-Reading"
+      ],
+      "unlockedBy": [
+        "Primes"
+      ],
+      "excludedBy": []
+    },
+    "Prime Warden": {
+      "name": "Prime Warden",
+      "description": "A monastery-warrior of one of the seven great Prime monasteries — broad-shouldered and twelve feet of cold-country muscle, in heavy blue and crimson over layered fur, two-handed mace or polearm sized to the body. The monasteries do not project force outward. When the wardens come down from the mountains, something has gone seriously wrong.",
+      "skills": [
+        {
+          "skill": "melee",
+          "modifier": 12
+        },
+        {
+          "skill": "intimidation",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "stamina",
+          "modifier": 15
+        },
+        {
+          "resource": "health",
+          "modifier": 20
+        }
+      ],
+      "quirk": "You speak rarely. When you arrive in a village, the village notices.",
+      "startingItems": [],
+      "abilities": [
+        "Veteran",
+        "Standing Wall"
+      ],
+      "unlockedBy": [
+        "Primes"
+      ],
+      "excludedBy": []
+    },
+    "Hold-Warrior": {
+      "name": "Hold-Warrior",
+      "description": "A trained close-combat fighter of one of the great clan or noble households — Draklid clan-hold, Threshi noble-band, Vorok house-security, Kelmari marches-house, Hofnar clan-guard, Cephalen House-marine, Fernwarg pack-hunter. The kit and culture vary by house, the underlying discipline does not. Seasoned for the kind of fight the household runs.",
+      "skills": [
+        {
+          "skill": "melee",
+          "modifier": 10
+        },
+        {
+          "skill": "athletics",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "stamina",
+          "modifier": 12
+        }
+      ],
+      "quirk": "You read a hall first for who you would have to kill, and the appraisal does not surface as an expression.",
+      "startingItems": [],
+      "abilities": [
+        "Veteran"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Hunter": {
+      "name": "Hunter",
+      "description": "A trapper, game-hunter, or back-country tracker working the kingdoms' forests, the steppe edges, the Plateau scree. Reads trail, season, and weather. Carries the trade home — pelts, meat, the occasional troublesome predator brought down for bounty. The same hands serve well in scout work, marches-cycle skirmish, and the work of clearing grist warrens and tarkle infestations from settled country.",
+      "skills": [
+        {
+          "skill": "ranged",
+          "modifier": 8
+        },
+        {
+          "skill": "survival",
+          "modifier": 8
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "stamina",
+          "modifier": 8
+        }
+      ],
+      "quirk": "You see tracks the rest of the party walks past.",
+      "startingItems": [],
+      "abilities": [
+        "Marches-Reader"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Crafter": {
+      "name": "Crafter",
+      "description": "A skilled hand of one of the trades — smith, carpenter, weaver, mason, cooper, leatherworker, instrument-maker, brewer, dyer, baker. The whole human and non-human world of made things runs through these hands. A crafter knows the materials, the tools, the workshop register, and the quiet politics of guild and license that govern the work in any given town.",
+      "skills": [
+        {
+          "skill": "craft",
+          "modifier": 12
+        },
+        {
+          "skill": "investigation",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [],
+      "quirk": "You assess any room first by what was made in it and how well.",
+      "startingItems": [],
+      "abilities": [
+        "Smith's Eye"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Healer": {
+      "name": "Healer",
+      "description": "A practitioner of the body's ordinary repair — apothecary, midwife, bonesetter, herbalist, surgeon, household physician. Not a witch, though many village healers are quietly both. Knows wounds, fevers, births, draughts, and the particular medicine each race needs that a stranger to the race would get wrong.",
+      "skills": [
+        {
+          "skill": "craft",
+          "modifier": 10
+        },
+        {
+          "skill": "investigation",
+          "modifier": 5
+        },
+        {
+          "skill": "persuasion",
+          "modifier": 3
+        }
+      ],
+      "attributes": [],
+      "resources": [],
+      "quirk": "You triage a room without meaning to and remember faces by what they were dying of.",
+      "startingItems": [],
+      "abilities": [
+        "Apothecary's Touch"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Drifter": {
+      "name": "Drifter",
+      "description": "An unrooted person of the towns and roads — traveling musician, gambler, off-season laborer, sex-worker, pickpocket, beggar, courier of small cargoes. Lives at the edges of settled life. Knows which inns turn you away, which constables are corruptible, which back roads run between kingdoms unwatched.",
+      "skills": [
+        {
+          "skill": "persuasion",
+          "modifier": 8
+        },
+        {
+          "skill": "acrobatics",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "stamina",
+          "modifier": 5
+        }
+      ],
+      "quirk": "You read a room first for who is paying attention to you and second for the exits.",
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Apothecary": {
+      "name": "Apothecary",
+      "description": "A specialist of the alchemical trades — potions, reagents, philtres, the assessment of old magical items. The closest a non-magical person gets to a working life with magic. Brews healing draughts and contraceptives openly; brews mana potions where the kingdom permits and quietly where it doesn't; reads pre-Ensoulment items for the merchants and lords who bring them in. A senior apothecary in a large town commands prices that outpace most physicians.",
+      "skills": [
+        {
+          "skill": "alchemy",
+          "modifier": 12
+        },
+        {
+          "skill": "lore",
+          "modifier": 5
+        },
+        {
+          "skill": "medicine",
+          "modifier": 4
+        }
+      ],
+      "attributes": [],
+      "resources": [],
+      "quirk": "You read every cargo first by what reagents it might be hiding.",
+      "startingItems": [],
+      "abilities": [
+        "Brew Healing Potion",
+        "Brew Reagent",
+        "Identify Old Item"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Forbidden Working": {
+      "name": "Forbidden Working",
+      "description": "The bearer practices magic outside the line — non-consenting essence-sources, hexcraft, compulsion of the will, the corner of the trade nobody admits to. Power and access at the cost of standing in any kingdom that finds out, and a personal weight the witch carries whether anyone finds out or not.",
+      "skills": [],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "reservoir",
+          "modifier": 50
+        }
+      ],
+      "quirk": "You have decided that the price is worth paying. You have not told anyone you trust.",
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "School of Projection": {
+      "name": "School of Projection",
+      "description": "The College's combat-magic specialty. The witch's projective working — flame, cold, light, force at distance — is faster to bring up and cheaper per use than for a generalist. The school's masters are the witches the Brotherhood fears most in open engagement.",
+      "skills": [
+        {
+          "skill": "witchcraft",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "reservoir",
+          "modifier": 30
+        }
+      ],
+      "quirk": "You see a fight first as a question of geometry — where the working will land, what it will catch.",
+      "startingItems": [],
+      "abilities": [
+        "Heat Lance",
+        "Witchfire",
+        "Cold Wall"
+      ],
+      "unlockedBy": [],
+      "excludedBy": [
+        "School of the Hidden",
+        "School of Sight",
+        "School of the Body",
+        "School of the Hand"
+      ]
+    },
+    "School of the Hidden": {
+      "name": "School of the Hidden",
+      "description": "The College's glamour and concealment specialty. The witch's working slides past the eye, the appearance of a stranger holds for hours, the patrol passes within reach. The school favored by witches who travel quietly outside Avenor and by the queen's couriers.",
+      "skills": [
+        {
+          "skill": "witchcraft",
+          "modifier": 5
+        },
+        {
+          "skill": "stealth",
+          "modifier": 3
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "reservoir",
+          "modifier": 30
+        }
+      ],
+      "quirk": "You walk a market and notice nobody noticing you.",
+      "startingItems": [],
+      "abilities": [
+        "Veil",
+        "Misdirection"
+      ],
+      "unlockedBy": [],
+      "excludedBy": [
+        "School of Projection",
+        "School of Sight",
+        "School of the Body",
+        "School of the Hand"
+      ]
+    },
+    "School of Sight": {
+      "name": "School of Sight",
+      "description": "The College's scrying and intent-reading specialty. The witch reads the working in a room, the truth in a mouth, the line of someone watched at distance. The school behind every Avenorian intelligence operation worth running.",
+      "skills": [
+        {
+          "skill": "witchcraft",
+          "modifier": 5
+        },
+        {
+          "skill": "insight",
+          "modifier": 3
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "reservoir",
+          "modifier": 30
+        }
+      ],
+      "quirk": "You read a room before you've fully entered it, and the read is rarely wrong.",
+      "startingItems": [],
+      "abilities": [
+        "Distance-Sight",
+        "Read Intent",
+        "Trace Working"
+      ],
+      "unlockedBy": [],
+      "excludedBy": [
+        "School of Projection",
+        "School of the Hidden",
+        "School of the Body",
+        "School of the Hand"
+      ]
+    },
+    "School of the Body": {
+      "name": "School of the Body",
+      "description": "The College's healing and birth specialty. The witch closes the wound, draws the fever, eases the labor, sets the bone with the working doing the slow patient work the body alone could not. The continent's quietest specialty and its most consistently useful — every village has needed this craft, lawful or not.",
+      "skills": [
+        {
+          "skill": "witchcraft",
+          "modifier": 5
+        },
+        {
+          "skill": "medicine",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "reservoir",
+          "modifier": 30
+        }
+      ],
+      "quirk": "You triage rooms without meaning to and remember faces by what they were dying of.",
+      "startingItems": [],
+      "abilities": [
+        "Mend Body",
+        "Ease the Birth"
+      ],
+      "unlockedBy": [],
+      "excludedBy": [
+        "School of Projection",
+        "School of the Hidden",
+        "School of Sight",
+        "School of the Hand"
+      ]
+    },
+    "School of the Hand": {
+      "name": "School of the Hand",
+      "description": "The College's telekinetic specialty. The witch moves weight at distance, hurls weapons, holds doors, drags fallen comrades clear. Less showy than projection, more useful in a tight room. The school senior consorts pair best with — co-working a hand-spell triples its weight without tripling the reservoir cost.",
+      "skills": [
+        {
+          "skill": "witchcraft",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "reservoir",
+          "modifier": 30
+        }
+      ],
+      "quirk": "You catalogue a room first by what is loose and what is fixed.",
+      "startingItems": [],
+      "abilities": [
+        "Force Pull",
+        "Hold the Door",
+        "Hurl"
+      ],
+      "unlockedBy": [],
+      "excludedBy": [
+        "School of Projection",
+        "School of the Hidden",
+        "School of Sight",
+        "School of the Body"
+      ]
+    },
+    "Marches Drilled": {
+      "name": "Marches Drilled",
+      "description": "Trained on the Kelmari winter line. The Threshi raid cycle has been the bearer's school for years — read the ground, place the lance, ride down what does not break and disengage from what does. The most experienced field discipline in human Hedoria.",
+      "skills": [
+        {
+          "skill": "melee",
+          "modifier": 5
+        },
+        {
+          "skill": "survival",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "stamina",
+          "modifier": 10
+        }
+      ],
+      "quirk": "You read the season into every meadow and judge it for the Threshi line you would have ridden across it last year.",
+      "startingItems": [],
+      "abilities": [
+        "Marches Charge",
+        "Marches-Reader"
+      ],
+      "unlockedBy": [],
+      "excludedBy": [
+        "Marsh Skirmisher",
+        "Lake Archer"
+      ]
+    },
+    "Marsh Skirmisher": {
+      "name": "Marsh Skirmisher",
+      "description": "Trained on the Udorathi fen-edge. Strike from cover, fall back through ground a stranger can't read, ambush the heavy column that thought it had crossed open country. The discipline that has held the western frontier in worse moments than the present one.",
+      "skills": [
+        {
+          "skill": "ranged",
+          "modifier": 5
+        },
+        {
+          "skill": "stealth",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "stamina",
+          "modifier": 10
+        }
+      ],
+      "quirk": "You read a marsh first for the line of footing only the locals see.",
+      "startingItems": [],
+      "abilities": [
+        "Marsh Ambush"
+      ],
+      "unlockedBy": [],
+      "excludedBy": [
+        "Marches Drilled",
+        "Lake Archer"
+      ]
+    },
+    "Lake Archer": {
+      "name": "Lake Archer",
+      "description": "Trained at the Nadorim seasonal musters. Loose long arrows from boat or pier-head, read wind across water, place a volley on a column that has no cover. The kingdom's principal military art and a quietly devout discipline; bowmen touch the Hand-sigil before each volley.",
+      "skills": [
+        {
+          "skill": "ranged",
+          "modifier": 8
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "stamina",
+          "modifier": 8
+        }
+      ],
+      "quirk": "You read wind off water automatically, and notice every arc your peers haven't accounted for.",
+      "startingItems": [],
+      "abilities": [
+        "Lake-Volley"
+      ],
+      "unlockedBy": [],
+      "excludedBy": [
+        "Marches Drilled",
+        "Marsh Skirmisher"
+      ]
+    },
+    "Free-Company Veteran": {
+      "name": "Free-Company Veteran",
+      "description": "The bearer has run a contract season as a captain or senior of a small mixed-race mercenary band. Tactics, contract-language, the politics of holding a company together across a winter — the experience reads in every move.",
+      "skills": [
+        {
+          "skill": "melee",
+          "modifier": 4
+        },
+        {
+          "skill": "persuasion",
+          "modifier": 4
+        },
+        {
+          "skill": "lore",
+          "modifier": 4
+        }
+      ],
+      "attributes": [],
+      "resources": [],
+      "quirk": "You read a band of strangers first for what they cost to feed.",
+      "startingItems": [],
+      "abilities": [
+        "Free-Company Captain"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Duelist Trained": {
+      "name": "Duelist Trained",
+      "description": "The single-combat specialist. Trained in a school of a kingdom or on the Draklid challenge-form, the bearer reads an opponent in beats ahead. Useful in noble duels, the Draklid challenge, the back-alley fight that won't be stopped.",
+      "skills": [
+        {
+          "skill": "melee",
+          "modifier": 8
+        }
+      ],
+      "attributes": [],
+      "resources": [],
+      "quirk": "You watch a fight beginning to read who finishes it.",
+      "startingItems": [],
+      "abilities": [
+        "Duelist's Eye"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Pair-Bonded Brother": {
+      "name": "Pair-Bonded Brother",
+      "description": "The brother has formed a pair-bond with another from his agoge cohort — comrades across decades, deployed together by mutual choice. The order does not police these bonds. The pair reads each other's openings without speech.",
+      "skills": [],
+      "attributes": [],
+      "resources": [],
+      "quirk": "You think of yourself as half of a pair. The bond was the choice that defined you.",
+      "startingItems": [],
+      "abilities": [
+        "Pair-Bonded"
+      ],
+      "unlockedBy": [
+        "Wizard"
+      ],
+      "excludedBy": []
+    },
+    "Hollow-Touched": {
+      "name": "Hollow-Touched",
+      "description": "The bearer has, at some point in their life, drawn power from a Wartide-fragment source — a Hollow walked, a demonic remnant overcome, an old corrupted battlefield held too long. Power follows. The bearer is changed by it in ways nobody catalogues cleanly.",
+      "skills": [],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "reservoir",
+          "modifier": 60
+        }
+      ],
+      "quirk": "You feel the Hollows from miles away. They feel you back.",
+      "startingItems": [],
+      "abilities": [
+        "Hollow-Touched Draw"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Pinnacle of the Reservoir": {
+      "name": "Pinnacle of the Reservoir",
+      "description": "Born under a star the College reads the same way every generation — the witch whose reservoir holds far more than any of her cohort, whose ceiling approaches the historical record. The body pays for it; the witch is physically slighter and tires faster, and her workings cost her in ways other witches' do not. At a full reservoir she is the most dangerous person in any human kingdom, and the College knows where she lives.",
+      "skills": [],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "reservoir",
+          "modifier": 1500
+        },
+        {
+          "resource": "health",
+          "modifier": -20
+        },
+        {
+          "resource": "stamina",
+          "modifier": -10
+        }
+      ],
+      "quirk": "Other witches feel your reservoir from across a room. The Brotherhood marks your name when it hears it.",
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Pinnacle of Mana": {
+      "name": "Pinnacle of Mana",
+      "description": "The wizard whose body produces mana faster and at greater capacity than any of his agoge-cohort. The Brotherhood marks him early, deploys him often, and is at once proud of him and quietly worried about him. Some senior masters note that the men with the strongest pools historically have the hardest time staying loyal to the doctrine.",
+      "skills": [],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "mana",
+          "modifier": 50
+        }
+      ],
+      "quirk": "Other wizards read the strength of your output and adjust their tone accordingly.",
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Disowned": {
+      "name": "Disowned",
+      "description": "The bearer was cut from a clan, an order, or a house — Draklid stripped of clan-sigil, Brotherhood man broken from the order, Vorok blacklisted across the inter-house compacts, Hofnar driven from a Rideing for a contract broken. The bearer takes work no member-in-good-standing would touch and is more dangerous for it. The reason is not asked.",
+      "skills": [
+        {
+          "skill": "melee",
+          "modifier": 3
+        },
+        {
+          "skill": "intimidation",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "stamina",
+          "modifier": 5
+        }
+      ],
+      "quirk": "You do not introduce yourself by lineage. The lineage is the topic you change.",
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Refugee under the Writ": {
+      "name": "Refugee under the Writ",
+      "description": "The bearer reached Avenor as a refugee — Quell escapee, Threshi dissident, Raknid burned-out community survivor — and was received under the queen's writ. They carry the small civic token of citizenship and a long quiet story of how they got here. Welcome in Avenor; visible everywhere else.",
+      "skills": [
+        {
+          "skill": "survival",
+          "modifier": 5
+        },
+        {
+          "skill": "stealth",
+          "modifier": 3
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "stamina",
+          "modifier": 5
+        }
+      ],
+      "quirk": "You hold the writ-token close in any kingdom that does not honor it, which is three out of four.",
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Wagon-Born": {
+      "name": "Wagon-Born",
+      "description": "Raised in a Hofnar clan-wagon on the long routes. The bearer knows roads, currencies, customs, and the quiet politics of every market between the southern and northern grasslands. Speaks four trade-tongues at a working level by fifteen.",
+      "skills": [
+        {
+          "skill": "persuasion",
+          "modifier": 5
+        },
+        {
+          "skill": "lore",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [],
+      "quirk": "You name each town first by the road that gets you out of it.",
+      "startingItems": [],
+      "abilities": [
+        "Trade-Tongue Negotiator"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Cephalen-Schooled": {
+      "name": "Cephalen-Schooled",
+      "description": "The bearer trained in a Cephalen House for a season or more — color-discipline, the codes of obligation, the formal courtesy that masks negotiation. Rare for a non-Cephalen; the Houses do not teach outsiders lightly. Useful in any negotiation that has consequences.",
+      "skills": [
+        {
+          "skill": "deception",
+          "modifier": 5
+        },
+        {
+          "skill": "insight",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [],
+      "quirk": "You hold an expression for as long as you choose, and choose deliberately.",
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Wizard": {
+      "name": "Wizard",
+      "description": "A male human with the spark — the rare biological capacity to generate mana from his own body. Training comes through the Brotherhood at Telinor (the formal path: agoge from boyhood, a decade of magical and martial drill, lifelong celibate doctrine, the dark uniform of the order) or through informal channels (hedge-tutoring, retired brothers gone unsanctioned, private masters paid in coin). Either way he works the four domains of staff-work — striking, bracing, warding, motion — and progresses through staves over his career: a training staff first, then field-issue, eventually a master's staff if rank or fortune carries him there. The Brotherhood claims most of the field and watches the rest.",
+      "skills": [
+        {
+          "skill": "staff-work",
+          "modifier": 12
+        },
+        {
+          "skill": "melee",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "mana",
+          "modifier": 30
+        }
+      ],
+      "quirk": "You think with the staff in hand — the small pool of mana measured against the working, the body's weight committed behind each strike. Without the staff you feel half-armed.",
+      "startingItems": [],
+      "abilities": [
+        "Standing Wall",
+        "Wind-Slow",
+        "Hardened Strike"
+      ],
+      "unlockedBy": [],
+      "excludedBy": [
+        "Witch",
+        "Hedge-Witch",
+        "Consort of the College"
+      ]
+    },
+    "Witch": {
+      "name": "Witch",
+      "description": "A trained witch — typically a human woman, occasionally a Draklid, Cephalen, Raknid, or freed Quell. Her power lives in a reservoir she fills with male essence and spends on workings: projection, glamour, sight, body, hand. Training comes through the Queen's College in Avenor (open practice, lawful, the consort-line system keeping her supplied at home) or through the hedge tradition (informal teaching, careful filling on what she can find, the practice concealed from neighbors). The five working domains are the same; only the access to consort-line resources and the legal protection differ. Outside Avenor every witch lives with the threat of arrest, exile, or quiet death — even the College-trained, when they cross borders.",
+      "skills": [
+        {
+          "skill": "witchcraft",
+          "modifier": 12
+        },
+        {
+          "skill": "investigation",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "reservoir",
+          "modifier": 60
+        }
+      ],
+      "quirk": "You think in mana — what each working will cost, when you can fill, who in the room is the spark and who is not.",
+      "startingItems": [],
+      "abilities": [
+        "Hedge-Working",
+        "Witchlight",
+        "Conjure Cold",
+        "Cooperative Filling"
+      ],
+      "unlockedBy": [],
+      "excludedBy": [
+        "Wizard",
+        "Consort of the College"
+      ]
+    },
+    "Courtesan": {
+      "name": "Courtesan",
+      "description": "A trained practitioner of paid intimacy in courtesan-house, tavern, or street apprenticeship. You read people as a craft, manage risk with precision, and know every layer of the trade. The work grants both coin and unmatched skill in reading desire and negotiating its terms.",
+      "quirk": "You read a room first for who is paying attention and second for the terms of what they want.",
+      "skills": [
+        {
+          "skill": "carnal-arts",
+          "modifier": 8
+        },
+        {
+          "skill": "persuasion",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [],
+      "startingItems": [
+        {
+          "item": "Contraceptive Draught",
+          "quantity": 1
+        }
+      ],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Quelled-Marked": {
+      "name": "Quelled-Marked",
+      "description": "You survived the Quelled-trade, the structural sexual slavery that touches every beast-market and breeding-house across Hedoria. The mark on your body reads what happened. The skill it taught is undeniable, and the hardness it left behind keeps you standing when others would break.",
+      "quirk": "You have seen what others cannot imagine. The things you survived made you unbreakable in ways quiet people do not speak of.",
+      "skills": [
+        {
+          "skill": "carnal-arts",
+          "modifier": 8
+        }
+      ],
+      "attributes": [],
+      "resources": [],
+      "startingItems": [],
+      "abilities": [
+        "Hardened to It"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Drawing Witch": {
+      "name": "Drawing Witch",
+      "description": "You are a witch who chose the direct path over the hedge craft. You draw mana from partners through sexual intimacy, uncut and efficient. This is the taboo technique most witches refuse, the one that marks you dangerous in the eyes of every kingdom that learns what you are. The Brotherhood hunts you before they hunt others.",
+      "quirk": "You walk into rooms and the air changes. People feel drawn to you before they know why, and when they learn what draws them, they recoil.",
+      "skills": [
+        {
+          "skill": "carnal-arts",
+          "modifier": 8
+        },
+        {
+          "skill": "witchcraft",
+          "modifier": 8
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "reservoir",
+          "modifier": 60
+        }
+      ],
+      "startingItems": [],
+      "abilities": [
+        "Wild Draw"
+      ],
+      "unlockedBy": [
+        "Witch"
+      ],
+      "excludedBy": []
+    },
+    "Trader": {
+      "name": "Trader",
+      "description": "A merchant who buys low and sells high across kingdom borders and trade-routes. Reads ledgers, factor-letters, and contract clauses with ease; knows guild licenses and the customs of every major market town. Could be trained on a Hofnar wagon, in a Cephalen counting-house, as a human burgher-merchant, or through years of freelance broker work.",
+      "quirk": "You see a room first by what it is willing to trade.",
+      "skills": [
+        {
+          "skill": "persuasion",
+          "modifier": 8
+        },
+        {
+          "skill": "lore",
+          "modifier": 5
+        },
+        {
+          "skill": "insight",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [],
+      "startingItems": [],
+      "abilities": [
+        "Read the Market"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Diplomat": {
+      "name": "Diplomat",
+      "description": "A court envoy or treaty-bearer trained to navigate the delicate spaces between hostile powers. Reads rooms with precision, drafts careful language, and carries word between parties who will not speak directly. Could be a human kingdom-emissary, Cephalen House ambassador, Threshi border-envoy, or independent broker working freelance contracts.",
+      "quirk": "You say what each side needs to hear, framed the way they are ready to receive it.",
+      "skills": [
+        {
+          "skill": "persuasion",
+          "modifier": 10
+        },
+        {
+          "skill": "insight",
+          "modifier": 5
+        },
+        {
+          "skill": "deception",
+          "modifier": 3
+        }
+      ],
+      "attributes": [],
+      "resources": [],
+      "startingItems": [],
+      "abilities": [
+        "Bridge the Gap"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Spy": {
+      "name": "Spy",
+      "description": "An informant, watcher, or intelligence-handler trained to listen, move unseen, and carry word through dangerous territory. Skilled at manufacturing false tells and reading the social signatures of intrigue. Could be Cephalen-trained in color-discipline, a hedge-network informant, a kingdom agent, or freelance work.",
+      "quirk": "You listen to what people don't say, and the silence tells you everything.",
+      "skills": [
+        {
+          "skill": "investigation",
+          "modifier": 8
+        },
+        {
+          "skill": "stealth",
+          "modifier": 8
+        },
+        {
+          "skill": "insight",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [],
+      "startingItems": [],
+      "abilities": [
+        "Read the Room"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Pit-Foreman": {
+      "name": "Pit-Foreman",
+      "description": "A mining specialist who reads ground-water, gas pockets, fault-lines, ore-body structure, ventilation, and tunnel-shoring with practiced eye. Oversees extraction and safety in difficult ground. Could be a Vorok consortium foreman, a kingdom's quarry-master, or a foreign engineer trained in Vorok mines on contract.",
+      "quirk": "You assess ground first by what it will give up and what it will take from you.",
+      "skills": [
+        {
+          "skill": "craft",
+          "modifier": 8
+        },
+        {
+          "skill": "survival",
+          "modifier": 5
+        },
+        {
+          "skill": "athletics",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "stamina",
+          "modifier": 10
+        }
+      ],
+      "startingItems": [],
+      "abilities": [
+        "Ground-Sense"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Sailor": {
+      "name": "Sailor",
+      "description": "A deck-hand, oarsman, or ship-fighter with salt-weathered hands and the muscle to work rope, sail, and boarding pike through a long voyage. Reads weather, current, and the small language of the ship with instinctive ease. Could be Cephalen crew, Nadorim coastal hand, lake-fisher of the Avenor or Kelmar lakes, or river-pilot of the great waterways.",
+      "quirk": "You feel the water's mood before the crew sees it in the sky.",
+      "skills": [
+        {
+          "skill": "athletics",
+          "modifier": 8
+        },
+        {
+          "skill": "survival",
+          "modifier": 5
+        },
+        {
+          "skill": "ranged",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "stamina",
+          "modifier": 8
+        }
+      ],
+      "startingItems": [],
+      "abilities": [
+        "Weather-Sense"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Pilot": {
+      "name": "Pilot",
+      "description": "A master of currents, charts, and channels who brings ships through treacherous harbor approaches, river bars, and dangerous straits. The difference between a safe passage and a wreck often rests on the pilot's read of invisible water. Could be a Cephalen harbor-pilot, Nadorim river-master, kingdom navigator, or independent contracted specialist.",
+      "quirk": "You read water before you read the sky, and your crew trusts what you say.",
+      "skills": [
+        {
+          "skill": "survival",
+          "modifier": 10
+        },
+        {
+          "skill": "investigation",
+          "modifier": 5
+        },
+        {
+          "skill": "acrobatics",
+          "modifier": 3
+        }
+      ],
+      "attributes": [],
+      "resources": [],
+      "startingItems": [],
+      "abilities": [
+        "Channel-Read"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Scribe": {
+      "name": "Scribe",
+      "description": "A literate clerk, copyist, or court-recorder skilled in drafting contracts, copying texts, and maintaining ledgers with exacting care. The work grants authority in any kingdom that values the written word. Could be a kingdom bureaucrat, Threshi court specialist, Hofnar contract-drafter, Brotherhood archivist, or freelance letter-writer.",
+      "quirk": "You read what was written and hear what was not said.",
+      "skills": [
+        {
+          "skill": "lore",
+          "modifier": 8
+        },
+        {
+          "skill": "investigation",
+          "modifier": 5
+        },
+        {
+          "skill": "insight",
+          "modifier": 3
+        }
+      ],
+      "attributes": [],
+      "resources": [],
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Watch-Officer": {
+      "name": "Watch-Officer",
+      "description": "A town watch sergeant, kingdom investigator, or harbor-warden carrying arrest authority within jurisdiction. Trained to read crime scenes, run hard questions, and manage the violence that comes with law. Could be Avenorian watch, Udorath garrison-officer, or Hofnar caravan-warden.",
+      "quirk": "You read guilt before a person opens their mouth.",
+      "skills": [
+        {
+          "skill": "investigation",
+          "modifier": 10
+        },
+        {
+          "skill": "intimidation",
+          "modifier": 5
+        },
+        {
+          "skill": "melee",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "stamina",
+          "modifier": 8
+        }
+      ],
+      "startingItems": [],
+      "abilities": [
+        "Interrogate"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Outlaw": {
+      "name": "Outlaw",
+      "description": "An exile, brigand, or fugitive living back-country beyond the reach of the law. Learned to read pursuit, know the fence-network, and move unseen through territories where being found means death. Could be a banished hedge-witch, a Vorok blacklisted from the houses, a Threshi who broke contract, or a deserter from any kingdom.",
+      "quirk": "You read authority the moment it enters a room, and you know exactly where the door is.",
+      "skills": [
+        {
+          "skill": "stealth",
+          "modifier": 8
+        },
+        {
+          "skill": "survival",
+          "modifier": 8
+        },
+        {
+          "skill": "deception",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [],
+      "startingItems": [],
+      "abilities": [
+        "Vanish"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Caravan Guard": {
+      "name": "Caravan Guard",
+      "description": "A hired wagon-protector with years of cross-border journey-fighting in the blood. Practiced at reading ambush ground, the pace of a long road, and how to hold a circled camp against raiders. Could be a Vorok exile, free-company hand, kingdom veteran on contract, or any drifter who took the work.",
+      "quirk": "You assess every piece of ground first for who has the advantage.",
+      "skills": [
+        {
+          "skill": "melee",
+          "modifier": 8
+        },
+        {
+          "skill": "survival",
+          "modifier": 5
+        },
+        {
+          "skill": "investigation",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "stamina",
+          "modifier": 10
+        }
+      ],
+      "startingItems": [],
+      "abilities": [
+        "Camp-Hold"
+      ],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Quick-Witted": {
+      "name": "Quick-Witted",
+      "description": "A mind that moves fast — catching tells before others register the question, parsing situations with rapid clarity. Useful in negotiation, combat, and any moment where the first read wins.",
+      "quirk": "You see the angle before it is played.",
+      "skills": [
+        {
+          "skill": "insight",
+          "modifier": 5
+        },
+        {
+          "skill": "investigation",
+          "modifier": 3
+        }
+      ],
+      "attributes": [],
+      "resources": [],
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Iron Stomach": {
+      "name": "Iron Stomach",
+      "description": "A digestive system that survives bad food, dubious water, and mild poisons without flinching. The bearer eats what others leave behind and walks away better for it.",
+      "quirk": "You pick at suspect food without hesitation and never sicken from it.",
+      "skills": [],
+      "attributes": [
+        {
+          "attribute": "constitution",
+          "modifier": 2
+        }
+      ],
+      "resources": [
+        {
+          "resource": "stamina",
+          "modifier": 5
+        }
+      ],
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Sharp-Eyed": {
+      "name": "Sharp-Eyed",
+      "description": "Distance and low-light vision that catches what is faint, far, or hidden in shadow. Useful in any environment where others strain to see.",
+      "quirk": "You spot what others miss in fog, dusk, or the gloom of a distant ridgeline.",
+      "skills": [
+        {
+          "skill": "investigation",
+          "modifier": 5
+        },
+        {
+          "skill": "ranged",
+          "modifier": 3
+        }
+      ],
+      "attributes": [],
+      "resources": [],
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Light-Footed": {
+      "name": "Light-Footed",
+      "description": "Stealth and balance that allow silent movement on any ground and recovery from a slip without crashing. The bearer is never the one whose step gives the position away.",
+      "quirk": "You move quiet on any surface and catch yourself before you fall.",
+      "skills": [
+        {
+          "skill": "stealth",
+          "modifier": 5
+        },
+        {
+          "skill": "acrobatics",
+          "modifier": 3
+        }
+      ],
+      "attributes": [],
+      "resources": [],
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Silver-Tongued": {
+      "name": "Silver-Tongued",
+      "description": "A gift for reading what people want to hear and giving a version of it. The bearer talks their way through doors that others pound against.",
+      "quirk": "You choose the angle the room is already leaning toward and lean harder.",
+      "skills": [
+        {
+          "skill": "persuasion",
+          "modifier": 5
+        },
+        {
+          "skill": "deception",
+          "modifier": 3
+        }
+      ],
+      "attributes": [],
+      "resources": [],
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Apprenticed Under a Master": {
+      "name": "Apprenticed Under a Master",
+      "description": "The bearer learned a trade from someone who really knew it — the depth of knowledge that comes only from years at the bench or forge with a skilled hand teaching the subtleties. Hold high standards, see slipshod work for what it is.",
+      "quirk": "You know how it should be done, and sloppy work offends you on a fundamental level.",
+      "skills": [
+        {
+          "skill": "craft",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [],
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Survived a Wasting": {
+      "name": "Survived a Wasting",
+      "description": "Long illness, plague, or fever that left scars on the body and hardness in the spirit. The bearer is tougher for what the sickness took and what they had to do to walk out of it.",
+      "quirk": "You read how a body is failing because you know all the ways a body can fail.",
+      "skills": [],
+      "attributes": [
+        {
+          "attribute": "constitution",
+          "modifier": 2
+        }
+      ],
+      "resources": [
+        {
+          "resource": "stamina",
+          "modifier": 5
+        }
+      ],
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Lost to Captivity": {
+      "name": "Lost to Captivity",
+      "description": "Held prisoner for a year or more — mine, raid-camp, debt-prison, breeding compound, or lord's dungeon. Came out hardened in ways that do not heal. The bearer reads coercion fast and knows when someone is being squeezed.",
+      "quirk": "You see the cage in any room, even rooms made of nothing but air.",
+      "skills": [
+        {
+          "skill": "insight",
+          "modifier": 5
+        },
+        {
+          "skill": "stealth",
+          "modifier": 3
+        }
+      ],
+      "attributes": [
+        {
+          "attribute": "wisdom",
+          "modifier": 2
+        }
+      ],
+      "resources": [],
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Crossed the Unforgiving": {
+      "name": "Crossed the Unforgiving",
+      "description": "Walked alone across a hostile region — the Black Steppe, Hollow-fringe, Threshi border-zone, or deep desert — and came out the other side changed. Know how far rest can carry, when to push, and when to camp.",
+      "quirk": "You assess the land first by what it will cost to cross it.",
+      "skills": [
+        {
+          "skill": "survival",
+          "modifier": 8
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "stamina",
+          "modifier": 10
+        }
+      ],
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Late Arrival": {
+      "name": "Late Arrival",
+      "description": "The bearer came to their present trade late, after a different life already lived. Brings cross-domain perspective that younger trainees lack. See what specialists miss because they only know one way.",
+      "quirk": "You remember how it was done before, and that memory is useful more often than you would think.",
+      "skills": [
+        {
+          "skill": "lore",
+          "modifier": 5
+        },
+        {
+          "skill": "investigation",
+          "modifier": 3
+        }
+      ],
+      "attributes": [],
+      "resources": [],
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Recruit": {
+      "name": "Recruit",
+      "description": "One season of drill and at most one engagement under your belt. You can hold a line if pointed at it, follow orders, and look like a soldier from a distance — but the small skills that mark a veteran are still ahead of you. The discipline is starting to stick; the instinct is not yet there.",
+      "quirk": "You watch how the older soldiers stand at rest, and you copy it before you understand it.",
+      "skills": [
+        {
+          "skill": "melee",
+          "modifier": 4
+        },
+        {
+          "skill": "athletics",
+          "modifier": 3
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "stamina",
+          "modifier": 5
+        }
+      ],
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Free-Hand": {
+      "name": "Free-Hand",
+      "description": "An independent for-hire taking whatever short work comes. No Free-Company badge yet, no name in the contract-circles, but you have a weapon, the willingness to use it, and the start of a reputation. The big road-contracts are not yet open to you; the small ones build the name that opens them.",
+      "quirk": "You quote your rate before they ask, because that's what you watched the veterans do.",
+      "skills": [
+        {
+          "skill": "melee",
+          "modifier": 4
+        },
+        {
+          "skill": "survival",
+          "modifier": 3
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "stamina",
+          "modifier": 5
+        }
+      ],
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Wizard Aspirant": {
+      "name": "Wizard Aspirant",
+      "description": "A youth with the spark, in early years of formal training or under an unsanctioned tutor. Can hold a staff and lay simple workings — small strikes, light bracing — but the mana pool is small and the four disciplines have not yet settled into instinct. Years of drill still ahead before the practice is real.",
+      "quirk": "You count the mana you can hold against the working you want to do, and the working keeps winning.",
+      "skills": [
+        {
+          "skill": "staff-work",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "mana",
+          "modifier": 10
+        }
+      ],
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": [
+        "Witch",
+        "Hedge-Witch",
+        "Consort of the College"
+      ]
+    },
+    "Witch Initiate": {
+      "name": "Witch Initiate",
+      "description": "A novice in early training — College first-year, hedge-tutored from her teens, or just past the change that revealed the gift. Can hold a small reservoir and do trivial workings; nothing combat-grade yet. The first year is mostly nervy practice and learning when not to.",
+      "quirk": "You spend half a working watching to see if it took, and the other half worrying it didn't.",
+      "skills": [
+        {
+          "skill": "witchcraft",
+          "modifier": 5
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "reservoir",
+          "modifier": 15
+        }
+      ],
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": [
+        "Wizard",
+        "Hedge-Wizard",
+        "Consort of the College"
+      ]
+    },
+    "Wagon-Hand": {
+      "name": "Wagon-Hand",
+      "description": "Junior on a Hofnar wagon, kingdom road-crew, or independent caravan. Strong back, fresh eyes, learning the routes and the contract patterns from the seniors. No agency in trade decisions yet; you do what you're told, watch what you're shown, and earn your standing through the first season.",
+      "quirk": "You memorize the order of stops on a route the way other people memorize songs.",
+      "skills": [
+        {
+          "skill": "athletics",
+          "modifier": 3
+        },
+        {
+          "skill": "persuasion",
+          "modifier": 2
+        },
+        {
+          "skill": "survival",
+          "modifier": 2
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "stamina",
+          "modifier": 5
+        }
+      ],
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    },
+    "Runner": {
+      "name": "Runner",
+      "description": "A dispatch-rider, kingdom messenger, or scout-runner — the youth they send when the road is dangerous and the message has to arrive. Travels light, fast, and across country others find difficult. Not yet trusted with the larger work of long contracts or deep scouting, but the routes that build that trust are exactly what you are running now.",
+      "quirk": "You judge a road by how fast you can leave it, not by how comfortable it is to walk.",
+      "skills": [
+        {
+          "skill": "athletics",
+          "modifier": 4
+        },
+        {
+          "skill": "survival",
+          "modifier": 3
+        }
+      ],
+      "attributes": [],
+      "resources": [
+        {
+          "resource": "stamina",
+          "modifier": 8
+        }
+      ],
+      "startingItems": [],
+      "abilities": [],
+      "unlockedBy": [],
+      "excludedBy": []
+    }
+  }
+}

@@ -1,0 +1,1739 @@
+{
+  "abilities": {
+    "Trade-Tongue Negotiator": {
+      "name": "Trade-Tongue Negotiator",
+      "description": "The Hofnar practice of running a contract conversation across two languages, three currencies, and four parties without losing the thread. In any negotiation framed as trade, contract, or arbitration, the Hofnar reads the room a beat ahead — every dialect spoken at the table is one she has heard before. Combat use: spot the word that means the other party is about to break the table. Civic use: read a contract for the trap before signing.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Hofnar",
+          "amount": 1
+        }
+      ],
+      "bonus": 8,
+      "cooldown": 0
+    },
+    "Calculating Gaze": {
+      "name": "Calculating Gaze",
+      "description": "The Draklid practice of holding stillness in a way other races find impossible to read. Tail neutral, mandible-set unmoved, slit pupils tracking only what the speaker chose to track. The opponent loses the read on the Draklid's intent, and finds himself volunteering more than he meant to. Useful in negotiation, interrogation, and the long second before a duel.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Draklid",
+          "amount": 1
+        }
+      ],
+      "bonus": 8,
+      "cooldown": 5
+    },
+    "Emotional Projection": {
+      "name": "Emotional Projection",
+      "description": "The Cephalen master's discipline — chromatophores held in deliberate false patterns, projecting calm where there is rage, warmth where there is contempt, friendly slate where the negotiation is already won. Bypasses the ordinary read of emotion that other races rely on. Other Cephalen always see through it; outsiders almost never.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Cephalen",
+          "amount": 1
+        }
+      ],
+      "bonus": 10,
+      "cooldown": 5
+    },
+    "Plant Whisperer": {
+      "name": "Plant Whisperer",
+      "description": "The Molvar gardener's affinity, going past gardening. Coax a tunnel into shape overnight, persuade a crop to thrive on poor soil, draw root-walls across a passage, ease the meadow above a settlement into bloom or wither. Slow, patient, and devastating in defense of a Molvar's own warren — the meadow turns hostile underfoot, the tunnel collapses around an attacker who took the wrong branching.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Molvar",
+          "amount": 1
+        }
+      ],
+      "bonus": 10,
+      "cooldown": 8
+    },
+    "Web-Sense": {
+      "name": "Web-Sense",
+      "description": "The Raknid silken mantle reads vibration and air-flow through fibers most races do not register at all. The bearer notices the approach behind her, the body in the next room, the change in the wind two minutes before it reaches the camp. Combat use: never surprised in close space. Investigation use: track presence through walls, follow movement at night.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Raknid",
+          "amount": 1
+        }
+      ],
+      "bonus": 8,
+      "cooldown": 0
+    },
+    "Ancestor-Call": {
+      "name": "Ancestor-Call",
+      "description": "Address a named ancestor through their relic and ask for their attention on the present matter. The ancestor sees, considers, and offers whatever the lineage has to give — a turn of the work the bones know. Slow, ritual, and inappropriate for combat. Used to open every Prime working of consequence.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Primes",
+          "amount": 1
+        }
+      ],
+      "bonus": 6,
+      "cooldown": 8
+    },
+    "Pack-Laughter Chorus": {
+      "name": "Pack-Laughter Chorus",
+      "description": "The Fernwarg evening pack-laughter, used in pack and rare in single Fernwarg abroad. A rising chittering chorus that disturbs human listeners at a level beneath conscious hearing — opponents lose discipline, civilians flee, mounts shy. Combat use: morale-break a war-band. Social use: shake an interrogation off-rhythm.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Fernwarg",
+          "amount": 1
+        }
+      ],
+      "bonus": 8,
+      "cooldown": 8
+    },
+    "Chitinous Glide": {
+      "name": "Chitinous Glide",
+      "description": "The Threshi wing-panel glide, short flights and long downhill drops that close ground a non-flying race cannot match. Cross a river, drop into a granary from the rooftop above, close on a fleeing target across open field. Limited; the Threshi cannot sustain flight. The glide ends when the ground does.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Threshi",
+          "amount": 1
+        }
+      ],
+      "bonus": 8,
+      "cooldown": 4
+    },
+    "Livestock Endurance": {
+      "name": "Livestock Endurance",
+      "description": "The bred-in stamina of a body lifted from generations of agricultural labor. The Quell carries weight, walks distance, and works through fatigue in ways the other races find quietly remarkable. Combat use: outlast the opponent in a long fight. Travel use: carry the load that breaks a human porter, arrive walking after the rest of the party is on the wagon.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Quelled",
+          "amount": 1
+        }
+      ],
+      "bonus": 8,
+      "cooldown": 0
+    },
+    "Ore-Sense": {
+      "name": "Ore-Sense",
+      "description": "The Vorok's prospector-sense — the body reads stone and metal at a distance, picks up ore-veins through rock, finds water-tables underfoot, judges the soundness of a wall or a ceiling. Combat use: spot the ambush waiting behind worked stone. Operations use: prospect a tunnel, set a charge, judge the hold of a built structure.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Vorok",
+          "amount": 1
+        }
+      ],
+      "bonus": 8,
+      "cooldown": 0
+    },
+    "Adaptive Learning": {
+      "name": "Adaptive Learning",
+      "description": "The human knack for picking up the trick in front of them — the swing the foreign master used, the dialect the trader speaks, the habit of the local guard rotation. Generic-fast in any unfamiliar situation. Used in social, combat, and travel contexts equally; the bonus comes from having paid attention three turns earlier.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Human",
+          "amount": 1
+        }
+      ],
+      "bonus": 6,
+      "cooldown": 0
+    },
+    "Standing Wall": {
+      "name": "Standing Wall",
+      "description": "Brace the staff and the body against a charge or a swing, holding ground that should have broken. Stops a cavalry rush at a doorway, anchors a line that wants to fold, shields civilians behind you for the length of the working. Combat use: full block against an incoming melee strike. Civic use: hold a door, brace a falling beam, plant yourself between an ally and harm. Spends mana.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "staff-work",
+          "amount": 5
+        }
+      ],
+      "bonus": 8,
+      "cooldown": 4
+    },
+    "Wind-Slow": {
+      "name": "Wind-Slow",
+      "description": "Call a thick gust against a volley, a thrown weapon, or an opponent's charge — slowing it enough that the line behind you has time to react. Combat use: blunt incoming missiles. Field use: scatter smoke, turn back a small fire, ease an ally's fall from a height. Spends mana.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "staff-work",
+          "amount": 8
+        }
+      ],
+      "bonus": 8,
+      "cooldown": 5
+    },
+    "Step Through": {
+      "name": "Step Through",
+      "description": "Move across ground that shouldn't take your weight — bog, scree, ice, the splintered floor over a drop. The working hardens the path under your feet for the duration of the crossing. Combat use: cross broken ground to engage. Travel use: pass a bad patch the rest of the party has to go around. Spends mana.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "staff-work",
+          "amount": 8
+        }
+      ],
+      "bonus": 6,
+      "cooldown": 5
+    },
+    "Stop the Blade": {
+      "name": "Stop the Blade",
+      "description": "Catch a strike mid-arc — the staff held across the line of a sword or axe, the working hardening the wood and the moment so that what should have killed you stops a hand from your throat. Combat reaction. Spends mana, and can only be done once per turn — overuse and the staff feels the cost too.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "staff-work",
+          "amount": 12
+        }
+      ],
+      "bonus": 10,
+      "cooldown": 3
+    },
+    "Hardened Strike": {
+      "name": "Hardened Strike",
+      "description": "Drive the staff blow with the full discipline of the working behind it — the wood at the impact point briefly harder than tempered iron, the strike landing with weight the swing alone could not carry. Punches through plate, breaks shields, drops the largest opponents. Spends mana.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "staff-work",
+          "amount": 10
+        }
+      ],
+      "bonus": 12,
+      "cooldown": 6
+    },
+    "Staff Through Plate": {
+      "name": "Staff Through Plate",
+      "description": "The senior brothers' working. The staff strike at full intent, magical and physical aligned, that drives wood through worn plate and the wearer behind it. Used at the close of a fight against an armored opponent, when the brother is committed and there will not be a second swing. Spends a heavy share of mana.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Wizard",
+          "amount": 1
+        },
+        {
+          "type": "skill",
+          "variable": "staff-work",
+          "amount": 18
+        }
+      ],
+      "bonus": 18,
+      "cooldown": 12
+    },
+    "Hedge-Working": {
+      "name": "Hedge-Working",
+      "description": "The small, broad, low-cost workings that fill a hedge-witch's life. Quiet a fevered child, ease a hard birth, trip a stuck lock, set a small ward over a doorway, calm a sour stomach, draw water from a stone trough that's gone bad. Costs almost nothing from the reservoir. The whole repertoire of a village witch who never trained at the College, and a daily tool for College-trained witches too.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 5
+        }
+      ],
+      "bonus": 5,
+      "cooldown": 1
+    },
+    "Witchlight": {
+      "name": "Witchlight",
+      "description": "Conjure light at distance — any color, any size, sustained or flashing, held in the air or anchored to an object. Combat use: blind an opponent, mark a target through smoke, signal across a battlefield. Utility use: light a cave, illuminate a search, hold a steady reading lamp without flame. Spends a small portion of the reservoir.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 8
+        }
+      ],
+      "bonus": 6,
+      "cooldown": 2
+    },
+    "Conjure Cold": {
+      "name": "Conjure Cold",
+      "description": "Pull warmth out of the air or a body or a surface — frost a doorway shut, slow an opponent's limbs, quench a hostile fire, freeze a small body of water enough to cross. Spends meaningful reservoir for combat use, very little for utility use.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 10
+        }
+      ],
+      "bonus": 10,
+      "cooldown": 4
+    },
+    "Conjure Flame": {
+      "name": "Conjure Flame",
+      "description": "Call flame at distance — kindle a fire on dry tinder, set an enemy's cloak burning, drop a sheet of fire across a doorway, ignite a fuse from across a yard. The witch's projection a wizard cannot match. Spends meaningful reservoir.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 10
+        }
+      ],
+      "bonus": 10,
+      "cooldown": 4
+    },
+    "Move Weight": {
+      "name": "Move Weight",
+      "description": "Telekinetic working — lift a fallen beam off an ally, hurl a weapon back at the thrower, drag a closed door open at distance, hold a falling body in the air for a beat. The weight that can be moved scales with the reservoir spent.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 12
+        }
+      ],
+      "bonus": 10,
+      "cooldown": 5
+    },
+    "Pass Unseen": {
+      "name": "Pass Unseen",
+      "description": "Glamour the witch or a small group — not invisibility, but a working that slides attention past you, the gaze of guards finding more interesting things to settle on, the patrol passing within a body's length and looking through. Holds while the witch holds focus and her reservoir lasts.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 12
+        }
+      ],
+      "bonus": 10,
+      "cooldown": 8
+    },
+    "Scry": {
+      "name": "Scry",
+      "description": "Look at distance. Find a person whose name and face you know, read intent on someone you've met, see a place you've stood. Slow, focused, costs reservoir steadily for the duration of the sight. Cannot find someone hidden by another witch's working without overcoming hers.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 15
+        }
+      ],
+      "bonus": 12,
+      "cooldown": 15
+    },
+    "Reservoir Spend": {
+      "name": "Reservoir Spend",
+      "description": "The College's signature — the working a trained witch builds toward when the moment justifies it. Empty most of the reservoir into a single act the world will remember: a wall of cold across a battlefield, a flame that swallows a war-band, a glamour that holds a city's eyes for an hour, a healing that brings someone back from the edge. The witch is spent afterward and will be a woman in unusual clothes hoping nobody notices until she fills again.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Witch",
+          "amount": 1
+        },
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 18
+        }
+      ],
+      "bonus": 25,
+      "cooldown": 60
+    },
+    "Cooperative Filling": {
+      "name": "Cooperative Filling",
+      "description": "The cooperative practice the Brotherhood was built to refuse. With a willing male partner who carries his own mana, the witch fills her reservoir directly through ingestion of his essence or being ejaculated into. A long downtime scene played out as intimacy; mechanically a meaningful refill from the partner's mana, larger than any single potion can match. Always done in private. The Queen's College consort-line still teaches it, though institutional fashion has drifted toward distilled potion-use over the last generation; direct filling reads as old-fashioned even in College halls. In conservative kingdoms outside Avenor it is doctrinally illegal; a witch and partner caught at it face arrest and quiet disposal.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Witch",
+          "amount": 1
+        }
+      ],
+      "bonus": 0,
+      "cooldown": 0
+    },
+    "Mend by Lineage": {
+      "name": "Mend by Lineage",
+      "description": "Call a healer-ancestor through their relic and conduct a slow restorative working over a wounded ally. Closes wounds the body could not close on its own, draws fever down, knits bone over time. Not battlefield-quick; the working asks the ancestor to do their old craft, and the bones take their pace.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Primes",
+          "amount": 1
+        },
+        {
+          "type": "skill",
+          "variable": "ancestor-work",
+          "amount": 8
+        }
+      ],
+      "bonus": 10,
+      "cooldown": 10
+    },
+    "Bone-Reading": {
+      "name": "Bone-Reading",
+      "description": "Hold the relic, ask the ancestor what they see, and the lineage offers what it has — a true thing about a person in front of you, the past of an object, the standing of a contract, the shape of a curse. Patient, exact, and rarely wrong. Refused if the ancestor disapproves of the asker's intent.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Primes",
+          "amount": 1
+        },
+        {
+          "type": "skill",
+          "variable": "ancestor-work",
+          "amount": 10
+        }
+      ],
+      "bonus": 10,
+      "cooldown": 12
+    },
+    "Untangle Curse": {
+      "name": "Untangle Curse",
+      "description": "The slow Prime work the colleges quietly send their hardest cases to. Find the working laid on a person, place, or object, read its anchor, and unbind it across the time the bones will give to the matter. Hours to days; never quick. Returns more than half of what was taken if the lineage is patient and the relic is right.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Primes",
+          "amount": 1
+        },
+        {
+          "type": "skill",
+          "variable": "ancestor-work",
+          "amount": 12
+        }
+      ],
+      "bonus": 15,
+      "cooldown": 30
+    },
+    "True-Name": {
+      "name": "True-Name",
+      "description": "Speak a creature's true name through the ancestor and bind, banish, or compel it. Effective on demonic remnants of officer-class and below, on ward-bound monsters, and on the lesser things the Wartide left behind. Slow to set up. Catastrophic if the wrong name is spoken.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Primes",
+          "amount": 1
+        },
+        {
+          "type": "skill",
+          "variable": "ancestor-work",
+          "amount": 15
+        }
+      ],
+      "bonus": 18,
+      "cooldown": 30
+    },
+    "Tail-Strike": {
+      "name": "Tail-Strike",
+      "description": "The reaction-attack a Draklid keeps in reserve through any close engagement — the long active tail whipping out at the opening the opponent didn't think existed. A free strike off the engagement, light damage but reliably timed. Disrupts a charge, breaks an opponent's swing, sweeps a foot from under a smaller fighter.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Draklid",
+          "amount": 1
+        }
+      ],
+      "bonus": 6,
+      "cooldown": 3
+    },
+    "Compress": {
+      "name": "Compress",
+      "description": "The Cephalen body squeezes through a gap a third its apparent size — gun-port, hatchway, sewer-grille, prison bars, the crack under a poorly-set door. Combat use: vanish from a hold, reposition through an obstacle. Civic use: get into and out of places no other race can enter at all.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Cephalen",
+          "amount": 1
+        }
+      ],
+      "bonus": 8,
+      "cooldown": 6
+    },
+    "Veteran": {
+      "name": "Veteran",
+      "description": "The unromantic edge a body builds across years of fights. The opponent's tells are familiar, the tempo is familiar, the moment to commit and the moment to disengage are read without conscious thought. Available to any character who has spent enough time in melee or ranged work for the discipline to have stuck.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "melee",
+          "amount": 12
+        }
+      ],
+      "bonus": 8,
+      "cooldown": 4
+    },
+    "Marches-Reader": {
+      "name": "Marches-Reader",
+      "description": "The Kelmari winter-cycle instinct — read terrain for the ambush, find the line a Threshi raid will take across the same meadow they took last year, judge a slope for footing under a charge. Civic use: assess any tactical landscape. Combat use: pre-position in the right ground before the engagement starts.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "survival",
+          "amount": 10
+        }
+      ],
+      "bonus": 8,
+      "cooldown": 0
+    },
+    "Mana-Hunter Track": {
+      "name": "Mana-Hunter Track",
+      "description": "The black-market specialist's trade. Find a magical creature in its range, judge the size of its essence, anticipate where it will move next, set the snare and the working that captures it for extraction. Criminal where it isn't licensed; the high end of the unicorn trade and the cleanest source of black-market potion.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Mana-Hunter",
+          "amount": 1
+        }
+      ],
+      "bonus": 10,
+      "cooldown": 0
+    },
+    "Brew Mana Potion": {
+      "name": "Brew Mana Potion",
+      "description": "Refine essence and reagents into a potion that fills a witch's reservoir on consumption. Requires a real source — donor mana from a willing wizard, essence from a willing or captive male magical creature, or material from the licensed Avenorian houses — and a workshop. Source determines grade and price; the brewing is the same craft. Outside Avenor the act of brewing for the witch trade is illegal at every step.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "alchemy",
+          "amount": 10
+        }
+      ],
+      "bonus": 8,
+      "cooldown": 0
+    },
+    "Brew Healing Potion": {
+      "name": "Brew Healing Potion",
+      "description": "Brew a healing draught from herbs, reagents, and the slow alchemy of restoration. Closes wounds across the next hour, draws a fever, eases shock. The basic apothecary's stock and the most-purchased item on any caravan ledger. Quality scales with the alchemist's skill and the workshop's tools.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "alchemy",
+          "amount": 5
+        }
+      ],
+      "bonus": 6,
+      "cooldown": 0
+    },
+    "Brew Reagent": {
+      "name": "Brew Reagent",
+      "description": "Refine a raw component — creature material, plant matter, mineral — into a usable alchemical reagent. The intermediate work that the rest of the trade leans on. Lampfowl-egg essence, naia-rendered tincture, shed-antler powder, ground sylvan-pool moss; the apothecary's pantry.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "alchemy",
+          "amount": 6
+        }
+      ],
+      "bonus": 5,
+      "cooldown": 0
+    },
+    "Identify Old Item": {
+      "name": "Identify Old Item",
+      "description": "Examine a magical item — almost always pre-Ensoulment — and determine what it does, how it activates, what it costs to use, and what the catch is. Slow, requires a workshop and time at the bench. The senior apothecary's most-paid-for service: a pre-Ensoulment sword pulled from a back-country ruin is worthless until someone reads it correctly.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "alchemy",
+          "amount": 8
+        },
+        {
+          "type": "skill",
+          "variable": "lore",
+          "amount": 5
+        }
+      ],
+      "bonus": 8,
+      "cooldown": 0
+    },
+    "Enchant": {
+      "name": "Enchant",
+      "description": "Witch-tier magical work, rare and expensive. Lay a working into an object that holds the working when the witch is no longer there — a blade that warms in the hand and burns flesh on a strike, a charm that wards small malice, a scroll that releases a single witchlight when broken. Spends a great deal of reservoir per item; minor enchantments cost in the high tens, useful ones in the hundreds, items at the level of the surviving pre-Ensoulment artifacts beyond ordinary play. The College trains a small number of enchanters each generation; outside Avenor, an enchanter who can be found is paid in gold.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 18
+        }
+      ],
+      "bonus": 15,
+      "cooldown": 30
+    },
+    "Extract Essence": {
+      "name": "Extract Essence",
+      "description": "Draw mana from a non-willing source — a captured creature, a bound caster, the rare horror that follows. Refills the witch's reservoir directly without potion or partner. Politically catastrophic if discovered.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Forbidden Working",
+          "amount": 1
+        }
+      ],
+      "bonus": 12,
+      "cooldown": 8
+    },
+    "Bind Essence": {
+      "name": "Bind Essence",
+      "description": "Bind another caster's working through their essence — corrupt their reservoir, redirect their intent, deny their access to their own power for the duration of the binding. The deepest crime in the Avenorian register.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Forbidden Working",
+          "amount": 1
+        },
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 15
+        }
+      ],
+      "bonus": 18,
+      "cooldown": 30
+    },
+    "Apothecary's Touch": {
+      "name": "Apothecary's Touch",
+      "description": "The healer's hand — bleed a fever down, set a bone, draw poison, pack a wound, make a draught. Ordinary practice for any village wisefolk. The same skill covers the contraceptive, the painkiller, and the small protective working a hedge-witch uses interchangeably with ordinary herbs.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "craft",
+          "amount": 6
+        }
+      ],
+      "bonus": 6,
+      "cooldown": 2
+    },
+    "Smith's Eye": {
+      "name": "Smith's Eye",
+      "description": "Read a piece of made work — weapon, armor, tool, lock, joint, casting — for its quality, its maker, and its weak point. Estimate price, judge fitness for a fight, find the place a blade will break under load.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "craft",
+          "amount": 8
+        }
+      ],
+      "bonus": 6,
+      "cooldown": 0
+    },
+    "Hold the Contract": {
+      "name": "Hold the Contract",
+      "description": "The reliability that a Hofnar driver, Draklid retainer, or oath-bound mercenary brings to a job — they do not break the contract during the season under any pressure short of mortal threat to themselves. While engaged in contracted work, the bearer resists persuasion, intimidation, and mundane bribery aimed at making them stop.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "persuasion",
+          "amount": 8
+        }
+      ],
+      "bonus": 10,
+      "cooldown": 0
+    },
+    "Fern-Hide": {
+      "name": "Fern-Hide",
+      "description": "The Fernwarg coat reads the season and shifts pattern accordingly; in undergrowth, the bearer is invisible standing still. Stealth bonus in any forest, woodland, or fern-country. Outside the right environment the working does nothing.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Fernwarg",
+          "amount": 1
+        }
+      ],
+      "bonus": 10,
+      "cooldown": 0
+    },
+    "Heat Lance": {
+      "name": "Heat Lance",
+      "description": "Witch projection — a thin bar of heat across distance, drawn through one target with surgical intent. Pierces armor that flame would have spread across, ignites cloth and hair, blinds the eye if held a beat too long. The College's preferred combat shape for a single hard target. Spends moderate reservoir.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 12
+        },
+        {
+          "type": "trait",
+          "variable": "School of Projection",
+          "amount": 1
+        }
+      ],
+      "bonus": 12,
+      "cooldown": 4
+    },
+    "Witchfire": {
+      "name": "Witchfire",
+      "description": "Witch projection at scale — a sheet of flame across a doorway, a sweep of fire across a war-band, a wall of burning that an opponent must break through to reach you. Less precise than Heat Lance; the strength is area, not single target. Spends meaningful reservoir.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 14
+        },
+        {
+          "type": "trait",
+          "variable": "School of Projection",
+          "amount": 1
+        }
+      ],
+      "bonus": 14,
+      "cooldown": 6
+    },
+    "Cold Wall": {
+      "name": "Cold Wall",
+      "description": "Witch projection inverted — a curtain of bitter cold dropped between the witch and a charging line. Frosts the air, slows the charge, freezes a doorway, robs warmth from anything that enters the space. Defensive use; holds for several turns until the reservoir thins.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 13
+        },
+        {
+          "type": "trait",
+          "variable": "School of Projection",
+          "amount": 1
+        }
+      ],
+      "bonus": 12,
+      "cooldown": 6
+    },
+    "Veil": {
+      "name": "Veil",
+      "description": "Witch glamour — a working of unconsidered passing. Self and a small group slide through the gaze of guards, patrols, gatekeepers, the gaze finds more interesting things to settle on, the patrol passes within reach without seeing. Holds while the witch holds focus; a glance from a trained sight-witch will overcome it.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 10
+        },
+        {
+          "type": "trait",
+          "variable": "School of the Hidden",
+          "amount": 1
+        }
+      ],
+      "bonus": 10,
+      "cooldown": 8
+    },
+    "Misdirection": {
+      "name": "Misdirection",
+      "description": "Witch glamour, applied at the scene level — the eye drawn to the wrong door, the conversation steered to the wrong table, the wrong man identified as the dangerous one in the room. Smaller than concealment, used in social or investigative scenes. Other casters trained in sight see through it; ordinary observers do not.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 8
+        },
+        {
+          "type": "trait",
+          "variable": "School of the Hidden",
+          "amount": 1
+        }
+      ],
+      "bonus": 8,
+      "cooldown": 5
+    },
+    "Distance-Sight": {
+      "name": "Distance-Sight",
+      "description": "Witch sight — open the working on a known person or place and watch from where the witch stands. The witch sees what is happening there, hears imperfectly, cannot be heard or seen by what she watches. Costs reservoir steadily for the duration of the sight; a long watch empties the tank.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 12
+        },
+        {
+          "type": "trait",
+          "variable": "School of Sight",
+          "amount": 1
+        }
+      ],
+      "bonus": 12,
+      "cooldown": 12
+    },
+    "Read Intent": {
+      "name": "Read Intent",
+      "description": "Witch sight applied to a person in the room. The witch reads what the speaker means, what they mean to do next, where they are lying and where they are not. Quiet, undeclared, inadmissible — the speaker rarely knows it has happened, but a trained Cephalen Reader or another witch can feel the working land.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 10
+        },
+        {
+          "type": "trait",
+          "variable": "School of Sight",
+          "amount": 1
+        }
+      ],
+      "bonus": 10,
+      "cooldown": 4
+    },
+    "Trace Working": {
+      "name": "Trace Working",
+      "description": "Witch sight applied to magical evidence — find the working laid on a person, place, or object, read its shape and intent. The investigative tool of the Queen's College and a useful counterintelligence skill. Slow; takes minutes of focused attention per object.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 14
+        },
+        {
+          "type": "trait",
+          "variable": "School of Sight",
+          "amount": 1
+        }
+      ],
+      "bonus": 12,
+      "cooldown": 10
+    },
+    "Mend Body": {
+      "name": "Mend Body",
+      "description": "Witch body-working — close a wound, draw a fever, set a bone with the magic doing the patient work the body would have done over weeks. Slow by combat standards; not the magic to rely on mid-fight. The College's clinical specialty and the hedge-witch's daily trade. Does not regrow, does not resurrect.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 10
+        },
+        {
+          "type": "trait",
+          "variable": "School of the Body",
+          "amount": 1
+        }
+      ],
+      "bonus": 12,
+      "cooldown": 6
+    },
+    "Ease the Birth": {
+      "name": "Ease the Birth",
+      "description": "Witch body-working in its oldest form — quiet a labor, turn a child, close a tear, manage a hemorrhage. The daily craft of the village hedge-witch and the senior College midwife. Used through generations under the radar of every kingdom that criminalizes witchcraft, because every village needs its midwife and every magistrate has a wife.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 8
+        },
+        {
+          "type": "trait",
+          "variable": "School of the Body",
+          "amount": 1
+        }
+      ],
+      "bonus": 10,
+      "cooldown": 0
+    },
+    "Force Pull": {
+      "name": "Force Pull",
+      "description": "Witch hand-working — pull a person, weapon, or object across a hall by the working alone. Combat use: yank a sword from a hand, drag an opponent off a wall, pull an ally out of harm. Utility use: open a stuck door at distance, retrieve a fallen item. Heavier weights cost more reservoir.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 10
+        },
+        {
+          "type": "trait",
+          "variable": "School of the Hand",
+          "amount": 1
+        }
+      ],
+      "bonus": 10,
+      "cooldown": 4
+    },
+    "Hold the Door": {
+      "name": "Hold the Door",
+      "description": "Witch hand-working in defense — anchor a door, a wagon, a crate, a body where it is. The working holds against any pressure short of structural breach for the duration. Used to seal a chamber from a coming charge or to pin a struggling captive without touching them.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 12
+        },
+        {
+          "type": "trait",
+          "variable": "School of the Hand",
+          "amount": 1
+        }
+      ],
+      "bonus": 10,
+      "cooldown": 8
+    },
+    "Hurl": {
+      "name": "Hurl",
+      "description": "Witch hand-working at impact — pick up the loose objects in the room and throw them all at once. Bottles, crockery, furniture, a fallen sword. Combat use: a chaos of small projectiles thrown at a single target or several. Spends moderate reservoir; the heavier the objects, the more.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 12
+        },
+        {
+          "type": "trait",
+          "variable": "School of the Hand",
+          "amount": 1
+        }
+      ],
+      "bonus": 12,
+      "cooldown": 5
+    },
+    "Compel Will": {
+      "name": "Compel Will",
+      "description": "Forbidden working. The witch overrides another person's will for the length of a single act — an order obeyed against the target's nature, a confession given under no other pressure, a hand pulling a trigger the mind would have refused. The Brotherhood would consider this proof of every accusation it has ever made; Avenor would not protect a witch who used it.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Forbidden Working",
+          "amount": 1
+        },
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 14
+        }
+      ],
+      "bonus": 16,
+      "cooldown": 30
+    },
+    "Hexcraft": {
+      "name": "Hexcraft",
+      "description": "Forbidden working. Lay a curse on a person, place, or lineage — slow misfortune that runs across days or generations. Hard to detect, harder to remove. A hexed person needs Untangle Curse from a Prime to fully recover. The witch-question's worst nightmare; the Brotherhood's recruiting argument.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Forbidden Working",
+          "amount": 1
+        },
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 14
+        }
+      ],
+      "bonus": 12,
+      "cooldown": 60
+    },
+    "Witch-Mark": {
+      "name": "Witch-Mark",
+      "description": "Hedge-witch dark working. A small malicious mark laid on a person — a chronic ache, a fever that returns at the same hour, a bad luck that finds them at gates. Modest in cost, sustained by ill will. The village hedge-witch's quiet revenge on the lord who mistreated her, and the working most likely to draw the Brotherhood's attention if the village starts to talk.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Forbidden Working",
+          "amount": 1
+        },
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 8
+        }
+      ],
+      "bonus": 8,
+      "cooldown": 20
+    },
+    "Glamour of Faces": {
+      "name": "Glamour of Faces",
+      "description": "Glamour at the extreme tier. The witch wears another woman's face — voice, gait, the lift of a hand — for hours at a time. Detectable by another witch trained in sight, but in a room without one she passes. Used by the queen's couriers in the field; also by anyone running a serious deception.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Forbidden Working",
+          "amount": 1
+        },
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 13
+        }
+      ],
+      "bonus": 14,
+      "cooldown": 30
+    },
+    "Hollow-Touched Draw": {
+      "name": "Hollow-Touched Draw",
+      "description": "The deepest forbidden draw. The bearer pulls power from a Wartide-fragment source — a Hollow walked, a demonic remnant bound, the corrupted ground of an old battlefield. Refills the reservoir or fuels a working at scales no clean source can match. The drawing is dangerous to the bearer in ways the College does not fully catalogue.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Hollow-Touched",
+          "amount": 1
+        }
+      ],
+      "bonus": 18,
+      "cooldown": 30
+    },
+    "Co-Working": {
+      "name": "Co-Working",
+      "description": "The cooperative practice in action: a witch and a willing wizard partner pool their reservoirs on a single working. The witch acts; the wizard's mana flows alongside her reservoir into the spell. Workings at the upper edge of either's solo reach become routine; workings beyond either's solo reach become possible. The classical Avenorian battlefield mode, taught at the College and still the most powerful application of paired practice; less common in everyday use as the consort tradition has narrowed.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Witch",
+          "amount": 1
+        }
+      ],
+      "bonus": 12,
+      "cooldown": 6
+    },
+    "Donate Mana": {
+      "name": "Donate Mana",
+      "description": "The consort's working: channel mana through cooperative practice into a bonded witch's reservoir or a shared working. The Queen's College trains and credentials its consort-line, though the role is increasingly old-fashioned even there as institutional fashion has shifted toward distilled potion-use. Done in private; the act is intimate when scenic and instantaneous in combat, and the consort feels a witch he is bonded to across a meaningful distance. Doctrinally unthinkable for a Brotherhood man; in conservative kingdoms a registered consort travels with discretion.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Consort of the College",
+          "amount": 1
+        }
+      ],
+      "bonus": 10,
+      "cooldown": 0
+    },
+    "Beast-Snare": {
+      "name": "Beast-Snare",
+      "description": "The captive-trade method. A bound working laid in a creature's range that captures the magical beast alive for transport to a refining workshop, where the essence is extracted across many sessions. Officially forbidden in most kingdoms, licensed in most kingdoms; the ugly end of the work and most mana-hunters know it.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Mana-Hunter",
+          "amount": 1
+        },
+        {
+          "type": "skill",
+          "variable": "survival",
+          "amount": 8
+        }
+      ],
+      "bonus": 10,
+      "cooldown": 8
+    },
+    "Cleanly Done": {
+      "name": "Cleanly Done",
+      "description": "Kill-trade combat. The killing strike against a magical creature placed so the essence does not bleed off — through the eye, through the heart, through the working-organ where the creature has one. The essence holds in the body for hours, and the hunter has time to extract.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Mana-Hunter",
+          "amount": 1
+        },
+        {
+          "type": "skill",
+          "variable": "ranged",
+          "amount": 10
+        }
+      ],
+      "bonus": 12,
+      "cooldown": 4
+    },
+    "Brew Black-Source Potion": {
+      "name": "Brew Black-Source Potion",
+      "description": "Mana-Hunter darkest craft. Refine essence from a non-consenting sentient — a captive person, a bound caster, the rare horror that follows — into a potion that fills a reservoir. The line the captive-trade does not cross in polite framing and quietly does cross in practice.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Mana-Hunter",
+          "amount": 1
+        },
+        {
+          "type": "trait",
+          "variable": "Forbidden Working",
+          "amount": 1
+        },
+        {
+          "type": "skill",
+          "variable": "alchemy",
+          "amount": 12
+        }
+      ],
+      "bonus": 14,
+      "cooldown": 0
+    },
+    "Shield-Wall": {
+      "name": "Shield-Wall",
+      "description": "Soldier formation discipline. Lock shields with allies adjacent; the line braces, the body uses neighbors' weight, incoming weapons are turned by the shape rather than blocked individually. Combat use: a small group of soldiers in formation become the line in any street fight or siege.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "melee",
+          "amount": 8
+        }
+      ],
+      "bonus": 8,
+      "cooldown": 3
+    },
+    "Marches Charge": {
+      "name": "Marches Charge",
+      "description": "Kelmari winter-cycle drill. Drive the lance-tip through a Threshi line at speed, the body and the weapon committed to a single point that does not slow. Used three centuries on the eastern frontier. Combat use: a single hard committed strike that breaks formation behind it.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Marches Drilled",
+          "amount": 1
+        },
+        {
+          "type": "skill",
+          "variable": "melee",
+          "amount": 10
+        }
+      ],
+      "bonus": 12,
+      "cooldown": 6
+    },
+    "Marsh Ambush": {
+      "name": "Marsh Ambush",
+      "description": "Udorathi fen-edge drill. Strike from cover where the ground does not show your weight, fall back through reeds where pursuit cannot follow. Combat use: ambush from terrain only an Udorathi reads correctly, and disengage where a heavier opponent cannot.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Marsh Skirmisher",
+          "amount": 1
+        },
+        {
+          "type": "skill",
+          "variable": "stealth",
+          "amount": 8
+        }
+      ],
+      "bonus": 10,
+      "cooldown": 5
+    },
+    "Lake-Volley": {
+      "name": "Lake-Volley",
+      "description": "Nadorim water-archer drill. Place a long volley from a moving boat or the head of a pier, the wind read into every arc, the shots landing on the line they were meant for. Ranged combat at distance over open water or open ground.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Lake Archer",
+          "amount": 1
+        },
+        {
+          "type": "skill",
+          "variable": "ranged",
+          "amount": 10
+        }
+      ],
+      "bonus": 12,
+      "cooldown": 4
+    },
+    "Free-Company Captain": {
+      "name": "Free-Company Captain",
+      "description": "Mercenary command discipline. Position a small mixed-race band in a fight where each member's gifts compound, read the contract for the part nobody read aloud, hold a contract season together when the company has reasons to fall apart. Useful in tactical combat, in negotiating the next contract, and in the ordinary work of keeping a company on the road.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Free-Company Veteran",
+          "amount": 1
+        }
+      ],
+      "bonus": 10,
+      "cooldown": 0
+    },
+    "Duelist's Eye": {
+      "name": "Duelist's Eye",
+      "description": "Single-combat focus. The opponent's tells are read three beats ahead — the foot that will move, the shoulder that will commit, the moment to finish a fight that has been declared formal. Used in noble duels, Draklid challenge-combat, the back-alley fight with a man who has no interest in stopping.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Duelist Trained",
+          "amount": 1
+        }
+      ],
+      "bonus": 12,
+      "cooldown": 4
+    },
+    "Pickpocket": {
+      "name": "Pickpocket",
+      "description": "Lift a coinpurse, knife, pouch, ring, or small sealed object from a target without their noticing. Easier in a crowd, easier when the target is engaged, harder against a trained guard or another thief. The drifter's standby and the courtier's least-acknowledged hobby.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "thievery",
+          "amount": 5
+        }
+      ],
+      "bonus": 6,
+      "cooldown": 2
+    },
+    "Pick Lock": {
+      "name": "Pick Lock",
+      "description": "Defeat a mechanical lock — house door, shop strongbox, prison-cell, the lockboxes a Hofnar caravan secures contracts in. Time scales with the quality of the lock and the tools at hand. A lock the size of an Avenorian palace strongbox will not fall to picks alone.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "thievery",
+          "amount": 5
+        }
+      ],
+      "bonus": 6,
+      "cooldown": 1
+    },
+    "Vanish": {
+      "name": "Vanish",
+      "description": "Use the moment, the cover, and the body to disappear from a scene — a market crowd, a tavern fight, a guard's distracted glance. Not glamour, just use of the world. Drifters live by it; pickpockets keep it for emergencies; sex-workers know which doors lead where.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "stealth",
+          "amount": 6
+        }
+      ],
+      "bonus": 8,
+      "cooldown": 4
+    },
+    "Field Medicine": {
+      "name": "Field Medicine",
+      "description": "Stabilize a wounded ally during or directly after combat — pack a bleed, set a hand, draw a clean breath, keep the patient alive through the next ten minutes. Distinct from Apothecary's Touch (which is village-rate medicine over time); field medicine is the work done under fire.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "medicine",
+          "amount": 8
+        }
+      ],
+      "bonus": 10,
+      "cooldown": 3
+    },
+    "Master-Work": {
+      "name": "Master-Work",
+      "description": "Crafter's signature. Spend days or weeks in a workshop and produce a piece of made work above the standard of the trade — a sword that survives a campaign, armor that fits the body, a wagon-axle that does not break on the long route. The work that builds a reputation across kingdoms.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "craft",
+          "amount": 14
+        }
+      ],
+      "bonus": 12,
+      "cooldown": 30
+    },
+    "Tracker's Patience": {
+      "name": "Tracker's Patience",
+      "description": "Hunter's slow-cycle skill. Hold a trail across days, terrain, weather, water-crossings, and deliberate counter-tracking. Find a creature or a person who has tried not to be found, in a country the tracker has read the seasons on. Combat use: position before the engagement starts. Investigation use: find a witness, a fugitive, or a body.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "survival",
+          "amount": 12
+        }
+      ],
+      "bonus": 10,
+      "cooldown": 0
+    },
+    "Tavern-Wise": {
+      "name": "Tavern-Wise",
+      "description": "Drifter's network skill. Walk into any tavern in a kingdom you've been through and know within an evening who runs the back room, which constable is corruptible, which traveler is what they say, where the trouble is, where the work is, where the bed is for free.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "persuasion",
+          "amount": 6
+        }
+      ],
+      "bonus": 8,
+      "cooldown": 0
+    },
+    "Pair-Bonded": {
+      "name": "Pair-Bonded",
+      "description": "Brotherhood pair-discipline. The brother and his agoge-comrade have worked together for decades; in combat they coordinate without speech, the strikes interleave, the bracing covers each other's openings. Bonus while fighting alongside the bonded brother. The order does not enforce these bonds; it does not police them either.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "Wizard",
+          "amount": 1
+        },
+        {
+          "type": "trait",
+          "variable": "Pair-Bonded Brother",
+          "amount": 1
+        }
+      ],
+      "bonus": 10,
+      "cooldown": 0
+    },
+    "Aggregated Working": {
+      "name": "Aggregated Working",
+      "description": "The cooperative rite at scale. Multiple casters — witches, consorts, sometimes a stockpile drawn on as a third pool — pool reservoirs on a single working. Effects beyond any participant's solo reach become possible. The mechanism behind every continent-shaping working in the historical record, including the Ensoulment. In ordinary play, the participants of a small rite (two to a dozen) can together push a working two or three tiers above what any of them could do alone.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 18
+        }
+      ],
+      "bonus": 18,
+      "cooldown": 30
+    },
+    "Restoration": {
+      "name": "Restoration",
+      "description": "Body-domain working at the extreme tier. Regrow a limb, restore an organ, rebuild what ordinary mending cannot reach. Cost in the high hundreds; requires School of the Body and time across days, not turns. The College has performed this for the witch queen and a small handful of others. A witch attempting it on a stranger expects to be invoiced accordingly.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "School of the Body",
+          "amount": 1
+        },
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 20
+        }
+      ],
+      "bonus": 20,
+      "cooldown": 90
+    },
+    "Restore the Dead": {
+      "name": "Restore the Dead",
+      "description": "Resurrection at the extreme tier. Body recently dead, mostly intact, the witch fully prepared and the reservoir well into the thousands. Years of cooldown afterward — the working asks a great deal of the witch and the body.",
+      "requirements": [
+        {
+          "type": "trait",
+          "variable": "School of the Body",
+          "amount": 1
+        },
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 22
+        }
+      ],
+      "bonus": 25,
+      "cooldown": 365
+    },
+    "Flash": {
+      "name": "Flash",
+      "description": "A sudden display calculated to distract, scandalizing or amusing onlookers. Lift a skirt, bare a breast, hike a shirt, the moment of exposure working on the viewer's eye and drawing a moment's distraction from the tactical. Ranged Willpower damage to a single target or small group; the bigger the audience, the deeper the landing. Cooldown on reuse to preserve the shock.",
+      "requirements": [],
+      "bonus": 0,
+      "cooldown": 2
+    },
+    "Lewd Taunt": {
+      "name": "Lewd Taunt",
+      "description": "Verbal or gestural mockery of a sexual kind. Catcall, lewd gesture, suggestion, invitation, the tone audible in a crowded tavern and the aim to fracture the target's focus. Ranged Willpower chip that stacks with multiple practitioners using it on the same target in the same scene; harmless when used alone, devastating in concert.",
+      "requirements": [],
+      "bonus": 0,
+      "cooldown": 1
+    },
+    "Grope": {
+      "name": "Grope",
+      "description": "Crude and unwanted touch, delivered in passing or face-to-face. Grab, pinch, swat, pull hair; the act done without consent and meant to mark territory or humiliate. Adjacent Willpower damage and a clear message of dominance. Provokes either capitulation or violent reaction; there is no neutral response.",
+      "requirements": [],
+      "bonus": 0,
+      "cooldown": 1
+    },
+    "Force Kiss": {
+      "name": "Force Kiss",
+      "description": "Mouth-on-target intimate contact, taken without consent. Kiss, suck, lick, the act pressed on the target's neck, ear, mouth; adjacent contact that humiliates and damages resolve. Counterable by Vile Reflex if the target has it. High stamina cost; high Willpower damage on landing.",
+      "requirements": [],
+      "bonus": 0,
+      "cooldown": 2
+    },
+    "Whisper Filth": {
+      "name": "Whisper Filth",
+      "description": "Quiet words spoken at close range, bypassing the public witness that marks other crude attacks. Whispered invitation, suggestion, threat; the target alone hears the content, no crowd to muffle the intent. Adjacent Willpower damage without the social buffering of a wider audience.",
+      "requirements": [],
+      "bonus": 0,
+      "cooldown": 1
+    },
+    "Gross-Out": {
+      "name": "Gross-Out",
+      "description": "Assault through revulsion. Spit, drool, fart, belch, the act performed at or near the target; the response is recoil rather than arousal. Bypasses defenses built for seduction; low Willpower damage but high visceral impact, clearing a space or breaking a hold.",
+      "requirements": [],
+      "bonus": 0,
+      "cooldown": 2
+    },
+    "Vile Reflex": {
+      "name": "Vile Reflex",
+      "description": "Universal crude defense. Knee to the groin, bite back hard, slap with force; the reaction automatic and available to any target caught in crude touch. A reaction triggered by Force Kiss, Grope, or similar crude adjacent attack. Small physical damage to the attacker; no cooldown, an immediate right of refusal.",
+      "requirements": [],
+      "bonus": 0,
+      "cooldown": 0
+    },
+    "Mount the Beaten": {
+      "name": "Mount the Beaten",
+      "description": "The victor's right, expressed through the carnal. A finishing move available when the foe lies at zero health or zero Willpower; the act of sexual dominance final and absolute. Requires high stamina; leaves a permanent reputation scar and Willpower scar on any survivor. Cannot be undone through casual healing or time.",
+      "requirements": [],
+      "bonus": 0,
+      "cooldown": 5
+    },
+    "Allure Strike": {
+      "name": "Allure Strike",
+      "description": "Trained technical Willpower attack delivered through gaze, voice, posture, the working of sex appeal as a weapon. Ranged and scaling with the practitioner's skill; far more potent than crude taunts but requiring finesse to land. The difference between a street insult and a courtesan's calculated dismantling.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 1
+        }
+      ],
+      "bonus": 1,
+      "cooldown": 2
+    },
+    "Body Press": {
+      "name": "Body Press",
+      "description": "Adjacent positioning that commands attention through proximity. Lean in with cleavage, press hips, pin through deliberate body contact; the working uses physicality and presence to dominate the engagement. Moderate Willpower damage and advantage on the next Carnal or Persuasion roll. The fight tips before a hand is thrown.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 1
+        }
+      ],
+      "bonus": 1,
+      "cooldown": 2
+    },
+    "Suppress": {
+      "name": "Suppress",
+      "description": "Adjacent grapple that silences and blinds the target through intimate positioning. Sit-on-face, smother, deepthroat-gag, throat-pin; the variant determined by anatomy and practicality. Spellcasters cannot cast while suppressed. Sustained Willpower damage each round that the hold is maintained; high stamina cost to initiate and sustain.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 1
+        }
+      ],
+      "bonus": 1,
+      "cooldown": 3
+    },
+    "Tease and Withhold": {
+      "name": "Tease and Withhold",
+      "description": "Escalation followed by refusal, designed to frustrate and damage resolve. Build arousal, then withdraw; the unmet expectation landing harder on the next touch. A setup move that delays Willpower damage one round but multiplies it on landing. Works on targets susceptible to seduction and frustration alike.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 1
+        }
+      ],
+      "bonus": 1,
+      "cooldown": 3
+    },
+    "Honeyed Tongue": {
+      "name": "Honeyed Tongue",
+      "description": "Reaction parry against incoming Carnal attack. On successful counter, no damage taken and an immediate free Lewd Taunt back at the attacker, turning their own opening against them. Available to any trained practitioner; the difference between raw crude and technical defense.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 1
+        }
+      ],
+      "bonus": 1,
+      "cooldown": 0
+    },
+    "Hardened to It": {
+      "name": "Hardened to It",
+      "description": "Passive reduction to Willpower damage from sexual sources, the body and mind acclimated to rough trade. The practitioner takes persistent small damage from rough work, but incidental health wounds close at scene-end without treatment. Built through repeated carnal engagement; a callousness that protects.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 1
+        }
+      ],
+      "bonus": 1,
+      "cooldown": 0
+    },
+    "Disgrace": {
+      "name": "Disgrace",
+      "description": "Humiliation through exposure or violation, usable mid-fight or as a post-combat finisher. Strip a target, force them into position, mark them publicly with the signs of carnal defeat. Permanent reputation and Willpower scar on the survivor; the impact deepens if performed before witnesses. Medium stamina cost; the working takes time.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 1
+        }
+      ],
+      "bonus": 1,
+      "cooldown": 4
+    },
+    "Bind in Bliss": {
+      "name": "Bind in Bliss",
+      "description": "Overwhelming pleasure as an incapacitating force. The target loses the next turn to involuntary response, body overridden by sensation; works on humanoids and most beasts. High Willpower damage; rarely survivable without countermeasure. Master-tier technique requiring discipline and skill.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 5
+        }
+      ],
+      "bonus": 5,
+      "cooldown": 5
+    },
+    "Break the Will": {
+      "name": "Break the Will",
+      "description": "Finisher move requiring the target Willpower at or below a set threshold. The act of breaking final resistance through carnal domination; the target yields, charms, or surrenders depending on circumstance. Ends the engagement by forcing capitulation. Master-tier technique; the endpoint of many encounters.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 5
+        }
+      ],
+      "bonus": 5,
+      "cooldown": 6
+    },
+    "Marathon": {
+      "name": "Marathon",
+      "description": "Passive doubling of stamina pool available for Carnal Arts abilities and recovery rate. The earned signature of a genuine master; the body trained to sustain prolonged engagement without collapse. Passive benefit at high skill; marks the practitioner's graduation to the dangerous tier of the craft.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 5
+        }
+      ],
+      "bonus": 5,
+      "cooldown": 0
+    },
+    "Juicing": {
+      "name": "Juicing",
+      "description": "The iconic witch-sex-kill, forbidden and taboo even in places that look the other way. Requires Suppress setup or target Willpower at threshold. The act of sexual assault combined with mana-draw, killing the target through dual damage while filling the witch's reservoir. High stamina and reservoir cost; the practitioner is marked as a Drawing Witch afterward, carrying the reputation that brand entails everywhere but the most hidden quarters.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 5
+        },
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 5
+        },
+        {
+          "type": "trait",
+          "variable": "Witch",
+          "amount": 1
+        }
+      ],
+      "bonus": 5,
+      "cooldown": 6
+    },
+    "Wild Draw": {
+      "name": "Wild Draw",
+      "description": "Mana-draw from a willing partner without mana of their own. Charmed, seduced, paid, or romantic partner; the act structured as intimacy rather than extract. Modest reservoir refill through a downtime scene, conducted in private. Requires carnal-arts training to calibrate; available once per scene per partner. Used by witches who lack potion supply or a consort, or who prefer the directness.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 1
+        },
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 0
+        },
+        {
+          "type": "trait",
+          "variable": "Witch",
+          "amount": 1
+        }
+      ],
+      "bonus": 0,
+      "cooldown": 0
+    },
+    "Forced Draw": {
+      "name": "Forced Draw",
+      "description": "Mana-draw from an unwilling source, the black-witch method. Captive, beaten, broken; the extraction carried out as domination and theft. Small dirty yield; addictive to the practitioner and risks Willpower cap reduction through repeated use. The witch is branded by this act and the reputation follows to every kingdom where witches face inquiry.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 1
+        },
+        {
+          "type": "trait",
+          "variable": "Witch",
+          "amount": 1
+        }
+      ],
+      "bonus": 0,
+      "cooldown": 0
+    },
+    "Sister's Draw": {
+      "name": "Sister's Draw",
+      "description": "The rarest technique, drawing from female partners with their own mana. Very small yield; the method is nearly lost, taught by only a handful of senior witches to their closest students. Requires both carnal-arts and witchcraft at master level. No formal tradition teaches it openly and most witches do not know it exists. Once per scene per partner.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 7
+        },
+        {
+          "type": "skill",
+          "variable": "witchcraft",
+          "amount": 7
+        },
+        {
+          "type": "trait",
+          "variable": "Witch",
+          "amount": 1
+        }
+      ],
+      "bonus": 7,
+      "cooldown": 0
+    },
+    "Set the Rate": {
+      "name": "Set the Rate",
+      "description": "Sex-work transaction skill, turning an encounter into structured income. Gold scaled by the practitioner's skill and the client's wealth; the negotiation done cleanly and the agreement binding. Available outside combat during downtime sessions. The difference between street-walking and professional practice.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 1
+        }
+      ],
+      "bonus": 1,
+      "cooldown": 0
+    },
+    "Aftercare": {
+      "name": "Aftercare",
+      "description": "Extract intelligence or leverage from a satisfied client after a successful encounter. The sex-worker reads the client's unguarded moment, gathering names, secrets, commercial advantage, or long-term asset leverage. Overlaps with Insight skill; used in downtime after a session gone right.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 1
+        }
+      ],
+      "bonus": 1,
+      "cooldown": 0
+    },
+    "House Standing": {
+      "name": "House Standing",
+      "description": "Passive standing in a brothel-house network, accumulating reputation and protection. Street risk reduced in towns where the practitioner has worked; access to contracts street-walkers cannot reach; the house backing the worker against casual violence. Built through repeated work in organized establishments.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 1
+        }
+      ],
+      "bonus": 1,
+      "cooldown": 0
+    },
+    "Read the Room": {
+      "name": "Read the Room",
+      "description": "Pre-screening of a potential client before commitment, reading the room for danger and deception. Carnal-arts combined with Insight skill; reveals whether the client means harm, carries disease, intends theft, or brings legitimate coin. The sex-worker's safeguard against bad clients.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 1
+        }
+      ],
+      "bonus": 1,
+      "cooldown": 1
+    },
+    "Settle the Bill": {
+      "name": "Settle the Bill",
+      "description": "Closing move on difficult clients, ending an encounter on the practitioner's terms. Client tries to stiff, assault, or otherwise escalate; the sex-worker extracts payment and terminates the encounter without brawl or escalation. The professional move that protects working girls from the worst outcomes.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 1
+        }
+      ],
+      "bonus": 1,
+      "cooldown": 2
+    },
+    "Juke the Patron": {
+      "name": "Juke the Patron",
+      "description": "Defensive trick turning a too-rough or too-dangerous client toward safer ground without breaking the encounter or the fee. Fake the climax, slip sleeping draught into wine, suggest an alternative service, the practitioner steering toward control. Allows exit from a deteriorating encounter while keeping the coin.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 1
+        }
+      ],
+      "bonus": 1,
+      "cooldown": 3
+    },
+    "Read the Market": {
+      "name": "Read the Market",
+      "description": "Size up a counterparty's true needs, their fear of loss, and the price band they are genuinely willing to move in. A Trader's read of the room cuts through posture and bluff. Useful in commerce, barter, and any negotiation where the first to show their bottom price loses.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "persuasion",
+          "amount": 5
+        }
+      ],
+      "bonus": 5,
+      "cooldown": 0
+    },
+    "Bridge the Gap": {
+      "name": "Bridge the Gap",
+      "description": "Reframe a hostile negotiation into language both sides can hear. A Diplomat carries word from one party to another in the exact phrasing each wants to receive — not lying, just choosing which truth to emphasize. Useful when direct contact would break a fragile agreement.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "persuasion",
+          "amount": 10
+        }
+      ],
+      "bonus": 10,
+      "cooldown": 4
+    },
+    "Ground-Sense": {
+      "name": "Ground-Sense",
+      "description": "Read the rock before the work begins — judge the soundness of overhead, sense the pocket of gas or water-table depth, feel the fault-line that will shift under weight. A Pit-Foreman's sense keeps the mine from killing the crew. Useful in any worked stone, vault, or collapsed structure.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "craft",
+          "amount": 8
+        }
+      ],
+      "bonus": 8,
+      "cooldown": 0
+    },
+    "Weather-Sense": {
+      "name": "Weather-Sense",
+      "description": "Read the sky and water hours before the shift comes — the pressure-change in the bones, the wave-pattern that says the wind is turning, the smell of a storm closing in from the far horizon. A Sailor's sense means safe harbor or a corpse in the water. Passive and always working.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "survival",
+          "amount": 5
+        }
+      ],
+      "bonus": 5,
+      "cooldown": 0
+    },
+    "Channel-Read": {
+      "name": "Channel-Read",
+      "description": "Read a strange river bar, harbor approach, or narrow strait at a glance — find the safe water and the hidden rock without local knowledge. A Pilot brings a vessel through impossible passage by reading the current and the depth the ordinary eye cannot see.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "survival",
+          "amount": 10
+        }
+      ],
+      "bonus": 10,
+      "cooldown": 3
+    },
+    "Interrogate": {
+      "name": "Interrogate",
+      "description": "Sweat a witness or suspect using combined force and insight — the Watch-Officer finds what someone is hiding when they have a reason to talk. Not torture, just pressure at the right angle until the story breaks and the truth spills.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "intimidation",
+          "amount": 10
+        }
+      ],
+      "bonus": 10,
+      "cooldown": 4
+    },
+    "Camp-Hold": {
+      "name": "Camp-Hold",
+      "description": "Set a circled camp on hostile ground — sightlines clear, watch-rotation tight, ambush geometry impossible. While a Caravan Guard holds the camp, the party gets a defensive bonus and resistance to surprise. Useful any time a night on bad ground has to end with everyone alive.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "survival",
+          "amount": 8
+        }
+      ],
+      "bonus": 8,
+      "cooldown": 6
+    }
+  }
+}

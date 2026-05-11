@@ -1,0 +1,136 @@
+{
+  "attributeSettings": {
+    "attributeNames": [
+      "strength",
+      "dexterity",
+      "constitution",
+      "intelligence",
+      "wisdom",
+      "charisma"
+    ],
+    "lowAttributeTraits": {},
+    "maxStartingAttribute": 16,
+    "lowAttributeThreshold": 2,
+    "attributeBonusModifier": 2.5,
+    "attributeStatModifiers": {},
+    "startingAttributeValue": 8,
+    "startingAttributePoints": 16
+  },
+  "skillSettings": {
+    "maxSkillLevel": 25,
+    "maxSkillSuccessLevel": 25,
+    "skillXPRewards": {
+      "huge": 150,
+      "large": 100,
+      "small": 40,
+      "medium": 60
+    },
+    "xpFromNewSkill": 200,
+    "trainingCooldown": 10,
+    "skillBonusModifier": 1,
+    "charXPPerSkillLevel": 5,
+    "baseXPFromSkillUpgrade": 125,
+    "skillTypeDifficultyBonus": {
+      "none": 0,
+      "magic": 0,
+      "combat": 0,
+      "utility": 0
+    },
+    "startingXPToLevelUpSkill": 100,
+    "baseChanceToLearnNewSkill": 0.1,
+    "skillLearningBonusModifier": 0.01,
+    "additionalXPRequiredPerSkillLevel": 40
+  },
+  "locationSettings": {
+    "regionSize": 100,
+    "simpleRadius": 2,
+    "complexRadius": 5,
+    "regionLocationCount": 8,
+    "avgTravelDistance": 20,
+    "minTravelDistance": 5,
+    "regionFactionCount": 4,
+    "newRegionGenerationEnabled": true,
+    "encountersEnabled": false
+  },
+  "itemSettings": {
+    "currencyName": "gold",
+    "itemSlots": [
+      {
+        "slot": "head",
+        "category": "Armor",
+        "quantity": 1
+      },
+      {
+        "slot": "body",
+        "category": "Armor",
+        "quantity": 1
+      },
+      {
+        "slot": "legs",
+        "category": "Armor",
+        "quantity": 1
+      },
+      {
+        "slot": "feet",
+        "category": "Armor",
+        "quantity": 1
+      },
+      {
+        "slot": "hands",
+        "category": "Armor",
+        "quantity": 1
+      },
+      {
+        "slot": "mainHand",
+        "category": "Weapon",
+        "quantity": 1
+      },
+      {
+        "slot": "offHand",
+        "category": "Weapon",
+        "quantity": 1
+      },
+      {
+        "slot": "trinket",
+        "category": "Tool",
+        "quantity": 2
+      }
+    ],
+    "itemCategories": [
+      "Currency",
+      "Armor",
+      "Weapon",
+      "Tool",
+      "Consumable"
+    ],
+    "startingItems": []
+  },
+  "combatSettings": {
+    "minCombatXP": 1,
+    "baseCombatXP": 100,
+    "abilityCooldown": 20,
+    "abilityBonus": 10,
+    "npcDailyHealingAmount": 999,
+    "damageTypes": [
+      "piercing",
+      "slashing",
+      "bludgeoning",
+      "poisoning",
+      "fire",
+      "lightning",
+      "wind",
+      "water",
+      "arcane",
+      "light",
+      "dark",
+      "psychic"
+    ]
+  },
+  "otherSettings": {
+    "startingCharacterLevelUpRequirement": 1000,
+    "extraRequiredXPPerCharacterLevel": 400,
+    "maxCharacterLevel": 100,
+    "npcHealthPerLevel": 12,
+    "npcMinHealth": 66
+  }
+}
