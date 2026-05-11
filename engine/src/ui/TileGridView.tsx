@@ -53,6 +53,8 @@ const TILE_PX = 112;
 export type TileGridViewProps = {
   grid: TileGrid;
   playerPos: [number, number];
+  /** Optional cell highlighted as the UI selection (e.g. region map inspector). */
+  selectedPos?: [number, number] | null;
   imageCache: TileImageCache;
   onCellClick: (x: number, y: number, tile: Tile) => void;
   /** Optional cell-level decoration (e.g. quest-marker icon overlay). */
@@ -71,6 +73,7 @@ export function TileGridView(props: TileGridViewProps) {
   const {
     grid,
     playerPos,
+    selectedPos = null,
     imageCache,
     onCellClick,
     renderOverlay,
@@ -136,6 +139,8 @@ export function TileGridView(props: TileGridViewProps) {
           const x = idx % grid.width;
           const y = Math.floor(idx / grid.width);
           const here = playerPos[0] === x && playerPos[1] === y;
+          const selected =
+            !!selectedPos && selectedPos[0] === x && selectedPos[1] === y;
           const adjacent =
             Math.abs(playerPos[0] - x) + Math.abs(playerPos[1] - y) === 1;
           // Y-flip + inset (when there's an exit ring around the grid).
@@ -151,6 +156,7 @@ export function TileGridView(props: TileGridViewProps) {
               cssRow={cssRow}
               cssCol={cssCol}
               here={here}
+              selected={selected}
               adjacent={adjacent}
               imageCache={imageCache}
               onClick={() => onCellClick(x, y, tile)}
@@ -342,6 +348,7 @@ type CellProps = {
   /** 1-indexed CSS grid column (x + 1). */
   cssCol: number;
   here: boolean;
+  selected: boolean;
   adjacent: boolean;
   imageCache: TileImageCache;
   onClick: () => void;
@@ -356,6 +363,7 @@ function TileGridCell({
   cssRow,
   cssCol,
   here,
+  selected,
   adjacent,
   imageCache,
   onClick,
@@ -375,6 +383,7 @@ function TileGridCell({
   const className = [
     "tileGrid__cell",
     here ? "tileGrid__cell--here" : "",
+    selected ? "tileGrid__cell--selected" : "",
     adjacent ? "tileGrid__cell--adjacent" : "",
     !tile.passable ? "tileGrid__cell--impassable" : "",
     tile.dangerous ? "tileGrid__cell--dangerous" : "",

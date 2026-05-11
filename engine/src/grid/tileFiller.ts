@@ -12,8 +12,6 @@ import type {
   WorldRegion,
 } from "../schema/worldSchema";
 import {
-  LOCATION_GRID_H,
-  LOCATION_GRID_W,
   REGION_GRID_H,
   REGION_GRID_W,
   TileGridSchema,
@@ -21,9 +19,29 @@ import {
   type Tile,
   type TileGrid,
 } from "./tilePrimitives";
+import {
+  areaIdToTileKind,
+  layoutLocationAreas,
+  type LocationAreaAnchor,
+} from "./locationAreaLayout";
 import { projectLocations, type ProjectedAnchor } from "./locationProjection";
-import { buildSystemPrompt } from "../llm/promptBuilder";
+import { buildSystemPrompt, type PromptOperation } from "../llm/promptBuilder";
 import { ENGINE_PROMPTS } from "../llm/systemPrompts";
+import { useStore } from "../state/store";
+
+function isTileImageMosaicMode(): boolean {
+  return useStore.getState().tileImageMode === "mosaic";
+}
+
+function tileClassifierOperation(
+  scope: "region" | "location",
+  mosaicImage: boolean,
+): PromptOperation {
+  if (mosaicImage) {
+    return scope === "region" ? "tile.region.mosaic" : "tile.location.mosaic";
+  }
+  return scope === "region" ? "tile.region" : "tile.location";
+}
 
 /**
  * The filler's contract with the LLM. We ask for one row per grid cell,
@@ -37,6 +55,11 @@ const FillerCellSchema = z.object({
   kind: z.string().min(1),
   /** One short human-readable phrase, e.g. "marshy reed flats". */
   label: z.string().default(""),
+  /**
+   * Rich top-down art direction for mosaic mode (one big image per grid).
+   * Omitted when the player uses per-tile image caching.
+   */
+  mosaicDescribe: z.string().optional(),
   passable: z.boolean(),
   dangerous: z.boolean().default(false),
   /** If non-empty, this cell is a location-anchor for the named location. */
@@ -85,11 +108,15 @@ export type TileFillerOptions = {
 
 /**
  * Centralised tile-grid generator. ONE LLM call per region (or location)
- * — never per cell — so a 10x10 region pays one round-trip and a 5x5
- * location pays another, even if every cell is procedural.
+ * — never per cell — so a 10x10 region pays one round-trip and each
+ * location grid (size derived from its authored sub-areas) pays another.
  *
  * Persisted as a `tile-grid` row in `sceneSpecs`; subsequent visits in the
  * same save read directly from IndexedDB without touching the LLM.
+ *
+ * When the global tile-image mode is `mosaic` (see store), region/location
+ * classification uses relaxed prompts and emits per-cell `mosaicDescribe`
+ * for the whole-map image pass; `per-tile` mode keeps the tight palette rules.
  */
 export class TileFiller {
   private readonly saveId: string;
@@ -228,7 +255,7 @@ export class TileFiller {
     await deleteSceneSpecRow(
       this.saveId,
       "tile-grid",
-      `${scope}-v3::${ownerId}`,
+      scope === "location" ? `location-v4::${ownerId}` : `region-v3::${ownerId}`,
     );
     diag.info("tile-grid", `cleared cached grid for ${scope} ${ownerId}`, {
       scope,
@@ -242,17 +269,12 @@ export class TileFiller {
     scope: "region" | "location",
     ownerId: string,
   ): Promise<TileGrid | null> {
-    // The "v3" suffix is a deliberate cache-busting tag.
-    //   v1 -> v2: switched from screen-y-down to cartographer +y = north.
-    //   v2 -> v3: locations are now placed by the engine via a projection
-    //             from authored config (x, y) into the grid, instead of
-    //             being scattered wherever the LLM felt like. v2 rows
-    //             would still render with locations in random spots.
-    const row = await getSceneSpecRow(
-      this.saveId,
-      "tile-grid",
-      `${scope}-v3::${ownerId}`,
-    );
+    // Region: "v3" — projection of authored (x,y) into the grid.
+    // Location: "v4" — dynamic grid size + engine-reserved sub-area cells
+    // (replaces fixed 5×5 location grids from earlier builds).
+    const cacheKey =
+      scope === "location" ? `location-v4::${ownerId}` : `region-v3::${ownerId}`;
+    const row = await getSceneSpecRow(this.saveId, "tile-grid", cacheKey);
     if (!row) return null;
     const parsed = TileGridSchema.safeParse(row.spec);
     if (!parsed.success) return null;
@@ -272,9 +294,11 @@ export class TileFiller {
     await putSceneSpecRow({
       saveId: this.saveId,
       scope: "tile-grid",
-      // Keep the read/write keys in lock-step (see readCachedGrid for the
-      // version history behind the "-v3" suffix).
-      ids: `${grid.scope}-v3::${grid.ownerId}`,
+      // Keep the read/write keys in lock-step (see readCachedGrid).
+      ids:
+        grid.scope === "location"
+          ? `location-v4::${grid.ownerId}`
+          : `region-v3::${grid.ownerId}`,
       spec: grid,
       source: "llm",
       generatedAt: Date.now(),
@@ -294,10 +318,14 @@ export class TileFiller {
     // cellsToGrid using `forcedAnchors`.
     const anchors = projectLocations({ locations, gridW: width, gridH: height });
 
+    const mosaicImage = isTileImageMosaicMode();
+    const operation = tileClassifierOperation("region", mosaicImage);
     const system = buildSystemPrompt({
       world: this.world,
-      operation: "tile.region",
-      engineHeader: ENGINE_PROMPTS.tileRegion(),
+      operation,
+      engineHeader: mosaicImage
+        ? ENGINE_PROMPTS.tileRegionMosaic()
+        : ENGINE_PROMPTS.tileRegion(),
     });
     let user = userPromptForRegion({
       regionId,
@@ -308,6 +336,7 @@ export class TileFiller {
       anchors,
       activeQuestMarkers,
       worldBackground: this.worldBackgroundHint(),
+      mosaicImageArt: mosaicImage,
     });
     if (input.llmCacheBuster) {
       user += `\n\n<!-- engine:grid-regenerate ${input.llmCacheBuster} -->`;
@@ -335,17 +364,23 @@ export class TileFiller {
     input: LocationFillerInput,
   ): Promise<FillerOutcome> {
     const { location, locationId, regionBiome, activeQuestMarkers = [] } = input;
-    const width = LOCATION_GRID_W;
-    const height = LOCATION_GRID_H;
-    const areas = Object.entries(location.areas ?? {}).map(([id, a]) => ({
-      id,
-      description: a.description,
-    }));
+    const layout = layoutLocationAreas(location.areas);
+    const { width, height, anchors: areaAnchors } = layout;
+    const areas = Object.entries(location.areas ?? {})
+      .map(([id, a]) => ({
+        id,
+        description: a.description,
+      }))
+      .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 
+    const mosaicImage = isTileImageMosaicMode();
+    const operation = tileClassifierOperation("location", mosaicImage);
     const system = buildSystemPrompt({
       world: this.world,
-      operation: "tile.location",
-      engineHeader: ENGINE_PROMPTS.tileLocation(),
+      operation,
+      engineHeader: mosaicImage
+        ? ENGINE_PROMPTS.tileLocationMosaic()
+        : ENGINE_PROMPTS.tileLocation(),
     });
     let user = userPromptForLocation({
       locationId,
@@ -357,8 +392,10 @@ export class TileFiller {
       width,
       height,
       areas,
+      areaAnchors,
       activeQuestMarkers,
       worldBackground: this.worldBackgroundHint(),
+      mosaicImageArt: mosaicImage,
     });
     if (input.llmCacheBuster) {
       user += `\n\n<!-- engine:grid-regenerate ${input.llmCacheBuster} -->`;
@@ -372,13 +409,14 @@ export class TileFiller {
       system,
       user,
       forcedAnchors: [],
+      forcedAreaAnchors: areaAnchors,
       buildFallback: () =>
         deterministicLocationGrid({
           locationId,
           width,
           height,
-          areas,
           biome: regionBiome ?? "mixed-temperate",
+          areaAnchors,
         }),
     });
   }
@@ -407,9 +445,15 @@ export class TileFiller {
      * Cells the engine is going to stamp regardless of what the LLM does.
      * For region grids this is the projected location list (so locations
      * can never end up in the wrong half of the map). For location grids
-     * this is empty — areas are flexible.
+     * this stays empty — sub-area stamps use `forcedAreaAnchors` instead.
      */
     forcedAnchors: ProjectedAnchor[];
+    /**
+     * At location scope, cells reserved for authored sub-areas (from
+     * `layoutLocationAreas`). Stamped after the LLM response like region
+     * anchors so every area always appears on the map.
+     */
+    forcedAreaAnchors?: LocationAreaAnchor[];
     /**
      * Called when the LLM is unavailable. Should return a grid that still
      * surfaces authored content (locations as anchors at region scope,
@@ -418,7 +462,17 @@ export class TileFiller {
      */
     buildFallback: () => TileGrid;
   }): Promise<FillerOutcome> {
-    const { scope, ownerId, width, height, system, user, forcedAnchors, buildFallback } = args;
+    const {
+      scope,
+      ownerId,
+      width,
+      height,
+      system,
+      user,
+      forcedAnchors,
+      forcedAreaAnchors,
+      buildFallback,
+    } = args;
 
     let parsed: z.infer<typeof FillerResponseSchema> | null = null;
     try {
@@ -454,6 +508,7 @@ export class TileFiller {
         biome: parsed.biome.trim() || "mixed-temperate",
         cells: parsed.cells,
         forcedAnchors,
+        forcedAreaAnchors,
       }),
       source: "llm",
     };
@@ -480,6 +535,8 @@ function userPromptForRegion(args: {
   anchors: ProjectedAnchor[];
   activeQuestMarkers: QuestMarker[];
   worldBackground: string;
+  /** When true, the text model must emit `mosaicDescribe` on every cell. */
+  mosaicImageArt?: boolean;
 }): string {
   const lines: string[] = [];
   lines.push(`Region id: ${args.regionId}`);
@@ -525,6 +582,12 @@ function userPromptForRegion(args: {
     lines.push(args.worldBackground);
     lines.push("");
   }
+  if (args.mosaicImageArt) {
+    lines.push(
+      "Image pipeline: MOSAIC mode — one large top-down painting will be sliced into this grid. Every cell MUST include a substantial `mosaicDescribe` (see system rules). Reserved location cells need one too (what to paint before the engine stamps the settlement).",
+    );
+    lines.push("");
+  }
   lines.push("Produce the JSON now.");
   return lines.join("\n");
 }
@@ -539,8 +602,10 @@ function userPromptForLocation(args: {
   width: number;
   height: number;
   areas: Array<{ id: string; description: string }>;
+  areaAnchors: LocationAreaAnchor[];
   activeQuestMarkers: QuestMarker[];
   worldBackground: string;
+  mosaicImageArt?: boolean;
 }): string {
   const lines: string[] = [];
   lines.push(`Location id: ${args.locationId}`);
@@ -562,6 +627,22 @@ function userPromptForLocation(args: {
     }
     lines.push("");
   }
+  if (args.areaAnchors.length > 0) {
+    lines.push(
+      "ENGINE-RESERVED CELLS — these (x,y) coordinates are already assigned to authored sub-areas. The engine will OVERWRITE these cells after generation so every sub-area is present on the map. Emit plausible yards, halls, alleys, or connectors at those coordinates that match the surrounding layout:",
+    );
+    const sortedAnchors = [...args.areaAnchors].sort((a, b) =>
+      a.id < b.id ? -1 : a.id > b.id ? 1 : 0,
+    );
+    for (const a of sortedAnchors) {
+      lines.push(`  - (${a.gx},${a.gy}) → "${a.id}"`);
+    }
+    lines.push("");
+    lines.push(
+      "Do NOT duplicate these proper-noun sub-area names into other cells' `kind` or `label` — use generic architectural kinds everywhere (see system rules).",
+    );
+    lines.push("");
+  }
   if (args.regionProse) {
     lines.push("Surrounding region prose (context only):");
     lines.push(args.regionProse.slice(0, 600));
@@ -577,6 +658,12 @@ function userPromptForLocation(args: {
   if (args.worldBackground) {
     lines.push("World tone:");
     lines.push(args.worldBackground);
+    lines.push("");
+  }
+  if (args.mosaicImageArt) {
+    lines.push(
+      "Image pipeline: MOSAIC mode — one large top-down painting will be sliced into this grid. Every cell MUST include a substantial `mosaicDescribe` (see system rules), including ENGINE-RESERVED sub-area cells.",
+    );
     lines.push("");
   }
   lines.push("Produce the JSON now.");
@@ -598,8 +685,10 @@ function cellsToGrid(args: {
    * so the model can never bury a far-north city in the south row.
    */
   forcedAnchors: ProjectedAnchor[];
+  forcedAreaAnchors?: LocationAreaAnchor[];
 }): TileGrid {
-  const { scope, ownerId, width, height, biome, cells, forcedAnchors } = args;
+  const { scope, ownerId, width, height, biome, cells, forcedAnchors, forcedAreaAnchors } =
+    args;
 
   // Default-fill with `path` so any missing cell is still walkable.
   const tiles: Tile[] = [];
@@ -617,11 +706,13 @@ function cellsToGrid(args: {
   //    forcedAnchors below is the single source of truth for that.
   for (const cell of cells) {
     if (cell.x < 0 || cell.y < 0 || cell.x >= width || cell.y >= height) continue;
+    const md = cell.mosaicDescribe?.trim();
     const tile: Tile = {
       kind: normalizeKind(cell.kind),
       label: cell.label || undefined,
       passable: cell.passable,
       dangerous: cell.dangerous || undefined,
+      ...(md ? { mosaicDescribe: md } : {}),
     };
     place(cell.x, cell.y, tile);
   }
@@ -645,6 +736,26 @@ function cellsToGrid(args: {
         passable: true,
         locationId: a.id,
         priorKind: prior.kind !== "path" ? prior.kind : undefined,
+        ...(prior.mosaicDescribe?.trim()
+          ? { mosaicDescribe: prior.mosaicDescribe.trim() }
+          : {}),
+      };
+    }
+  }
+
+  if (scope === "location" && forcedAreaAnchors && forcedAreaAnchors.length > 0) {
+    for (const a of forcedAreaAnchors) {
+      const idx = a.gy * width + a.gx;
+      if (idx < 0 || idx >= tiles.length) continue;
+      const prior = tiles[idx];
+      tiles[idx] = {
+        kind: areaIdToTileKind(a.id),
+        label: a.id,
+        passable: true,
+        priorKind: prior.kind !== "path" ? prior.kind : undefined,
+        ...(prior.mosaicDescribe?.trim()
+          ? { mosaicDescribe: prior.mosaicDescribe.trim() }
+          : {}),
       };
     }
   }
@@ -742,27 +853,18 @@ function deterministicLocationGrid(args: {
   width: number;
   height: number;
   biome: string;
-  areas: Array<{ id: string; description: string }>;
+  areaAnchors: LocationAreaAnchor[];
 }): TileGrid {
-  const { locationId, width, height, areas, biome } = args;
+  const { locationId, width, height, biome, areaAnchors } = args;
   const tiles: Tile[] = [];
   for (let i = 0; i < width * height; i += 1) {
     tiles.push({ kind: "path", passable: true });
   }
-  // Stable, area-first placement: every authored area becomes one cell, in
-  // declaration order, walking row-major across the grid. Any remaining cells
-  // stay as `path` connectors. With 5x5 = 25 cells, locations with up to 25
-  // areas all fit; for the rare bigger location we surface only the first 25.
-  const sorted = [...areas];
-  const usable = Math.min(sorted.length, width * height);
-  for (let i = 0; i < usable; i += 1) {
-    const a = sorted[i];
-    const x = i % width;
-    const y = Math.floor(i / width);
-    tiles[y * width + x] = {
-      kind:
-        a.id.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") ||
-        "open-area",
+  for (const a of areaAnchors) {
+    const idx = a.gy * width + a.gx;
+    if (idx < 0 || idx >= tiles.length) continue;
+    tiles[idx] = {
+      kind: areaIdToTileKind(a.id),
       label: a.id,
       passable: true,
     };

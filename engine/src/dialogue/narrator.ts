@@ -3,7 +3,7 @@ import type { LlmAdapter } from "../llm/adapter";
 import type { LlmResponse } from "../llm/types";
 import type { TileFiller } from "../grid/tileFiller";
 import type { TileImageCache } from "../grid/tileImageCache";
-import { applyPathing } from "../grid/pathing";
+import { applyPathing, findRegionWalkPath } from "../grid/pathing";
 import { getTile, type TileGrid } from "../grid/tilePrimitives";
 import type { IndexedWorld } from "../world/indexer";
 import { diag } from "../diag/log";
@@ -14,12 +14,7 @@ import {
   type StoreState,
   useStore,
 } from "../state/store";
-import {
-  REGION_GRID_H,
-  REGION_GRID_W,
-  LOCATION_GRID_H,
-  LOCATION_GRID_W,
-} from "../grid/tilePrimitives";
+import { REGION_GRID_H, REGION_GRID_W } from "../grid/tilePrimitives";
 import {
   clearQuestMarkers,
   populateGridWithQuest,
@@ -103,6 +98,11 @@ const MoveDirSchema = z
   .refine((v) => !!v.direction || v.dx !== undefined || v.dy !== undefined, {
     message: "Provide either `direction` or `dx`/`dy`",
   });
+
+const TravelRegionSchema = z.object({
+  x: z.number().int(),
+  y: z.number().int(),
+});
 
 const EnterLocationSchema = z.object({ locationId: z.string().min(1) });
 const EnterTileSchema = z.object({
@@ -327,6 +327,40 @@ export class Narrator {
           .catch(() => null);
       }
       return ok(undefined, { regionPos: [nx, ny] });
+    });
+
+    handlers.set("travel_region", async (raw, state, ctx) => {
+      if (!ensureMode(state, "region")) return fail("Not in region mode");
+      const args = TravelRegionSchema.parse(raw);
+      const grid = state.regionGrid;
+      if (!grid) return fail("Region grid not loaded");
+      if (
+        !inBounds(args.x, args.y, grid.width, grid.height) ||
+        !inBounds(state.regionPos[0], state.regionPos[1], grid.width, grid.height)
+      ) {
+        return fail("Out of bounds.");
+      }
+      const from = { x: state.regionPos[0], y: state.regionPos[1] };
+      const to = { x: args.x, y: args.y };
+      const path = findRegionWalkPath(grid, from, to);
+      if (!path) {
+        return fail("No walkable path to that tile.");
+      }
+      const store = useStore.getState();
+      let last = from;
+      for (let i = 1; i < path.length; i += 1) {
+        const step = path[i];
+        const target = getTile(grid, step.x, step.y);
+        if (!target?.passable) {
+          return fail(`Path blocked at (${step.x},${step.y}).`);
+        }
+        store.setRegionPos([step.x, step.y]);
+        void ctx.tileImageCache
+          .getUrlForTile(grid, step.x, step.y, target)
+          .catch(() => null);
+        last = step;
+      }
+      return ok(undefined, { regionPos: [last.x, last.y] });
     });
 
     handlers.set("move_location", async (raw, state, ctx) => {
@@ -918,11 +952,6 @@ export async function ensureLocationGrid(
     });
   } finally {
     useStore.getState().setGenerating({ locationGridFor: undefined });
-  }
-  if (grid.width !== LOCATION_GRID_W || grid.height !== LOCATION_GRID_H) {
-    throw new Error(
-      `Location grid for ${locationId} has wrong size ${grid.width}x${grid.height}`,
-    );
   }
   useStore.getState().setLocationGrid(grid);
   if (!options?.skipPrewarm) {

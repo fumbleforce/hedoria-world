@@ -27,7 +27,7 @@ import { z } from "zod";
  *  - `path` is written by the pathfinder in `pathing.ts` after the LLM has
  *    filled the rest of the grid. Always passable. Image-cached per biome.
  *  - `location-anchor` carries a non-empty `locationId` that resolves to a
- *    Location in the world; clicking enters that location's 5x5 grid.
+ *    Location in the world; clicking enters that location's tile grid.
  *
  * Every other value of `kind` is a free-form string the LLM invented for
  * a particular cell (e.g. "reed-marsh", "witch-shrine", "vineyard",
@@ -63,7 +63,7 @@ export const QuestMarkerSchema = z.object({
 export type QuestMarker = z.infer<typeof QuestMarkerSchema>;
 
 /**
- * A single tile in either a region (10x10) or a location (5x5) grid. The
+ * A single tile in either a region (10x10) or a location (variable size) grid. The
  * shape is identical at both scales — only the surrounding grid dimensions
  * and contextual prose differ.
  */
@@ -78,7 +78,7 @@ export const TileSchema = z.object({
   label: z.string().optional(),
   /**
    * If non-empty, this tile is a `location-anchor` and clicking it enters
-   * the named Location's 5x5 grid. The engine validates that the locationId
+   * the named Location's grid. The engine validates that the locationId
    * resolves before accepting the action.
    */
   locationId: z.string().optional(),
@@ -104,6 +104,12 @@ export const TileSchema = z.object({
   props: z.record(z.string(), z.unknown()).optional(),
   /** Quest overlay; written by the populator, not the filler. */
   questMarker: QuestMarkerSchema.optional(),
+  /**
+   * When the tile grid was authored for mosaic-style art, the classifier may
+   * attach a rich per-cell description for the single whole-map image pass.
+   * Ignored in per-tile image mode (keys use kind+biome).
+   */
+  mosaicDescribe: z.string().optional(),
 });
 export type Tile = z.infer<typeof TileSchema>;
 
@@ -113,7 +119,7 @@ export type Tile = z.infer<typeof TileSchema>;
  * `sceneSpecs` row without map<->object conversions.
  */
 export const TileGridSchema = z.object({
-  /** Always "region" for 10x10 grids, "location" for 5x5 grids. */
+  /** Always "region" for 10x10 grids, "location" for per-site grids. */
   scope: z.enum(["region", "location"]),
   /** The id of the WorldRegion or WorldLocation this grid belongs to. */
   ownerId: z.string(),
@@ -173,5 +179,7 @@ export function blankGrid(
 
 export const REGION_GRID_W = 10;
 export const REGION_GRID_H = 10;
+/** Default location grid when a site has no authored sub-areas. */
 export const LOCATION_GRID_W = 5;
+/** Default location grid when a site has no authored sub-areas. */
 export const LOCATION_GRID_H = 5;

@@ -5,6 +5,8 @@ export type PromptOperation =
   | "story.scene"
   | "tile.region"
   | "tile.location"
+  | "tile.region.mosaic"
+  | "tile.location.mosaic"
   | "skill.check"
   | "quest.verify"
   | "death.recovery";
@@ -23,6 +25,14 @@ const OPERATION_TO_INSTRUCTIONS: Record<
     appendNarratorStyle: false,
   },
   "tile.location": {
+    blocks: ["generateLocationDetails"],
+    appendNarratorStyle: false,
+  },
+  "tile.region.mosaic": {
+    blocks: ["generateRegionDetails"],
+    appendNarratorStyle: false,
+  },
+  "tile.location.mosaic": {
     blocks: ["generateLocationDetails"],
     appendNarratorStyle: false,
   },

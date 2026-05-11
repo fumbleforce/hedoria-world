@@ -3,12 +3,14 @@ import type { Narrator } from "./narrator";
 import type { IndexedWorld } from "../world/indexer";
 import { useStore, type StoreState } from "../state/store";
 import { DIALOGUE_TOOLS } from "./tools";
+import { findRegionWalkPath } from "../grid/pathing";
 import { getTile } from "../grid/tilePrimitives";
 import { diag } from "../diag/log";
 import { buildSystemPrompt } from "../llm/promptBuilder";
 import { ENGINE_PROMPTS } from "../llm/systemPrompts";
 import { movementContext } from "./narratorPromptHelpers";
 import type { PlayerIntent } from "./playerIntent";
+import { tileLabel } from "./narratorPromptHelpers";
 
 export type { Direction, SceneVerb, PlayerIntent } from "./playerIntent";
 
@@ -173,6 +175,19 @@ export class WorldNarrator {
       return;
     }
 
+    if (intent.kind === "region.travelTo") {
+      const st = useStore.getState();
+      const g = st.regionGrid;
+      const pos = st.regionPos;
+      if (!g) return;
+      const path = findRegionWalkPath(
+        g,
+        { x: pos[0], y: pos[1] },
+        { x: intent.x, y: intent.y },
+      );
+      if (!path || path.length < 2) return;
+    }
+
     diag.warn("narrator", "LLM omitted canonical tool — running fallback", {
       intent: intent.kind,
       toolCalls: toolCalls.map((c) => c.name),
@@ -195,6 +210,16 @@ function describeIntent(
   world: IndexedWorld,
 ): string {
   switch (intent.kind) {
+    case "region.travelTo": {
+      const tile = state.regionGrid
+        ? getTile(state.regionGrid, intent.x, intent.y)
+        : undefined;
+      const label =
+        (tile?.locationId && world.locations[tile.locationId]?.name) ||
+        tileLabel(tile) ||
+        `tile (${intent.x},${intent.y})`;
+      return `You travel to ${label}.`;
+    }
     case "region.move": {
       const ctx = movementContext(intent, state);
       if (ctx.toLabel && ctx.toPassable === false) {
@@ -295,6 +320,8 @@ function canonicalToolFor(intent: PlayerIntent): string[] {
   switch (intent.kind) {
     case "region.move":
       return ["move_region"];
+    case "region.travelTo":
+      return ["travel_region"];
     case "region.enterLocation":
       return ["enter_location"];
     case "location.move":
@@ -321,6 +348,8 @@ function canonicalCallFor(
   switch (intent.kind) {
     case "region.move":
       return { name: "move_region", arguments: { dx: intent.dx, dy: intent.dy } };
+    case "region.travelTo":
+      return { name: "travel_region", arguments: { x: intent.x, y: intent.y } };
     case "region.enterLocation":
       return {
         name: "enter_location",

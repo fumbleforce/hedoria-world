@@ -16,7 +16,7 @@ import {
 /**
  * Tile illustration cache with two interchangeable strategies.
  *
- *   - `per-tile` (default): one image per `(kind, biome, style)` tuple.
+ *   - `per-tile`: one image per `(kind, biome, style)` tuple.
  *     The same kind reuses the same image across regions; changing the
  *     global style rolls every cached image. Exactly ONE image-LLM
  *     call per cache miss, and many cells in many regions hit the
@@ -24,7 +24,8 @@ import {
  *     small palette (the same `grain-field` reuses across dozens of
  *     cells).
  *
- *   - `mosaic`: ONE image per region/location grid. The cache asks the
+ *   - `mosaic` (default when no persisted mode): ONE image per region/location
+ *     grid. The cache asks the
  *     image model for the whole composition described as a strict
  *     N×M grid, then slices the returned PNG locally into per-cell
  *     PNGs. Each slice is cached under a per-position key
@@ -102,8 +103,19 @@ export function tileImageKey(
  *             the image model dutifully rendered as captions across
  *             each tile. v3 slices for locations therefore contain
  *             baked-in text and must be regenerated.
+ *   v4 -> v5: location mosaics now read `priorKind` (classifier output
+ *             before engine sub-area stamps) and use kebab phrase fallbacks
+ *             so prompts match the actual grid instead of all-"interior".
+ *   v5 -> v6: mosaic image mode uses a separate tile classifier with per-cell
+ *             `mosaicDescribe`; composeMosaicPrompt prefers that field.
+ *   v6 -> v7: mosaic prompt rewritten to lead with style + subject, frame the
+ *             layout as invisible bands rather than a grid, and add explicit
+ *             negative checks for grid lines / borders / map chrome — both
+ *             for cheaper image models that previously baked visible cell
+ *             lines into the picture and for higher-end models that still
+ *             leaked the words "row"/"column" into compass-rose decorations.
  */
-const MOSAIC_PROMPT_VERSION = "v4";
+const MOSAIC_PROMPT_VERSION = "v7";
 
 /**
  * Per-cell mosaic cache key. The first segment `mosaic` is a literal
@@ -157,7 +169,7 @@ export class TileImageCache {
     this.style = opts.style ?? DEFAULT_STYLE;
     this.size = opts.size ?? DEFAULT_SIZE;
     this.mosaicSliceSize = opts.mosaicSliceSize ?? DEFAULT_MOSAIC_SLICE_SIZE;
-    this.mode = opts.initialMode ?? "per-tile";
+    this.mode = opts.initialMode ?? "mosaic";
   }
 
   getMode(): TileImageMode {

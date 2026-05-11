@@ -6,7 +6,12 @@ import type { PackInfo } from "../world/loader";
 import {
   defaultGeminiImageModel,
   defaultGeminiTextModel,
+  normalizeGeminiTextModel,
 } from "../llm/geminiModelOptions";
+import {
+  DEFAULT_OPENROUTER_IMAGE_MODEL,
+  DEFAULT_OPENROUTER_TEXT_MODEL,
+} from "../llm/openRouterDefaults";
 
 /**
  * The single Zustand store for the engine. The store contains the
@@ -18,6 +23,9 @@ import {
  */
 
 export type Mode = "region" | "location" | "scene";
+
+/** Which HTTP API handles text or image LLM calls (per store; no reload). */
+export type LlmBackend = "gemini" | "openrouter";
 
 export type EngagementState = "idle" | "engaged" | "locked";
 
@@ -173,11 +181,16 @@ export type StoreState = {
 
   /**
    * Gemini text / image model ids for API calls. Persisted in localStorage;
-   * boot reads them when constructing providers. Changing either reloads
-   * the page so adapters and caches pick up the new id cleanly.
+   * live providers read the current value for each new request, so changing
+   * either does not restart the game session.
    */
   geminiTextModel: string;
   geminiImageModel: string;
+  textLlmBackend: LlmBackend;
+  imageLlmBackend: LlmBackend;
+  /** OpenRouter model slugs (e.g. google/gemini-2.5-flash). */
+  openRouterTextModel: string;
+  openRouterImageModel: string;
 
   // ---------------- mode + position
   mode: Mode;
@@ -202,10 +215,10 @@ export type StoreState = {
   backgroundActivities: Record<string, string>;
 
   /**
-   * Active tile-image strategy. `per-tile` (default) generates one
-   * image per (kind, biome). `mosaic` generates one image per region
-   * grid and slices it client-side. Persisted in localStorage so the
-   * choice survives a reload.
+   * Active tile-image strategy. `mosaic` (default) generates one image per
+   * region/location grid and slices it client-side. `per-tile` generates one
+   * image per (kind, biome). Persisted in localStorage so the choice survives
+   * a reload.
    */
   tileImageMode: TileImageMode;
 
@@ -264,6 +277,10 @@ export type StoreState = {
   setAvailablePacks: (packs: PackInfo[]) => void;
   setGeminiTextModel: (modelId: string) => void;
   setGeminiImageModel: (modelId: string) => void;
+  setTextLlmBackend: (backend: LlmBackend) => void;
+  setImageLlmBackend: (backend: LlmBackend) => void;
+  setOpenRouterTextModel: (modelId: string) => void;
+  setOpenRouterImageModel: (modelId: string) => void;
 
   setCurrentRegionId: (regionId: string) => void;
   setRegionPos: (pos: [number, number]) => void;
@@ -348,7 +365,7 @@ function readPersistedTileImageMode(): TileImageMode {
   } catch {
     // ignore
   }
-  return "per-tile";
+  return "mosaic";
 }
 
 function writePersistedTileImageMode(mode: TileImageMode): void {
@@ -393,7 +410,7 @@ const GEMINI_IMAGE_MODEL_LS_KEY = "engine.geminiImageModel";
 function readPersistedGeminiTextModel(): string {
   try {
     const raw = globalThis.localStorage?.getItem(GEMINI_TEXT_MODEL_LS_KEY)?.trim();
-    if (raw) return raw;
+    if (raw) return normalizeGeminiTextModel(raw);
   } catch {
     // ignore
   }
@@ -421,6 +438,68 @@ function writePersistedGeminiTextModel(modelId: string): void {
 function writePersistedGeminiImageModel(modelId: string): void {
   try {
     globalThis.localStorage?.setItem(GEMINI_IMAGE_MODEL_LS_KEY, modelId);
+  } catch {
+    // ignore
+  }
+}
+
+const TEXT_LLM_BACKEND_LS_KEY = "engine.textLlmBackend";
+const IMAGE_LLM_BACKEND_LS_KEY = "engine.imageLlmBackend";
+const OPENROUTER_TEXT_MODEL_LS_KEY = "engine.openRouterTextModel";
+const OPENROUTER_IMAGE_MODEL_LS_KEY = "engine.openRouterImageModel";
+
+function readPersistedLlmBackend(
+  key: string,
+  fallback: LlmBackend,
+): LlmBackend {
+  try {
+    const raw = globalThis.localStorage?.getItem(key)?.trim();
+    if (raw === "gemini" || raw === "openrouter") return raw;
+  } catch {
+    // ignore
+  }
+  return fallback;
+}
+
+function writePersistedLlmBackend(key: string, backend: LlmBackend): void {
+  try {
+    globalThis.localStorage?.setItem(key, backend);
+  } catch {
+    // ignore
+  }
+}
+
+function readPersistedOpenRouterTextModel(): string {
+  try {
+    const raw = globalThis.localStorage?.getItem(OPENROUTER_TEXT_MODEL_LS_KEY)?.trim();
+    if (raw) return raw;
+  } catch {
+    // ignore
+  }
+  return DEFAULT_OPENROUTER_TEXT_MODEL;
+}
+
+function readPersistedOpenRouterImageModel(): string {
+  try {
+    const raw = globalThis.localStorage?.getItem(OPENROUTER_IMAGE_MODEL_LS_KEY)?.trim();
+    if (raw) return raw;
+  } catch {
+    // ignore
+  }
+  return DEFAULT_OPENROUTER_IMAGE_MODEL;
+}
+
+function writePersistedOpenRouterTextModel(modelId: string): void {
+  try {
+    globalThis.localStorage?.setItem(OPENROUTER_TEXT_MODEL_LS_KEY, modelId);
+  } catch {
+    // ignore
+  }
+}
+
+function writePersistedOpenRouterImageModel(modelId: string): void {
+  try {
+    globalThis.localStorage?.setItem(OPENROUTER_IMAGE_MODEL_LS_KEY, modelId);
   } catch {
     // ignore
   }
@@ -522,6 +601,10 @@ export const useStore = create<StoreState>((set) => ({
   availablePacks: [],
   geminiTextModel: readPersistedGeminiTextModel(),
   geminiImageModel: readPersistedGeminiImageModel(),
+  textLlmBackend: readPersistedLlmBackend(TEXT_LLM_BACKEND_LS_KEY, "gemini"),
+  imageLlmBackend: readPersistedLlmBackend(IMAGE_LLM_BACKEND_LS_KEY, "gemini"),
+  openRouterTextModel: readPersistedOpenRouterTextModel(),
+  openRouterImageModel: readPersistedOpenRouterImageModel(),
 
   mode: "region",
   currentRegionId: "",
@@ -569,12 +652,31 @@ export const useStore = create<StoreState>((set) => ({
   },
   setAvailablePacks: (availablePacks) => set({ availablePacks }),
   setGeminiTextModel: (geminiTextModel) => {
-    writePersistedGeminiTextModel(geminiTextModel);
-    set({ geminiTextModel });
+    const normalized = normalizeGeminiTextModel(geminiTextModel);
+    writePersistedGeminiTextModel(normalized);
+    set({ geminiTextModel: normalized });
   },
   setGeminiImageModel: (geminiImageModel) => {
     writePersistedGeminiImageModel(geminiImageModel);
     set({ geminiImageModel });
+  },
+  setTextLlmBackend: (textLlmBackend) => {
+    writePersistedLlmBackend(TEXT_LLM_BACKEND_LS_KEY, textLlmBackend);
+    set({ textLlmBackend });
+  },
+  setImageLlmBackend: (imageLlmBackend) => {
+    writePersistedLlmBackend(IMAGE_LLM_BACKEND_LS_KEY, imageLlmBackend);
+    set({ imageLlmBackend });
+  },
+  setOpenRouterTextModel: (openRouterTextModel) => {
+    const trimmed = openRouterTextModel.trim() || DEFAULT_OPENROUTER_TEXT_MODEL;
+    writePersistedOpenRouterTextModel(trimmed);
+    set({ openRouterTextModel: trimmed });
+  },
+  setOpenRouterImageModel: (openRouterImageModel) => {
+    const trimmed = openRouterImageModel.trim() || DEFAULT_OPENROUTER_IMAGE_MODEL;
+    writePersistedOpenRouterImageModel(trimmed);
+    set({ openRouterImageModel: trimmed });
   },
 
   setCurrentRegionId: (currentRegionId) => set({ currentRegionId }),

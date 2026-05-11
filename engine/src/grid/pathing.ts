@@ -1,4 +1,4 @@
-import type { Tile, TileGrid } from "./tilePrimitives";
+import { getTile, type Tile, type TileGrid } from "./tilePrimitives";
 
 /**
  * Coordinates within a TileGrid. (0,0) is top-left.
@@ -206,4 +206,27 @@ function reconstruct(
     cur = cameFrom.get(cur);
   }
   return out;
+}
+
+/** Matches `move_region`: only `passable` tiles are walkable. */
+export function isRegionCellWalkable(grid: TileGrid, x: number, y: number): boolean {
+  const t = getTile(grid, x, y);
+  return !!t && t.passable;
+}
+
+/**
+ * Shortest 4-connected path on the region grid from `from` to `to`, or null
+ * if unreachable. Includes both endpoints; a trivial stand-still path is
+ * `[from]` when from equals to.
+ */
+export function findRegionWalkPath(
+  grid: TileGrid,
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+): { x: number; y: number }[] | null {
+  if (grid.scope !== "region") return null;
+  if (!isRegionCellWalkable(grid, to.x, to.y)) return null;
+  return aStar(from, to, grid.width, grid.height, (x, y) =>
+    isRegionCellWalkable(grid, x, y),
+  );
 }

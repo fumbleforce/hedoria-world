@@ -2,6 +2,9 @@ import { useState } from "react";
 import { useStore } from "../state/store";
 import type { WorldNarrator, SceneVerb } from "../dialogue/worldNarrator";
 import type { Engagement, EngagementGroup } from "../state/store";
+import type { IndexedWorld } from "../world/indexer";
+import type { TileImageCache } from "../grid/tileImageCache";
+import type { SceneBackgroundCache } from "../scene/sceneBackgroundCache";
 import {
   actionsFor,
   describeLock,
@@ -10,6 +13,7 @@ import {
   sortedGroupsForView,
 } from "../scene/engagement";
 import { LoadingPill } from "./LoadingPill";
+import { SceneRoomPanel } from "./SceneRoomPanel";
 
 /**
  * The scene-mode UI: NPC group cards with state-aware buttons + an
@@ -21,22 +25,29 @@ import { LoadingPill } from "./LoadingPill";
  */
 type Props = {
   worldNarrator: WorldNarrator;
+  world: IndexedWorld;
+  tileImageCache: TileImageCache;
+  sceneBackgroundCache: SceneBackgroundCache;
 };
 
-export function SceneView({ worldNarrator }: Props) {
+export function SceneView({
+  worldNarrator,
+  world,
+  tileImageCache,
+  sceneBackgroundCache,
+}: Props) {
   const [pending, setPending] = useState(false);
 
   const tile = useStore((s) => s.currentSceneTile);
   const engagement = useStore((s) => s.engagement);
   const combat = useStore((s) => s.combat);
+  const currentLocationId = useStore((s) => s.currentLocationId);
+  const locationGrid = useStore((s) => s.locationGrid);
 
   if (!tile) {
     return (
-      <section className="sceneView">
-        <header className="sceneView__header">
-          <h2>Scene</h2>
-        </header>
-        <p style={{ color: "var(--fg-2)" }}>You are not in a scene.</p>
+      <section className="sceneView sceneView--board">
+        <p className="sceneView__emptyHint">You are not in a scene.</p>
       </section>
     );
   }
@@ -68,9 +79,9 @@ export function SceneView({ worldNarrator }: Props) {
   }
 
   return (
-    <section className="sceneView">
-      <header className="sceneView__header">
-        <h2>
+    <section className="sceneView sceneView--board">
+      <header className="sceneView__floatHeader">
+        <h2 className="sceneView__floatTitle">
           Scene <small>· {tile.label ?? tile.kind}</small>
           {pending ? <LoadingPill label="Narrator responding" /> : null}
         </h2>
@@ -91,64 +102,82 @@ export function SceneView({ worldNarrator }: Props) {
         </div>
       </header>
 
-      <aside className="sceneView__groups">
-        <h3 className="sceneView__groupsTitle">Who is here</h3>
-        {characters.length === 0 && parties.length === 0 ? (
-          <p className="sceneView__hint">
-            No one in view. The narrator may add a party on your next action.
-          </p>
+      <div className="sceneView__roomLayer">
+        {currentLocationId ? (
+          <SceneRoomPanel
+            world={world}
+            sortedGroups={sorted}
+            sceneBackgroundCache={sceneBackgroundCache}
+            tileImageCache={tileImageCache}
+            locationGrid={locationGrid}
+            sceneTile={tile}
+            currentLocationId={currentLocationId}
+          />
         ) : (
-          <>
-            <section className="sceneView__groupSection">
-              <h4 className="sceneView__groupHeading">Characters</h4>
-              <p className="sceneView__hint sceneView__hint--tight">
-                From the world — each stands alone.
-              </p>
-              {characters.length === 0 ? (
-                <p className="sceneView__hint">None on this tile.</p>
-              ) : (
-                <ul>
-                  {characters.map((g) => (
-                    <GroupCard
-                      key={g.id}
-                      g={g}
-                      engagement={engagement}
-                      pending={pending}
-                      onAction={submitButton}
-                      badge="Character"
-                    />
-                  ))}
-                </ul>
-              )}
-            </section>
-            <section className="sceneView__groupSection">
-              <h4 className="sceneView__groupHeading">Parties</h4>
-              <p className="sceneView__hint sceneView__hint--tight">
-                Procedural bands — one stranger, 2–3 together, or an unnamed crowd.
-              </p>
-              {parties.length === 0 ? (
-                <p className="sceneView__hint">None right now.</p>
-              ) : (
-                <ul>
-                  {parties.map((g) => (
-                    <GroupCard
-                      key={g.id}
-                      g={g}
-                      engagement={engagement}
-                      pending={pending}
-                      onAction={submitButton}
-                      badge={partyBadge(g)}
-                    />
-                  ))}
-                </ul>
-              )}
-            </section>
-          </>
+          <div className="sceneRoomPanel sceneRoomPanel--fallback">
+            <p className="sceneView__hint">Location context unavailable.</p>
+          </div>
         )}
+      </div>
+
+      <aside className="sceneView__groups sceneView__groupsOverlay">
+          <h3 className="sceneView__groupsTitle">Who is here</h3>
+          {characters.length === 0 && parties.length === 0 ? (
+            <p className="sceneView__hint">
+              No one in view. The narrator may add a party on your next action.
+            </p>
+          ) : (
+            <>
+              <section className="sceneView__groupSection">
+                <h4 className="sceneView__groupHeading">Characters</h4>
+                <p className="sceneView__hint sceneView__hint--tight">
+                  From the world — each stands alone.
+                </p>
+                {characters.length === 0 ? (
+                  <p className="sceneView__hint">None on this tile.</p>
+                ) : (
+                  <ul>
+                    {characters.map((g) => (
+                      <GroupCard
+                        key={g.id}
+                        g={g}
+                        engagement={engagement}
+                        pending={pending}
+                        onAction={submitButton}
+                        badge="Character"
+                      />
+                    ))}
+                  </ul>
+                )}
+              </section>
+              <section className="sceneView__groupSection">
+                <h4 className="sceneView__groupHeading">Parties</h4>
+                <p className="sceneView__hint sceneView__hint--tight">
+                  Procedural bands — one stranger, 2–3 together, or an unnamed crowd.
+                </p>
+                {parties.length === 0 ? (
+                  <p className="sceneView__hint">None right now.</p>
+                ) : (
+                  <ul>
+                    {parties.map((g) => (
+                      <GroupCard
+                        key={g.id}
+                        g={g}
+                        engagement={engagement}
+                        pending={pending}
+                        onAction={submitButton}
+                        badge={partyBadge(g)}
+                      />
+                    ))}
+                  </ul>
+                )}
+              </section>
+            </>
+          )}
       </aside>
 
       {combat ? (
-        <section className="sceneView__combat">
+        <section className="sceneView__combat sceneView__combat--float">
           <h3>Combat (turn {combat.turn})</h3>
           <ul>
             {combat.actors.map((a) => (

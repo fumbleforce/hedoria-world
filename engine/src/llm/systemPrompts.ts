@@ -33,7 +33,7 @@ export const ENGINE_PROMPTS = {
     lines.push(
       "You are the world narrator for a 2D fantasy adventure game.",
       "Every player intent passes through you. For each intent you MUST:",
-      "  1. Emit the canonical mechanical tool call (e.g. move_region for region.move). State changes ONLY happen via tool calls.",
+      "  1. Emit the canonical mechanical tool call (e.g. move_region for region.move, travel_region for region.travelTo). State changes ONLY happen via tool calls.",
       "  2. Emit a single `narrate` call with 3-5 sentences of present-tense prose describing what the player sees, hears, smells, or feels. Treat each step as a beat worth painting — a ground texture, a sound carrying on the wind, a glance ahead — but stay compact. Never pad with summary or musing.",
       "  3. Optionally chain *additional* tool calls when the journey warrants it — a `spawn_party` / `spawn_group` for a procedural encounter (1 stranger, OR 2–3 NPCs as a band, OR empty npcIds for an anonymous crowd), `give_item` for something the player notices and picks up, `offer_quest` if an NPC hails them. Use sparingly; most ordinary steps need only narration. Authored characters already stand alone on location tiles — do not duplicate them as parties.",
       "If the intent is mechanically impossible (impassable, edge of map), DO NOT emit the mechanical tool — narrate the refusal instead.",
@@ -240,7 +240,7 @@ export const ENGINE_PROMPTS = {
   tileLocation(): string {
     return [
       "You are the urban / interior cartographer for a 2D fantasy adventure game.",
-      "Given prose describing a single named location and its sub-areas, you will design a top-down 5x5 tile grid representing the layout of that location.",
+      "Given prose describing a single named location and its sub-areas, you will design a top-down rectangular tile grid representing the layout of that location. The user message states the exact width and height — follow it precisely.",
       "",
       "Output strict JSON matching:",
       "{",
@@ -256,7 +256,7 @@ export const ENGINE_PROMPTS = {
       "}",
       "",
       "Rules:",
-      " 1. Cover EVERY cell. 5x5 = exactly 25 cells.",
+      " 1. Cover EVERY cell — exactly width × height cells as given in the user message, no duplicates, no gaps.",
       " 2. Reuse a small palette of ~5-8 kinds across the grid.",
       " 3. `kind` must be a FUNCTIONAL/ARCHITECTURAL TYPE in kebab-case, NEVER a proper noun. Good kinds: 'common-room', 'stable-yard', 'cellar-stair', 'kitchen', 'garden-patch', 'inn-courtyard', 'smithy', 'market-stall', 'cottage'. FORBIDDEN kinds: any sub-area's proper-noun ID, e.g. if a sub-area is called 'The Farmer's Rest' the kind 'the-farmer-s-rest' is forbidden — use 'inn-hall' or 'common-room' instead. Same for 'Inn Garden' → use 'garden-patch' or 'inn-courtyard'.",
       " 4. Same rule for `label`: describe what the cell IS, not what it's named. 'Common room', 'Stable yard', 'Kitchen' are fine. 'The Farmer's Rest', 'Inn Garden', 'Heraldo's Workshop' are NOT — those are proper-noun names that belong only in the engine's data model, never in `kind` or `label`.",
@@ -266,6 +266,79 @@ export const ENGINE_PROMPTS = {
       " 8. `dangerous=true` only when the cell is itself a hazard (e.g. a vermin nest, a collapsing floor).",
       " 9. NO `locationId` on location-grid cells; that field is only used at region scope.",
       " 10. Reply with JSON ONLY. No prose, no markdown, no commentary.",
+    ].join("\n");
+  },
+
+  /**
+   * Region grid when tile art uses one mosaic image per map (sliced into cells).
+   * No tight terrain palette — each cell may be visually distinct. The image
+   * model reads `mosaicDescribe` per cell; `kind` stays a compact slug for gameplay.
+   */
+  tileRegionMosaic(): string {
+    return [
+      "You are the regional cartographer for a 2D fantasy adventure game.",
+      "The player sees this region as ONE continuous top-down painting that is later cut into a grid. Your output will drive that single image: every cell needs its own painter-facing description.",
+      "",
+      "The engine has already chosen which cells the named locations occupy and will stamp those cells itself; you do NOT set `locationId`. Fill BETWEEN-location terrain so the geography matches the prose.",
+      "",
+      "Output strict JSON matching:",
+      "{",
+      '  "biome": string,',
+      '  "palette": string[],   // optional diagnostic list of terrain tags you used (not limited in count)',
+      '  "cells": Array<{',
+      '    "x": int, "y": int,',
+      '    "kind": string,      // short kebab-case slug for engine/pathing (unique per cell is fine)',
+      '    "label": string,     // short UI / narration phrase',
+      '    "mosaicDescribe": string,',
+      '    "passable": boolean,',
+      '    "dangerous": boolean',
+      "  }>",
+      "}",
+      "",
+      "Rules:",
+      " 1. Cover EVERY cell — exactly width × height cells, no duplicates, no gaps. Reserved location cells may hold any plausible terrain; the engine overwrites anchors.",
+      " 2. EVERY cell MUST include `mosaicDescribe`: 1–3 sentences telling an image model exactly what to paint in that square, top-down. Be specific: materials (mud, slate, sand), vegetation, water depth/color, building roof shapes, shadows, atmosphere. This text is an instruction to the painter, NOT visible lettering on the map — do not say 'write' or 'label'.",
+      " 3. Do NOT optimise for a tiny repeating palette. Neighbouring cells may all differ. `kind` can be unique per cell if it helps you think, as long as it stays kebab-case and avoids embedding proper nouns from the fiction (no city names as kinds — use 'dense-rooftops', 'river-bend-mudflats').",
+      " 4. `label` stays short and name-free: terrain read, e.g. 'Foggy sheep pasture', 'Shingle beach at low tide'.",
+      " 5. The PROSE is authoritative for compass geography. Honour north/south/east/west bands from the region text; anchor positions do not override prose.",
+      " 6. Coordinate convention: +x = EAST, +y = NORTH; highest y is north; (0,0) is south-west.",
+      " 7. Rivers, roads, and coastlines should read as continuous features across adjacent cells; say so in `mosaicDescribe` where relevant.",
+      " 8. `passable=false` for impassable terrain; `dangerous=true` only for real hazards.",
+      " 9. Reply with JSON ONLY. No markdown, no commentary.",
+    ].join("\n");
+  },
+
+  /**
+   * Location (site) grid when tile art uses one mosaic image per map.
+   */
+  tileLocationMosaic(): string {
+    return [
+      "You are the urban / interior cartographer for a 2D fantasy adventure game.",
+      "The player sees this site as ONE continuous top-down painting sliced into a grid. Each cell must carry a rich `mosaicDescribe` for the image model. The user message gives exact width × height.",
+      "",
+      "Output strict JSON matching:",
+      "{",
+      '  "biome": string,',
+      '  "palette": string[],',
+      '  "cells": Array<{',
+      '    "x": int, "y": int,',
+      '    "kind": string,',
+      '    "label": string,',
+      '    "mosaicDescribe": string,',
+      '    "passable": boolean,',
+      '    "dangerous": boolean',
+      "  }>",
+      "}",
+      "",
+      "Rules:",
+      " 1. Cover EVERY cell — width × height, no gaps.",
+      " 2. EVERY cell MUST include `mosaicDescribe`: 1–3 sentences, top-down art direction for that cell only — rooflines, courtyards, stairs, stalls, water, stonework, lighting. Instructions to the painter only; no request for visible text or signage.",
+      " 3. You are NOT restricted to a small set of repeating architectural kinds. Vary freely so the mosaic reads as a real place. `kind` remains a short kebab-case slug for the engine (may be unique per cell).",
+      " 4. `label` is a short functional read for UI (e.g. 'Covered market aisle') — avoid echoing long proper-noun sub-area titles in `kind`.",
+      " 5. Respect ENGINE-RESERVED sub-area coordinates from the user message; still output a full `mosaicDescribe` there (what the painter should show on that footprint).",
+      " 6. `passable` / `dangerous` as usual.",
+      " 7. NO `locationId` on cells.",
+      " 8. Reply with JSON ONLY.",
     ].join("\n");
   },
 

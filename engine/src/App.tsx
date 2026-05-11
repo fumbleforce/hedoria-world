@@ -13,12 +13,13 @@ import { ActionPrompt } from "./ui/ActionPrompt";
 import { BackgroundActivityStrip } from "./ui/BackgroundActivityStrip";
 import { SettingsPanel } from "./ui/SettingsPanel";
 import { SideRailCharacterLedger } from "./ui/SideRailCharacterLedger";
+import { LocaleContextPanel } from "./ui/LocaleContextPanel";
 
 /**
  * Top-level mode router + HUD. The map is the only thing that occupies the
  * full viewport — every other piece of UI is a translucent overlay drawn on
  * top: the HUD strip clings to the top edge, the side rail floats at the
- * top-right with the active quests / region brief, and a thin hint sits at
+ * top-right with the active quests / tabbed locale context, and a thin hint sits at
  * the bottom. This is a "game with a UI on top" rather than "a website with
  * a map embedded in it".
  *
@@ -26,12 +27,17 @@ import { SideRailCharacterLedger } from "./ui/SideRailCharacterLedger";
  * boot card; if it fails we surface the error and stop rather than
  * rendering with a half-initialised store.
  */
+type RegionTileSelection = { x: number; y: number };
+
 export function App() {
   const [services, setServices] = useState<BootResult | null>(null);
   const [showInventory, setShowInventory] = useState(false);
   const [showCharacter, setShowCharacter] = useState(false);
   const [showDb, setShowDb] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [regionTileSelection, setRegionTileSelection] = useState<RegionTileSelection | null>(
+    null,
+  );
 
   const mode = useStore((s) => s.mode);
   const currentRegionId = useStore((s) => s.currentRegionId);
@@ -50,6 +56,12 @@ export function App() {
   const setCurrentPackId = useStore((s) => s.setCurrentPackId);
   const bootAwaitingPackChoice = useStore((s) => s.bootAwaitingPackChoice);
   const bootAwaitingPackHint = useStore((s) => s.bootAwaitingPackHint);
+
+  useEffect(() => {
+    if (mode !== "region") {
+      setRegionTileSelection(null);
+    }
+  }, [mode]);
 
   // Switching authored worlds rewires everything (config hash, save row,
   // tile cache). Persist the choice and reload so boot runs fresh.
@@ -169,8 +181,16 @@ export function App() {
     );
   }
 
-  const { narrator, worldNarrator, tileImageCache, tileFiller, llm, imageProvider, world } =
-    services;
+  const {
+    narrator,
+    worldNarrator,
+    tileImageCache,
+    tileFiller,
+    llm,
+    imageProvider,
+    world,
+    sceneBackgroundCache,
+  } = services;
 
   // Crumb summary — shows the current locale, e.g. "Avenor → Red Harvest".
   const locationName = currentLocationId
@@ -191,7 +211,8 @@ export function App() {
         {mode === "region" ? (
           <RegionMap
             imageCache={tileImageCache}
-            worldNarrator={worldNarrator}
+            regionSelection={regionTileSelection}
+            onRegionSelectionChange={setRegionTileSelection}
           />
         ) : null}
         {mode === "location" ? (
@@ -200,7 +221,14 @@ export function App() {
             worldNarrator={worldNarrator}
           />
         ) : null}
-        {mode === "scene" ? <SceneView worldNarrator={worldNarrator} /> : null}
+        {mode === "scene" ? (
+          <SceneView
+            worldNarrator={worldNarrator}
+            world={world}
+            tileImageCache={tileImageCache}
+            sceneBackgroundCache={sceneBackgroundCache}
+          />
+        ) : null}
       </div>
 
       <NarrationPanel />
@@ -334,15 +362,12 @@ export function App() {
           )}
         </section>
 
-        <section className="sideRail__card">
-          <h2>
-            Region <small>{regionName}</small>
-          </h2>
-          <p className="sideRail__brief">
-            {world.regionsById[currentRegionId]?.basicInfo?.slice(0, 600) ??
-              "(no prose authored)"}
-          </p>
-        </section>
+        <LocaleContextPanel
+          world={world}
+          worldNarrator={worldNarrator}
+          regionSelection={regionTileSelection}
+          onRegionSelectionChange={setRegionTileSelection}
+        />
       </aside>
 
       {bottomHint ? <div className="bottomHint">{bottomHint}</div> : null}

@@ -329,6 +329,192 @@ input:focus {
   white-space: pre-wrap;
 }
 
+/* Side rail: tabbed Region / Location / Scene context (see LocaleContextPanel). */
+.sideRail__card.localeContextPanel {
+  /* One glass surface: inner scroll only — outer overflow clips the seam
+   * with the footer and stops a second scrollbar on the card. */
+  overflow: hidden;
+}
+.localeContextPanel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: min(52vh, 440px);
+}
+.localeContextPanel__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: -2px 0 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--glass-border);
+}
+.localeContextPanel__tab {
+  font: inherit;
+  font-size: 0.72em;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--glass-border);
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--fg-2);
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease,
+    color 120ms ease;
+}
+.localeContextPanel__tab:hover {
+  border-color: rgba(201, 166, 107, 0.35);
+  color: var(--fg);
+}
+.localeContextPanel__tab--active {
+  border-color: var(--accent);
+  background: rgba(201, 166, 107, 0.12);
+  color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(201, 166, 107, 0.22);
+}
+.localeContextPanel__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.localeContextPanel__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 2px 10px 0;
+  scrollbar-gutter: stable;
+  /* Slight tint so backdrop-blur from the card doesn’t read as a blotchy
+   * map wash that fights the prose; stays translucent vs the footer strip. */
+  background: rgba(0, 0, 0, 0.14);
+  border-radius: 6px;
+}
+.localeContextPanel__footer {
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+  min-height: 72px;
+  box-sizing: border-box;
+  /* Bleed into the card’s own padding so there’s no “second band” under
+   * the actions; keeps one continuous glass pane with the side rail card. */
+  margin: 0 -16px -14px;
+  padding: 12px 16px 14px;
+  border-top: 1px solid var(--glass-border);
+  border-radius: 0 0 11px 11px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: transparent;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+.localeContextPanel__footer .localeContextPanel__actions {
+  margin-top: 0;
+  width: 100%;
+}
+.localeContextPanel__title {
+  margin: 0;
+  font-size: 0.78em;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+  font-weight: 600;
+  line-height: 1.35;
+}
+.localeContextPanel__title small {
+  display: block;
+  margin-top: 4px;
+  font-size: 1.15em;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--fg);
+  font-weight: 600;
+}
+.localeContextPanel__meta {
+  margin: 0;
+  font-size: 0.72em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+.localeContextPanel__section {
+  margin: 0;
+}
+.localeContextPanel__sectionLabel {
+  margin: 0 0 4px;
+  font-size: 0.68em;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+.localeContextPanel__prose {
+  margin: 0;
+  font-size: 0.88em;
+  line-height: 1.5;
+  color: var(--fg-2);
+  white-space: pre-wrap;
+}
+.localeContextPanel__muted {
+  color: var(--fg-3);
+  font-style: italic;
+}
+.localeContextPanel__small {
+  font-size: 0.85em;
+}
+.localeContextPanel__textBtn {
+  align-self: flex-start;
+  margin: 0 0 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent-2);
+  font: inherit;
+  font-size: 0.8em;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.localeContextPanel__textBtn:hover {
+  color: var(--accent);
+}
+.localeContextPanel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+  align-items: center;
+}
+.localeContextPanel__actions button {
+  flex: 1 1 auto;
+  min-width: 100px;
+}
+.localeContextPanel__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.88em;
+  line-height: 1.45;
+  color: var(--fg-2);
+}
+.localeContextPanel__list strong {
+  color: var(--fg);
+}
+.localeContextPanel__listSub {
+  font-size: 0.92em;
+  color: var(--fg-3);
+  margin-top: 2px;
+}
+
 /* -------------------------------------------------------------- Narration
  *
  * The persistent narration rail on the left. Always visible, always
@@ -723,6 +909,14 @@ input:focus {
     0 0 22px var(--accent-glow);
   z-index: 4;
 }
+.tileGrid__cell--selected:not(.tileGrid__cell--here) {
+  border-color: var(--accent-2);
+  box-shadow:
+    inset 0 0 0 2px var(--accent-2),
+    0 0 0 2px rgba(143, 170, 132, 0.4),
+    0 0 18px var(--accent-2-glow);
+  z-index: 3;
+}
 .tileGrid__cell--adjacent {
   border-color: rgba(201, 166, 107, 0.35);
   box-shadow:
@@ -749,6 +943,13 @@ input:focus {
     inset 0 0 0 1px var(--accent),
     inset 0 0 0 2px var(--accent-2),
     0 0 22px var(--accent-glow);
+}
+.tileGrid__cell--here.tileGrid__cell--selected {
+  box-shadow:
+    inset 0 0 0 1px var(--accent),
+    0 0 0 3px rgba(143, 170, 132, 0.55),
+    0 0 26px var(--accent-glow),
+    0 0 14px var(--accent-2-glow);
 }
 .tileGrid__cell--path {
   border-style: dashed;
@@ -956,52 +1157,73 @@ input:focus {
 
 /* -------------------------------------------------------------- Scene view
  *
- * Scene mode is denser — narration log, NPC group cards, action input. We
- * present it as a single floating glass card centered on the canvas, sized
- * to feel like an in-game journal page, not a webpage section.
+ * Like region/location maps: the room fills the canvas with no outer glass
+ * frame — only the page vignette behind it. Title + leave control float;
+ * group cards sit in a slim glass column left of the side rail.
  */
-/* The scene card is a focused glass platter centred on the canvas.
- * Without explicit positioning it would land at the canvas's top-left
- * (the canvas is `position: absolute` with no flex layout), which is
- * what made the old free-text form feel "stuck in the corner". We
- * absolute-position it to sit a comfortable distance below the HUD and
- * above the bottom action prompt, centred horizontally so it reads as
- * "the screen the player is currently in" rather than a card pasted
- * onto a map. */
 .sceneView {
+  /* Shared base; board layout overrides below. */
+  box-sizing: border-box;
+}
+.sceneView.sceneView--board {
+  /* Fill the canvas like `.tileGridViewport` — absolute inset avoids flex
+   * collapse when the only child is absolutely positioned. */
   position: absolute;
-  top: 92px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(880px, calc(100vw - 48px));
-  max-height: calc(100vh - 220px);
-  display: flex;
-  flex-direction: column;
-  background: var(--glass-bg-strong);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-border-strong);
-  border-radius: 14px;
-  box-shadow: var(--glass-shadow);
-  padding: 16px 20px;
-  gap: 12px;
-  overflow-y: auto;
-  z-index: 6;
+  inset: 0;
+  width: auto;
+  height: auto;
+  min-height: 0;
+  /* Visible so the perspective-tilted portrait board is not clipped. */
+  overflow: visible;
+  z-index: 1;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  padding: 0;
 }
-.sceneView__header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-}
-.sceneView__header h2 {
+.sceneView__emptyHint {
   margin: 0;
-  font-size: 0.82em;
-  letter-spacing: 0.16em;
+  padding: 24px;
+  color: var(--fg-2);
+  font-size: 0.9em;
+}
+.sceneView__roomLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+.sceneView__floatHeader {
+  position: absolute;
+  z-index: 8;
+  top: 10px;
+  /* Centre in the band between narration rail (~372px) and scene groups + side rail */
+  left: calc(50% + min(96px, 8vw));
+  transform: translateX(-50%);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 12px 20px;
+  max-width: min(560px, calc(100vw - 720px));
+  pointer-events: none;
+}
+.sceneView__floatHeader > * {
+  pointer-events: auto;
+}
+.sceneView__floatTitle {
+  margin: 0;
+  font-size: 0.78em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--fg-2);
+  text-shadow:
+    0 0 12px rgba(0, 0, 0, 0.85),
+    0 1px 2px rgba(0, 0, 0, 0.9);
 }
-.sceneView__header h2 small {
+.sceneView__floatTitle small {
   color: var(--fg-3);
   font-weight: 400;
   letter-spacing: 0.04em;
@@ -1016,11 +1238,32 @@ input:focus {
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
-.sceneView__grid {
-  display: grid;
-  grid-template-columns: 1fr 260px;
-  gap: 16px;
-  min-height: 0;
+.sceneView__groupsOverlay {
+  position: absolute;
+  top: 72px;
+  /* Sit just left of the 320px side rail + margin */
+  right: calc(12px + 320px + 12px);
+  width: min(260px, calc(100vw - 420px));
+  max-height: calc(100vh - 200px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  z-index: 6;
+  padding: 12px 14px;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  box-shadow: var(--glass-shadow);
+}
+@media (max-width: 1100px) {
+  .sceneView__groupsOverlay {
+    right: 12px;
+    width: min(240px, calc(100vw - 380px));
+    max-height: min(280px, 38vh);
+    top: auto;
+    bottom: 100px;
+  }
 }
 .sceneView__narration h3,
 .sceneView__groups h3,
@@ -1140,6 +1383,212 @@ input:focus {
   margin-top: 12px;
   padding-top: 10px;
   border-top: 1px solid var(--glass-border);
+}
+.sceneView__combat--float {
+  position: absolute;
+  left: max(384px, calc(12px + 360px + 12px));
+  bottom: 96px;
+  max-width: min(360px, calc(100vw - 420px));
+  margin: 0;
+  padding: 10px 12px;
+  border-top: none;
+  border-radius: 10px;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  z-index: 6;
+}
+
+/* Scene room — full-canvas backdrop + portrait grid (entered tile). */
+.sceneRoomPanel {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  border-radius: 0;
+  border: none;
+  background: rgba(0, 0, 0, 0.15);
+}
+.sceneRoomPanel--fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+}
+.sceneRoomPanel__backdrop {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  filter: saturate(1.05);
+}
+/* Mock / before first image: keep contrast so the portrait grid reads. */
+.sceneRoomPanel__backdrop--placeholder {
+  background-image: none !important;
+  background: radial-gradient(
+    ellipse 85% 70% at 50% 42%,
+    rgba(42, 36, 30, 0.92) 0%,
+    rgba(14, 12, 10, 0.97) 100%
+  );
+}
+.sceneRoomPanel__portraitGridWrap {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  /* Clear HUD band, bottom hint, activity strip, and action prompt; extra
+   * vertical room so a perspective-tilted board does not clip. */
+  padding: 8px 16px clamp(96px, 16vh, 140px);
+  pointer-events: none;
+  /* 3D stage: playing-board tilt (see .sceneRoomPanel__portraitGrid). */
+  perspective: min(1600px, 130vw);
+  perspective-origin: 50% 62%;
+  transform-style: preserve-3d;
+}
+.sceneRoomPanel__portraitGrid {
+  display: grid;
+  width: min(720px, calc(100vw - 32px));
+  max-width: 100%;
+  max-height: min(460px, calc(100vh - 240px));
+  min-height: 180px;
+  aspect-ratio: 6 / 4;
+  height: auto;
+  gap: 10px;
+  padding: 14px;
+  box-sizing: border-box;
+  align-items: stretch;
+  justify-items: stretch;
+  align-content: center;
+  justify-content: center;
+  /* Legible over busy scene art: blur + strong matte so slots read clearly. */
+  background:
+    linear-gradient(
+      165deg,
+      rgba(12, 10, 8, 0.82) 0%,
+      rgba(8, 7, 6, 0.88) 45%,
+      rgba(6, 5, 4, 0.9) 100%
+    );
+  backdrop-filter: blur(10px) saturate(0.88);
+  -webkit-backdrop-filter: blur(10px) saturate(0.88);
+  border-radius: 12px;
+  border: 1px solid rgba(230, 206, 170, 0.35);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 24px 48px rgba(0, 0, 0, 0.55),
+    0 8px 20px rgba(0, 0, 0, 0.4);
+  transform: rotateX(30deg);
+  transform-origin: center bottom;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sceneRoomPanel__portraitGridWrap {
+    perspective: none;
+  }
+  .sceneRoomPanel__portraitGrid {
+    transform: none;
+    box-shadow:
+      inset 0 0 0 1px rgba(0, 0, 0, 0.55),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+}
+.sceneRoomPanel__cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 0;
+  border-radius: 8px;
+}
+.sceneRoomPanel__cell--player,
+.sceneRoomPanel__cell--npc {
+  background: rgba(0, 0, 0, 0.38);
+  border: 1px solid rgba(212, 188, 150, 0.32);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 2px 8px rgba(0, 0, 0, 0.35);
+}
+.sceneRoomPanel__cell--empty {
+  opacity: 1;
+  border-radius: 8px;
+  border: 1px dashed rgba(230, 206, 170, 0.45);
+  background: rgba(0, 0, 0, 0.42);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+.sceneRoomPanel__cellLabel {
+  font-size: 0.62em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(235, 228, 214, 0.92);
+  text-shadow:
+    0 0 8px rgba(0, 0, 0, 0.95),
+    0 1px 3px rgba(0, 0, 0, 0.85);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+}
+.sceneRoomPanel__disc {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 2px solid rgba(201, 166, 107, 0.55);
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.45),
+    0 6px 18px rgba(0, 0, 0, 0.55);
+  background: linear-gradient(145deg, rgba(40, 34, 28, 0.95), rgba(22, 18, 14, 0.98));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.sceneRoomPanel__disc--withImage {
+  border-color: rgba(143, 170, 132, 0.45);
+}
+.sceneRoomPanel__disc--small {
+  width: 36px;
+  height: 36px;
+  border-width: 2px;
+}
+.sceneRoomPanel__discGlyph {
+  width: 26px;
+  height: 26px;
+  fill: rgba(235, 228, 214, 0.35);
+}
+.sceneRoomPanel__initials {
+  font-size: 0.72em;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+}
+.sceneRoomPanel__faceStack {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.sceneRoomPanel__faceStack--many .sceneRoomPanel__disc--small {
+  margin-left: -10px;
+}
+.sceneRoomPanel__faceStack--many .sceneRoomPanel__disc--small:first-child {
+  margin-left: 0;
+}
+.sceneRoomPanel__crowdGlyph {
+  font-size: 1.4em;
+  letter-spacing: 0.12em;
+  color: rgba(235, 228, 214, 0.45);
+  line-height: 1;
 }
 
 /* -------------------------------------------------------------- Loading pill */

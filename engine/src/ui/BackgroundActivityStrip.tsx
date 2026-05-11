@@ -22,13 +22,37 @@ export function BackgroundActivityStrip() {
           : "Narrator · responding",
       );
     }
+
+    // Activity IDs from the LLM adapter look like `text-llm:<seq>:<kind>`.
+    // The scene-classify call is the inner LLM step of a region/location
+    // grid fill, so when one of those high-level operations is in flight
+    // we collapse the two pills into a single descriptive one and skip the
+    // generic "Text model · map / tile layout" pill below.
+    const activityEntries = Object.entries(backgroundActivities);
+    const sceneClassifyId = activityEntries.find(
+      ([id]) => id.startsWith("text-llm:") && id.endsWith(":scene-classify"),
+    )?.[0];
+    const mergedId =
+      generating.regionGridFor || generating.locationGridFor
+        ? sceneClassifyId
+        : undefined;
+
     if (generating.regionGridFor) {
-      out.push(`Region map · ${generating.regionGridFor}`);
+      out.push(
+        mergedId
+          ? `Region map · ${generating.regionGridFor} · planning layout`
+          : `Region map · ${generating.regionGridFor}`,
+      );
     }
     if (generating.locationGridFor) {
-      out.push(`Location map · ${generating.locationGridFor}`);
+      out.push(
+        mergedId
+          ? `Location map · ${generating.locationGridFor} · planning layout`
+          : `Location map · ${generating.locationGridFor}`,
+      );
     }
-    for (const label of Object.values(backgroundActivities)) {
+    for (const [id, label] of activityEntries) {
+      if (id === mergedId) continue;
       out.push(label);
     }
     return out;

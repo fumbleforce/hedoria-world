@@ -1,4 +1,12 @@
 import type { LlmProvider, LlmRequest, LlmResponse } from "./types";
+import {
+  defaultGeminiTextModel,
+  normalizeGeminiTextModel,
+} from "./geminiModelOptions";
+import { DEFAULT_OPENROUTER_TEXT_MODEL } from "./openRouterDefaults";
+import { normalizeOpenRouterTextModelId } from "./openRouterPresets";
+import { StoreBackedOpenRouterTextProvider } from "./openRouterTextProvider";
+import { useStore } from "../state/store";
 
 type HttpProviderConfig = {
   id: string;
@@ -219,6 +227,90 @@ class GeminiTextProvider implements LlmProvider {
       text: textChunks.join(""),
       toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
     };
+  }
+}
+
+/**
+ * Stable provider handle used by booted services. It resolves the actual
+ * Gemini client at call time, so changing the model in settings affects the
+ * next request without rebuilding the game session.
+ */
+export class StoreBackedGeminiTextProvider implements LlmProvider {
+  private readonly apiKey: string;
+  private readonly providersByModel = new Map<string, GeminiTextProvider>();
+
+  constructor(apiKey: string) {
+    this.apiKey = apiKey;
+  }
+
+  get id(): string {
+    return this.current().id;
+  }
+
+  async complete(request: LlmRequest): Promise<LlmResponse> {
+    return this.current().complete(request);
+  }
+
+  private current(): GeminiTextProvider {
+    const store = useStore.getState();
+    const model = normalizeGeminiTextModel(store.geminiTextModel);
+    const effectiveModel = model || defaultGeminiTextModel();
+    if (effectiveModel !== store.geminiTextModel) {
+      store.setGeminiTextModel(effectiveModel);
+    }
+    let provider = this.providersByModel.get(effectiveModel);
+    if (!provider) {
+      provider = new GeminiTextProvider(this.apiKey, effectiveModel);
+      this.providersByModel.set(effectiveModel, provider);
+    }
+    return provider;
+  }
+}
+
+/**
+ * Routes each text LLM call to Gemini or OpenRouter based on store (no reload).
+ */
+export class DelegatingTextLlmProvider implements LlmProvider {
+  private readonly gemini: StoreBackedGeminiTextProvider | null;
+  private readonly openRouter: StoreBackedOpenRouterTextProvider | null;
+
+  constructor(
+    gemini: StoreBackedGeminiTextProvider | null,
+    openRouter: StoreBackedOpenRouterTextProvider | null,
+  ) {
+    this.gemini = gemini;
+    this.openRouter = openRouter;
+  }
+
+  get id(): string {
+    const s = useStore.getState();
+    if (s.textLlmBackend === "openrouter") {
+      const trimmed =
+        s.openRouterTextModel.trim() || DEFAULT_OPENROUTER_TEXT_MODEL;
+      const m = normalizeOpenRouterTextModelId(trimmed);
+      return `openrouter:${m}`;
+    }
+    const model =
+      normalizeGeminiTextModel(s.geminiTextModel) || defaultGeminiTextModel();
+    return `gemini:${model}`;
+  }
+
+  async complete(request: LlmRequest): Promise<LlmResponse> {
+    const s = useStore.getState();
+    if (s.textLlmBackend === "openrouter") {
+      if (!this.openRouter) {
+        throw new Error(
+          "OpenRouter text is not available. Set OPENROUTER_API_KEY in engine/.env.local and run the Vite dev server.",
+        );
+      }
+      return this.openRouter.complete(request);
+    }
+    if (!this.gemini) {
+      throw new Error(
+        "Gemini text is not available. Set VITE_GEMINI_API_KEY in engine/.env.local.",
+      );
+    }
+    return this.gemini.complete(request);
   }
 }
 

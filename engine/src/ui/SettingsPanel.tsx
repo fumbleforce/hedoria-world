@@ -1,7 +1,9 @@
-import { useStore } from "../state/store";
+import { useEffect } from "react";
+import { useStore, type LlmBackend } from "../state/store";
 import type { LlmAdapter } from "../llm/adapter";
 import {
   imageModelSelectOptions,
+  normalizeGeminiTextModel,
   textModelSelectOptions,
 } from "../llm/geminiModelOptions";
 import type { IndexedWorld } from "../world/indexer";
@@ -12,6 +14,7 @@ import {
   ensureRegionGrid,
   prewarmGridImages,
 } from "../dialogue/narrator";
+import { OpenRouterModelField } from "./OpenRouterModelField";
 
 type Props = {
   onClose: () => void;
@@ -21,9 +24,13 @@ type Props = {
   world: IndexedWorld;
 };
 
+const hasGeminiEnvKey = Boolean(
+  (import.meta.env.VITE_GEMINI_API_KEY as string | undefined)?.trim(),
+);
+
 /**
- * Map / LLM preferences that do not fit in the top HUD strip: Gemini model
- * ids, tile image strategy, and cache recovery actions.
+ * Map / LLM preferences that do not fit in the top HUD strip: LLM backends
+ * and models, tile image strategy, and cache recovery actions.
  */
 export function SettingsPanel({
   onClose,
@@ -42,8 +49,23 @@ export function SettingsPanel({
   const geminiImageModel = useStore((s) => s.geminiImageModel);
   const setGeminiTextModel = useStore((s) => s.setGeminiTextModel);
   const setGeminiImageModel = useStore((s) => s.setGeminiImageModel);
+  const textLlmBackend = useStore((s) => s.textLlmBackend);
+  const imageLlmBackend = useStore((s) => s.imageLlmBackend);
+  const openRouterTextModel = useStore((s) => s.openRouterTextModel);
+  const openRouterImageModel = useStore((s) => s.openRouterImageModel);
+  const setTextLlmBackend = useStore((s) => s.setTextLlmBackend);
+  const setImageLlmBackend = useStore((s) => s.setImageLlmBackend);
+  const setOpenRouterTextModel = useStore((s) => s.setOpenRouterTextModel);
+  const setOpenRouterImageModel = useStore((s) => s.setOpenRouterImageModel);
 
   const activeGrid = mode === "region" ? regionGrid : locationGrid;
+  const normalizedGeminiTextModel = normalizeGeminiTextModel(geminiTextModel);
+
+  useEffect(() => {
+    if (normalizedGeminiTextModel && normalizedGeminiTextModel !== geminiTextModel) {
+      setGeminiTextModel(normalizedGeminiTextModel);
+    }
+  }, [geminiTextModel, normalizedGeminiTextModel, setGeminiTextModel]);
 
   const onToggleTileImageMode = () => {
     const next = tileImageMode === "mosaic" ? "per-tile" : "mosaic";
@@ -102,7 +124,9 @@ export function SettingsPanel({
           <h3 className="settingsPanel__heading">Tile images</h3>
           <p className="settingsPanel__hint">
             Per-tile reuses art by terrain kind; mosaic asks for one large image
-            and slices it to the grid.
+            and slices it to the grid. Mosaic mode uses a richer map classifier
+            (per-cell painter notes). After switching to mosaic, use Rebuild map
+            so existing grids pick that up.
           </p>
           <button
             type="button"
@@ -146,54 +170,144 @@ export function SettingsPanel({
         </section>
 
         <section className="settingsPanel__section">
-          <h3 className="settingsPanel__heading">Gemini models</h3>
+          <h3 className="settingsPanel__heading">Text LLM</h3>
           <p className="settingsPanel__hint">
             {isLlmReady
-              ? "Changing a model reloads the page so text and image clients reconnect with the new id."
-              : "Set VITE_GEMINI_API_KEY in engine/.env to enable live Gemini."}
+              ? "Backend and model apply on the next request (no reload)."
+              : "Set VITE_GEMINI_API_KEY (direct Gemini) and/or OPENROUTER_API_KEY in engine/.env.local. OpenRouter uses the Vite dev proxy only (not in static production builds). The app does not call the OpenAI API directly."}
           </p>
           <label className="settingsPanel__field">
-            <span className="settingsPanel__label">Text model</span>
+            <span className="settingsPanel__label">Backend</span>
             <select
               className="settingsPanel__select"
-              value={geminiTextModel}
-              disabled={!isLlmReady}
-              title={geminiTextModel}
+              value={textLlmBackend}
+              title="Where text completions are sent"
               onChange={(e) => {
-                const next = e.target.value;
-                if (next === geminiTextModel) return;
-                setGeminiTextModel(next);
-                window.location.reload();
+                const next = e.target.value as LlmBackend;
+                if (next === textLlmBackend) return;
+                setTextLlmBackend(next);
               }}
             >
-              {textModelSelectOptions(geminiTextModel).map((id) => (
-                <option key={id} value={id}>
-                  {id}
-                </option>
-              ))}
+              <option value="gemini">Gemini (browser, API key in bundle)</option>
+              <option value="openrouter">OpenRouter (dev proxy)</option>
             </select>
           </label>
+          {textLlmBackend === "gemini" ? (
+            <label className="settingsPanel__field">
+              <span className="settingsPanel__label">Gemini text model</span>
+              <select
+                className="settingsPanel__select"
+                value={normalizedGeminiTextModel}
+                disabled={!hasGeminiEnvKey}
+                title={normalizedGeminiTextModel}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  if (next === normalizedGeminiTextModel) return;
+                  setGeminiTextModel(next);
+                }}
+              >
+                {textModelSelectOptions(normalizedGeminiTextModel).map((id) => (
+                  <option key={id} value={id}>
+                    {id}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <>
+              <p className="settingsPanel__hint">
+                Auto Router (<code>openrouter/auto</code>) picks a model per
+                prompt; see{" "}
+                <a
+                  href="https://openrouter.ai/docs/guides/routing/routers/auto-router"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Auto Router
+                </a>
+                . Browse the full catalog at{" "}
+                <a
+                  href="https://openrouter.ai/models"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  openrouter.ai/models
+                </a>
+                . Use Custom to paste any id.
+              </p>
+              <OpenRouterModelField
+                kind="text"
+                value={openRouterTextModel}
+                onChange={setOpenRouterTextModel}
+              />
+            </>
+          )}
+        </section>
+
+        <section className="settingsPanel__section">
+          <h3 className="settingsPanel__heading">Image LLM</h3>
+          <p className="settingsPanel__hint">
+            Tile art, portraits, and scene backgrounds use the image backend you
+            select. OpenRouter image models use the same chat API with image
+            output modalities.
+          </p>
           <label className="settingsPanel__field">
-            <span className="settingsPanel__label">Image model</span>
+            <span className="settingsPanel__label">Backend</span>
             <select
               className="settingsPanel__select"
-              value={geminiImageModel}
-              disabled={!isLlmReady}
-              title={geminiImageModel}
+              value={imageLlmBackend}
+              title="Where image generation is sent"
               onChange={(e) => {
-                const next = e.target.value;
-                if (next === geminiImageModel) return;
-                setGeminiImageModel(next);
-                window.location.reload();
+                const next = e.target.value as LlmBackend;
+                if (next === imageLlmBackend) return;
+                setImageLlmBackend(next);
               }}
             >
-              {imageModelSelectOptions(geminiImageModel).map((id) => (
-                <option key={id} value={id}>
-                  {id}
-                </option>
-              ))}
+              <option value="gemini">Gemini (browser)</option>
+              <option value="openrouter">OpenRouter (dev proxy)</option>
             </select>
           </label>
+          {imageLlmBackend === "gemini" ? (
+            <label className="settingsPanel__field">
+              <span className="settingsPanel__label">Gemini image model</span>
+              <select
+                className="settingsPanel__select"
+                value={geminiImageModel}
+                disabled={!hasGeminiEnvKey}
+                title={geminiImageModel}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  if (next === geminiImageModel) return;
+                  setGeminiImageModel(next);
+                }}
+              >
+                {imageModelSelectOptions(geminiImageModel).map((id) => (
+                  <option key={id} value={id}>
+                    {id}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <>
+              <p className="settingsPanel__hint">
+                Image-capable models are listed with image output on{" "}
+                <a
+                  href="https://openrouter.ai/models?output_modalities=image"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  openrouter.ai/models
+                </a>{" "}
+                (filter: image). Use Custom for any id.
+              </p>
+              <OpenRouterModelField
+                kind="image"
+                value={openRouterImageModel}
+                onChange={setOpenRouterImageModel}
+              />
+            </>
+          )}
         </section>
       </div>
     </div>

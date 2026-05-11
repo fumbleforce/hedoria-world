@@ -1,5 +1,52 @@
 import type { ImageResponse } from "../llm/imageAdapter";
-import type { TileGrid } from "./tilePrimitives";
+import type { Tile, TileGrid } from "./tilePrimitives";
+
+/** Last-resort line when a location cell has no usable kind / priorKind. */
+const MOSAIC_LOCATION_FALLBACK = "small interior space";
+
+function isMosaicLocationFallback(phrase: string): boolean {
+  return phrase === MOSAIC_LOCATION_FALLBACK;
+}
+
+/**
+ * When head-noun mapping fails, turn a kebab-case classifier slug into a
+ * plain phrase for the image model (e.g. `city-gate` → "city gate, seen from above").
+ */
+function kebabSlugToScenePhrase(raw: string): string {
+  const cleaned = raw
+    .toLowerCase()
+    .replace(/_/g, "-")
+    .replace(/-+/g, "-")
+    .trim();
+  const STOP = new Set(["the", "a", "an", "of", "s", "and"]);
+  const tokens = cleaned.split("-").filter((t) => t && !STOP.has(t));
+  if (tokens.length === 0) return MOSAIC_LOCATION_FALLBACK;
+  return `${tokens.join(" ")}, seen from above`;
+}
+
+/**
+ * Location mosaic lines: classifier output lives in `priorKind` after the
+ * engine stamps sub-area tiles (overwriting `kind` with a slug from the
+ * area id). Prefer that, then `kind`, mapping head nouns when we can.
+ */
+function describeLocationTileForMosaic(tile: {
+  kind: string;
+  priorKind?: string;
+}): string {
+  const phraseFromRaw = (raw: string | undefined): string | null => {
+    if (!raw?.trim()) return null;
+    const mapped = genericiseLocationKind(raw);
+    if (!isMosaicLocationFallback(mapped)) return mapped;
+    const kebab = kebabSlugToScenePhrase(raw);
+    return isMosaicLocationFallback(kebab) ? null : kebab;
+  };
+
+  return (
+    phraseFromRaw(tile.priorKind) ??
+    phraseFromRaw(tile.kind) ??
+    MOSAIC_LOCATION_FALLBACK
+  );
+}
 
 /**
  * Whole-grid image generator + client-side slicer.
@@ -43,67 +90,109 @@ import type { TileGrid } from "./tilePrimitives";
  *  1. At REGION scope, anchor tiles (those carrying a `locationId`)
  *     are replaced with a generic "built place on <terrain>" line. The
  *     proper noun (e.g. "Avenor") never reaches the image model.
- *  2. At LOCATION scope, EVERY cell skips the human label and uses a
- *     generic functional descriptor derived from the kind, then run
- *     through a proper-noun cleaner. Location sub-area IDs (e.g.
- *     "The Farmer's Rest", "Inn Garden") are almost always proper
- *     nouns by authoring convention, and the location system prompt
- *     historically did not forbid them — so without this scrub the
- *     image model wrote them across each tile as text.
+ *  2. At LOCATION scope, cells skip the human `label` (often a proper
+ *     noun) but should reflect the scene-classifier `kind` and, when the
+ *     engine stamped a sub-area, the preserved `priorKind` from the LLM
+ *     (the terrain the classifier chose before the overwrite). Unknown
+ *     slugs become plain hyphen phrases ("city gate") instead of a
+ *     useless generic interior.
+ *
+ * When tiles carry `mosaicDescribe` (classifier output in mosaic image mode),
+ * that string is passed through verbatim as the cell line — it is already
+ * written for the image model.
  */
+function lineForMosaicCell(tile: Tile, biome: string, scope: "region" | "location"): string {
+  const md = tile.mosaicDescribe?.trim();
+  if (md) return md;
+  return describeTileForPrompt(tile, biome, scope);
+}
+
 export function composeMosaicPrompt(grid: TileGrid, style: string): string {
   const lines: string[] = [];
-  lines.push(
-    `Generate a single top-down map illustration arranged as a strict ${grid.width} × ${grid.height} grid (${grid.width} columns by ${grid.height} rows).`,
-  );
-  lines.push(
-    `North is at the TOP of the image; south is at the bottom. West is on the left, east on the right.`,
-  );
-  lines.push(
-    `Cells are equal-sized and butt directly against each other — no gutters, no gaps, no labels, no borders, no UI, no text anywhere in the image.`,
-  );
+
+  // Lead with the headline image so cheap models latch onto style + subject
+  // before the long per-cell list. Image models tend to weight the first and
+  // last paragraphs most heavily.
+  const subject =
+    grid.scope === "location"
+      ? `top-down painted view of a single ${prettify(grid.biome)} place — its courtyards, alleys, rooftops, gardens, and other open ground seen from straight above`
+      : `top-down painted regional map of a ${prettify(grid.biome)}`;
+  lines.push(`A ${subject}, in this art style: ${style}.`);
   lines.push("");
+
+  // Hard rules. State them positively ("paint", "show") AND negatively
+  // ("must not contain") since cheaper models often follow only one of the
+  // two phrasings. "No grid lines" gets repeated because the listing below
+  // uses the words "row" and "column" which weak models otherwise visualise
+  // as visible lines.
+  lines.push(`Hard rules — the finished image must satisfy ALL of these:`);
   lines.push(
-    `Tile composition (${grid.scope === "location" ? "top row first" : "north-most row first"}, west-most column first within each row):`,
+    ` - PAINTED SCENERY ONLY. No text, no captions, no labels, no place names, no numbers, no letters, no symbols, no signs with readable writing.`,
+  );
+  lines.push(
+    ` - NO VISIBLE GRID. The image must not contain any grid lines, cell borders, frames, gutters, seams, outlines, fences-of-pixels, or any other line marking subdivisions. The picture is one continuous painting.`,
+  );
+  lines.push(
+    ` - NO MAP CHROME. No compass rose, no scale bar, no legend, no key, no border decoration, no inset, no arrows.`,
+  );
+  lines.push(
+    ` - North is at the top of the image, south at the bottom; west is on the left, east on the right.`,
   );
   lines.push("");
 
-  // Walk rows from north (highest y) to south (y=0) so the listing
-  // mirrors the visual layout the model is being asked to produce.
+  // Reframe the layout as "equal bands" rather than a "grid" so the model is
+  // less tempted to draw the lines we're telling it not to draw. The
+  // post-processing slicer is mentioned to make clear that subdivision is
+  // OUR problem, not the painter's.
+  lines.push(
+    `Composition: the painting fills the canvas edge-to-edge and is laid out so that ${grid.width} equal vertical bands across the width and ${grid.height} equal horizontal bands across the height each contain one of the features listed below. The bands are an INVISIBLE layout reference — they must not be drawn, outlined, or hinted at. After you return the picture we slice it into ${grid.width} × ${grid.height} tiles externally; your job is to paint a single seamless image whose features happen to land in those positions.`,
+  );
+  lines.push("");
+
+  // Per-cell directives. We still walk north-most row first so the listing
+  // visually mirrors the painting. Use compact "L→R: a; b; c" lines so weak
+  // models treat each row as one continuous band rather than four boxed cells.
+  lines.push(
+    `Feature placement (${grid.height} rows from top to bottom, each row listing west→east cells):`,
+  );
   for (let y = grid.height - 1; y >= 0; y -= 1) {
-    const rowLabel = `Row ${y} (${rowDirectionLabel(y, grid.height)})`;
+    const rowLabel = rowDirectionLabel(y, grid.height);
     const cells: string[] = [];
     for (let x = 0; x < grid.width; x += 1) {
       const tile = grid.tiles[y * grid.width + x];
-      cells.push(
-        `col ${x}: ${describeTileForPrompt(tile, grid.biome, grid.scope)}`,
-      );
+      cells.push(lineForMosaicCell(tile, grid.biome, grid.scope));
     }
-    lines.push(`${rowLabel}:`);
-    for (const c of cells) lines.push(`  ${c}`);
+    lines.push(` ${rowLabel}: ${cells.join(" | ")}`);
   }
   lines.push("");
+
+  // Continuity / blending rules. Cheap models otherwise paint each band as a
+  // distinct illustration with hard edges, which then bakes pseudo-grid
+  // lines into the picture even without explicit borders.
+  lines.push(`Continuity rules:`);
   if (grid.scope === "location") {
     lines.push(
-      `Setting: top-down view of a single ${prettify(grid.biome)} location's interior layout (courtyards, alleys, room-tops, garden patches). The image is the building/grounds plan as seen from above.`,
+      ` - Adjacent open spaces flow into each other: courtyards open onto alleys, paths run unbroken across band edges, roof ridges align where buildings span more than one band.`,
+    );
+    lines.push(
+      ` - Shadows, paving textures, vegetation, and lighting are continuous across band edges. Treat the whole canvas as one place at one moment, not a stitched collage.`,
     );
   } else {
-    lines.push(`Biome / region tone: ${prettify(grid.biome)}.`);
+    lines.push(
+      ` - Rivers, coastlines, roads, and ridge lines flow unbroken through every band they pass through. A river that ends mid-band is a bug.`,
+    );
+    lines.push(
+      ` - Forest canopies, fields, and grasslands have continuous textures across band edges; lighting and palette are uniform across the whole picture.`,
+    );
   }
-  lines.push(`Art style: ${style}.`);
   lines.push("");
-  lines.push(`Layout rules:`);
+
+  // Final negative reminder. Putting this last lets it overwrite any earlier
+  // hallucination about cartographic conventions ("but it's a MAP, maps have
+  // grid lines!"). Phrase it as a strict checklist for compliance-minded
+  // models.
   lines.push(
-    ` - The image is a strict ${grid.width}×${grid.height} lattice. All cells share the same size; the lattice aligns with the image edges so it can be sliced with equal cuts.`,
-  );
-  lines.push(
-    ` - Each cell's central character should clearly read as the described ${grid.scope === "location" ? "function (a yard looks like a yard, a roofed hall looks like a roofed hall)" : "terrain (e.g. a grain field looks like a grain field; coastal shallows look like shallow water)"}.`,
-  );
-  lines.push(
-    ` - Adjacent cells blend smoothly at their borders — ${grid.scope === "location" ? "a courtyard flows into the alley next to it, roof-lines align where buildings meet, paths connect across cells" : "a continuous river flows across river cells, a coastline looks like a coastline, a road connects road cells"}.`,
-  );
-  lines.push(
-    ` - Render purely painted scenery. No labels, no place names, no captions, no compass roses, no scale bars, no legends, no letters, no numbers, no grid lines, no signage with readable writing. The descriptors above are instructions to YOU; they must NOT appear as text on the image. Paint the buildings, water, and roads themselves; do not annotate them.`,
+    `Final check before returning: the image must be a single painting with smooth, continuous scenery and ZERO of: text, numbers, labels, captions, grid lines, cell borders, frames, compass roses, scale bars, legends, or any other map chrome. If any of those appear, regenerate without them.`,
   );
   return lines.join("\n");
 }
@@ -116,12 +205,9 @@ export function composeMosaicPrompt(grid: TileGrid, style: string): string {
  * - Region scope, non-anchor: kind + safe label (the region system
  *   prompt forbids proper nouns in kind/label, so the label is
  *   already terrain-y like "Reed marsh" or "Wheat field").
- * - Location scope, ANY tile: kind only, with a proper-noun-ish kind
- *   coerced into a generic structural descriptor (e.g. "the-farmer-s-
- *   rest" → "small inn building"). Labels are dropped wholesale at
- *   this scope because they're almost always authored sub-area names
- *   ("The Farmer's Rest", "Inn Garden") that the image model would
- *   render as captions.
+ * - Location scope: prefer `priorKind` (classifier before engine stamp),
+ *   then `kind`, using head-noun mapping when possible and a kebab-slug
+ *   phrase fallback. `label` is still omitted to reduce painted captions.
  */
 function describeTileForPrompt(
   tile: {
@@ -142,11 +228,7 @@ function describeTileForPrompt(
   }
 
   if (scope === "location") {
-    // Map kind to a generic functional descriptor. Anything that still
-    // looks like a proper noun after slug cleanup is collapsed into a
-    // safe fallback so the image model can't latch onto it as text.
-    const generic = genericiseLocationKind(tile.kind);
-    return `${generic}${passable}`;
+    return `${describeLocationTileForMosaic(tile)}${passable}`;
   }
 
   // Region scope, non-anchor terrain. Both kind and label are safe by
@@ -180,7 +262,7 @@ function genericiseLocationKind(rawKind: string): string {
     .trim();
   const STOP = new Set(["the", "a", "an", "of", "s", "and"]);
   const tokens = cleaned.split(" ").filter((t) => t && !STOP.has(t));
-  if (tokens.length === 0) return "small interior space";
+  if (tokens.length === 0) return MOSAIC_LOCATION_FALLBACK;
 
   // Look for a "head noun" we recognise as a generic architectural
   // feature. If we find one, build a descriptor around it. Otherwise
@@ -215,6 +297,47 @@ function genericiseLocationKind(rawKind: string): string {
     well: "stone well in an open patch of ground",
     fountain: "stone fountain in an open patch of ground",
     gate: "stone gate set into a wall",
+    gates: "city gates and barbican seen from above",
+    city: "dense block of rooftops, alleys, and small courtyards",
+    urban: "dense block of rooftops, alleys, and small courtyards",
+    street: "narrow city street between buildings",
+    streets: "network of city streets between buildings",
+    avenue: "broad paved avenue between façades",
+    boulevard: "broad tree-lined boulevard between buildings",
+    promenade: "riverside or harbor promenade with paving",
+    embankment: "stone river embankment with worn steps",
+    riverside: "riverside quay with mooring posts and stone paving",
+    riverwalk: "busy riverfront walk with stalls and mooring",
+    landing: "busy river landing with wharves and cargo",
+    wharf: "wooden wharf with stacked cargo and ropes",
+    wharves: "row of wooden wharves along the water",
+    quays: "row of stone quays along the water",
+    district: "mixed city district of roofs and narrow lanes",
+    quarter: "historic quarter of tight lanes and rooflines",
+    ward: "urban ward of packed buildings and alleys",
+    plaza: "small public square of flagstones",
+    forum: "open civic forum of flagstones and low steps",
+    bazaar: "covered bazaar alley with awnings and stalls",
+    arcade: "covered shopping arcade with repeating arches",
+    rampart: "thick stone rampart walk with crenellations",
+    bastion: "angular bastion jutting from city walls",
+    watchtower: "tall stone watchtower with steep roof",
+    tower: "tall stone tower with small windows",
+    spire: "slender stone spire rising above roofs",
+    temple: "temple forecourt and stepped roof seen from above",
+    cathedral: "large cathedral roof and crossing plan",
+    palace: "grand palace roof and formal courtyard",
+    manor: "manor house roof and attached yard",
+    keep: "fortified keep with thick walls",
+    barracks: "long barracks roof and drill yard",
+    warehouse: "long warehouse roof with loading bays",
+    granary: "granary building with peaked roof",
+    sewer: "narrow vaulted sewer channel with damp stone",
+    sewers: "network of vaulted sewer channels",
+    tunnel: "stone tunnel mouth or underpass",
+    bridge: "short stone footbridge",
+    stairs: "wide outdoor stone stair flight",
+    steps: "wide outdoor stone steps between levels",
     door: "doorway set into a low wall",
     wall: "section of stone wall",
     walls: "run of stone walls",
@@ -224,14 +347,11 @@ function genericiseLocationKind(rawKind: string): string {
     alley: "narrow alley between buildings",
     alleys: "warren of narrow alleys",
     square: "small public square of flagstones",
-    plaza: "small public square of flagstones",
     pond: "small pond surrounded by reeds",
-    bridge: "short stone footbridge",
     field: "small enclosed working field",
     fields: "patchwork of small working fields",
     orchard: "compact orchard of low fruit trees",
     barn: "barn building with peaked roof",
-    granary: "granary building with peaked roof",
     library: "small library with shelved roof shadow",
     workshop: "open workshop with workbenches",
     foundry: "smoking foundry with chimney",
@@ -252,11 +372,9 @@ function genericiseLocationKind(rawKind: string): string {
   }
   if (chosen) return chosen;
 
-  // No recognised head noun — the kind is either an unknown but
-  // plausible word (e.g. "smithy-attic") or a proper-noun slug. In
-  // either case, "small interior space" is a safe top-down filler
-  // that won't be rendered as text.
-  return "small interior space";
+  // Caller may still turn the raw slug into a hyphen phrase; here we avoid
+  // inventing misleading concrete nouns for unknown tokens.
+  return MOSAIC_LOCATION_FALLBACK;
 }
 
 function prettify(slugOrPhrase: string): string {
@@ -264,9 +382,9 @@ function prettify(slugOrPhrase: string): string {
 }
 
 function rowDirectionLabel(y: number, height: number): string {
-  if (y === height - 1) return "northernmost";
-  if (y === 0) return "southernmost";
-  return `row ${y}`;
+  if (y === height - 1) return "Top row (northernmost)";
+  if (y === 0) return "Bottom row (southernmost)";
+  return `Row ${height - 1 - y} of ${height - 1} from the top`;
 }
 
 /**

@@ -9,7 +9,8 @@ export const GEMINI_TEXT_MODEL_OPTIONS: readonly string[] = [
   "gemini-2.5-flash",
   "gemini-2.5-pro",
   "gemini-3-flash-preview",
-  "gemini-3.1-flash",
+  "gemini-3.1-flash-lite",
+  "gemini-3.1-flash-lite-preview",
   "gemini-3.1-pro-preview",
 ];
 
@@ -37,9 +38,15 @@ export function defaultGeminiImageModel(): string {
   return envImageModel() ?? "gemini-2.5-flash-image";
 }
 
+export function normalizeGeminiTextModel(model: string): string {
+  const trimmed = model.trim();
+  if (trimmed === "gemini-3.1-flash") return "gemini-3-flash-preview";
+  return trimmed;
+}
+
 /** Options for a `<select>`, always including the active id if it is custom. */
 export function textModelSelectOptions(current: string): string[] {
-  const cur = current.trim();
+  const cur = normalizeGeminiTextModel(current);
   if (!cur) return [...GEMINI_TEXT_MODEL_OPTIONS];
   if (GEMINI_TEXT_MODEL_OPTIONS.includes(cur)) return [...GEMINI_TEXT_MODEL_OPTIONS];
   return [cur, ...GEMINI_TEXT_MODEL_OPTIONS];

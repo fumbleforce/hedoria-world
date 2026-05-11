@@ -1,16 +1,26 @@
 import { LlmAdapter } from "./llm/adapter";
 import {
-  GeminiImageProvider,
   MockImageProvider,
+  StoreBackedGeminiImageProvider,
   type ImageProvider,
 } from "./llm/imageAdapter";
-import { createGeminiProvider } from "./llm/providers";
+import {
+  DelegatingImageProvider,
+  StoreBackedOpenRouterImageProvider,
+} from "./llm/openRouterImageProvider";
+import {
+  DelegatingTextLlmProvider,
+  StoreBackedGeminiTextProvider,
+} from "./llm/providers";
+import { migrateOpenRouterModelsInStore } from "./llm/openRouterStoreMigration";
+import { StoreBackedOpenRouterTextProvider } from "./llm/openRouterTextProvider";
 import { MockProvider } from "./llm/mockProvider";
 import type { LlmProvider } from "./llm/types";
 import { loadPacks, loadWorldFromPack, type PackInfo } from "./world/loader";
 import { buildWorldIndex, type IndexedWorld } from "./world/indexer";
 import { ensureStoragePersistence, getOrCreateSave } from "./persist/saveLoad";
 import { TileImageCache } from "./grid/tileImageCache";
+import { SceneBackgroundCache } from "./scene/sceneBackgroundCache";
 import { TileFiller } from "./grid/tileFiller";
 import { Narrator, ensureRegionGrid } from "./dialogue/narrator";
 import { WorldNarrator } from "./dialogue/worldNarrator";
@@ -56,6 +66,8 @@ export type BootResult = {
    * mosaic key pipeline.
    */
   imageProvider: ImageProvider;
+  /** Cached widescreen backgrounds for per-tile scene mode. */
+  sceneBackgroundCache: SceneBackgroundCache;
   saveId: string;
 };
 
@@ -178,13 +190,21 @@ async function runBoot(): Promise<BootResult | null> {
     store.setSaveId(save.saveId);
     stage("save resolved", { saveId: save.saveId });
 
-    const llmProvider = resolveLlmProvider();
+    const openRouterOk = await fetchOpenRouterStatus();
+    const geminiKey = (import.meta.env.VITE_GEMINI_API_KEY as string | undefined)?.trim();
+    if (openRouterOk) {
+      // Pull the live catalog and rewrite any stale persisted ids before any
+      // request goes out, so logs / cache keys match what gets sent.
+      await migrateOpenRouterModelsInStore();
+    }
+    const llmProvider = resolveLlmProvider(geminiKey ?? "", openRouterOk);
     store.setLlmReady(llmProvider.id !== "mock-local");
-    const imageProvider = resolveImageProvider();
+    const imageProvider = resolveImageProvider(geminiKey ?? "", openRouterOk);
     stage("providers resolved", {
       llmProvider: llmProvider.id,
       imageProvider: imageProvider.id,
       live: llmProvider.id !== "mock-local",
+      openRouterOk,
       geminiTextModel: useStore.getState().geminiTextModel,
       geminiImageModel: useStore.getState().geminiImageModel,
     });
@@ -202,6 +222,11 @@ async function runBoot(): Promise<BootResult | null> {
     });
     await tileImageCache.hydrateFromSave();
     stage("tileImageCache hydrated");
+
+    const sceneBackgroundCache = new SceneBackgroundCache({
+      saveId: save.saveId,
+      imageProvider,
+    });
 
     const tileFiller = new TileFiller({
       saveId: save.saveId,
@@ -254,6 +279,7 @@ async function runBoot(): Promise<BootResult | null> {
       tileFiller,
       llm,
       imageProvider,
+      sceneBackgroundCache,
       saveId: save.saveId,
     };
   } catch (err) {
@@ -293,23 +319,34 @@ function buildPackProbeOrder(
   return out;
 }
 
-function resolveLlmProvider(): LlmProvider {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
-  if (apiKey && apiKey.length > 0) {
-    const model = useStore.getState().geminiTextModel.trim() || "gemini-2.5-flash-lite";
-    return createGeminiProvider(apiKey, model);
+async function fetchOpenRouterStatus(): Promise<boolean> {
+  try {
+    const r = await fetch("/__openrouter/status");
+    if (!r.ok) return false;
+    const j = (await r.json()) as { ok?: boolean };
+    return j.ok === true;
+  } catch {
+    return false;
+  }
+}
+
+function resolveLlmProvider(geminiApiKey: string, openRouterOk: boolean): LlmProvider {
+  const gemini = geminiApiKey ? new StoreBackedGeminiTextProvider(geminiApiKey) : null;
+  const openRouter = openRouterOk ? new StoreBackedOpenRouterTextProvider() : null;
+  if (gemini || openRouter) {
+    return new DelegatingTextLlmProvider(gemini, openRouter);
   }
   console.warn(
-    "[boot] VITE_GEMINI_API_KEY is not set — using MockProvider (deterministic stub responses).",
+    "[boot] No text LLM: set VITE_GEMINI_API_KEY and/or OPENROUTER_API_KEY (dev proxy) — using MockProvider.",
   );
   return new MockProvider();
 }
 
-function resolveImageProvider(): ImageProvider {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
-  if (apiKey && apiKey.length > 0) {
-    const model = useStore.getState().geminiImageModel.trim() || "gemini-2.5-flash-image";
-    return new GeminiImageProvider(apiKey, model);
+function resolveImageProvider(geminiApiKey: string, openRouterOk: boolean): ImageProvider {
+  const gemini = geminiApiKey ? new StoreBackedGeminiImageProvider(geminiApiKey) : null;
+  const openRouter = openRouterOk ? new StoreBackedOpenRouterImageProvider() : null;
+  if (gemini || openRouter) {
+    return new DelegatingImageProvider(gemini, openRouter);
   }
   return new MockImageProvider();
 }

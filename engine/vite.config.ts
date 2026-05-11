@@ -1,4 +1,4 @@
-import { defineConfig, type Plugin } from "vite";
+import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -95,6 +95,162 @@ function diagLogEndpoint(): Plugin {
     url: "/__diag-log",
     file: path.resolve(__dirname, "logs", "events.jsonl"),
   });
+}
+
+const OPENROUTER_UPSTREAM = "https://openrouter.ai/api/v1/chat/completions";
+const OPENROUTER_MODELS_UPSTREAM = "https://openrouter.ai/api/v1/models";
+
+function pickModelFromBody(body: string): string {
+  try {
+    const parsed = JSON.parse(body) as { model?: unknown };
+    if (typeof parsed.model === "string") return parsed.model;
+  } catch {
+    // body wasn't JSON — fall through and report unknown
+  }
+  return "<unknown>";
+}
+
+/**
+ * Dev-only proxy to OpenRouter (CORS-safe). The browser POSTs an OpenAI-shaped
+ * chat body; the key stays in OPENROUTER_API_KEY (loaded via loadEnv, not VITE_*).
+ *
+ * Every chat-completion proxy hit is logged to the server console with the
+ * client-supplied X-Request-Id so you can correlate browser-side logs with the
+ * upstream HTTP timing.
+ */
+function openRouterProxyEndpoint(): Plugin {
+  return {
+    name: "openrouter-proxy-endpoint",
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        if (!req.url) {
+          next();
+          return;
+        }
+        const mode = server.config.mode;
+        const env = loadEnv(mode, process.cwd(), "");
+        const apiKey = env.OPENROUTER_API_KEY?.trim() ?? "";
+        const referer = env.OPENROUTER_HTTP_REFERER?.trim();
+        const title = env.OPENROUTER_APP_TITLE?.trim() ?? "Hedoria Engine";
+
+        if (req.method === "GET" && req.url.split("?")[0] === "/__openrouter/status") {
+          res.statusCode = 200;
+          res.setHeader("Content-Type", "application/json");
+          res.setHeader("Cache-Control", "no-store");
+          res.end(JSON.stringify({ ok: apiKey.length > 0 }));
+          return;
+        }
+
+        // Proxy the public model catalog. No auth needed upstream, but routing
+        // through Vite avoids any CORS surprises and keeps a single base URL on
+        // the client.
+        if (req.method === "GET" && req.url.split("?")[0] === "/__openrouter/models") {
+          const reqId = (req.headers["x-request-id"] as string | undefined) ?? "or-models";
+          const startedAt = Date.now();
+          console.log(`[openrouter] ${reqId} → GET ${OPENROUTER_MODELS_UPSTREAM}`);
+          try {
+            const upstream = await fetch(OPENROUTER_MODELS_UPSTREAM, {
+              headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
+            });
+            const text = await upstream.text();
+            const elapsed = Date.now() - startedAt;
+            console.log(
+              `[openrouter] ${reqId} ← ${upstream.status} models (${text.length}B, ${elapsed}ms)`,
+            );
+            res.statusCode = upstream.status;
+            res.setHeader(
+              "Content-Type",
+              upstream.headers.get("content-type") ?? "application/json",
+            );
+            res.setHeader("Cache-Control", "no-store");
+            res.end(text);
+          } catch (error) {
+            const elapsed = Date.now() - startedAt;
+            const msg = error instanceof Error ? error.message : String(error);
+            console.error(`[openrouter] ${reqId} ✖ models failed (${elapsed}ms): ${msg}`);
+            res.statusCode = 502;
+            res.setHeader("Content-Type", "application/json");
+            res.end(JSON.stringify({ ok: false, error: msg }));
+          }
+          return;
+        }
+
+        if (req.method === "POST" && req.url.split("?")[0] === "/__openrouter/chat") {
+          const reqId = (req.headers["x-request-id"] as string | undefined) ?? "or-chat";
+          const startedAt = Date.now();
+          if (!apiKey) {
+            console.warn(
+              `[openrouter] ${reqId} ✖ chat blocked: OPENROUTER_API_KEY missing`,
+            );
+            res.statusCode = 503;
+            res.setHeader("Content-Type", "application/json");
+            res.end(
+              JSON.stringify({
+                ok: false,
+                error: "OPENROUTER_API_KEY is not set (engine/.env.local)",
+              }),
+            );
+            return;
+          }
+          let body = "";
+          // Periodic "still waiting" heartbeat so a stalled upstream is
+          // visible in the dev-server log. The browser-side abort will
+          // ultimately kill the request, but until then we want to know.
+          const heartbeat = setInterval(() => {
+            const elapsed = Date.now() - startedAt;
+            console.log(
+              `[openrouter] ${reqId} … still pending upstream (${elapsed}ms)`,
+            );
+          }, 10_000);
+          try {
+            body = await readBody(req);
+            const model = pickModelFromBody(body);
+            console.log(
+              `[openrouter] ${reqId} → POST chat model=${model} body=${body.length}B`,
+            );
+            const upstream = await fetch(OPENROUTER_UPSTREAM, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${apiKey}`,
+                ...(referer ? { Referer: referer } : {}),
+                "X-Title": title,
+              },
+              body,
+            });
+            const headerMs = Date.now() - startedAt;
+            const text = await upstream.text();
+            const totalMs = Date.now() - startedAt;
+            console.log(
+              `[openrouter] ${reqId} ← ${upstream.status} chat model=${model} headers=${headerMs}ms total=${totalMs}ms body=${text.length}B`,
+            );
+            if (!upstream.ok) {
+              const preview = text.slice(0, 400).replace(/\s+/gu, " ");
+              console.warn(`[openrouter] ${reqId} body-preview: ${preview}`);
+            }
+            res.statusCode = upstream.status;
+            res.setHeader("Content-Type", upstream.headers.get("content-type") ?? "application/json");
+            res.end(text);
+          } catch (error) {
+            const elapsed = Date.now() - startedAt;
+            const msg = error instanceof Error ? error.message : String(error);
+            const model = body ? pickModelFromBody(body) : "<unknown>";
+            console.error(
+              `[openrouter] ${reqId} ✖ chat failed model=${model} after ${elapsed}ms: ${msg}`,
+            );
+            res.statusCode = 502;
+            res.setHeader("Content-Type", "application/json");
+            res.end(JSON.stringify({ ok: false, error: msg }));
+          } finally {
+            clearInterval(heartbeat);
+          }
+          return;
+        }
+
+        next();
+      });
+    },
+  };
 }
 
 /**
@@ -271,5 +427,11 @@ function packsEndpoint(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), llmLogEndpoint(), diagLogEndpoint(), packsEndpoint()],
+  plugins: [
+    react(),
+    llmLogEndpoint(),
+    diagLogEndpoint(),
+    openRouterProxyEndpoint(),
+    packsEndpoint(),
+  ],
 });

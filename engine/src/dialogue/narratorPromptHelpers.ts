@@ -1,5 +1,6 @@
 import type { StoreState } from "../state/store";
 import { getTile, type Tile, type TileGrid } from "../grid/tilePrimitives";
+import { findRegionWalkPath } from "../grid/pathing";
 import type { PlayerIntent } from "./playerIntent";
 
 const DIR_NAMES: Record<string, string> = {
@@ -54,6 +55,32 @@ export function intentHintLine(intent: PlayerIntent, state: StoreState): string 
     case "region.move": {
       const ctx = movementContext(intent, state);
       return movementHint("move_region", ctx, "region");
+    }
+    case "region.travelTo": {
+      const grid = state.regionGrid;
+      const pos = state.regionPos;
+      if (!grid) {
+        return `Player intent: travel to region cell (${intent.x},${intent.y}). Emit travel_region({x:${intent.x},y:${intent.y}}) and a narrate call describing the journey.`;
+      }
+      const dest = getTile(grid, intent.x, intent.y);
+      const destLabel = dest ? tileLabel(dest) ?? `(${intent.x},${intent.y})` : `(${intent.x},${intent.y})`;
+      const path = findRegionWalkPath(
+        grid,
+        { x: pos[0], y: pos[1] },
+        { x: intent.x, y: intent.y },
+      );
+      if (!path || path.length < 2) {
+        return [
+          `Player intent: travel toward ${destLabel} at (${intent.x},${intent.y}) on the region grid.`,
+          "There is NO walkable path to that cell from the player's position — DO NOT emit travel_region;",
+          "the player does not move. Use a single `narrate` call to describe why the route fails.",
+        ].join(" ");
+      }
+      return [
+        `Player intent: travel along the walkable path to ${destLabel} at (${intent.x},${intent.y}) on the region grid`,
+        `(${path.length - 1} step(s)). Emit travel_region({x:${intent.x},y:${intent.y}}) and a single \`narrate\` call`,
+        "covering the whole approach — textures, sounds, weather — without naming every intermediate cell.",
+      ].join(" ");
     }
     case "region.enterLocation":
       return `Player intent: enter the named location. Emit enter_location({locationId:"${intent.locationId}"}) and a narrate call describing the threshold.`;

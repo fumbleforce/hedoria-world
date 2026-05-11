@@ -1,4 +1,5 @@
 import { useStore } from "../state/store";
+import { defaultGeminiImageModel } from "./geminiModelOptions";
 
 export type ImageProviderConfig = {
   id: string;
@@ -147,6 +148,67 @@ export class ImageTimeoutError extends Error {
   }
 }
 
+/**
+ * Gemini image generation only accepts these aspect_ratio tokens (not raw
+ * pixel pairs like "1024:576"). See INVALID_ARGUMENT on image_config.aspect_ratio.
+ */
+const GEMINI_IMAGE_ASPECT_RATIOS = [
+  "1:1",
+  "1:4",
+  "1:8",
+  "2:3",
+  "3:2",
+  "3:4",
+  "4:1",
+  "4:3",
+  "4:5",
+  "5:4",
+  "8:1",
+  "9:16",
+  "16:9",
+  "21:9",
+] as const;
+
+function gcdPair(a: number, b: number): number {
+  let x = Math.abs(Math.round(a));
+  let y = Math.abs(Math.round(b));
+  while (y !== 0) {
+    const t = y;
+    y = x % y;
+    x = t;
+  }
+  return x || 1;
+}
+
+/**
+ * Map requested pixel size to the closest allowed aspect_ratio token (Gemini /
+ * OpenRouter image_config share the same ratio set for Google image models).
+ */
+export function aspectRatioTokenForPixelSize(width: number, height: number): string {
+  if (width <= 0 || height <= 0) return "1:1";
+  const g = gcdPair(width, height);
+  const sw = Math.round(width / g);
+  const sh = Math.round(height / g);
+  const simplified = `${sw}:${sh}`;
+  if ((GEMINI_IMAGE_ASPECT_RATIOS as readonly string[]).includes(simplified)) {
+    return simplified;
+  }
+  const target = width / height;
+  let best: (typeof GEMINI_IMAGE_ASPECT_RATIOS)[number] = "1:1";
+  let bestScore = Infinity;
+  for (const ar of GEMINI_IMAGE_ASPECT_RATIOS) {
+    const [aw, ah] = ar.split(":").map((n) => Number(n));
+    if (!aw || !ah) continue;
+    const r = aw / ah;
+    const score = Math.abs(Math.log(target) - Math.log(r));
+    if (score < bestScore) {
+      bestScore = score;
+      best = ar;
+    }
+  }
+  return best;
+}
+
 export class GeminiImageProvider implements ImageProvider {
   readonly id: string;
   private readonly apiKey: string;
@@ -185,7 +247,7 @@ export class GeminiImageProvider implements ImageProvider {
         generationConfig: {
           responseModalities: ["IMAGE"],
           imageConfig: {
-            aspectRatio: width === height ? "1:1" : `${width}:${height}`,
+            aspectRatio: aspectRatioTokenForPixelSize(width, height),
           },
         },
       };
@@ -263,6 +325,39 @@ export class GeminiImageProvider implements ImageProvider {
     } finally {
       useStore.getState().setBackgroundActivity(activityId, null);
     }
+  }
+}
+
+/**
+ * Stable provider handle used by caches and portrait generation. It keeps
+ * per-model Gemini clients alive for cooldown state, while routing each new
+ * request through the model currently selected in settings.
+ */
+export class StoreBackedGeminiImageProvider implements ImageProvider {
+  private readonly apiKey: string;
+  private readonly providersByModel = new Map<string, GeminiImageProvider>();
+
+  constructor(apiKey: string) {
+    this.apiKey = apiKey;
+  }
+
+  get id(): string {
+    return this.current().id;
+  }
+
+  async generate(request: ImageRequest): Promise<ImageResponse> {
+    return this.current().generate(request);
+  }
+
+  private current(): GeminiImageProvider {
+    const model =
+      useStore.getState().geminiImageModel.trim() || defaultGeminiImageModel();
+    let provider = this.providersByModel.get(model);
+    if (!provider) {
+      provider = new GeminiImageProvider(this.apiKey, model);
+      this.providersByModel.set(model, provider);
+    }
+    return provider;
   }
 }
 

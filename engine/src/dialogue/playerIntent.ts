@@ -4,6 +4,7 @@ export type SceneVerb = "talk" | "attack" | "trade" | "leave" | "engage";
 
 export type PlayerIntent =
   | { kind: "region.move"; dx: number; dy: number }
+  | { kind: "region.travelTo"; x: number; y: number }
   | { kind: "region.enterLocation"; locationId: string }
   | { kind: "location.move"; dx: number; dy: number }
   | { kind: "location.enterTile"; x: number; y: number }

@@ -83,6 +83,17 @@ export async function findTranscriptByPromptHash(
   return db.transcript.where("[saveId+promptHash]").equals([saveId, promptHash]).first();
 }
 
+/** Drop a cached text-LLM row (e.g. inner JSON no longer matches current parsers). */
+export async function deleteTranscriptByPromptHash(
+  saveId: string,
+  promptHash: string,
+): Promise<void> {
+  await db.transcript
+    .where("[saveId+promptHash]")
+    .equals([saveId, promptHash])
+    .delete();
+}
+
 export async function getSceneSpecRow(
   saveId: string,
   scope: SceneSpecRow["scope"],

@@ -152,6 +152,19 @@ export const DIALOGUE_TOOLS: ToolSpec[] = [
     },
   },
   {
+    name: "travel_region",
+    description:
+      "Move the player along a walkable path to the target region cell (x,y) in one journey. Use when the player chose a distant tile and confirmed travel; do not chain multiple move_region calls for the same intent.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        x: { type: "number" },
+        y: { type: "number" },
+      },
+      required: ["x", "y"],
+    },
+  },
+  {
     name: "move_location",
     description:
       "Move the player one step on the active location grid. Same direction/dx/dy semantics as move_region.",

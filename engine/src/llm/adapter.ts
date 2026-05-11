@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { findTranscriptByPromptHash, putTranscript } from "../persist/saveLoad";
+import {
+  deleteTranscriptByPromptHash,
+  findTranscriptByPromptHash,
+  putTranscript,
+} from "../persist/saveLoad";
 import { diag } from "../diag/log";
 import { useStore } from "../state/store";
 import type {
@@ -61,6 +65,28 @@ function hashPrompt(input: string): string {
 }
 
 /**
+ * Tile/region `scene-classify` responses must be JSON with a non-empty
+ * `cells` array. The transcript table only validates the outer
+ * `{ text, toolCalls? }` wrapper, so malformed or pre-schema caches would
+ * otherwise hit forever and force deterministic fallbacks in TileFiller.
+ */
+function isValidSceneClassifyGridPayload(text: string): boolean {
+  const trimmed = text
+    .trim()
+    .replace(/^```(?:json)?\s*/iu, "")
+    .replace(/```\s*$/u, "");
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    return false;
+  }
+  if (!parsed || typeof parsed !== "object") return false;
+  const cells = (parsed as { cells?: unknown }).cells;
+  return Array.isArray(cells) && cells.length > 0;
+}
+
+/**
  * Fire-and-forget POST to the dev-server `/__llm-log` middleware. Appends one
  * JSON line per LLM call to `engine/logs/llm-prompts.jsonl`. Silently no-ops
  * in production builds (the endpoint 404s and we swallow the error).
@@ -98,7 +124,8 @@ export class LlmAdapter {
   ): Promise<LlmResponse> {
     const kind: LlmCallKind = options?.kind ?? "other";
     const promptBlob = JSON.stringify(request);
-    const promptHash = hashPrompt(promptBlob);
+    const providerId = this.provider.id;
+    const promptHash = hashPrompt(`${providerId}\n${promptBlob}`);
     const startedAt = performance.now();
     const promptLength = promptBlob.length;
 
@@ -106,32 +133,46 @@ export class LlmAdapter {
     if (cached) {
       const parsed = LlmResponseSchema.safeParse(JSON.parse(cached.response) as unknown);
       if (parsed.success) {
-        const durationMs = performance.now() - startedAt;
-        diag.info("llm", `text-llm cache hit (kind=${kind})`, {
-          model: cached.model,
-          kind,
-          promptHash,
-          promptLength,
-          responseLength: parsed.data.text.length,
-          toolCalls: parsed.data.toolCalls?.length ?? 0,
-          durationMs: Math.round(durationMs),
-          cached: true,
-        });
-        logLlmCall({
-          kind,
-          model: cached.model,
-          promptHash,
-          cached: true,
-          request,
-          response: parsed.data,
-          durationMs,
-        });
-        return parsed.data;
+        const needsGridBody =
+          kind === "scene-classify" && (request.jsonMode ?? false);
+        if (
+          needsGridBody &&
+          !isValidSceneClassifyGridPayload(parsed.data.text)
+        ) {
+          await deleteTranscriptByPromptHash(this.saveId, promptHash);
+          diag.warn("llm", `text-llm cache dropped (invalid scene-classify JSON)`, {
+            kind,
+            promptHash,
+            model: cached.model,
+          });
+        } else {
+          const durationMs = performance.now() - startedAt;
+          diag.info("llm", `text-llm cache hit (kind=${kind})`, {
+            model: cached.model,
+            kind,
+            promptHash,
+            promptLength,
+            responseLength: parsed.data.text.length,
+            toolCalls: parsed.data.toolCalls?.length ?? 0,
+            durationMs: Math.round(durationMs),
+            cached: true,
+          });
+          logLlmCall({
+            kind,
+            model: cached.model,
+            promptHash,
+            cached: true,
+            request,
+            response: parsed.data,
+            durationMs,
+          });
+          return parsed.data;
+        }
       }
     }
 
-    diag.info("llm", `text-llm request → ${this.provider.id} (kind=${kind})`, {
-      model: this.provider.id,
+    diag.info("llm", `text-llm request → ${providerId} (kind=${kind})`, {
+      model: providerId,
       kind,
       promptHash,
       promptLength,
@@ -151,17 +192,29 @@ export class LlmAdapter {
       const raw = await this.provider.complete(request);
       const parsed = LlmResponseSchema.parse(raw);
       const durationMs = performance.now() - startedAt;
-      await putTranscript({
-        saveId: this.saveId,
-        callId: crypto.randomUUID(),
-        promptHash,
-        model: this.provider.id,
-        prompt: promptBlob,
-        response: JSON.stringify(parsed),
-        generatedAt: Date.now(),
-      });
+      const cacheThis =
+        kind !== "scene-classify" ||
+        !request.jsonMode ||
+        isValidSceneClassifyGridPayload(parsed.text);
+      if (cacheThis) {
+        await putTranscript({
+          saveId: this.saveId,
+          callId: crypto.randomUUID(),
+          promptHash,
+          model: providerId,
+          prompt: promptBlob,
+          response: JSON.stringify(parsed),
+          generatedAt: Date.now(),
+        });
+      } else {
+        diag.warn("llm", `text-llm response not cached (invalid scene-classify JSON)`, {
+          kind,
+          promptHash,
+          model: providerId,
+        });
+      }
       diag.info("llm", `text-llm response (${Math.round(durationMs)}ms)`, {
-        model: this.provider.id,
+        model: providerId,
         kind,
         promptHash,
         responseLength: parsed.text.length,
@@ -170,7 +223,7 @@ export class LlmAdapter {
       });
       logLlmCall({
         kind,
-        model: this.provider.id,
+        model: providerId,
         promptHash,
         cached: false,
         request,
@@ -180,7 +233,7 @@ export class LlmAdapter {
       return parsed;
     } catch (err) {
       diag.error("llm", `text-llm failed (${kind})`, {
-        model: this.provider.id,
+        model: providerId,
         kind,
         promptHash,
         error: err instanceof Error ? err.message : String(err),
