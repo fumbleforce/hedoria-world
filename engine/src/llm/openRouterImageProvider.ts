@@ -22,10 +22,15 @@ let liveOpenRouterImageSeq = 0;
 let openRouterImageRequestSeq = 0;
 
 const IMAGE_REQUEST_TIMEOUT_MS = (() => {
-  const raw = (import.meta as { env?: Record<string, string | undefined> })
-    ?.env?.VITE_GEMINI_IMAGE_TIMEOUT_MS;
+  // OpenRouter image models (gpt-5-image, flux, etc.) routinely need 60-180s
+  // for a single 1Mp render, so we default to 240s and let the env override.
+  // VITE_OPENROUTER_IMAGE_TIMEOUT_MS wins; VITE_GEMINI_IMAGE_TIMEOUT_MS is the
+  // legacy fallback so existing setups keep their tuned value.
+  const env = (import.meta as { env?: Record<string, string | undefined> })?.env;
+  const raw =
+    env?.VITE_OPENROUTER_IMAGE_TIMEOUT_MS ?? env?.VITE_GEMINI_IMAGE_TIMEOUT_MS;
   const parsed = raw ? Number(raw) : NaN;
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 120_000;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 240_000;
 })();
 
 function dataUrlToBytes(dataUrl: string): { bytes: Uint8Array; mime: string } {

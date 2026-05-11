@@ -193,9 +193,30 @@ function openRouterProxyEndpoint(): Plugin {
             return;
           }
           let body = "";
+          // Cancel the upstream OpenRouter call when the browser disconnects
+          // (tab closed, AbortController fired client-side, navigation, etc.)
+          // so we do not keep paying for a long-running image render that
+          // nobody will read.
+          //
+          // We listen on `res.close` — that event fires both for a normal
+          // response end AND for an early disconnect; we distinguish the two
+          // by checking `res.writableEnded`. Listening on `req.close` would
+          // be wrong: Node emits it as soon as `readBody` finishes consuming
+          // the POST body, which would abort every request immediately.
+          const upstreamCtl = new AbortController();
+          const onResClose = () => {
+            if (res.writableEnded || upstreamCtl.signal.aborted) return;
+            const elapsed = Date.now() - startedAt;
+            console.warn(
+              `[openrouter] ${reqId} ⚠ client disconnected after ${elapsed}ms; aborting upstream`,
+            );
+            upstreamCtl.abort();
+          };
+          res.once("close", onResClose);
+
           // Periodic "still waiting" heartbeat so a stalled upstream is
-          // visible in the dev-server log. The browser-side abort will
-          // ultimately kill the request, but until then we want to know.
+          // visible in the dev-server log. Stops as soon as the upstream
+          // fetch resolves OR the client aborts.
           const heartbeat = setInterval(() => {
             const elapsed = Date.now() - startedAt;
             console.log(
@@ -217,6 +238,7 @@ function openRouterProxyEndpoint(): Plugin {
                 "X-Title": title,
               },
               body,
+              signal: upstreamCtl.signal,
             });
             const headerMs = Date.now() - startedAt;
             const text = await upstream.text();
@@ -228,21 +250,38 @@ function openRouterProxyEndpoint(): Plugin {
               const preview = text.slice(0, 400).replace(/\s+/gu, " ");
               console.warn(`[openrouter] ${reqId} body-preview: ${preview}`);
             }
-            res.statusCode = upstream.status;
-            res.setHeader("Content-Type", upstream.headers.get("content-type") ?? "application/json");
-            res.end(text);
+            if (!res.writableEnded) {
+              res.statusCode = upstream.status;
+              res.setHeader(
+                "Content-Type",
+                upstream.headers.get("content-type") ?? "application/json",
+              );
+              res.end(text);
+            }
           } catch (error) {
             const elapsed = Date.now() - startedAt;
             const msg = error instanceof Error ? error.message : String(error);
             const model = body ? pickModelFromBody(body) : "<unknown>";
-            console.error(
-              `[openrouter] ${reqId} ✖ chat failed model=${model} after ${elapsed}ms: ${msg}`,
-            );
-            res.statusCode = 502;
-            res.setHeader("Content-Type", "application/json");
-            res.end(JSON.stringify({ ok: false, error: msg }));
+            const aborted =
+              (error as { name?: string })?.name === "AbortError" ||
+              upstreamCtl.signal.aborted;
+            if (aborted) {
+              console.warn(
+                `[openrouter] ${reqId} ⌀ aborted model=${model} after ${elapsed}ms`,
+              );
+            } else {
+              console.error(
+                `[openrouter] ${reqId} ✖ chat failed model=${model} after ${elapsed}ms: ${msg}`,
+              );
+            }
+            if (!res.writableEnded) {
+              res.statusCode = aborted ? 499 : 502;
+              res.setHeader("Content-Type", "application/json");
+              res.end(JSON.stringify({ ok: false, error: msg }));
+            }
           } finally {
             clearInterval(heartbeat);
+            res.off("close", onResClose);
           }
           return;
         }

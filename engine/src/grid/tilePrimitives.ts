@@ -131,6 +131,18 @@ export const TileGridSchema = z.object({
   tiles: z.array(TileSchema),
   /** When this grid was generated (ms epoch). */
   generatedAt: z.number().int(),
+  /**
+   * Where this grid came from. `llm` = authoritative LLM output (either fresh
+   * or cached on disk); `fallback` = the deterministic blank grid we hand back
+   * when scene-classify failed (rate limit, network, schema). Callers like
+   * the rebuild flow use this to decide whether expensive follow-up work
+   * (image generation) is worth doing.
+   *
+   * Optional in the schema so previously-cached entries (which we always
+   * trust were LLM-sourced) still validate; filler code sets it explicitly
+   * before handing the grid back to the engine.
+   */
+  source: z.enum(["llm", "fallback"]).optional(),
 });
 export type TileGrid = z.infer<typeof TileGridSchema>;
 

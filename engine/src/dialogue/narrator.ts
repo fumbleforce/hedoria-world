@@ -923,7 +923,11 @@ export async function ensureRegionGrid(
   // (kind, biome) pair. Calling `getUrl(kind, biome)` directly here
   // would force per-tile mode even when the cache is in mosaic mode,
   // duplicating work and starving the mosaic request of API budget.
-  if (!options?.skipPrewarm) {
+  //
+  // Skip prewarm if the grid is a fallback (scene-classify failed):
+  // pre-rendering placeholder tiles wastes API budget on art that the
+  // next successful classify will invalidate anyway.
+  if (!options?.skipPrewarm && grid.source !== "fallback") {
     prewarmGridImages(ctx.tileImageCache, grid);
   }
   return grid;
@@ -954,7 +958,7 @@ export async function ensureLocationGrid(
     useStore.getState().setGenerating({ locationGridFor: undefined });
   }
   useStore.getState().setLocationGrid(grid);
-  if (!options?.skipPrewarm) {
+  if (!options?.skipPrewarm && grid.source !== "fallback") {
     prewarmGridImages(ctx.tileImageCache, grid);
   }
   return grid;

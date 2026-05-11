@@ -20,14 +20,14 @@ const OPERATION_TO_INSTRUCTIONS: Record<
     blocks: ["generateStory", "generateNPCIntents", "ItemGenerationAndUsage"],
     appendNarratorStyle: true,
   },
-  "tile.region": {
-    blocks: ["generateRegionDetails"],
-    appendNarratorStyle: false,
-  },
-  "tile.location": {
-    blocks: ["generateLocationDetails"],
-    appendNarratorStyle: false,
-  },
+  // "tile.region": {
+  //   blocks: ["generateRegionDetails"],
+  //   appendNarratorStyle: false,
+  // },
+  // "tile.location": {
+  //   blocks: ["generateLocationDetails"],
+  //   appendNarratorStyle: false,
+  // },
   "tile.region.mosaic": {
     blocks: ["generateRegionDetails"],
     appendNarratorStyle: false,

@@ -88,12 +88,26 @@ export function SettingsPanel({
     // Drop the live grid from the store so TileGridView does not keep
     // mounting cells for the old layout (which would refetch images while
     // the filler is still building the new spec).
+    //
+    // If scene-classify (text reclassification) failed and we got a blank
+    // fallback grid, skip the image-generation step. Tile art keyed off a
+    // deterministic placeholder grid would just be wasted spend, and the
+    // next rebuild attempt should start from the live LLM call again.
+    const isLlmSourced = (g: { source?: "llm" | "fallback" }): boolean =>
+      g.source !== "fallback";
+
     if (scope === "region") {
       useStore.getState().setRegionGrid(null);
       const newGrid = await ensureRegionGrid(ctx, ownerId, {
         skipPrewarm: true,
         llmCacheBuster,
       });
+      if (!isLlmSourced(newGrid)) {
+        console.warn(
+          "[rebuild] region scene-classify failed; skipping image generation",
+        );
+        return;
+      }
       await tileImageCache.clearImagesForGrid(newGrid);
       prewarmGridImages(tileImageCache, newGrid);
     } else if (scope === "location") {
@@ -102,6 +116,12 @@ export function SettingsPanel({
         skipPrewarm: true,
         llmCacheBuster,
       });
+      if (!isLlmSourced(newGrid)) {
+        console.warn(
+          "[rebuild] location scene-classify failed; skipping image generation",
+        );
+        return;
+      }
       await tileImageCache.clearImagesForGrid(newGrid);
       prewarmGridImages(tileImageCache, newGrid);
     }

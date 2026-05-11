@@ -250,6 +250,11 @@ export class TileImageCache {
    * image request and returns this slice's URL once the slicing
    * completes. Concurrent calls for different cells of the same grid
    * dedupe to a single image request.
+   *
+   * Fallback grids (scene-classify failed) get a deterministic
+   * placeholder per cell key — never a provider call. Spending image
+   * tokens on placeholder geography is a strict waste; the next
+   * successful classify will repaint everything anyway.
    */
   async getUrlForTile(
     grid: TileGrid,
@@ -258,6 +263,11 @@ export class TileImageCache {
     tile: Tile,
   ): Promise<string> {
     const key = this.keyForTile(grid, x, y, tile);
+    if (grid.source === "fallback") {
+      const placeholder = fallbackPlaceholder(key);
+      this.memUrls.set(key, placeholder);
+      return placeholder;
+    }
     if (this.mode === "per-tile") {
       return this.getOrCreate(key, () => this.resolve(key, tile.kind, grid.biome));
     }

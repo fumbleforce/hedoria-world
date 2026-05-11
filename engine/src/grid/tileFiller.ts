@@ -154,7 +154,7 @@ export class TileFiller {
           tiles: cached.tiles.length,
           biome: cached.biome,
         });
-        return cached;
+        return { ...cached, source: "llm" as const };
       }
       diag.info("tile-grid", `region cache miss ${input.regionId} — calling filler`, {
         scope: "region",
@@ -179,7 +179,7 @@ export class TileFiller {
           ownerId: input.regionId,
         });
       }
-      return result.grid;
+      return { ...result.grid, source: result.source };
     })().finally(() => {
       this.inFlight.delete(key);
     });
@@ -203,7 +203,7 @@ export class TileFiller {
           tiles: cached.tiles.length,
           biome: cached.biome,
         });
-        return cached;
+        return { ...cached, source: "llm" as const };
       }
       diag.info(
         "tile-grid",
@@ -230,7 +230,7 @@ export class TileFiller {
           { scope: "location", ownerId: input.locationId },
         );
       }
-      return result.grid;
+      return { ...result.grid, source: result.source };
     })().finally(() => {
       this.inFlight.delete(key);
     });

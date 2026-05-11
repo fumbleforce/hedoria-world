@@ -277,7 +277,7 @@ export const ENGINE_PROMPTS = {
   tileRegionMosaic(): string {
     return [
       "You are the regional cartographer for a 2D fantasy adventure game.",
-      "The player sees this region as ONE continuous top-down painting that is later cut into a grid. Your output will drive that single image: every cell needs its own painter-facing description.",
+      "The player sees this region as ONE continuous top-down map that is later cut into an exact grid. Your output will drive that single image: every cell needs its own terse location description.",
       "",
       "The engine has already chosen which cells the named locations occupy and will stamp those cells itself; you do NOT set `locationId`. Fill BETWEEN-location terrain so the geography matches the prose.",
       "",
@@ -297,14 +297,13 @@ export const ENGINE_PROMPTS = {
       "",
       "Rules:",
       " 1. Cover EVERY cell — exactly width × height cells, no duplicates, no gaps. Reserved location cells may hold any plausible terrain; the engine overwrites anchors.",
-      " 2. EVERY cell MUST include `mosaicDescribe`: 1–3 sentences telling an image model exactly what to paint in that square, top-down. Be specific: materials (mud, slate, sand), vegetation, water depth/color, building roof shapes, shadows, atmosphere. This text is an instruction to the painter, NOT visible lettering on the map — do not say 'write' or 'label'.",
-      " 3. Do NOT optimise for a tiny repeating palette. Neighbouring cells may all differ. `kind` can be unique per cell if it helps you think, as long as it stays kebab-case and avoids embedding proper nouns from the fiction (no city names as kinds — use 'dense-rooftops', 'river-bend-mudflats').",
-      " 4. `label` stays short and name-free: terrain read, e.g. 'Foggy sheep pasture', 'Shingle beach at low tide'.",
-      " 5. The PROSE is authoritative for compass geography. Honour north/south/east/west bands from the region text; anchor positions do not override prose.",
-      " 6. Coordinate convention: +x = EAST, +y = NORTH; highest y is north; (0,0) is south-west.",
-      " 7. Rivers, roads, and coastlines should read as continuous features across adjacent cells; say so in `mosaicDescribe` where relevant.",
-      " 8. `passable=false` for impassable terrain; `dangerous=true` only for real hazards.",
-      " 9. Reply with JSON ONLY. No markdown, no commentary.",
+      " 2. EVERY cell MUST include `mosaicDescribe`: 1 terse, concrete description telling an image model exactly what to paint in that square, top-down cell. Be specific: materials (mud, slate, sand), vegetation, water depth/color, building types, atmosphere. Simple instruction to the painter, NOT visible lettering on the map — do not say 'write' or 'label'.",
+      " 3. `label` stays short and name-free: terrain read, e.g. 'Foggy sheep pasture', 'Shingle beach at low tide'.",
+      " 4. The PROSE is authoritative for compass geography. Honour north/south/east/west bands from the region text; anchor positions do not override prose.",
+      " 5. Coordinate convention: +x = EAST, +y = NORTH; highest y is north; (0,0) is south-west.",
+      " 6. Rivers, roads, and coastlines should read as continuous features across adjacent cells; say so in `mosaicDescribe` where relevant.",
+      " 7.`dangerous=true` only for real hazards.",
+      " 8. Reply with JSON ONLY. No markdown, no commentary.",
     ].join("\n");
   },
 
@@ -313,8 +312,8 @@ export const ENGINE_PROMPTS = {
    */
   tileLocationMosaic(): string {
     return [
-      "You are the urban / interior cartographer for a 2D fantasy adventure game.",
-      "The player sees this site as ONE continuous top-down painting sliced into a grid. Each cell must carry a rich `mosaicDescribe` for the image model. The user message gives exact width × height.",
+      "You are the location cartographer for a 2D fantasy adventure game.",
+      "The player sees this site as ONE continuous top-down painting sliced into different sections. Each part must carry a rich `mosaicDescribe` for the image model. The user message gives exact width × height.",
       "",
       "Output strict JSON matching:",
       "{",
@@ -333,12 +332,11 @@ export const ENGINE_PROMPTS = {
       "Rules:",
       " 1. Cover EVERY cell — width × height, no gaps.",
       " 2. EVERY cell MUST include `mosaicDescribe`: 1–3 sentences, top-down art direction for that cell only — rooflines, courtyards, stairs, stalls, water, stonework, lighting. Instructions to the painter only; no request for visible text or signage.",
-      " 3. You are NOT restricted to a small set of repeating architectural kinds. Vary freely so the mosaic reads as a real place. `kind` remains a short kebab-case slug for the engine (may be unique per cell).",
-      " 4. `label` is a short functional read for UI (e.g. 'Covered market aisle') — avoid echoing long proper-noun sub-area titles in `kind`.",
-      " 5. Respect ENGINE-RESERVED sub-area coordinates from the user message; still output a full `mosaicDescribe` there (what the painter should show on that footprint).",
-      " 6. `passable` / `dangerous` as usual.",
-      " 7. NO `locationId` on cells.",
-      " 8. Reply with JSON ONLY.",
+      " 3. `label` is a short functional read for UI (e.g. 'Covered market aisle') — avoid echoing long proper-noun sub-area titles in `kind`.",
+      " 4. Respect ENGINE-RESERVED sub-area coordinates from the user message; still output a full `mosaicDescribe` there (what the painter should show on that footprint).",
+      " 5. `passable` / `dangerous` as usual.",
+      " 6. NO `locationId` on cells.",
+      " 7. Reply with JSON ONLY.",
     ].join("\n");
   },
 
