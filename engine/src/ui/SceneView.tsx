@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useStore } from "../state/store";
 import type { WorldNarrator, SceneVerb } from "../dialogue/worldNarrator";
+import type { Engagement, EngagementGroup } from "../state/store";
 import {
   actionsFor,
   describeLock,
   isPlayerLocked,
+  partitionCharactersAndParties,
   sortedGroupsForView,
 } from "../scene/engagement";
 import { LoadingPill } from "./LoadingPill";
@@ -39,7 +41,8 @@ export function SceneView({ worldNarrator }: Props) {
     );
   }
 
-  const groups = sortedGroupsForView(engagement);
+  const sorted = sortedGroupsForView(engagement);
+  const { characters, parties } = partitionCharactersAndParties(sorted);
   const playerLocked = isPlayerLocked(engagement);
   const lock = describeLock(engagement);
 
@@ -89,37 +92,58 @@ export function SceneView({ worldNarrator }: Props) {
       </header>
 
       <aside className="sceneView__groups">
-        <h3>Groups</h3>
-        {groups.length === 0 ? (
+        <h3 className="sceneView__groupsTitle">Who is here</h3>
+        {characters.length === 0 && parties.length === 0 ? (
           <p className="sceneView__hint">
-            No NPCs around. The narrator may introduce some on your next action.
+            No one in view. The narrator may add a party on your next action.
           </p>
         ) : (
-          <ul>
-            {groups.map((g) => (
-              <li key={g.id} className={`sceneView__group sceneView__group--${g.state}`}>
-                <header>
-                  <strong>{g.name}</strong>
-                  <span className="sceneView__groupState">{g.state}</span>
-                </header>
-                {g.summary ? <p>{g.summary}</p> : null}
-                <div className="sceneView__groupActions">
-                  {actionsFor(g, engagement).map((verb) => (
-                    <button
-                      key={verb}
-                      type="button"
-                      disabled={pending}
-                      onClick={() =>
-                        void submitButton({ verb, groupId: g.id })
-                      }
-                    >
-                      {labelFor(verb)}
-                    </button>
+          <>
+            <section className="sceneView__groupSection">
+              <h4 className="sceneView__groupHeading">Characters</h4>
+              <p className="sceneView__hint sceneView__hint--tight">
+                From the world — each stands alone.
+              </p>
+              {characters.length === 0 ? (
+                <p className="sceneView__hint">None on this tile.</p>
+              ) : (
+                <ul>
+                  {characters.map((g) => (
+                    <GroupCard
+                      key={g.id}
+                      g={g}
+                      engagement={engagement}
+                      pending={pending}
+                      onAction={submitButton}
+                      badge="Character"
+                    />
                   ))}
-                </div>
-              </li>
-            ))}
-          </ul>
+                </ul>
+              )}
+            </section>
+            <section className="sceneView__groupSection">
+              <h4 className="sceneView__groupHeading">Parties</h4>
+              <p className="sceneView__hint sceneView__hint--tight">
+                Procedural bands — one stranger, 2–3 together, or an unnamed crowd.
+              </p>
+              {parties.length === 0 ? (
+                <p className="sceneView__hint">None right now.</p>
+              ) : (
+                <ul>
+                  {parties.map((g) => (
+                    <GroupCard
+                      key={g.id}
+                      g={g}
+                      engagement={engagement}
+                      pending={pending}
+                      onAction={submitButton}
+                      badge={partyBadge(g)}
+                    />
+                  ))}
+                </ul>
+              )}
+            </section>
+          </>
         )}
       </aside>
 
@@ -141,6 +165,48 @@ export function SceneView({ worldNarrator }: Props) {
         </section>
       ) : null}
     </section>
+  );
+}
+
+function partyBadge(g: EngagementGroup): string {
+  const n = g.npcIds.length;
+  if (n === 0) return "Party · crowd";
+  if (n === 1) return "Party · lone";
+  return `Party · ${n}`;
+}
+
+function GroupCard(props: {
+  g: EngagementGroup;
+  engagement: Engagement;
+  pending: boolean;
+  onAction: (a: { verb: SceneVerb; groupId: string }) => void;
+  badge: string;
+}) {
+  const { g, engagement, pending, onAction, badge } = props;
+  return (
+    <li className={`sceneView__group sceneView__group--${g.state}`}>
+      <header>
+        <strong>{g.name}</strong>
+        <span className="sceneView__groupBadge">{badge}</span>
+        <span className="sceneView__groupState">{g.state}</span>
+      </header>
+      {g.npcIds.length > 0 ? (
+        <p className="sceneView__npcIds">{g.npcIds.join(" · ")}</p>
+      ) : null}
+      {g.summary ? <p>{g.summary}</p> : null}
+      <div className="sceneView__groupActions">
+        {actionsFor(g, engagement).map((verb) => (
+          <button
+            key={verb}
+            type="button"
+            disabled={pending}
+            onClick={() => void onAction({ verb, groupId: g.id })}
+          >
+            {labelFor(verb)}
+          </button>
+        ))}
+      </div>
+    </li>
   );
 }
 

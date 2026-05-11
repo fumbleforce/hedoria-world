@@ -21,6 +21,13 @@ export type Mode = "region" | "location" | "scene";
 
 export type EngagementState = "idle" | "engaged" | "locked";
 
+/**
+ * Authored world NPCs are always `character` (one per card, from pack data).
+ * LLM-spawned encounters are `party`: alone (1 id), or 2–3 ids, or empty npcIds
+ * for an anonymous band (merchants, thieves, guards) named via `name`/`summary`.
+ */
+export type EngagementKind = "character" | "party";
+
 export type EngagementGroup = {
   /** Stable id used by tool calls (e.g. "bandit-camp-3"). */
   id: string;
@@ -31,6 +38,8 @@ export type EngagementGroup = {
   state: EngagementState;
   /** Optional one-line summary the dispatcher shows in the engagement card. */
   summary?: string;
+  /** Omitted or `"party"` = procedural party; `"character"` = authored standalone. */
+  kind?: EngagementKind;
 };
 
 export type Engagement = {
@@ -203,6 +212,12 @@ export type StoreState = {
   // ---------------- player character (name + background + portrait)
   character: Character | null;
 
+  /**
+   * Companion world-NPC ids traveling with the player. Rendered as rows under
+   * the hero in the side rail; persisted per pack (see `playerPartyByPack` LS).
+   */
+  playerPartyNpcIds: string[];
+
   // ---------------- dialogue + narration
   dialogue: DialogueMessage[];
   narrationLog: string[];
@@ -274,6 +289,9 @@ export type StoreState = {
   /** Merge a partial update into the existing character, creating an
    *  empty one if none exists yet. */
   updateCharacter: (patch: Partial<Character>) => void;
+
+  /** Replaces the companion list (deduped, capped); persists for the active pack. */
+  setPlayerPartyNpcIds: (npcIds: string[]) => void;
 
   appendDialogue: (msg: DialogueMessage) => void;
   appendNarration: (line: string) => void;
@@ -443,6 +461,41 @@ function writePersistedCharacter(character: Character | null): void {
   }
 }
 
+/** Max companions in the player party (hero is separate in the UI). */
+export const MAX_PLAYER_PARTY_SIZE = 6;
+
+const PLAYER_PARTY_BY_PACK_LS_KEY = "engine.playerPartyByPack";
+
+export function readPersistedPlayerParty(packId: string | null): string[] {
+  if (!packId) return [];
+  try {
+    const raw = globalThis.localStorage?.getItem(PLAYER_PARTY_BY_PACK_LS_KEY);
+    if (!raw) return [];
+    const obj = JSON.parse(raw) as Record<string, unknown>;
+    const arr = obj[packId];
+    if (!Array.isArray(arr)) return [];
+    return arr.filter((x): x is string => typeof x === "string" && x.length > 0);
+  } catch {
+    return [];
+  }
+}
+
+function writePersistedPlayerParty(packId: string | null, ids: string[]): void {
+  if (!packId) return;
+  try {
+    const raw = globalThis.localStorage?.getItem(PLAYER_PARTY_BY_PACK_LS_KEY);
+    const obj: Record<string, string[]> =
+      raw && typeof raw === "string" ? (JSON.parse(raw) as Record<string, string[]>) : {};
+    obj[packId] = ids;
+    globalThis.localStorage?.setItem(
+      PLAYER_PARTY_BY_PACK_LS_KEY,
+      JSON.stringify(obj),
+    );
+  } catch {
+    // ignore
+  }
+}
+
 const initialEngagement = (): Engagement => ({ groups: {}, lockReason: undefined });
 const initialInventory = (): Inventory => ({
   items: {},
@@ -480,6 +533,7 @@ export const useStore = create<StoreState>((set) => ({
   shop: null,
 
   character: readPersistedCharacter(),
+  playerPartyNpcIds: [],
 
   dialogue: [],
   narrationLog: [],
@@ -602,6 +656,13 @@ export const useStore = create<StoreState>((set) => ({
       const next: Character = { ...base, ...patch };
       writePersistedCharacter(next);
       return { character: next };
+    }),
+
+  setPlayerPartyNpcIds: (npcIds) =>
+    set((state) => {
+      const deduped = [...new Set(npcIds)].slice(0, MAX_PLAYER_PARTY_SIZE);
+      writePersistedPlayerParty(state.currentPackId, deduped);
+      return { playerPartyNpcIds: deduped };
     }),
 
   appendDialogue: (msg) =>

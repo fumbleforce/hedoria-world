@@ -1056,6 +1056,43 @@ input:focus {
   text-transform: uppercase;
   color: var(--fg-3);
 }
+.sceneView__groupsTitle {
+  margin-bottom: 4px;
+}
+.sceneView__groupSection {
+  margin-top: 14px;
+}
+.sceneView__groupSection:first-of-type {
+  margin-top: 0;
+}
+.sceneView__groupHeading {
+  margin: 0 0 4px;
+  font-size: 0.68em;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.sceneView__hint--tight {
+  margin: 0 0 8px;
+  font-size: 0.8em;
+  line-height: 1.35;
+}
+.sceneView__groupBadge {
+  font-size: 0.62em;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent-2);
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(143, 170, 132, 0.35);
+  background: rgba(60, 78, 52, 0.2);
+}
+.sceneView__npcIds {
+  margin: 4px 0 0;
+  font-size: 0.78em;
+  color: var(--fg-2);
+  line-height: 1.35;
+}
 .sceneView__log {
   list-style: none;
   margin: 0;
@@ -1103,14 +1140,16 @@ input:focus {
 }
 .sceneView__group header {
   display: flex;
-  justify-content: space-between;
+  flex-wrap: wrap;
   align-items: baseline;
+  gap: 6px 10px;
 }
 .sceneView__groupState {
   font-size: 0.72em;
   letter-spacing: 0.12em;
   color: var(--fg-3);
   text-transform: uppercase;
+  margin-left: auto;
 }
 .sceneView__groupActions {
   display: flex;
@@ -1632,4 +1671,99 @@ input:focus {
   font-size: 0.84em;
   color: var(--fg-2);
   line-height: 1.4;
+}
+
+/* Character card + companion rows (player party ledger). */
+.sideRail__card--ledger > .sideRail__ledgerHero.sideRail__card--character {
+  margin: -14px -16px 0;
+  padding: 14px 16px;
+  border-radius: 12px 12px 0 0;
+  cursor: pointer;
+  transition: box-shadow 120ms ease, background 120ms ease;
+}
+.sideRail__card--ledger > .sideRail__ledgerHero.sideRail__card--character:hover,
+.sideRail__card--ledger > .sideRail__ledgerHero.sideRail__card--character:focus {
+  background: rgba(201, 166, 107, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(201, 166, 107, 0.35);
+  outline: none;
+}
+.sideRail__ledgerParty {
+  padding-top: 12px;
+}
+.sideRail__ledgerDivider {
+  height: 1px;
+  background: var(--glass-border);
+  margin: 0 0 10px;
+}
+.sideRail__partyHeading {
+  margin: 0 0 8px;
+  font-size: 0.68em;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-2);
+  font-weight: 600;
+}
+.sideRail__partyEmpty {
+  font-size: 0.78em;
+  color: var(--fg-3);
+  line-height: 1.45;
+  margin: 10px 0 0;
+}
+.sideRail__card .sideRail__partyList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sideRail__partyRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid var(--glass-border);
+}
+.sideRail__partyAvatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex: 0 0 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(
+    135deg,
+    rgba(143, 170, 132, 0.2),
+    rgba(201, 166, 107, 0.12)
+  );
+  border: 1px solid var(--glass-border-strong);
+  font-size: 0.75em;
+  font-weight: 600;
+  color: var(--fg-2);
+}
+.sideRail__partyAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.sideRail__partyText {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sideRail__partyText strong {
+  font-size: 0.88em;
+  color: var(--fg);
+}
+.sideRail__partyMeta {
+  font-size: 0.72em;
+  color: var(--fg-3);
+  line-height: 1.3;
 }

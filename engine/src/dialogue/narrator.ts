@@ -10,6 +10,7 @@ import { diag } from "../diag/log";
 import {
   type EquipmentSlot,
   type EngagementGroup,
+  MAX_PLAYER_PARTY_SIZE,
   type StoreState,
   useStore,
 } from "../state/store";
@@ -23,6 +24,7 @@ import {
   clearQuestMarkers,
   populateGridWithQuest,
 } from "../quests/tilePopulator";
+import { engagementGroupsFromAuthoredNpcs } from "../scene/npcPresence";
 
 /**
  * The single mutation funnel: every change to the runtime store goes
@@ -115,6 +117,7 @@ const SpawnGroupSchema = z.object({
   summary: z.string().optional(),
 });
 const GroupRefSchema = z.object({ groupId: z.string().min(1) });
+const PlayerPartyNpcSchema = z.object({ npcId: z.string().min(1) });
 const LockSchema = z.object({
   groupId: z.string().min(1),
   reason: z.string().min(1),
@@ -195,8 +198,12 @@ function ensureMode(state: StoreState, ...modes: Array<StoreState["mode"]>): boo
   return modes.includes(state.mode);
 }
 
-function emptyEngagementGroup(id: string, name: string): EngagementGroup {
-  return { id, name, npcIds: [], state: "idle" };
+function emptyEngagementGroup(
+  id: string,
+  name: string,
+  kind: EngagementGroup["kind"] = "party",
+): EngagementGroup {
+  return { id, name, npcIds: [], state: "idle", kind };
 }
 
 // ---------------- the Narrator class
@@ -455,7 +462,16 @@ export class Narrator {
         kind: tile.kind,
         label: tile.label,
       });
-      store.setEngagement({ groups: {}, lockReason: undefined });
+      const locationId = state.currentLocationId;
+      const authoredGroups =
+        locationId && tile
+          ? engagementGroupsFromAuthoredNpcs(this.ctx.world, locationId, tile)
+          : [];
+      const groups: Record<string, EngagementGroup> = {};
+      for (const g of authoredGroups) {
+        groups[g.id] = g;
+      }
+      store.setEngagement({ groups, lockReason: undefined });
       store.setMode("scene");
       return ok(undefined, { mode: "scene" });
     });
@@ -474,14 +490,70 @@ export class Narrator {
 
     // ------------------------------------------------------------ engagement
 
-    handlers.set("spawn_group", (raw) => {
+    const spawnPartyFromArgs = (raw: unknown): ToolResult => {
       const args = SpawnGroupSchema.parse(raw);
+      const ids = args.npcIds ?? [];
+      if (ids.length > 3) {
+        return fail(
+          "Parties may list at most 3 world NPC ids. Split into multiple parties, use empty npcIds for an anonymous band, or spawn a lone stranger with a single id.",
+        );
+      }
       const group: EngagementGroup = {
-        ...emptyEngagementGroup(args.id, args.name),
-        npcIds: args.npcIds ?? [],
+        ...emptyEngagementGroup(args.id, args.name, "party"),
+        npcIds: ids,
         summary: args.summary,
       };
       useStore.getState().setEngagementGroup(group);
+      return ok();
+    };
+    handlers.set("spawn_group", (raw) => spawnPartyFromArgs(raw));
+    handlers.set("spawn_party", (raw) => spawnPartyFromArgs(raw));
+
+    handlers.set("dismiss_party", (raw, state) => {
+      const args = GroupRefSchema.parse(raw);
+      const group = state.engagement.groups[args.groupId];
+      if (!group) return fail(`No party ${args.groupId}`);
+      if (group.kind === "character" || args.groupId.startsWith("world-npc-")) {
+        return fail(
+          "Authored characters are standalone — they are not dismissed; they leave when the player leaves the tile.",
+        );
+      }
+      if (state.engagement.lockReason) {
+        return fail(`Locked: ${state.engagement.lockReason}`);
+      }
+      if (group.state === "locked") {
+        return fail("Cannot dismiss a locked party; end combat or unlock engagement first.");
+      }
+      useStore.getState().removeEngagementGroup(args.groupId);
+      return ok();
+    });
+
+    handlers.set("add_to_player_party", (raw) => {
+      const args = PlayerPartyNpcSchema.parse(raw);
+      const npc = this.ctx.world.world.npcs[args.npcId];
+      if (!npc) return fail(`Unknown NPC "${args.npcId}".`);
+      const store = useStore.getState();
+      const cur = store.playerPartyNpcIds;
+      if (cur.includes(args.npcId)) {
+        return ok(undefined, { alreadyMember: true });
+      }
+      if (cur.length >= MAX_PLAYER_PARTY_SIZE) {
+        return fail(
+          `Player party full (${MAX_PLAYER_PARTY_SIZE} companions). Remove one with remove_from_player_party first.`,
+        );
+      }
+      store.setPlayerPartyNpcIds([...cur, args.npcId]);
+      return ok();
+    });
+
+    handlers.set("remove_from_player_party", (raw) => {
+      const args = PlayerPartyNpcSchema.parse(raw);
+      const store = useStore.getState();
+      const cur = store.playerPartyNpcIds;
+      if (!cur.includes(args.npcId)) {
+        return fail(`"${args.npcId}" is not in the player's traveling party.`);
+      }
+      store.setPlayerPartyNpcIds(cur.filter((id) => id !== args.npcId));
       return ok();
     });
 

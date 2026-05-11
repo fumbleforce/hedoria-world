@@ -12,6 +12,7 @@ import { NarrationPanel } from "./ui/NarrationPanel";
 import { ActionPrompt } from "./ui/ActionPrompt";
 import { BackgroundActivityStrip } from "./ui/BackgroundActivityStrip";
 import { SettingsPanel } from "./ui/SettingsPanel";
+import { SideRailCharacterLedger } from "./ui/SideRailCharacterLedger";
 
 /**
  * Top-level mode router + HUD. The map is the only thing that occupies the
@@ -43,6 +44,7 @@ export function App() {
   const inventory = useStore((s) => s.inventory);
   const activeQuestIds = useStore((s) => s.activeQuestIds);
   const character = useStore((s) => s.character);
+  const playerPartyNpcIds = useStore((s) => s.playerPartyNpcIds);
   const availablePacks = useStore((s) => s.availablePacks);
   const currentPackId = useStore((s) => s.currentPackId);
   const setCurrentPackId = useStore((s) => s.setCurrentPackId);
@@ -238,59 +240,12 @@ export function App() {
       </header>
 
       <aside className="sideRail">
-        {character ? (
-          <section
-            className="sideRail__card sideRail__card--character"
-            onClick={() => setShowCharacter(true)}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                setShowCharacter(true);
-              }
-            }}
-          >
-            <div className="sideRail__charRow">
-              <div className="sideRail__charAvatar">
-                {character.portraitDataUrl ? (
-                  <img
-                    src={character.portraitDataUrl}
-                    alt={`${character.name} portrait`}
-                  />
-                ) : (
-                  <span aria-hidden="true">
-                    {(character.name || "?")
-                      .split(/\s+/)
-                      .map((p) => p.charAt(0).toUpperCase())
-                      .slice(0, 2)
-                      .join("")}
-                  </span>
-                )}
-              </div>
-              <div className="sideRail__charText">
-                <strong>{character.name || "Unnamed"}</strong>
-                {character.background ? (
-                  <p>{character.background.slice(0, 140)}{character.background.length > 140 ? "…" : ""}</p>
-                ) : (
-                  <p className="sideRail__hint">(no background written)</p>
-                )}
-              </div>
-            </div>
-          </section>
-        ) : (
-          <section className="sideRail__card">
-            <h2>Character</h2>
-            <p className="sideRail__hint">No character yet.</p>
-            <button
-              type="button"
-              onClick={() => setShowCharacter(true)}
-              style={{ marginTop: 6 }}
-            >
-              Create one
-            </button>
-          </section>
-        )}
+        <SideRailCharacterLedger
+          character={character}
+          world={world}
+          playerPartyNpcIds={playerPartyNpcIds}
+          onOpenCharacter={() => setShowCharacter(true)}
+        />
 
         <section className="sideRail__card">
           <h2>Active Quests</h2>

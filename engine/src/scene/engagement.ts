@@ -84,3 +84,12 @@ export function sortedGroupsForView(engagement: Engagement): EngagementGroup[] {
       return a.name.localeCompare(b.name);
     });
 }
+
+/** Split scene engagement into authored characters vs procedural parties (stable order per section). */
+export function partitionCharactersAndParties(
+  sorted: EngagementGroup[],
+): { characters: EngagementGroup[]; parties: EngagementGroup[] } {
+  const characters = sorted.filter((g) => g.kind === "character");
+  const parties = sorted.filter((g) => g.kind !== "character");
+  return { characters, parties };
+}

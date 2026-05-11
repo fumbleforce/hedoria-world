@@ -212,7 +212,7 @@ export const DIALOGUE_TOOLS: ToolSpec[] = [
   {
     name: "spawn_group",
     description:
-      "Introduce an NPC group to the active scene tile. id must be unique within the engagement state; npcIds may reference world NPCs.",
+      "Spawn a procedural **party** on this scene tile (same as `spawn_party`). Use for strangers the pack does not list: a lone traveler, OR a band of 2–3 world NPC ids (merchants, thieves, guards, rivals), OR leave npcIds empty for an anonymous crowd named in `name`/`summary`. Never put authored-on-tile characters here — they are already present as standalone **characters**. At most 3 npcIds per party.",
     inputSchema: {
       type: "object",
       properties: {
@@ -222,6 +222,51 @@ export const DIALOGUE_TOOLS: ToolSpec[] = [
         summary: { type: "string" },
       },
       required: ["id", "name"],
+    },
+  },
+  {
+    name: "spawn_party",
+    description:
+      "Alias of `spawn_group`. Spawn a procedural party: 0 ids (anonymous band), 1 id (lone NPC), or 2–3 ids (small group). Examples: caravan merchants, alley thieves, patrol guards.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: { type: "string" },
+        name: { type: "string" },
+        npcIds: { type: "array", items: { type: "string" } },
+        summary: { type: "string" },
+      },
+      required: ["id", "name"],
+    },
+  },
+  {
+    name: "dismiss_party",
+    description:
+      "Remove a procedural party from the scene (e.g. they leave, scatter, or you reform groups after persuasion). Cannot target authored characters (`world-npc-*`). To move someone between parties, dismiss the old party and spawn_party with the new npcIds composition.",
+    inputSchema: {
+      type: "object",
+      properties: { groupId: { type: "string" } },
+      required: ["groupId"],
+    },
+  },
+  {
+    name: "add_to_player_party",
+    description:
+      "Add a world NPC to the player's traveling party (shown under their portrait in the UI). Cap enforced by the engine. Use when they agree to travel together, are hired, or are rescued into the fold.",
+    inputSchema: {
+      type: "object",
+      properties: { npcId: { type: "string" } },
+      required: ["npcId"],
+    },
+  },
+  {
+    name: "remove_from_player_party",
+    description:
+      "Remove an NPC from the player's traveling party (they leave, die off-screen, betray, or stay behind). Does not remove scene engagement tiles — only the persistent companion strip.",
+    inputSchema: {
+      type: "object",
+      properties: { npcId: { type: "string" } },
+      required: ["npcId"],
     },
   },
   {

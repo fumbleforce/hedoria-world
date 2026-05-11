@@ -223,7 +223,7 @@ export class WorldNarrator {
       "Every player intent passes through you. For each intent you MUST:",
       "  1. Emit the canonical mechanical tool call (e.g. move_region for region.move). State changes ONLY happen via tool calls.",
       "  2. Emit a single `narrate` call with 3-5 sentences of present-tense prose describing what the player sees, hears, smells, or feels. Treat each step as a beat worth painting — a ground texture, a sound carrying on the wind, a glance ahead — but stay compact. Never pad with summary or musing.",
-      "  3. Optionally chain *additional* tool calls when the journey warrants it — a `spawn_group` for a roadside encounter, `give_item` for something the player notices and picks up, `offer_quest` if an NPC hails them. Use these sparingly; most ordinary steps need only narration.",
+      "  3. Optionally chain *additional* tool calls when the journey warrants it — a `spawn_party` / `spawn_group` for a procedural encounter (1 stranger, OR 2–3 NPCs as a band, OR empty npcIds for an anonymous crowd), `give_item` for something the player notices and picks up, `offer_quest` if an NPC hails them. Use sparingly; most ordinary steps need only narration. Authored characters already stand alone on location tiles — do not duplicate them as parties.",
       "If the intent is mechanically impossible (impassable, edge of map), DO NOT emit the mechanical tool — narrate the refusal instead.",
       "",
       `Mode: ${state.mode}`,
@@ -270,6 +270,18 @@ export class WorldNarrator {
       }
     }
 
+    if (state.playerPartyNpcIds.length > 0) {
+      lines.push(
+        "",
+        "Player's traveling party (rows under their portrait in the UI):",
+        ...state.playerPartyNpcIds.map((id) => {
+          const n = this.world.world.npcs[id];
+          return `  - ${id}${n?.name ? ` — ${n.name}` : ""}`;
+        }),
+        "Use `add_to_player_party` / `remove_from_player_party` when someone joins or leaves the hero's journey (separate from one-off `spawn_party` encounters on a tile).",
+      );
+    }
+
     lines.push(
       "",
       "Style: present-tense, sensory, 3-5 sentences per `narrate` call. Vary sentence length. NEVER say 'as an AI'.",
@@ -313,14 +325,20 @@ export class WorldNarrator {
       `Engagement state: ${lockNote}`,
     );
     if (groups.length > 0) {
-      lines.push("Groups present:");
+      lines.push(
+        "**Characters** (kind=character, ids `world-npc-*`) are authored and always standalone — one NPC per entry. Do not `spawn_party` duplicates for the same npcIds.",
+        "**Parties** (kind=party) are procedural: either one stranger, 2–3 NPCs together (merchants, thieves, enemies), or anonymous (empty npcIds) with a descriptive name. If persuasion or story should move an NPC between parties, `dismiss_party` the old group and `spawn_party` with the updated npcIds.",
+      );
       for (const g of groups) {
+        const role = g.kind === "character" ? "character" : "party";
         const npcs = g.npcIds.length > 0 ? ` (npcs: ${g.npcIds.join(", ")})` : "";
-        lines.push(`  - id=${g.id} name="${g.name}" state=${g.state}${npcs} :: ${g.summary ?? ""}`);
+        lines.push(
+          `  - [${role}] id=${g.id} name="${g.name}" state=${g.state}${npcs} :: ${g.summary ?? ""}`,
+        );
       }
     } else {
       lines.push(
-        "No groups have been spawned for this tile yet. If the prose suggests inhabitants, you may emit `spawn_group` and then `engage`.",
+        "No procedural parties on this tile yet. Authored characters may still appear once the tile loads. For extra strangers or bands, use `spawn_party` (1–3 npcIds or anonymous) then `engage` if needed.",
       );
     }
 
@@ -347,10 +365,19 @@ export class WorldNarrator {
     const c = state.inventory.currency;
     lines.push(`Coin: ${c.gold}g ${c.silver}s ${c.copper}c`);
 
+    if (state.playerPartyNpcIds.length > 0) {
+      lines.push(
+        "",
+        `Traveling companions (persistent party under the hero portrait): ${state.playerPartyNpcIds.join(", ")}.`,
+        "Update with `add_to_player_party` / `remove_from_player_party` when the story recruits or drops someone who travels with the player. Tile encounters (`spawn_party`) are separate.",
+      );
+    }
+
     lines.push(
       "",
       "Style: present-tense, sensory, 3-5 sentences per `narrate` call (vary length; never pad). NEVER acknowledge being an AI.",
       "Reply MUST be valid for the tool catalogue. Use `narrate` for ambient prose, `say` for in-character NPC speech, and the mechanical tools for state changes.",
+      "Companion strip: `add_to_player_party` / `remove_from_player_party` maintain who travels with the hero (engine-capped); not the same as scene `spawn_party` bands.",
     );
 
     return lines.join("\n");

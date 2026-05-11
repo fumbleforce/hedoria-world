@@ -14,7 +14,7 @@ import { TileImageCache } from "./grid/tileImageCache";
 import { TileFiller } from "./grid/tileFiller";
 import { Narrator, ensureRegionGrid } from "./dialogue/narrator";
 import { WorldNarrator } from "./dialogue/worldNarrator";
-import { useStore } from "./state/store";
+import { readPersistedPlayerParty, useStore } from "./state/store";
 import { diag } from "./diag/log";
 
 /**
@@ -136,6 +136,11 @@ async function runBoot(): Promise<BootResult | null> {
       npcs: Object.keys(loaded.data.npcs).length,
     });
     const world = buildWorldIndex(loaded.data, []);
+
+    const partyIds = readPersistedPlayerParty(chosenPackId).filter(
+      (id) => loaded.data.npcs[id] !== undefined,
+    );
+    store.setPlayerPartyNpcIds(partyIds);
 
     // Each pack gets its own save row so switching worlds doesn't mix
     // tile images, transcripts, or scene specs across canons.
