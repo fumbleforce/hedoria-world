@@ -645,8 +645,8 @@ input:focus {
 /* One map-wide loading film — not 100 separate pseudo-element animations.
  * Shown only while at least one tile is still waiting on its image
  * (`.tileGrid__cellImage--pending`). The veil is the grid's first
- * overlapping layer: dark, low-contrast, and a single `opacity` tween so
- * the loop is seamless and the compositor does minimal work.
+ * overlapping layer: dark, low-contrast. Opacity is fixed (no infinite
+ * animation) so idle maps do not pay continuous repaint/composite cost.
  *
  * Previously: per-cell ::before/::after + a viewport-wide `--pulse` custom
  * property that still forced every pending cell to repaint each frame,
@@ -673,16 +673,6 @@ input:focus {
     rgba(4, 7, 12, 0.75) 100%
   );
   opacity: 0.18;
-  animation: mapImagesLoadingVeil 4.2s linear infinite;
-}
-@keyframes mapImagesLoadingVeil {
-  0%,
-  100% {
-    opacity: 0.14;
-  }
-  50% {
-    opacity: 0.26;
-  }
 }
 
 /* Cells: still 1:1 squares, but more refined chrome. Subtle inner shadow
@@ -894,7 +884,7 @@ input:focus {
  * The artwork is a placeholder gradient + silhouette glyph for now; a
  * future pass can swap in an AI-generated character image by replacing
  * the inner content of `.tileGrid__portraitDisc` (e.g. with a
- * background-image) without changing the layout or animation here.
+ * background-image) without changing the layout here.
  */
 .tileGrid__portrait {
   /* Smaller than a full tile so the cell underneath is still visible
@@ -930,7 +920,6 @@ input:focus {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  animation: portraitPulse 3s ease-in-out infinite;
 }
 /* When an actual portrait fills the disc, tighten the styling: a
  * slimmer ring and a stronger drop shadow read better around a
@@ -953,20 +942,6 @@ input:focus {
   fill: rgba(255, 255, 255, 0.92);
   /* Soft drop shadow so the silhouette reads against any disc tint. */
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
-}
-@keyframes portraitPulse {
-  0%, 100% {
-    box-shadow:
-      0 0 0 2px rgba(0, 0, 0, 0.6),
-      0 0 18px var(--accent-glow),
-      0 6px 14px rgba(0, 0, 0, 0.55);
-  }
-  50% {
-    box-shadow:
-      0 0 0 2px rgba(0, 0, 0, 0.6),
-      0 0 28px var(--accent-glow),
-      0 8px 18px rgba(0, 0, 0, 0.6);
-  }
 }
 .tileGrid__questMarker {
   position: absolute;
