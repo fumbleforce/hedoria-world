@@ -192,6 +192,7 @@ export const WorldSchema = z.object({
     })
     .default({ attributeNames: [] }),
   aiInstructions: z.record(z.string(), z.unknown()).default({}),
+  narratorStyle: z.string().default(""),
   worldLore: z.record(z.string(), z.unknown()).default({}),
   death: z
     .object({

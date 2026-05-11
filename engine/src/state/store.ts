@@ -150,6 +150,14 @@ export type StoreState = {
   // ---------------- session
   saveId: string;
   bootError: string | null;
+  /**
+   * True when boot could not enter the map because no usable pack was found
+   * (typically zero regions everywhere). The UI shows a world picker so the
+   * player can switch packs without editing localStorage by hand.
+   */
+  bootAwaitingPackChoice: boolean;
+  /** Optional line explaining why the picker appeared (explicit pack vs all empty). */
+  bootAwaitingPackHint: string | null;
   isLlmReady: boolean;
   /**
    * Id of the authored pack the engine booted with (see `packs/<id>/manifest.json`).
@@ -249,6 +257,7 @@ export type StoreState = {
   // ---------------- mutators
   setMode: (mode: Mode) => void;
   setBootError: (error: string | null) => void;
+  setBootAwaitingPackChoice: (awaiting: boolean, hint?: string | null) => void;
   setLlmReady: (ready: boolean) => void;
   setSaveId: (saveId: string) => void;
   setCurrentPackId: (packId: string | null) => void;
@@ -506,6 +515,8 @@ const initialInventory = (): Inventory => ({
 export const useStore = create<StoreState>((set) => ({
   saveId: "",
   bootError: null,
+  bootAwaitingPackChoice: false,
+  bootAwaitingPackHint: null,
   isLlmReady: false,
   currentPackId: readPersistedPackId(),
   availablePacks: [],
@@ -545,6 +556,11 @@ export const useStore = create<StoreState>((set) => ({
 
   setMode: (mode) => set({ mode }),
   setBootError: (bootError) => set({ bootError }),
+  setBootAwaitingPackChoice: (awaiting, hint = null) =>
+    set({
+      bootAwaitingPackChoice: awaiting,
+      bootAwaitingPackHint: awaiting ? hint ?? null : null,
+    }),
   setLlmReady: (isLlmReady) => set({ isLlmReady }),
   setSaveId: (saveId) => set({ saveId }),
   setCurrentPackId: (currentPackId) => {

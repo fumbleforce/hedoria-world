@@ -1,5 +1,8 @@
 import { z } from "zod";
 import { LlmAdapter } from "../llm/adapter";
+import type { WorldData } from "../schema/worldSchema";
+import { buildSystemPrompt } from "../llm/promptBuilder";
+import { ENGINE_PROMPTS } from "../llm/systemPrompts";
 
 const SkillResolutionSchema = z.object({
   outcome: z.enum(["success", "fail", "partial"]),
@@ -9,6 +12,7 @@ const SkillResolutionSchema = z.object({
 
 export async function resolveSkillCheck(
   adapter: LlmAdapter,
+  world: WorldData,
   skill: string,
   difficulty: number,
   stake: string,
@@ -16,8 +20,11 @@ export async function resolveSkillCheck(
 ) {
   const response = await adapter.complete(
     {
-      system:
-        "Resolve the skill check and return strict JSON {outcome, narration, side_effects}.",
+      system: buildSystemPrompt({
+        world,
+        operation: "skill.check",
+        engineHeader: ENGINE_PROMPTS.skillCheck(),
+      }),
       messages: [
         {
           role: "user",

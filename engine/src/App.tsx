@@ -48,6 +48,19 @@ export function App() {
   const availablePacks = useStore((s) => s.availablePacks);
   const currentPackId = useStore((s) => s.currentPackId);
   const setCurrentPackId = useStore((s) => s.setCurrentPackId);
+  const bootAwaitingPackChoice = useStore((s) => s.bootAwaitingPackChoice);
+  const bootAwaitingPackHint = useStore((s) => s.bootAwaitingPackHint);
+
+  // Switching authored worlds rewires everything (config hash, save row,
+  // tile cache). Persist the choice and reload so boot runs fresh.
+  // `?pack=` is set first so cold boot honors it before localStorage.
+  const onSwitchPack = (nextPackId: string) => {
+    if (!nextPackId || nextPackId === currentPackId) return;
+    setCurrentPackId(nextPackId);
+    const url = new URL(window.location.href);
+    url.searchParams.set("pack", nextPackId);
+    window.location.assign(url.toString());
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -85,6 +98,64 @@ export function App() {
     );
   }
 
+  if (bootAwaitingPackChoice && !services) {
+    return (
+      <div className="app">
+        <div className="bootScreen">
+          <div className="bootScreen__card" style={{ minWidth: 300 }}>
+            <span className="bootScreen__title">LLMRPG</span>
+            <div
+              style={{
+                marginBottom: 16,
+                color: "var(--fg-2)",
+                fontSize: "0.9em",
+                lineHeight: 1.45,
+                textAlign: "left",
+              }}
+            >
+              {bootAwaitingPackHint ?? "Choose a world to continue."}
+            </div>
+            {availablePacks.length > 0 ? (
+              <label
+                className="hud__pack"
+                style={{ width: "100%", marginBottom: 8 }}
+                title="Each pack keeps its own save data."
+              >
+                <span className="hud__packLabel">World</span>
+                <select
+                  className="hud__packSelect"
+                  value={currentPackId ?? ""}
+                  onChange={(e) => onSwitchPack(e.target.value)}
+                >
+                  {availablePacks.map((p) => (
+                    <option key={p.packId} value={p.packId}>
+                      {p.packName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : (
+              <p style={{ color: "var(--danger)", fontSize: "0.88em" }}>
+                No packs found under /packs/.
+              </p>
+            )}
+            <p
+              style={{
+                marginTop: 12,
+                fontSize: "0.78em",
+                color: "var(--fg-2)",
+                opacity: 0.85,
+              }}
+            >
+              Each world needs at least one entry in <code>regions</code> in
+              its pack config.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!services) {
     return (
       <div className="app">
@@ -100,19 +171,6 @@ export function App() {
 
   const { narrator, worldNarrator, tileImageCache, tileFiller, llm, imageProvider, world } =
     services;
-
-  // Switching authored worlds rewires everything (config hash, save
-  // row, tile cache, region anchors), so the cheapest correct path is
-  // to persist the choice and reload. We push `?pack=<id>` to the URL
-  // first so the new boot picks it up via the URL-param branch in
-  // `resolvePackId` even before localStorage is read.
-  const onSwitchPack = (nextPackId: string) => {
-    if (!nextPackId || nextPackId === currentPackId) return;
-    setCurrentPackId(nextPackId);
-    const url = new URL(window.location.href);
-    url.searchParams.set("pack", nextPackId);
-    window.location.assign(url.toString());
-  };
 
   // Crumb summary — shows the current locale, e.g. "Avenor → Red Harvest".
   const locationName = currentLocationId

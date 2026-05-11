@@ -83,6 +83,7 @@ export function boot(): Promise<BootResult | null> {
 async function runBoot(): Promise<BootResult | null> {
   const store = useStore.getState();
   store.setBootError(null);
+  store.setBootAwaitingPackChoice(false);
   const startedAt = performance.now();
   const stage = (message: string, data?: Record<string, unknown>) => {
     diag.info("boot", message, {
@@ -95,13 +96,14 @@ async function runBoot(): Promise<BootResult | null> {
     stage("start");
     void ensureStoragePersistence();
 
-    // ----- Resolve which authored pack to load.
+    // ----- Resolve which authored pack to load (must have ≥1 region).
     //
-    // Precedence:
-    //   1. `?pack=<id>` query string (developer override, sticky via step 2)
-    //   2. `engine.packId` in localStorage (last user choice)
-    //   3. The `hedoria` pack if it exists (canonical default)
-    //   4. The first pack returned by the server
+    // If `?pack=<id>` is present and valid, only that pack is tried — so a
+    // bookmark stays pinned to one world.
+    //
+    // Otherwise we probe in order: last persisted choice → `hedoria` → each
+    // pack from the server until one defines regions (cold boot can skip an
+    // empty stub pack and land on a playable world).
     stage("list packs");
     const packs = await loadPacks();
     store.setAvailablePacks(packs);
@@ -113,21 +115,47 @@ async function runBoot(): Promise<BootResult | null> {
 
     const params = new URLSearchParams(window.location.search);
     const persistedPackId = store.currentPackId;
-    const chosenPackId = resolvePackId(packs, {
-      fromUrl: params.get("pack"),
-      persisted: persistedPackId,
+    const urlPackRaw = params.get("pack");
+    const urlPackValid =
+      urlPackRaw && packs.some((p) => p.packId === urlPackRaw)
+        ? urlPackRaw
+        : null;
+
+    const probeOrder = buildPackProbeOrder(packs, urlPackValid, persistedPackId);
+    stage("pack probe order", {
+      packs: probeOrder,
+      explicitUrl: urlPackValid,
     });
+
+    let loaded: Awaited<ReturnType<typeof loadWorldFromPack>> | undefined;
+    let chosenPackId: string | undefined;
+    for (const packId of probeOrder) {
+      stage("fetch pack try", { packId });
+      const candidate = await loadWorldFromPack(packId);
+      if (Object.keys(candidate.data.regions).length > 0) {
+        loaded = candidate;
+        chosenPackId = packId;
+        break;
+      }
+    }
+
+    if (!loaded || !chosenPackId) {
+      const hint = urlPackValid
+        ? `Pack "${urlPackValid}" has no regions. Choose another world below, or add regions to that pack's config.`
+        : `None of your packs define any regions yet. Choose a world below after adding regions to its config.`;
+      store.setBootAwaitingPackChoice(true, hint);
+      return null;
+    }
+
     if (persistedPackId !== chosenPackId) {
       store.setCurrentPackId(chosenPackId);
     }
     stage("pack selected", {
       packId: chosenPackId,
       total: packs.length,
-      requested: params.get("pack") ?? persistedPackId ?? null,
+      requested: urlPackRaw ?? persistedPackId ?? null,
     });
 
-    stage("fetch pack");
-    const loaded = await loadWorldFromPack(chosenPackId);
     stage("config ok", {
       packId: chosenPackId,
       regions: Object.keys(loaded.data.regions).length,
@@ -193,7 +221,7 @@ async function runBoot(): Promise<BootResult | null> {
       : Object.keys(world.regionsById)[0];
     if (!regionId) {
       throw new Error(
-        `No regions in pack '${chosenPackId}' — populate \`regions\` before launching the engine.`,
+        `Internal error: pack '${chosenPackId}' reported regions but none resolved for start.`,
       );
     }
     store.setCurrentRegionId(regionId);
@@ -239,25 +267,30 @@ async function runBoot(): Promise<BootResult | null> {
 }
 
 /**
- * Apply the URL-param / localStorage / fallback precedence and snap the
- * result onto a pack that actually exists. Unknown ids are ignored
- * (and logged in `pack selected.requested`) rather than failing boot
- * outright, so e.g. an old bookmark pointing at a renamed pack still
- * launches into a sensible world.
+ * Order of packs to load when searching for a playable world (non-empty
+ * `regions`). With an explicit `?pack=` we only try that id; otherwise we
+ * walk persisted → hedoria → discovery order.
  */
-function resolvePackId(
+function buildPackProbeOrder(
   packs: PackInfo[],
-  prefs: { fromUrl: string | null; persisted: string | null },
-): string {
+  urlPackValid: string | null,
+  persistedPackId: string | null,
+): string[] {
   const ids = new Set(packs.map((p) => p.packId));
-  const tryId = (id: string | null): string | null =>
-    id && ids.has(id) ? id : null;
-  return (
-    tryId(prefs.fromUrl) ??
-    tryId(prefs.persisted) ??
-    tryId(FALLBACK_PACK_ID) ??
-    packs[0]!.packId
-  );
+  const out: string[] = [];
+  const add = (id: string | null) => {
+    if (id && ids.has(id) && !out.includes(id)) out.push(id);
+  };
+  if (urlPackValid) {
+    add(urlPackValid);
+    return out;
+  }
+  add(persistedPackId);
+  add(FALLBACK_PACK_ID);
+  for (const p of packs) {
+    add(p.packId);
+  }
+  return out;
 }
 
 function resolveLlmProvider(): LlmProvider {
