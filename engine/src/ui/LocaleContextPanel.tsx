@@ -4,13 +4,27 @@ import { getTile } from "../grid/tilePrimitives";
 import { findRegionWalkPath } from "../grid/pathing";
 import type { WorldNarrator } from "../dialogue/worldNarrator";
 import type { IndexedWorld } from "../world/indexer";
-import { locationAreaDescriptions } from "./localePanelUtils";
+import {
+  formatGridClassifierDebug,
+  formatTileClassifierDebug,
+  locationAreaDescriptions,
+  subAreaClassifierDebugSections,
+} from "./localePanelUtils";
 import {
   partitionCharactersAndParties,
   sortedGroupsForView,
 } from "../scene/engagement";
 
 type RegionSelection = { x: number; y: number };
+
+function ClassifierDebugPanel({ summary, text }: { summary: string; text: string }) {
+  return (
+    <details className="localeContextPanel__debug">
+      <summary className="localeContextPanel__debugSummary">{summary}</summary>
+      <pre className="localeContextPanel__debugPre">{text}</pre>
+    </details>
+  );
+}
 
 type Props = {
   world: IndexedWorld;
@@ -91,7 +105,7 @@ export function LocaleContextPanel({
     selectedTile?.kind ||
     (regionSelection ? `Tile (${regionSelection.x},${regionSelection.y})` : "");
 
-  const tileDescription = locFromTile ? locationAreaDescriptions(locFromTile) : "";
+  // Region map cell: show location basicInfo only — not concatenated sub-area prose.
   const tileInfo = locFromTile?.basicInfo?.trim() ?? "";
   const terrainHint =
     !locFromTile && selectedTile
@@ -196,29 +210,27 @@ export function LocaleContextPanel({
                   >
                     Region overview
                   </button>
-                  {tileDescription ? (
-                    <section className="localeContextPanel__section">
-                      <h3 className="localeContextPanel__sectionLabel">Description</h3>
-                      <p className="localeContextPanel__prose">{tileDescription}</p>
-                    </section>
-                  ) : null}
                   {tileInfo ? (
                     <section className="localeContextPanel__section">
                       <h3 className="localeContextPanel__sectionLabel">Info</h3>
                       <p className="localeContextPanel__prose">{tileInfo}</p>
                     </section>
                   ) : null}
-                  {!tileDescription && !tileInfo && terrainHint ? (
+                  {!tileInfo && terrainHint ? (
                     <section className="localeContextPanel__section">
                       <h3 className="localeContextPanel__sectionLabel">Terrain</h3>
                       <p className="localeContextPanel__prose">{terrainHint}</p>
                     </section>
                   ) : null}
-                  {!tileDescription && !tileInfo && !terrainHint ? (
+                  {!tileInfo && !terrainHint ? (
                     <p className="localeContextPanel__prose localeContextPanel__muted">
                       No extra details for this tile yet.
                     </p>
                   ) : null}
+                  <ClassifierDebugPanel
+                    summary="Classifier (this map cell)"
+                    text={formatTileClassifierDebug(selectedTile)}
+                  />
                 </div>
                 {showMapCellActionFooter ? (
                   <div className="localeContextPanel__footer">
@@ -275,6 +287,12 @@ export function LocaleContextPanel({
                 <p className="localeContextPanel__prose">
                   {region?.basicInfo?.trim() || "(no prose authored)"}
                 </p>
+                {regionGrid && regionGrid.ownerId === currentRegionId ? (
+                  <ClassifierDebugPanel
+                    summary="Classifier (region grid)"
+                    text={formatGridClassifierDebug(regionGrid)}
+                  />
+                ) : null}
               </div>
             )}
           </>
@@ -305,6 +323,26 @@ export function LocaleContextPanel({
                 No location prose authored yet.
               </p>
             ) : null}
+            {locationGrid && currentLocationId && locationGrid.ownerId === currentLocationId ? (
+              <>
+                <ClassifierDebugPanel
+                  summary="Classifier · full location grid"
+                  text={formatGridClassifierDebug(locationGrid)}
+                />
+                {subAreaClassifierDebugSections(location, locationGrid).map(({ areaId, text }) => (
+                  <ClassifierDebugPanel
+                    key={areaId}
+                    summary={`Classifier · sub-area "${areaId}"`}
+                    text={text}
+                  />
+                ))}
+              </>
+            ) : (
+              <ClassifierDebugPanel
+                summary="Classifier · location grid"
+                text="(No location grid in memory yet. Enter the site or wait for the map to finish generating.)"
+              />
+            )}
           </div>
         ) : null}
 
@@ -318,15 +356,21 @@ export function LocaleContextPanel({
               {currentSceneTile.y})
             </p>
             {underlyingSceneTile ? (
-              <section className="localeContextPanel__section">
-                <h3 className="localeContextPanel__sectionLabel">This spot</h3>
-                <p className="localeContextPanel__prose">
-                  {[underlyingSceneTile.label, underlyingSceneTile.kind]
-                    .filter(Boolean)
-                    .join(" · ")}
-                  {underlyingSceneTile.dangerous ? " · Hazardous." : ""}
-                </p>
-              </section>
+              <>
+                <section className="localeContextPanel__section">
+                  <h3 className="localeContextPanel__sectionLabel">This spot</h3>
+                  <p className="localeContextPanel__prose">
+                    {[underlyingSceneTile.label, underlyingSceneTile.kind]
+                      .filter(Boolean)
+                      .join(" · ")}
+                    {underlyingSceneTile.dangerous ? " · Hazardous." : ""}
+                  </p>
+                </section>
+                <ClassifierDebugPanel
+                  summary="Classifier (this map cell)"
+                  text={formatTileClassifierDebug(underlyingSceneTile)}
+                />
+              </>
             ) : null}
             {location?.basicInfo?.trim() ? (
               <section className="localeContextPanel__section">

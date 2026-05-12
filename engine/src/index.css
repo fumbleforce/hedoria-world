@@ -515,6 +515,44 @@ input:focus {
   margin-top: 2px;
 }
 
+.localeContextPanel__debug {
+  margin-top: 4px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.22);
+}
+.localeContextPanel__debugSummary {
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.72em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+  list-style: none;
+}
+.localeContextPanel__debugSummary::-webkit-details-marker {
+  display: none;
+}
+.localeContextPanel__debug[open] .localeContextPanel__debugSummary {
+  color: var(--fg-2);
+  margin-bottom: 6px;
+}
+.localeContextPanel__debugPre {
+  margin: 0;
+  padding: 8px;
+  max-height: 220px;
+  overflow: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--fg-2);
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 4px;
+}
+
 /* -------------------------------------------------------------- Narration
  *
  * The persistent narration rail on the left. Always visible, always
