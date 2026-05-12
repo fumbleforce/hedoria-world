@@ -7,13 +7,13 @@ import { markersFor, type ArchetypeMarker } from "./archetypes";
  * Quest tile populator. Given an active region or location grid and an
  * accepted quest, decide which cells to overlay with QuestMarker entries.
  *
- * Crucially, the populator NEVER changes a cell's kind, label, or
- * passability — those came from the LLM filler and the engine respects
+ * Crucially, the populator NEVER changes a cell's kind or label — those came
+ * from the LLM filler and the engine respects
  * them. Quest presence is a thin overlay that the scene runner /
  * tileFiller (on next regen) can narrate around.
  *
  * Picking strategy:
- *   1. Score every passable, non-anchor cell against the archetype's
+ *   1. Score every non-anchor cell against the archetype's
  *      `preferredKindHints` (substring match against `kind` and `label`).
  *   2. Sort descending by score; on ties, fall back to a deterministic
  *      seedable RNG.
@@ -43,7 +43,6 @@ export function populateGridWithQuest(opts: PopulateOptions): TileGrid {
 
   const scored = tiles
     .map((tile, idx) => ({ tile, idx, x: idx % grid.width, y: Math.floor(idx / grid.width) }))
-    .filter((c) => c.tile.passable)
     .filter((c) => !c.tile.questMarker || c.tile.questMarker.questId === questId);
 
   for (const marker of archetypeMarkers) {

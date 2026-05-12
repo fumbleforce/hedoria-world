@@ -209,12 +209,12 @@ Hard rules — the finished image must satisfy ALL of these:
 
 Composition: the map fills the canvas edge-to-edge and is laid out so that ${grid.width} equal vertical tiles across the width and ${grid.height} equal horizontal tiles across the height each contain one feature assignment listed below. Tile boundaries are not drawn, but composition MUST align so each CELL assignment is visually readable as its own tile.
 
-Feature placement, strict by coordinate (x=west→east, y=south→north):
-${cellLines.join("\n")}
-
 Continuity rules:
 ${continuityLines}
  - Continuity must not erase tile identity: roads/rivers can cross cells, but each addressed CELL keeps its assigned dominant look.
+
+Feature placement, strict by coordinate (x=west→east, y=south→north):
+${cellLines.join("\n")}
 `.trim();
 }
 
@@ -234,7 +234,6 @@ function describeTileForPrompt(
   tile: {
     kind: string;
     label?: string;
-    passable: boolean;
     locationId?: string;
     priorKind?: string;
   },

@@ -22,7 +22,6 @@ Output strict JSON matching:
     "x": int, "y": int,
     "kind": string,
     "label": string,
-    "passable": boolean,
     "dangerous": boolean
   }>
 }
@@ -40,9 +39,8 @@ Rules:
     - Cells with the highest x (e.g. x = width - 1) are the EASTERNMOST column.
     So 'mountains to the north' means MOUNTAIN-style kinds should fill the high-y rows (top of the map). 'Sea to the south' means SEA/SHORELINE kinds should fill the low-y rows. 'Coast to the east' means COAST/TIDAL kinds should fill the high-x columns. Mirror the prose's compass references in BAND placement.
  7. The geography should also reflect non-direction prose hints. If the region has a river, the river cells should form a continuous line or bend across the grid. If there is sea/coast, it should sit on ONE edge consistent with the prose. If there are mountains, they should cluster, not scatter.
- 8. \`passable=false\` for blocked terrain (deep water, cliffs, dense crag). Otherwise true.
- 9. \`dangerous=true\` only when crossing the cell would credibly trigger a hazard or hostile encounter.
- 10. Reply with JSON ONLY. No prose, no markdown, no commentary.
+ 8. \`dangerous=true\` only when crossing the cell would credibly trigger a hazard or hostile encounter.
+ 9. Reply with JSON ONLY. No prose, no markdown, no commentary.
 `);
   },
 
@@ -58,7 +56,6 @@ Output strict JSON matching:
     "x": int, "y": int,
     "kind": string,
     "label": string,
-    "passable": boolean,
     "dangerous": boolean
   }>
 }
@@ -70,10 +67,9 @@ Rules:
  4. Same rule for \`label\`: describe what the cell IS, not what it's named. 'Common room', 'Stable yard', 'Kitchen' are fine. 'The Farmer's Rest', 'Inn Garden', 'Heraldo's Workshop' are NOT — those are proper-noun names that belong only in the engine's data model, never in \`kind\` or \`label\`.
  5. If the prose references named sub-areas (rooms, halls, yards), surface each as one cell with a generic functional kind that matches the area's PURPOSE (e.g. 'The Farmer's Rest' (an inn) → kind 'inn-hall' or 'common-room'; 'Inn Garden' → 'garden-patch').
  6. The remaining cells fill in plausible connectors (alleys, gardens, walls) that make the layout coherent.
- 7. \`passable=false\` for blocked areas like solid walls or sealed rooms. Otherwise true.
- 8. \`dangerous=true\` only when the cell is itself a hazard (e.g. a vermin nest, a collapsing floor).
- 9. NO \`locationId\` on location-grid cells; that field is only used at region scope.
- 10. Reply with JSON ONLY. No prose, no markdown, no commentary.
+ 7. \`dangerous=true\` only when the cell is itself a hazard (e.g. a vermin nest, a collapsing floor).
+ 8. NO \`locationId\` on location-grid cells; that field is only used at region scope.
+ 9. Reply with JSON ONLY. No prose, no markdown, no commentary.
 `);
   },
 
@@ -97,7 +93,6 @@ Output strict JSON matching:
     "kind": string,      // short kebab-case slug for engine/pathing (unique per cell is fine)
     "label": string,     // short UI / narration phrase
     "desc": string,
-    "passable": boolean,
     "dangerous": boolean
   }>
 }
@@ -131,7 +126,6 @@ Output strict JSON matching:
     "kind": string,
     "label": string,
     "desc": string,
-    "passable": boolean,
     "dangerous": boolean
   }>
 }
@@ -141,7 +135,7 @@ Rules:
  2. EVERY cell MUST include \`desc\`: 1–3 sentences, top-down art direction for that cell only — rooflines, courtyards, stairs, stalls, water, stonework, lighting. Instructions to the painter only; no request for visible text or signage.
  3. \`label\` is a short functional read for UI (e.g. 'Covered market aisle') — avoid echoing long proper-noun sub-area titles in \`kind\`.
  4. Respect ENGINE-RESERVED sub-area coordinates from the user message; still output a full \`desc\` there (what the painter should show on that footprint).
- 5. \`passable\` / \`dangerous\` as usual.
+ 5. \`dangerous\` as usual.
  6. NO \`locationId\` on cells.
  7. Reply with JSON ONLY.
 `);

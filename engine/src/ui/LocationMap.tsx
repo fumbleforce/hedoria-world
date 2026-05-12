@@ -5,7 +5,7 @@ import type { WorldNarrator } from "../dialogue/worldNarrator";
 import { TileGridView, type ExitDirection } from "./TileGridView";
 
 /**
- * 5×5 location grid. Adjacent passable cell -> move; current cell ->
+ * 5×5 location grid. Adjacent cell -> move; current cell ->
  * enter_tile (scene mode). The map renders directly into the canvas
  * viewport with no surrounding panel chrome — the HUD handles the
  * location name + (x,y) crumb and the contextual "Leave" action. The
@@ -26,11 +26,10 @@ export function LocationMap({ imageCache, worldNarrator }: Props) {
 
   if (!grid) return null;
 
-  const onCellClick = (x: number, y: number, tile: Tile) => {
+  const onCellClick = (x: number, y: number, _tile: Tile) => {
     const dx = x - pos[0];
     const dy = y - pos[1];
     if (dx === 0 && dy === 0) {
-      if (!tile.passable) return;
       void worldNarrator.submitPlayerIntent({
         kind: "location.enterTile",
         x,

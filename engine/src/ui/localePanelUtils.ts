@@ -17,7 +17,6 @@ export function locationAreaDescriptions(
 export function tileClassifierRecord(tile: Tile): Record<string, unknown> {
   const r: Record<string, unknown> = {
     kind: tile.kind,
-    passable: tile.passable,
   };
   const label = tile.label?.trim();
   if (label) r.label = label;

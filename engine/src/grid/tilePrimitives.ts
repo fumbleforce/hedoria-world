@@ -25,7 +25,7 @@ import { z } from "zod";
  * these two — as primitives with built-in behaviour:
  *
  *  - `path` is written by the pathfinder in `pathing.ts` after the LLM has
- *    filled the rest of the grid. Always passable. Image-cached per biome.
+ *    filled the rest of the grid. Image-cached per biome.
  *  - `location-anchor` carries a non-empty `locationId` that resolves to a
  *    Location in the world; clicking enters that location's tile grid.
  *
@@ -33,7 +33,7 @@ import { z } from "zod";
  * a particular cell (e.g. "reed-marsh", "witch-shrine", "vineyard",
  * "ferry-crossing"). The engine does not enumerate them and never
  * special-cases a particular spelling. Behavior derives from the metadata
- * the LLM produces alongside the kind (passable, dangerous, label, props).
+ * the LLM produces alongside the kind (dangerous, label, props).
  */
 export const ENGINE_TILE_KINDS = ["path", "location-anchor"] as const;
 export type EngineTileKind = (typeof ENGINE_TILE_KINDS)[number];
@@ -82,8 +82,6 @@ export const TileSchema = z.object({
    * resolves before accepting the action.
    */
   locationId: z.string().optional(),
-  /** Whether the player can walk through / land on this tile. */
-  passable: z.boolean(),
   /**
    * Whether crossing this tile triggers an LLM-narrated hazard (storm,
    * ambush risk, exhaustion roll). The dispatcher reads this flag when
@@ -189,7 +187,7 @@ export function blankGrid(
 ): TileGrid {
   const tiles: Tile[] = [];
   for (let i = 0; i < width * height; i += 1) {
-    tiles.push({ kind: "path", passable: true });
+    tiles.push({ kind: "path" });
   }
   return {
     scope,

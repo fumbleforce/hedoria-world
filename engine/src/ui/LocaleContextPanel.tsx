@@ -83,7 +83,7 @@ export function LocaleContextPanel({
     regionSelection.y === regionPos[1];
 
   const pathToSelected = useMemo(() => {
-    if (!regionGrid || !regionSelection || !selectedTile?.passable || atPlayer) {
+    if (!regionGrid || !regionSelection || atPlayer) {
       return null;
     }
     return findRegionWalkPath(
@@ -236,31 +236,25 @@ export function LocaleContextPanel({
                   <div className="localeContextPanel__footer">
                     <div className="localeContextPanel__actions">
                       {!atPlayer ? (
-                        selectedTile.passable ? (
-                          <button
-                            type="button"
-                            disabled={!canWalkTo}
-                            title={
-                              canWalkTo
-                                ? "Walk along the path to this cell"
-                                : "No walkable path from your position"
-                            }
-                            onClick={() => {
-                              if (!regionSelection) return;
-                              void worldNarrator.submitPlayerIntent({
-                                kind: "region.travelTo",
-                                x: regionSelection.x,
-                                y: regionSelection.y,
-                              });
-                            }}
-                          >
-                            Go here
-                          </button>
-                        ) : (
-                          <span className="localeContextPanel__prose localeContextPanel__small">
-                            This tile is blocked.
-                          </span>
-                        )
+                        <button
+                          type="button"
+                          disabled={!canWalkTo}
+                          title={
+                            canWalkTo
+                              ? "Walk along the path to this cell"
+                              : "No route from your position"
+                          }
+                          onClick={() => {
+                            if (!regionSelection) return;
+                            void worldNarrator.submitPlayerIntent({
+                              kind: "region.travelTo",
+                              x: regionSelection.x,
+                              y: regionSelection.y,
+                            });
+                          }}
+                        >
+                          Go here
+                        </button>
                       ) : null}
                       {canEnterTile && selectedTile?.locationId ? (
                         <button

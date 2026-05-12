@@ -64,7 +64,6 @@ const FillerCellSchema = z.object({
    * Omitted when the player uses per-tile image caching.
    */
   desc: z.string().optional(),
-  passable: z.boolean(),
   dangerous: z.boolean().default(false),
   /** If non-empty, this cell is a location-anchor for the named location. */
   locationId: z.string().optional(),
@@ -572,7 +571,6 @@ export class TileFiller {
         .map((c) => (c.desc ?? "").trim().toLowerCase())
         .filter(Boolean);
       const uniqMd = new Set(mdVals).size;
-      const blockedCells = parsed.cells.filter((c) => c.passable === false).length;
       fetch(
         "http://127.0.0.1:7637/ingest/7037aa25-0b5a-4c3e-aa0c-e8b0c270a47d",
         {
@@ -596,7 +594,6 @@ export class TileFiller {
               uniqLabels,
               uniqMosaicDescribe: uniqMd,
               descCoverage: mdVals.length,
-              blockedCells,
               sampleKinds: parsed.cells.slice(0, 8).map((c) => c.kind),
               sampleMosaicDescribe: parsed.cells
                 .slice(0, 5)
@@ -866,7 +863,7 @@ function cellsToGrid(args: {
   // Default-fill with `path` so any missing cell is still walkable.
   const tiles: Tile[] = [];
   for (let i = 0; i < width * height; i += 1) {
-    tiles.push({ kind: "path", passable: true });
+    tiles.push({ kind: "path" });
   }
 
   const place = (x: number, y: number, t: Tile) => {
@@ -884,7 +881,6 @@ function cellsToGrid(args: {
     const tile: Tile = {
       kind: normalizeKind(cell.kind),
       label: cell.label || undefined,
-      passable: cell.passable,
       dangerous: cell.dangerous || undefined,
       ...(md ? { desc: md } : {}),
     };
@@ -912,7 +908,6 @@ function cellsToGrid(args: {
       tiles[idx] = {
         kind: slugFromName || "settlement",
         label: a.loc.name || a.id,
-        passable: true,
         locationId: a.id,
         priorKind: prior.kind !== "path" ? prior.kind : undefined,
         desc: keepPriorMd
@@ -997,7 +992,6 @@ function cellsToGrid(args: {
       tiles[idx] = {
         kind: areaIdToTileKind(a.id),
         label: a.id,
-        passable: true,
         priorKind: prior.kind !== "path" ? prior.kind : undefined,
         ...(prior.desc?.trim() ? { desc: prior.desc.trim() } : {}),
       };
@@ -1113,7 +1107,7 @@ function deterministicRegionGrid(args: {
   const { regionId, width, height, anchors } = args;
   const tiles: Tile[] = [];
   for (let i = 0; i < width * height; i += 1) {
-    tiles.push({ kind: "path", passable: true });
+    tiles.push({ kind: "path" });
   }
   // Use the SAME projection the LLM was told about so the offline view of
   // the world is geographically identical to the (eventual) LLM-filled
@@ -1127,7 +1121,6 @@ function deterministicRegionGrid(args: {
     tiles[idx] = {
       kind: slug || "settlement",
       label: a.loc.name || a.id,
-      passable: true,
       locationId: a.id,
     };
   }
@@ -1152,7 +1145,7 @@ function deterministicLocationGrid(args: {
   const { locationId, width, height, biome, areaAnchors } = args;
   const tiles: Tile[] = [];
   for (let i = 0; i < width * height; i += 1) {
-    tiles.push({ kind: "path", passable: true });
+    tiles.push({ kind: "path" });
   }
   for (const a of areaAnchors) {
     const idx = a.gy * width + a.gx;
@@ -1160,7 +1153,6 @@ function deterministicLocationGrid(args: {
     tiles[idx] = {
       kind: areaIdToTileKind(a.id),
       label: a.id,
-      passable: true,
     };
   }
   return {

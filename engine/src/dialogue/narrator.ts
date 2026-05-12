@@ -311,9 +311,6 @@ export class Narrator {
         return fail("Edge of region.");
       }
       const target = getTile(grid, nx, ny);
-      if (target && !target.passable) {
-        return fail(`That way is blocked (${target.label ?? target.kind}).`);
-      }
       useStore.getState().setRegionPos([nx, ny]);
       // Fire-and-forget pre-warm of the destination tile's image. Must be
       // mode-aware (per-tile vs. mosaic) — `getUrl` would force per-tile
@@ -344,16 +341,14 @@ export class Narrator {
       const to = { x: args.x, y: args.y };
       const path = findRegionWalkPath(grid, from, to);
       if (!path) {
-        return fail("No walkable path to that tile.");
+        return fail("No route to that tile.");
       }
       const store = useStore.getState();
       let last = from;
       for (let i = 1; i < path.length; i += 1) {
         const step = path[i];
         const target = getTile(grid, step.x, step.y);
-        if (!target?.passable) {
-          return fail(`Path blocked at (${step.x},${step.y}).`);
-        }
+        if (!target) return fail(`Tile missing at (${step.x},${step.y}).`);
         store.setRegionPos([step.x, step.y]);
         void ctx.tileImageCache
           .getUrlForTile(grid, step.x, step.y, target)
@@ -375,9 +370,6 @@ export class Narrator {
         return fail("Edge of location.");
       }
       const target = getTile(grid, nx, ny);
-      if (target && !target.passable) {
-        return fail(`That way is blocked (${target.label ?? target.kind}).`);
-      }
       useStore.getState().setLocationPos([nx, ny]);
       if (target) {
         void ctx.tileImageCache
@@ -455,7 +447,7 @@ export class Narrator {
           ny < state.regionGrid.height
         ) {
           const target = getTile(state.regionGrid, nx, ny);
-          if (target && target.passable) {
+          if (target) {
             store.setRegionPos([nx, ny]);
             return ok(undefined, {
               mode: "region",
@@ -464,14 +456,14 @@ export class Narrator {
             });
           }
         }
-        // The chosen direction would step out of bounds or onto a
-        // blocked tile. Stay on the original cell (the player is
+        // The chosen direction would step out of bounds. Stay on the
+        // original cell (the player is
         // still safely back in region mode), but report the failure so
         // the UI can narrate "you find no path that way" if it wants to.
         return ok(undefined, {
           mode: "region",
           direction: args.direction,
-          blocked: true,
+          edge: true,
         });
       }
       return ok(undefined, { mode: "region" });
@@ -487,7 +479,6 @@ export class Narrator {
       }
       const tile = getTile(grid, args.x, args.y);
       if (!tile) return fail("Tile missing.");
-      if (!tile.passable) return fail(`That tile is blocked.`);
       const store = useStore.getState();
       store.setLocationPos([args.x, args.y]);
       store.setCurrentSceneTile({

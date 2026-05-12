@@ -18,7 +18,6 @@ export type MoveContext = {
   direction: string;
   fromLabel?: string;
   toLabel?: string;
-  toPassable: boolean | undefined;
 };
 
 export function tileLabel(tile: Tile | undefined): string | undefined {
@@ -38,7 +37,7 @@ export function movementContext(
   const pos =
     intent.kind === "region.move" ? state.regionPos : state.locationPos;
   if (!grid) {
-    return { direction, toPassable: undefined };
+    return { direction };
   }
   const here = getTile(grid, pos[0], pos[1]);
   const target = getTile(grid, pos[0] + intent.dx, pos[1] + intent.dy);
@@ -46,7 +45,6 @@ export function movementContext(
     direction,
     fromLabel: tileLabel(here),
     toLabel: tileLabel(target),
-    toPassable: target?.passable,
   };
 }
 
@@ -72,12 +70,12 @@ export function intentHintLine(intent: PlayerIntent, state: StoreState): string 
       if (!path || path.length < 2) {
         return [
           `Player intent: travel toward ${destLabel} at (${intent.x},${intent.y}) on the region grid.`,
-          "There is NO walkable path to that cell from the player's position — DO NOT emit travel_region;",
+          "There is NO route to that cell from the player's position — DO NOT emit travel_region;",
           "the player does not move. Use a single `narrate` call to describe why the route fails.",
         ].join(" ");
       }
       return [
-        `Player intent: travel along the walkable path to ${destLabel} at (${intent.x},${intent.y}) on the region grid`,
+        `Player intent: travel along the route to ${destLabel} at (${intent.x},${intent.y}) on the region grid`,
         `(${path.length - 1} step(s)). Emit travel_region({x:${intent.x},y:${intent.y}}) and a single \`narrate\` call`,
         "covering the whole approach — textures, sounds, weather — without naming every intermediate cell.",
       ].join(" ");
@@ -109,19 +107,6 @@ export function movementHint(
   const from = ctx.fromLabel ? `"${ctx.fromLabel}"` : "the current tile";
   const to = ctx.toLabel ? `"${ctx.toLabel}"` : "the adjacent tile";
 
-  if (ctx.toPassable === false) {
-    return [
-      `Player intent: attempt to walk ${ctx.direction} on the ${gridKind} grid,`,
-      `from ${from} toward ${to}.`,
-      `The destination tile is IMPASSABLE — DO NOT emit ${toolName};`,
-      `the player does not move. In your single \`narrate\` call,`,
-      `make it unmistakable that ${to} stops them: describe approaching it,`,
-      `running into it, and turning back. Reference both ${from} (where they`,
-      `still stand) and ${to} (the obstacle) by name so the line reads as a`,
-      `failed step, not a successful one.`,
-    ].join(" ");
-  }
-
   return [
     `Player intent: walk one cell ${ctx.direction} on the ${gridKind} grid,`,
     `from ${from} toward ${to}.`,
@@ -150,7 +135,7 @@ export function adjacentSummary(grid: TileGrid, pos: readonly [number, number]):
     const t = getTile(grid, x, y);
     if (!t) continue;
     const label = (t.label ?? t.kind).replace(/\s+/g, " ");
-    parts.push(`${name}=${label}${t.passable ? "" : "(blocked)"}`);
+    parts.push(`${name}=${label}`);
   }
   return parts.join(", ");
 }

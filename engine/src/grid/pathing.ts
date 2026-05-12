@@ -6,15 +6,15 @@ import { getTile, type Tile, type TileGrid } from "./tilePrimitives";
 type Cell = { x: number; y: number };
 
 /**
- * Lay down the `path` primitive over blocked-but-not-anchor cells along
+ * Lay down the `path` primitive over non-anchor cells along
  * the routes that connect every location-anchor to the region center and
  * to each other. Returns a NEW TileGrid; the input is not mutated.
  *
  * Pathing rules:
  *   - 4-connected (no diagonals).
- *   - Passable cells (filler `passable=true`) are walkable at cost 1.
- *   - Anchor cells are always walkable (cost 1) regardless of passable;
- *     the path approaches but does not overwrite them.
+ *   - Any in-bounds tile is walkable at cost 1.
+ *   - Anchor cells are always walkable; the path approaches but does not
+ *     overwrite them.
  *   - When no route exists between two anchors, we silently skip — the
  *     player can still navigate via the surrounding terrain on their own.
  *
@@ -65,16 +65,8 @@ export function applyPathing(grid: TileGrid): TileGrid {
     routesToWalk.push([anchors[i].cell, anchors[i + 1].cell]);
   }
 
-  const anchorCells = new Set<string>(
-    anchors.map((a) => cellKey(a.cell)),
-  );
-
   for (const [from, to] of routesToWalk) {
-    const route = aStar(from, to, w, h, (x, y) => {
-      const t = tiles[y * w + x];
-      if (anchorCells.has(cellKey({ x, y }))) return true;
-      return t.passable;
-    });
+    const route = aStar(from, to, w, h, () => true);
     if (!route) continue;
     for (const step of route) {
       const idx = step.y * w + step.x;
@@ -98,7 +90,6 @@ function pathOver(prior: Tile): Tile {
     // Preserve pre-path visual description so mosaic prompts do not degrade
     // into repeated "path — <label>" fallbacks after route stamping.
     desc: prior.desc,
-    passable: true,
     priorKind: prior.kind,
     props: prior.props,
     questMarker: prior.questMarker,
@@ -121,7 +112,7 @@ function aStar(
   goal: Cell,
   w: number,
   h: number,
-  passable: (x: number, y: number) => boolean,
+  isWalkable: (x: number, y: number) => boolean,
 ): Cell[] | null {
   if (start.x === goal.x && start.y === goal.y) return [start];
 
@@ -168,7 +159,7 @@ function aStar(
     const curG = gScore.get(bestKey) ?? Number.POSITIVE_INFINITY;
     for (const next of neighbors(cur, w, h)) {
       const nk = cellKey(next);
-      if (!passable(next.x, next.y)) continue;
+      if (!isWalkable(next.x, next.y)) continue;
       const tentativeG = curG + 1;
       const oldG = gScore.get(nk) ?? Number.POSITIVE_INFINITY;
       if (tentativeG < oldG) {
@@ -211,10 +202,9 @@ function reconstruct(
   return out;
 }
 
-/** Matches `move_region`: only `passable` tiles are walkable. */
+/** Matches `move_region`: any in-bounds tile is walkable. */
 export function isRegionCellWalkable(grid: TileGrid, x: number, y: number): boolean {
-  const t = getTile(grid, x, y);
-  return !!t && t.passable;
+  return !!getTile(grid, x, y);
 }
 
 /**

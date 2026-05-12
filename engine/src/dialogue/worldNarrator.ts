@@ -162,19 +162,6 @@ export class WorldNarrator {
     );
     if (sawCanonical) return;
 
-    // If the intent is a movement attempt against a tile we already
-    // know is blocked, the deterministic dispatcher would just
-    // reject the call — there's no point firing it as a "safety net".
-    // The LLM was told (via the system prompt) NOT to emit the
-    // mechanical tool in that case; omitting it is the correct
-    // outcome, not a forgotten one.
-    if (
-      (intent.kind === "region.move" || intent.kind === "location.move") &&
-      movementContext(intent, useStore.getState()).toPassable === false
-    ) {
-      return;
-    }
-
     if (intent.kind === "region.travelTo") {
       const st = useStore.getState();
       const g = st.regionGrid;

@@ -21,7 +21,7 @@ export type ArchetypeMarker = {
   marker: QuestMarker;
   /**
    * Soft hint for the populator about which kinds make narrative sense
-   * for this marker. Empty array means "any passable tile".
+   * for this marker. Empty array means "any tile".
    */
   preferredKindHints: string[];
 };
@@ -29,7 +29,7 @@ export type ArchetypeMarker = {
 /**
  * Decide how many markers to spawn and what role each one plays. The
  * populator then picks tiles that match `preferredKindHints` first,
- * falling back to any passable tile.
+ * falling back to any tile.
  */
 export function markersFor(quest: WorldQuest, questId: string): ArchetypeMarker[] {
   const archetype = quest.archetype;
@@ -208,7 +208,7 @@ function repeat<T>(n: number, fn: (i: number) => T): T[] {
 /**
  * Quick-and-dirty mapping from monster type to plausible tile kinds the
  * filler is likely to have produced. Intentionally short — the populator
- * falls back to "any passable tile" if no hint matches.
+ * falls back to "any tile" if no hint matches.
  */
 function kindHintsForMonster(monster: string): string[] {
   const m = monster.toLowerCase();
