@@ -26,7 +26,7 @@ import {
 } from "./locationAreaLayout";
 import { projectLocations, type ProjectedAnchor } from "./locationProjection";
 import { buildSystemPrompt, type PromptOperation } from "../llm/promptBuilder";
-import { ENGINE_PROMPTS } from "../llm/systemPrompts";
+import { TILE_CARTOGRAPHY_PROMPTS } from "../llm/tileCartographyPrompts";
 import { useStore } from "../state/store";
 
 function isTileImageMosaicMode(): boolean {
@@ -324,8 +324,8 @@ export class TileFiller {
       world: this.world,
       operation,
       engineHeader: mosaicImage
-        ? ENGINE_PROMPTS.tileRegionMosaic()
-        : ENGINE_PROMPTS.tileRegion(),
+        ? TILE_CARTOGRAPHY_PROMPTS.tileRegionMosaicClassifierPrompt()
+        : TILE_CARTOGRAPHY_PROMPTS.tileRegion(),
     });
     let user = userPromptForRegion({
       regionId,
@@ -379,8 +379,8 @@ export class TileFiller {
       world: this.world,
       operation,
       engineHeader: mosaicImage
-        ? ENGINE_PROMPTS.tileLocationMosaic()
-        : ENGINE_PROMPTS.tileLocation(),
+        ? TILE_CARTOGRAPHY_PROMPTS.tileLocationMosaicClassifierPrompt()
+        : TILE_CARTOGRAPHY_PROMPTS.tileLocation(),
     });
     let user = userPromptForLocation({
       locationId,
@@ -526,6 +526,30 @@ type FillerOutcome = {
 
 // ---------------------------------------------------------------- prompt text
 
+function condenseWs(s: string): string {
+  return s.replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Keep more authored detail without hard-cutting mid-word/mid-sentence.
+ * Prefers ending at sentence punctuation when possible.
+ */
+function smartSnippet(text: string, maxChars: number): string {
+  const cleaned = condenseWs(text);
+  if (!cleaned) return "";
+  if (cleaned.length <= maxChars) return cleaned;
+  const hard = cleaned.slice(0, maxChars);
+  const punct = Math.max(hard.lastIndexOf(". "), hard.lastIndexOf("; "), hard.lastIndexOf(": "));
+  if (punct >= Math.floor(maxChars * 0.55)) {
+    return `${hard.slice(0, punct + 1).trim()} …`;
+  }
+  const ws = hard.lastIndexOf(" ");
+  if (ws >= Math.floor(maxChars * 0.55)) {
+    return `${hard.slice(0, ws).trim()} …`;
+  }
+  return `${hard.trim()} …`;
+}
+
 function userPromptForRegion(args: {
   regionId: string;
   regionName: string;
@@ -557,7 +581,7 @@ function userPromptForRegion(args: {
       "ENGINE-RESERVED CELLS — these (x,y) coordinates are already assigned to named locations. The engine will OVERWRITE these cells with location anchors regardless of what you put there, so emit plausible terrain on them and let your terrain choices around them respect the geography these locations imply:",
     );
     for (const a of args.anchors) {
-      const summary = (a.loc.basicInfo || "").slice(0, 200).replace(/\s+/g, " ");
+      const summary = smartSnippet(a.loc.basicInfo || "", 420);
       lines.push(
         `  - (${a.gx},${a.gy}) → "${a.loc.name || a.id}" :: ${summary}`,
       );
@@ -565,6 +589,9 @@ function userPromptForRegion(args: {
     lines.push("");
     lines.push(
       "Do NOT echo these names into other cells' `kind` or `label`. Other cells are pure terrain (rivers, marsh, fields, foothills, sea, etc.).",
+    );
+    lines.push(
+      "Anchor descriptions are LOCAL context only. For non-reserved cells, do not clone a named location's unique motif/name-family (e.g. forge-*, necropolis/tomb-city, festival fairground) into surrounding cells unless region prose explicitly says that terrain district spans broadly. Adjacency may imply transitions, not copy-paste districts.",
     );
   } else {
     lines.push("No named locations to place; populate the whole grid with regional terrain.");
@@ -623,7 +650,7 @@ function userPromptForLocation(args: {
   if (args.areas.length > 0) {
     lines.push("Authored sub-areas you should surface as cells:");
     for (const a of args.areas) {
-      lines.push(`  - "${a.id}" :: ${a.description.slice(0, 240)}`);
+      lines.push(`  - "${a.id}" :: ${smartSnippet(a.description, 360)}`);
     }
     lines.push("");
   }

@@ -34,6 +34,55 @@ async function appendJsonl(file: string, body: string): Promise<void> {
   await fs.appendFile(file, line + "\n");
 }
 
+function safeFilePart(raw: string): string {
+  const s = raw.trim().replace(/[^a-zA-Z0-9._-]+/g, "-");
+  return s.length > 0 ? s.slice(0, 80) : "unknown";
+}
+
+async function writeBlueprintPng(body: string): Promise<{ file: string }> {
+  const parsed = JSON.parse(body) as {
+    scope?: string;
+    ownerId?: string;
+    mime?: string;
+    base64?: string;
+    width?: number;
+    height?: number;
+    provider?: string;
+    variant?: string;
+  };
+  const b64 = parsed.base64 ?? "";
+  if (!b64) throw new Error("missing blueprint base64");
+  const mime = parsed.mime ?? "image/png";
+  const ext =
+    mime === "image/webp" ? "webp" : mime === "image/jpeg" ? "jpg" : "png";
+  const ts = new Date().toISOString().replace(/[:.]/g, "-");
+  const scope = safeFilePart(parsed.scope ?? "region");
+  const owner = safeFilePart(parsed.ownerId ?? "unknown");
+  const size = `${parsed.width ?? 0}x${parsed.height ?? 0}`;
+  const fileName = `${ts}-${scope}-${owner}-${size}.${ext}`;
+  const dir = path.resolve(__dirname, "logs", "blueprints");
+  const file = path.resolve(dir, fileName);
+  await fs.mkdir(dir, { recursive: true });
+  const bytes = Buffer.from(b64, "base64");
+  await fs.writeFile(file, bytes);
+  await fs.appendFile(
+    path.resolve(dir, "index.jsonl"),
+    JSON.stringify({
+      ts: new Date().toISOString(),
+      file,
+      scope: parsed.scope ?? null,
+      ownerId: parsed.ownerId ?? null,
+      provider: parsed.provider ?? null,
+      variant: parsed.variant ?? null,
+      mime,
+      width: parsed.width ?? null,
+      height: parsed.height ?? null,
+      bytes: bytes.byteLength,
+    }) + "\n",
+  );
+  return { file };
+}
+
 function makeJsonlEndpoint(opts: { name: string; url: string; file: string }): Plugin {
   return {
     name: opts.name,
@@ -95,6 +144,39 @@ function diagLogEndpoint(): Plugin {
     url: "/__diag-log",
     file: path.resolve(__dirname, "logs", "events.jsonl"),
   });
+}
+
+/**
+ * Dev-only sink for blueprint PNGs used by mosaic conditioning.
+ * Writes files to `engine/logs/blueprints/` and appends metadata to
+ * `engine/logs/blueprints/index.jsonl`.
+ */
+function blueprintDumpEndpoint(): Plugin {
+  return {
+    name: "blueprint-dump-endpoint",
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        if (req.method !== "POST" || req.url !== "/__blueprint-save") {
+          next();
+          return;
+        }
+        try {
+          const body = await readBody(req);
+          const out = await writeBlueprintPng(body);
+          res.statusCode = 200;
+          res.end(JSON.stringify({ ok: true, file: out.file }));
+        } catch (error) {
+          res.statusCode = 500;
+          res.end(
+            JSON.stringify({
+              ok: false,
+              error: error instanceof Error ? error.message : String(error),
+            }),
+          );
+        }
+      });
+    },
+  };
 }
 
 const OPENROUTER_UPSTREAM = "https://openrouter.ai/api/v1/chat/completions";
@@ -470,6 +552,7 @@ export default defineConfig({
     react(),
     llmLogEndpoint(),
     diagLogEndpoint(),
+    blueprintDumpEndpoint(),
     openRouterProxyEndpoint(),
     packsEndpoint(),
   ],

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { LlmAdapter } from "../llm/adapter";
 import type { WorldData } from "../schema/worldSchema";
 import { buildSystemPrompt } from "../llm/promptBuilder";
-import { ENGINE_PROMPTS } from "../llm/systemPrompts";
+import { MECHANICS_ENGINE_PROMPTS } from "../llm/mechanicsEnginePrompts";
 
 const VerificationSchema = z.object({
   complete: z.boolean(),
@@ -20,7 +20,7 @@ export async function verifyQuestCompletion(
       system: buildSystemPrompt({
         world,
         operation: "quest.verify",
-        engineHeader: ENGINE_PROMPTS.questVerify(),
+        engineHeader: MECHANICS_ENGINE_PROMPTS.questVerify(),
       }),
       messages: [
         {

@@ -48,6 +48,14 @@ function dataUrlToBytes(dataUrl: string): { bytes: Uint8Array; mime: string } {
   return { bytes, mime };
 }
 
+function bytesToDataUrl(bytes: Uint8Array, mime: string): string {
+  let s = "";
+  for (let i = 0; i < bytes.length; i += 1) {
+    s += String.fromCharCode(bytes[i]);
+  }
+  return `data:${mime};base64,${btoa(s)}`;
+}
+
 class OpenRouterImageProvider implements ImageProvider {
   readonly id: string;
   private readonly model: string;
@@ -66,12 +74,27 @@ class OpenRouterImageProvider implements ImageProvider {
       .getState()
       .setBackgroundActivity(activityId, `OpenRouter image · ${width}×${height}px`);
 
+    const content: unknown = request.conditioningImage
+      ? [
+          { type: "text", text: request.prompt },
+          {
+            type: "image_url",
+            image_url: {
+              url: bytesToDataUrl(
+                request.conditioningImage.bytes,
+                request.conditioningImage.mime,
+              ),
+            },
+          },
+        ]
+      : request.prompt;
+
     const body: Record<string, unknown> = {
       model: this.model,
       messages: [
         {
           role: "user",
-          content: request.prompt,
+          content,
         },
       ],
       modalities: ["image", "text"],

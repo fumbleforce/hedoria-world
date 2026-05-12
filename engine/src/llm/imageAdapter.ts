@@ -14,6 +14,11 @@ export type ImageRequest = {
   height?: number;
   /** Provider-agnostic hint passed through to the backend. */
   variant?: string;
+  /** Optional conditioning image (blueprint/layout guide). */
+  conditioningImage?: {
+    bytes: Uint8Array;
+    mime: string;
+  };
 };
 
 export type ImageResponse = {
@@ -63,6 +68,12 @@ export class HttpImageProvider implements ImageProvider {
           width,
           height,
           variant: request.variant,
+          conditioningImage: request.conditioningImage
+            ? {
+                base64: bytesToBase64(request.conditioningImage.bytes),
+                mime: request.conditioningImage.mime,
+              }
+            : undefined,
         }),
       });
       if (!response.ok) {
@@ -242,8 +253,20 @@ export class GeminiImageProvider implements ImageProvider {
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
         this.model,
       )}:generateContent?key=${encodeURIComponent(this.apiKey)}`;
+      const parts: Array<
+        | { text: string }
+        | { inlineData: { mimeType: string; data: string } }
+      > = [{ text: request.prompt }];
+      if (request.conditioningImage) {
+        parts.push({
+          inlineData: {
+            mimeType: request.conditioningImage.mime,
+            data: bytesToBase64(request.conditioningImage.bytes),
+          },
+        });
+      }
       const body = {
-        contents: [{ role: "user", parts: [{ text: request.prompt }] }],
+        contents: [{ role: "user", parts }],
         generationConfig: {
           responseModalities: ["IMAGE"],
           imageConfig: {
@@ -546,4 +569,12 @@ function base64ToBytes(b64: string): Uint8Array {
   const out = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i += 1) out[i] = bin.charCodeAt(i);
   return out;
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let s = "";
+  for (let i = 0; i < bytes.length; i += 1) {
+    s += String.fromCharCode(bytes[i]);
+  }
+  return btoa(s);
 }

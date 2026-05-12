@@ -1,4 +1,5 @@
 import type { WorldData } from "../schema/worldSchema";
+import { isTileClassifierOperation, tileClassifierExtra } from "./classifierInstructionConfig";
 
 export type PromptOperation =
   | "story.traversal"
@@ -20,22 +21,10 @@ const OPERATION_TO_INSTRUCTIONS: Record<
     blocks: ["generateStory", "generateNPCIntents", "ItemGenerationAndUsage"],
     appendNarratorStyle: true,
   },
-  // "tile.region": {
-  //   blocks: ["generateRegionDetails"],
-  //   appendNarratorStyle: false,
-  // },
-  // "tile.location": {
-  //   blocks: ["generateLocationDetails"],
-  //   appendNarratorStyle: false,
-  // },
-  "tile.region.mosaic": {
-    blocks: ["generateRegionDetails"],
-    appendNarratorStyle: false,
-  },
-  "tile.location.mosaic": {
-    blocks: ["generateLocationDetails"],
-    appendNarratorStyle: false,
-  },
+  "tile.region": { blocks: [], appendNarratorStyle: false },
+  "tile.location": { blocks: [], appendNarratorStyle: false },
+  "tile.region.mosaic": { blocks: [], appendNarratorStyle: false },
+  "tile.location.mosaic": { blocks: [], appendNarratorStyle: false },
   "skill.check": { blocks: ["generateActionInfo"], appendNarratorStyle: false },
   "quest.verify": { blocks: [], appendNarratorStyle: false },
   "death.recovery": { blocks: ["generateStory"], appendNarratorStyle: true },
@@ -76,18 +65,25 @@ export function buildSystemPrompt(args: {
   const meta = OPERATION_TO_INSTRUCTIONS[operation];
   const sections: string[] = [engineHeader.trimEnd()];
 
-  for (const block of meta.blocks) {
-    const raw = world.aiInstructions[block];
-    if (raw === undefined || raw === null) continue;
-    const body = flattenInstructionBlock(raw);
-    if (!body) continue;
-    sections.push(`## World guidance: ${block}\n\n${body}`);
-  }
+  if (isTileClassifierOperation(operation)) {
+    const classifier = tileClassifierExtra(operation);
+    if (classifier) {
+      sections.push(`## Engine classifier guidance\n\n${classifier}`);
+    }
+  } else {
+    for (const block of meta.blocks) {
+      const raw = world.aiInstructions[block];
+      if (raw === undefined || raw === null) continue;
+      const body = flattenInstructionBlock(raw);
+      if (!body) continue;
+      sections.push(`## World guidance: ${block}\n\n${body}`);
+    }
 
-  if (meta.appendNarratorStyle) {
-    const ns = world.narratorStyle?.trim();
-    if (ns) {
-      sections.push(`## Narrator Style\n\n${ns}`);
+    if (meta.appendNarratorStyle) {
+      const ns = world.narratorStyle?.trim();
+      if (ns) {
+        sections.push(`## Narrator Style\n\n${ns}`);
+      }
     }
   }
 

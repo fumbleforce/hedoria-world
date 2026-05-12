@@ -7,7 +7,7 @@ import { findRegionWalkPath } from "../grid/pathing";
 import { getTile } from "../grid/tilePrimitives";
 import { diag } from "../diag/log";
 import { buildSystemPrompt } from "../llm/promptBuilder";
-import { ENGINE_PROMPTS } from "../llm/systemPrompts";
+import { STORY_ENGINE_PROMPTS } from "../llm/storyEnginePrompts";
 import { movementContext } from "./narratorPromptHelpers";
 import type { PlayerIntent } from "./playerIntent";
 import { tileLabel } from "./narratorPromptHelpers";
@@ -134,7 +134,7 @@ export class WorldNarrator {
     return buildSystemPrompt({
       world: this.world.world,
       operation: "story.traversal",
-      engineHeader: ENGINE_PROMPTS.storyTraversal(state, intent, this.world),
+      engineHeader: STORY_ENGINE_PROMPTS.storyTraversal(state, intent, this.world),
     });
   }
 
@@ -142,7 +142,7 @@ export class WorldNarrator {
     return buildSystemPrompt({
       world: this.world.world,
       operation: "story.scene",
-      engineHeader: ENGINE_PROMPTS.storyScene(state, this.world),
+      engineHeader: STORY_ENGINE_PROMPTS.storyScene(state, this.world),
     });
   }
 

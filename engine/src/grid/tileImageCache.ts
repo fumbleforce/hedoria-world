@@ -8,7 +8,8 @@ import type { ImageProvider } from "../llm/imageAdapter";
 import { diag } from "../diag/log";
 import type { Tile, TileGrid } from "./tilePrimitives";
 import {
-  composeMosaicPrompt,
+  composeMosaicImagePrompt,
+  createMosaicBlueprintImage,
   sliceMosaic,
   type MosaicSlice,
 } from "./mosaicImage";
@@ -68,7 +69,7 @@ export type TileImageCacheOptions = {
   initialMode?: TileImageMode;
 };
 
-const DEFAULT_STYLE = "painterly-top-down";
+const DEFAULT_STYLE = "parchment map";
 const DEFAULT_SIZE = 256;
 const DEFAULT_MOSAIC_SLICE_SIZE = 128;
 
@@ -86,7 +87,7 @@ export function tileImageKey(
 
 /**
  * Cache-busting suffix for mosaic keys. Bump this whenever a change to
- * `composeMosaicPrompt` would otherwise leave stale slices visible.
+ * `composeMosaicImagePrompt` would otherwise leave stale slices visible.
  *
  *   v1 -> v2: prompt now anonymises named-location anchors (no proper
  *             nouns), so previously-cached v1 slices contained place
@@ -107,7 +108,7 @@ export function tileImageKey(
  *             before engine sub-area stamps) and use kebab phrase fallbacks
  *             so prompts match the actual grid instead of all-"interior".
  *   v5 -> v6: mosaic image mode uses a separate tile classifier with per-cell
- *             `mosaicDescribe`; composeMosaicPrompt prefers that field.
+ *             `mosaicDescribe`; composeMosaicImagePrompt prefers that field.
  *   v6 -> v7: mosaic prompt rewritten to lead with style + subject, frame the
  *             layout as invisible bands rather than a grid, and add explicit
  *             negative checks for grid lines / borders / map chrome — both
@@ -474,24 +475,110 @@ export class TileImageCache {
     if (existing) return existing;
 
     const promise = (async () => {
-      const prompt = composeMosaicPrompt(grid, this.style);
+      const prompt = composeMosaicImagePrompt(grid, this.style);
+      const blueprintPrompt =
+        `${prompt}\n\n` +
+        "A blueprint guide image is provided. Treat it as the authoritative spatial layout: keep each landmark/motif contained within its guide cell and preserve the full edge-to-edge map extent.";
       const requestW = this.mosaicSliceSize * grid.width;
       const requestH = this.mosaicSliceSize * grid.height;
+      const blueprint = await createMosaicBlueprintImage(grid, this.mosaicSliceSize);
+      const anchorCells = grid.tiles.filter((t) => !!t.locationId).length;
+      const dangerousCells = grid.tiles.filter((t) => !!t.dangerous).length;
       const startedAt = performance.now();
+      diag.info("image", `mosaic blueprint generated for ${grid.ownerId}`, {
+        scope: grid.scope,
+        ownerId: grid.ownerId,
+        provider: this.imageProvider.id,
+        blueprintSize: `${blueprint.width}x${blueprint.height}`,
+        blueprintBytes: blueprint.bytes.byteLength,
+        gridSize: `${grid.width}x${grid.height}`,
+        anchorCells,
+        dangerousCells,
+        mosaicSliceSize: this.mosaicSliceSize,
+      });
+      const savedPath = await saveBlueprintForDebug({
+        scope: grid.scope,
+        ownerId: grid.ownerId,
+        provider: this.imageProvider.id,
+        variant: "mosaic-blueprint",
+        blueprint,
+      });
+      if (savedPath) {
+        diag.info("image", `mosaic blueprint saved for ${grid.ownerId}`, {
+          scope: grid.scope,
+          ownerId: grid.ownerId,
+          file: savedPath,
+        });
+      }
       diag.info("image", `mosaic request → provider for ${grid.ownerId}`, {
         scope: grid.scope,
         ownerId: grid.ownerId,
         provider: this.imageProvider.id,
         size: `${requestW}x${requestH}`,
         gridSize: `${grid.width}x${grid.height}`,
-        prompt,
+        mode: "blueprint-conditioned",
+        promptChars: prompt.length,
+        blueprintPromptChars: blueprintPrompt.length,
+        promptPreview: prompt.slice(0, 320),
+        blueprintBytes: blueprint.bytes.byteLength,
       });
 
-      const result = await this.imageProvider.generate({
-        prompt,
-        width: requestW,
-        height: requestH,
-      });
+      let result;
+      try {
+        const blueprintReqStartedAt = performance.now();
+        result = await this.imageProvider.generate({
+          prompt: blueprintPrompt,
+          width: requestW,
+          height: requestH,
+          variant: "mosaic-blueprint",
+          conditioningImage: {
+            bytes: blueprint.bytes,
+            mime: blueprint.mime,
+          },
+        });
+        diag.info("image", `mosaic blueprint-conditioned response for ${grid.ownerId}`, {
+          scope: grid.scope,
+          ownerId: grid.ownerId,
+          provider: this.imageProvider.id,
+          variant: "mosaic-blueprint",
+          elapsedMs: Math.round(performance.now() - blueprintReqStartedAt),
+          rawBytes: result.bytes.byteLength,
+          rawSize: `${result.width}x${result.height}`,
+        });
+      } catch (err) {
+        // Provider/model may not support image conditioning; fall back to
+        // classic prompt-only mosaic generation.
+        diag.warn("image", `mosaic blueprint conditioning failed; falling back`, {
+          scope: grid.scope,
+          ownerId: grid.ownerId,
+          provider: this.imageProvider.id,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        const fallbackReqStartedAt = performance.now();
+        diag.info("image", `mosaic fallback request → provider for ${grid.ownerId}`, {
+          scope: grid.scope,
+          ownerId: grid.ownerId,
+          provider: this.imageProvider.id,
+          variant: "mosaic",
+          promptChars: prompt.length,
+          promptPreview: prompt.slice(0, 320),
+        });
+        result = await this.imageProvider.generate({
+          prompt,
+          width: requestW,
+          height: requestH,
+          variant: "mosaic",
+        });
+        diag.info("image", `mosaic fallback response for ${grid.ownerId}`, {
+          scope: grid.scope,
+          ownerId: grid.ownerId,
+          provider: this.imageProvider.id,
+          variant: "mosaic",
+          elapsedMs: Math.round(performance.now() - fallbackReqStartedAt),
+          rawBytes: result.bytes.byteLength,
+          rawSize: `${result.width}x${result.height}`,
+        });
+      }
       const slices = await sliceMosaic(result, grid.width, grid.height);
       const durationMs = Math.round(performance.now() - startedAt);
       diag.info("image", `mosaic response (${durationMs}ms) for ${grid.ownerId}`, {
@@ -501,6 +588,7 @@ export class TileImageCache {
         rawBytes: result.bytes.byteLength,
         rawSize: `${result.width}x${result.height}`,
         durationMs,
+        mode: "blueprint-then-fallback-if-needed",
       });
 
       await this.persistSlices(grid, slices);
@@ -593,6 +681,44 @@ export class TileImageCache {
       durationMs,
     });
     return bytesToUrl(result.bytes, result.mime);
+  }
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let s = "";
+  for (let i = 0; i < bytes.length; i += 1) s += String.fromCharCode(bytes[i]);
+  return btoa(s);
+}
+
+async function saveBlueprintForDebug(args: {
+  scope: "region" | "location";
+  ownerId: string;
+  provider: string;
+  variant: string;
+  blueprint: { bytes: Uint8Array; mime: string; width: number; height: number };
+}): Promise<string | null> {
+  try {
+    const response = await fetch("/__blueprint-save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        scope: args.scope,
+        ownerId: args.ownerId,
+        provider: args.provider,
+        variant: args.variant,
+        mime: args.blueprint.mime,
+        width: args.blueprint.width,
+        height: args.blueprint.height,
+        base64: bytesToBase64(args.blueprint.bytes),
+      }),
+      keepalive: true,
+    });
+    if (!response.ok) return null;
+    const payload = (await response.json()) as { ok?: boolean; file?: string };
+    return payload.ok && payload.file ? payload.file : null;
+  } catch {
+    // Dev-only endpoint; ignore in production or when unavailable.
+    return null;
   }
 }
 

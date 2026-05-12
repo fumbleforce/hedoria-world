@@ -1,7 +1,7 @@
 import type { WorldData } from "../schema/worldSchema";
 import { LlmAdapter } from "../llm/adapter";
 import { buildSystemPrompt } from "../llm/promptBuilder";
-import { ENGINE_PROMPTS } from "../llm/systemPrompts";
+import { STORY_ENGINE_PROMPTS } from "../llm/storyEnginePrompts";
 
 export type RecoveryResult = {
   narration: string;
@@ -25,7 +25,7 @@ export async function resolveDeathRecovery(
       system: buildSystemPrompt({
         world,
         operation: "death.recovery",
-        engineHeader: ENGINE_PROMPTS.deathRecovery(),
+        engineHeader: STORY_ENGINE_PROMPTS.deathRecovery(),
         extraTail: world.death.instructions || undefined,
       }),
       messages: [{ role: "user", content: encounterSummary }],

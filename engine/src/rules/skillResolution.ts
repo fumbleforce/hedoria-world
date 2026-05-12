@@ -2,7 +2,7 @@ import { z } from "zod";
 import { LlmAdapter } from "../llm/adapter";
 import type { WorldData } from "../schema/worldSchema";
 import { buildSystemPrompt } from "../llm/promptBuilder";
-import { ENGINE_PROMPTS } from "../llm/systemPrompts";
+import { MECHANICS_ENGINE_PROMPTS } from "../llm/mechanicsEnginePrompts";
 
 const SkillResolutionSchema = z.object({
   outcome: z.enum(["success", "fail", "partial"]),
@@ -23,7 +23,7 @@ export async function resolveSkillCheck(
       system: buildSystemPrompt({
         world,
         operation: "skill.check",
-        engineHeader: ENGINE_PROMPTS.skillCheck(),
+        engineHeader: MECHANICS_ENGINE_PROMPTS.skillCheck(),
       }),
       messages: [
         {

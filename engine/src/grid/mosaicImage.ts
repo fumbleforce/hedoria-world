@@ -107,54 +107,12 @@ function lineForMosaicCell(tile: Tile, biome: string, scope: "region" | "locatio
   return describeTileForPrompt(tile, biome, scope);
 }
 
-export function composeMosaicPrompt(grid: TileGrid, style: string): string {
-  const lines: string[] = [];
-
-  // Lead with the headline image so cheap models latch onto style + subject
-  // before the long per-cell list. Image models tend to weight the first and
-  // last paragraphs most heavily.
+export function composeMosaicImagePrompt(grid: TileGrid, style: string): string {
   const subject =
     grid.scope === "location"
-      ? `top-down painted view of a single ${prettify(grid.biome)} place — its courtyards, alleys, rooftops, gardens, and other open ground seen from straight above`
-      : `top-down painted regional map of a ${prettify(grid.biome)}`;
-  lines.push(`A ${subject}, in this art style: ${style}.`);
-  lines.push("");
-
-  // Hard rules. State them positively ("paint", "show") AND negatively
-  // ("must not contain") since cheaper models often follow only one of the
-  // two phrasings. "No grid lines" gets repeated because the listing below
-  // uses the words "row" and "column" which weak models otherwise visualise
-  // as visible lines.
-  lines.push(`Hard rules — the finished image must satisfy ALL of these:`);
-  lines.push(
-    ` - PAINTED SCENERY ONLY. No text, no captions, no labels, no place names, no numbers, no letters, no symbols, no signs with readable writing.`,
-  );
-  lines.push(
-    ` - NO VISIBLE GRID. The image must not contain any grid lines, cell borders, frames, gutters, seams, outlines, fences-of-pixels, or any other line marking subdivisions. The picture is one continuous painting.`,
-  );
-  lines.push(
-    ` - NO MAP CHROME. No compass rose, no scale bar, no legend, no key, no border decoration, no inset, no arrows.`,
-  );
-  lines.push(
-    ` - North is at the top of the image, south at the bottom; west is on the left, east on the right.`,
-  );
-  lines.push("");
-
-  // Reframe the layout as "equal bands" rather than a "grid" so the model is
-  // less tempted to draw the lines we're telling it not to draw. The
-  // post-processing slicer is mentioned to make clear that subdivision is
-  // OUR problem, not the painter's.
-  lines.push(
-    `Composition: the painting fills the canvas edge-to-edge and is laid out so that ${grid.width} equal vertical bands across the width and ${grid.height} equal horizontal bands across the height each contain one of the features listed below. The bands are an INVISIBLE layout reference — they must not be drawn, outlined, or hinted at. After you return the picture we slice it into ${grid.width} × ${grid.height} tiles externally; your job is to paint a single seamless image whose features happen to land in those positions.`,
-  );
-  lines.push("");
-
-  // Per-cell directives. We still walk north-most row first so the listing
-  // visually mirrors the painting. Use compact "L→R: a; b; c" lines so weak
-  // models treat each row as one continuous band rather than four boxed cells.
-  lines.push(
-    `Feature placement (${grid.height} rows from top to bottom, each row listing west→east cells):`,
-  );
+      ? `top-down TILED MAP of a single ${prettify(grid.biome)} place — its courtyards, alleys, buildings, gardens, and other open ground seen from a map perspective`
+      : `top-down TILED MAP of a ${prettify(grid.biome)} region`;
+  const rowLines: string[] = [];
   for (let y = grid.height - 1; y >= 0; y -= 1) {
     const rowLabel = rowDirectionLabel(y, grid.height);
     const cells: string[] = [];
@@ -162,39 +120,36 @@ export function composeMosaicPrompt(grid: TileGrid, style: string): string {
       const tile = grid.tiles[y * grid.width + x];
       cells.push(lineForMosaicCell(tile, grid.biome, grid.scope));
     }
-    lines.push(` ${rowLabel}: ${cells.join(" | ")}`);
+    rowLines.push(` ${rowLabel}: ${cells.join(" | ")}`);
   }
-  lines.push("");
+  const continuityLines =
+    grid.scope === "location"
+      ? [
+          " - Adjacent open spaces flow into each other: courtyards open onto alleys, paths run unbroken across band edges, roof ridges align where buildings span more than one band.",
+          " - Shadows, paving textures, vegetation, and lighting are continuous across band edges. Treat the whole canvas as one place at one moment, not a stitched collage.",
+        ].join("\n")
+      : [
+          " - Rivers, coastlines, roads, and ridge lines flow unbroken through every band they pass through. A river that ends mid-band is a bug.",
+          " - Forest canopies, fields, and grasslands have continuous textures across band edges; lighting and palette are uniform across the whole picture.",
+        ].join("\n");
 
-  // Continuity / blending rules. Cheap models otherwise paint each band as a
-  // distinct illustration with hard edges, which then bakes pseudo-grid
-  // lines into the picture even without explicit borders.
-  lines.push(`Continuity rules:`);
-  if (grid.scope === "location") {
-    lines.push(
-      ` - Adjacent open spaces flow into each other: courtyards open onto alleys, paths run unbroken across band edges, roof ridges align where buildings span more than one band.`,
-    );
-    lines.push(
-      ` - Shadows, paving textures, vegetation, and lighting are continuous across band edges. Treat the whole canvas as one place at one moment, not a stitched collage.`,
-    );
-  } else {
-    lines.push(
-      ` - Rivers, coastlines, roads, and ridge lines flow unbroken through every band they pass through. A river that ends mid-band is a bug.`,
-    );
-    lines.push(
-      ` - Forest canopies, fields, and grasslands have continuous textures across band edges; lighting and palette are uniform across the whole picture.`,
-    );
-  }
-  lines.push("");
+  return `
+A ${subject}, in this art style: ${style}.
 
-  // Final negative reminder. Putting this last lets it overwrite any earlier
-  // hallucination about cartographic conventions ("but it's a MAP, maps have
-  // grid lines!"). Phrase it as a strict checklist for compliance-minded
-  // models.
-  lines.push(
-    `Final check before returning: the image must be a single painting with smooth, continuous scenery and ZERO of: text, numbers, labels, captions, grid lines, cell borders, frames, compass roses, scale bars, legends, or any other map chrome. If any of those appear, regenerate without them.`,
-  );
-  return lines.join("\n");
+Hard rules — the finished image must satisfy ALL of these:
+ - ENVIRONMENT ONLY. No text, no captions, no labels, no place names, no numbers, no letters, no symbols, no signs with readable writing.
+ - NO VISIBLE GRID. The image must not contain any grid lines, cell borders, frames, gutters, seams, outlines, fences-of-pixels, or any other line marking subdivisions. The picture is one continuous painting.
+ - NO MAP CHROME. No compass rose, no scale bar, no legend, no key, no border decoration, no inset, no arrows.
+ - North is at the top of the image, south at the bottom; west is on the left, east on the right.
+
+Composition: the map fills the canvas edge-to-edge and is laid out so that ${grid.width} equal vertical tiles across the width and ${grid.height} equal horizontal tiles across the height each contain one of the features listed below. The tiling are an INVISIBLE layout reference — they must not be drawn, outlined, or hinted at. After you return the picture we slice it into ${grid.width} × ${grid.height} tiles externally; your job is to paint a single seamless image whose features happen to land in those positions.
+
+Feature placement (${grid.height} rows from top to bottom, each row listing west→east cells):
+${rowLines.join("\n")}
+
+Continuity rules:
+${continuityLines}
+`.trim();
 }
 
 /**
@@ -224,7 +179,7 @@ function describeTileForPrompt(
 
   if (scope === "region" && tile.locationId) {
     const surrounding = prettify(tile.priorKind || fallbackBiome);
-    return `built place — small cluster of buildings nestled in ${surrounding}${passable}`;
+    return `named location footprint integrated into surrounding ${surrounding}${passable}`;
   }
 
   if (scope === "location") {
@@ -402,6 +357,92 @@ export type MosaicSlice = {
   width: number;
   height: number;
 };
+
+function colorForToken(token: string): string {
+  let h = 2166136261;
+  for (let i = 0; i < token.length; i += 1) {
+    h ^= token.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  const hue = Math.abs(h % 360);
+  // Keep blueprint tones muted so they guide structure without dominating.
+  const sat = 14 + Math.abs((h >> 3) % 14);
+  const light = 62 + Math.abs((h >> 7) % 16);
+  return `hsl(${hue} ${sat}% ${light}%)`;
+}
+
+/**
+ * Build a synthetic "blueprint" guide image aligned to the target grid.
+ * The model can use this as a hard spatial prior so landmarks stay within
+ * their cells and outer margins are reduced.
+ */
+export async function createMosaicBlueprintImage(
+  grid: TileGrid,
+  cellPx: number,
+): Promise<ImageResponse> {
+  const width = Math.max(1, grid.width * cellPx);
+  const height = Math.max(1, grid.height * cellPx);
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("createMosaicBlueprintImage: 2d canvas context unavailable");
+
+  ctx.fillStyle = "#f2efe2";
+  ctx.fillRect(0, 0, width, height);
+
+  for (let y = 0; y < grid.height; y += 1) {
+    for (let x = 0; x < grid.width; x += 1) {
+      const t = grid.tiles[y * grid.width + x];
+      const imgRow = grid.height - 1 - y;
+      const px = x * cellPx;
+      const py = imgRow * cellPx;
+      const token = `${t.kind}|${t.priorKind ?? ""}|${grid.biome}`;
+      ctx.fillStyle = colorForToken(token);
+      ctx.fillRect(px, py, cellPx, cellPx);
+
+      // Named anchors: visible inner marker so model keeps motifs contained.
+      if (t.locationId) {
+        const inset = Math.max(3, Math.floor(cellPx * 0.18));
+        ctx.strokeStyle = "#101820";
+        ctx.lineWidth = Math.max(2, Math.floor(cellPx * 0.05));
+        ctx.strokeRect(px + inset, py + inset, cellPx - inset * 2, cellPx - inset * 2);
+      }
+
+      // Intentionally no danger glyphs/dots; they added visual noise and could
+      // bias the model toward accidental corner artefacts.
+    }
+  }
+
+  ctx.strokeStyle = "rgba(65, 58, 45, 0.26)";
+  ctx.lineWidth = Math.max(1, Math.floor(cellPx * 0.02));
+  for (let x = 0; x <= grid.width; x += 1) {
+    const px = x * cellPx;
+    ctx.beginPath();
+    ctx.moveTo(px + 0.5, 0);
+    ctx.lineTo(px + 0.5, height);
+    ctx.stroke();
+  }
+  for (let y = 0; y <= grid.height; y += 1) {
+    const py = y * cellPx;
+    ctx.beginPath();
+    ctx.moveTo(0, py + 0.5);
+    ctx.lineTo(width, py + 0.5);
+    ctx.stroke();
+  }
+
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob((b) => resolve(b), "image/png"),
+  );
+  if (!blob) throw new Error("createMosaicBlueprintImage: canvas.toBlob returned null");
+  const ab = await blob.arrayBuffer();
+  return {
+    bytes: new Uint8Array(ab),
+    mime: "image/png",
+    width,
+    height,
+  };
+}
 
 /**
  * Slice a generated mosaic image into `cols × rows` PNG slices using
