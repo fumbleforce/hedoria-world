@@ -21,6 +21,19 @@ export { DEFAULT_OPENROUTER_IMAGE_MODEL };
 let liveOpenRouterImageSeq = 0;
 let openRouterImageRequestSeq = 0;
 
+function logImageCall(payload: Record<string, unknown>): void {
+  void fetch("/__image-log", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      ts: new Date().toISOString(),
+      ...payload,
+    }),
+  }).catch(() => {
+    // Dev-only sink; production builds have no middleware.
+  });
+}
+
 const IMAGE_REQUEST_TIMEOUT_MS = (() => {
   // OpenRouter image models (gpt-5-image, flux, etc.) routinely need 60-180s
   // for a single 1Mp render, so we default to 240s and let the env override.
@@ -116,6 +129,20 @@ class OpenRouterImageProvider implements ImageProvider {
       bytes: bodyJson.length,
       timeoutMs: IMAGE_REQUEST_TIMEOUT_MS,
     });
+    logImageCall({
+      provider: this.id,
+      model: this.model,
+      variant: request.variant ?? "default",
+      status: "request",
+      width,
+      height,
+      prompt: request.prompt,
+      promptChars: request.prompt.length,
+      conditioningImage: !!request.conditioningImage,
+      endpoint: OPENROUTER_PROXY_CHAT_PATH,
+      reqId,
+      requestBytes: bodyJson.length,
+    });
 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), IMAGE_REQUEST_TIMEOUT_MS);
@@ -144,6 +171,20 @@ class OpenRouterImageProvider implements ImageProvider {
             `OpenRouter image timeout after ${Math.round(IMAGE_REQUEST_TIMEOUT_MS / 1000)}s on ${this.model}`,
           );
         }
+        logImageCall({
+          provider: this.id,
+          model: this.model,
+          variant: request.variant ?? "default",
+          status: "error",
+          width,
+          height,
+          prompt: request.prompt,
+          promptChars: request.prompt.length,
+          conditioningImage: !!request.conditioningImage,
+          reqId,
+          elapsedMs,
+          error: err instanceof Error ? err.message : String(err),
+        });
         diag.error("image", `openrouter image fetch failed`, {
           reqId,
           model: this.model,
@@ -170,6 +211,21 @@ class OpenRouterImageProvider implements ImageProvider {
           totalMs,
           bytes: rawText.length,
           bodyPreview: rawText.slice(0, 400),
+        });
+        logImageCall({
+          provider: this.id,
+          model: this.model,
+          variant: request.variant ?? "default",
+          status: "error",
+          width,
+          height,
+          prompt: request.prompt,
+          promptChars: request.prompt.length,
+          conditioningImage: !!request.conditioningImage,
+          reqId,
+          elapsedMs: totalMs,
+          httpStatus: response.status,
+          error: rawText.slice(0, 1000),
         });
         throw new Error(formatOpenRouterHttpError("image", response.status, rawText));
       }
@@ -230,6 +286,20 @@ class OpenRouterImageProvider implements ImageProvider {
           imageCount: images.length,
           bodyPreview: rawText.slice(0, 400),
         });
+        logImageCall({
+          provider: this.id,
+          model: this.model,
+          variant: request.variant ?? "default",
+          status: "error",
+          width,
+          height,
+          prompt: request.prompt,
+          promptChars: request.prompt.length,
+          conditioningImage: !!request.conditioningImage,
+          reqId,
+          elapsedMs: totalMs,
+          error: "OpenRouter image: no images in response",
+        });
         throw new Error("OpenRouter image: no images in response");
       }
 
@@ -244,6 +314,23 @@ class OpenRouterImageProvider implements ImageProvider {
         mime,
         width,
         height,
+      });
+      logImageCall({
+        provider: this.id,
+        model: this.model,
+        variant: request.variant ?? "default",
+        status: "response",
+        width,
+        height,
+        prompt: request.prompt,
+        promptChars: request.prompt.length,
+        conditioningImage: !!request.conditioningImage,
+        reqId,
+        elapsedMs: totalMs,
+        responseMime: mime,
+        responseWidth: width,
+        responseHeight: height,
+        responseBytes: bytes.byteLength,
       });
       return {
         bytes,

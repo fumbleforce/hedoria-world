@@ -30,6 +30,19 @@ export type ImageResponse = {
 
 let liveImageActivitySeq = 0;
 
+function logImageCall(payload: Record<string, unknown>): void {
+  void fetch("/__image-log", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      ts: new Date().toISOString(),
+      ...payload,
+    }),
+  }).catch(() => {
+    // Dev-only sink; production builds have no middleware.
+  });
+}
+
 export interface ImageProvider {
   readonly id: string;
   generate(request: ImageRequest): Promise<ImageResponse>;
@@ -51,11 +64,23 @@ export class HttpImageProvider implements ImageProvider {
   async generate(request: ImageRequest): Promise<ImageResponse> {
     const width = request.width ?? 512;
     const height = request.height ?? 512;
+    const startedAt = performance.now();
     const activityId = `image-http:${++liveImageActivitySeq}`;
     useStore
       .getState()
       .setBackgroundActivity(activityId, `Image · ${width}×${height}px (${this.id})`);
     try {
+      logImageCall({
+        provider: this.id,
+        model: this.model,
+        variant: request.variant ?? "default",
+        status: "request",
+        width,
+        height,
+        prompt: request.prompt,
+        promptChars: request.prompt.length,
+        conditioningImage: !!request.conditioningImage,
+      });
       const response = await fetch(this.endpoint, {
         method: "POST",
         headers: {
@@ -77,6 +102,21 @@ export class HttpImageProvider implements ImageProvider {
         }),
       });
       if (!response.ok) {
+        const errorText = await response.text().catch(() => "");
+        logImageCall({
+          provider: this.id,
+          model: this.model,
+          variant: request.variant ?? "default",
+          status: "error",
+          width,
+          height,
+          prompt: request.prompt,
+          promptChars: request.prompt.length,
+          conditioningImage: !!request.conditioningImage,
+          elapsedMs: Math.round(performance.now() - startedAt),
+          httpStatus: response.status,
+          error: errorText.slice(0, 1000),
+        });
         throw new Error(`image provider ${this.id} failed: ${response.status}`);
       }
       const payload = (await response.json()) as {
@@ -85,6 +125,22 @@ export class HttpImageProvider implements ImageProvider {
         width?: number;
         height?: number;
       };
+      logImageCall({
+        provider: this.id,
+        model: this.model,
+        variant: request.variant ?? "default",
+        status: "response",
+        width,
+        height,
+        prompt: request.prompt,
+        promptChars: request.prompt.length,
+        conditioningImage: !!request.conditioningImage,
+        elapsedMs: Math.round(performance.now() - startedAt),
+        responseMime: payload.mime ?? "image/png",
+        responseWidth: payload.width ?? width,
+        responseHeight: payload.height ?? height,
+        responseBytesBase64Chars: payload.base64?.length ?? 0,
+      });
       return {
         bytes: base64ToBytes(payload.base64),
         mime: payload.mime ?? "image/png",
@@ -245,11 +301,23 @@ export class GeminiImageProvider implements ImageProvider {
 
     const width = request.width ?? 512;
     const height = request.height ?? 512;
+    const startedAt = performance.now();
     const activityId = `image-gemini:${++liveImageActivitySeq}`;
     useStore
       .getState()
       .setBackgroundActivity(activityId, `Image model · ${width}×${height}px`);
     try {
+      logImageCall({
+        provider: this.id,
+        model: this.model,
+        variant: request.variant ?? "default",
+        status: "request",
+        width,
+        height,
+        prompt: request.prompt,
+        promptChars: request.prompt.length,
+        conditioningImage: !!request.conditioningImage,
+      });
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
         this.model,
       )}:generateContent?key=${encodeURIComponent(this.apiKey)}`;
@@ -321,6 +389,20 @@ export class GeminiImageProvider implements ImageProvider {
             cooldown,
           );
         }
+        logImageCall({
+          provider: this.id,
+          model: this.model,
+          variant: request.variant ?? "default",
+          status: "error",
+          width,
+          height,
+          prompt: request.prompt,
+          promptChars: request.prompt.length,
+          conditioningImage: !!request.conditioningImage,
+          elapsedMs: Math.round(performance.now() - startedAt),
+          httpStatus: response.status,
+          error: text.slice(0, 1000),
+        });
         throw new Error(
           `Gemini image API ${response.status}: ${text.slice(0, 300)}`,
         );
@@ -337,11 +419,41 @@ export class GeminiImageProvider implements ImageProvider {
       );
       const data = part?.inlineData?.data;
       if (!data) {
+        logImageCall({
+          provider: this.id,
+          model: this.model,
+          variant: request.variant ?? "default",
+          status: "error",
+          width,
+          height,
+          prompt: request.prompt,
+          promptChars: request.prompt.length,
+          conditioningImage: !!request.conditioningImage,
+          elapsedMs: Math.round(performance.now() - startedAt),
+          error: "Gemini image API: no inline image data in response",
+        });
         throw new Error("Gemini image API: no inline image data in response");
       }
+      const mime = part.inlineData?.mimeType ?? "image/png";
+      logImageCall({
+        provider: this.id,
+        model: this.model,
+        variant: request.variant ?? "default",
+        status: "response",
+        width,
+        height,
+        prompt: request.prompt,
+        promptChars: request.prompt.length,
+        conditioningImage: !!request.conditioningImage,
+        elapsedMs: Math.round(performance.now() - startedAt),
+        responseMime: mime,
+        responseWidth: width,
+        responseHeight: height,
+        responseBytesBase64Chars: data.length,
+      });
       return {
         bytes: base64ToBytes(data),
-        mime: part.inlineData?.mimeType ?? "image/png",
+        mime,
         width,
         height,
       };
@@ -401,6 +513,22 @@ export class MockImageProvider implements ImageProvider {
   async generate(request: ImageRequest): Promise<ImageResponse> {
     const w = request.width ?? 256;
     const h = request.height ?? 256;
+    logImageCall({
+      provider: this.id,
+      model: this.id,
+      variant: request.variant ?? "default",
+      status: "response",
+      width: w,
+      height: h,
+      prompt: request.prompt,
+      promptChars: request.prompt.length,
+      conditioningImage: !!request.conditioningImage,
+      elapsedMs: 0,
+      responseMime: "image/png",
+      responseWidth: w,
+      responseHeight: h,
+      responseBytesBase64Chars: 0,
+    });
     return {
       bytes: solidPng(w, h, hashColor(request.prompt)),
       mime: "image/png",

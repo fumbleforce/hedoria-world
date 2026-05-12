@@ -69,7 +69,7 @@ export type TileImageCacheOptions = {
   initialMode?: TileImageMode;
 };
 
-const DEFAULT_STYLE = "parchment map";
+const DEFAULT_STYLE = "tiled fantasy RPG";
 const DEFAULT_SIZE = 256;
 const DEFAULT_MOSAIC_SLICE_SIZE = 128;
 
@@ -108,15 +108,21 @@ export function tileImageKey(
  *             before engine sub-area stamps) and use kebab phrase fallbacks
  *             so prompts match the actual grid instead of all-"interior".
  *   v5 -> v6: mosaic image mode uses a separate tile classifier with per-cell
- *             `mosaicDescribe`; composeMosaicImagePrompt prefers that field.
+ *             `desc`; composeMosaicImagePrompt prefers that field.
  *   v6 -> v7: mosaic prompt rewritten to lead with style + subject, frame the
  *             layout as invisible bands rather than a grid, and add explicit
  *             negative checks for grid lines / borders / map chrome — both
  *             for cheaper image models that previously baked visible cell
  *             lines into the picture and for higher-end models that still
  *             leaked the words "row"/"column" into compass-rose decorations.
+ *   v7 -> v8: region location-anchor tiles omit classifier `desc` so
+ *             composeMosaicImagePrompt uses the priorKind-based anchor line
+ *             instead of often wrong-scale "outskirts" cell blurbs.
+ *   v8 -> v9: region anchors now stamp deterministic source-derived mosaic
+ *             briefs (from compressed location/region prose), replacing both
+ *             classifier anchor blurbs and weak generic priorKind-only lines.
  */
-const MOSAIC_PROMPT_VERSION = "v7";
+const MOSAIC_PROMPT_VERSION = "v9";
 
 /**
  * Per-cell mosaic cache key. The first segment `mosaic` is a literal
@@ -207,9 +213,13 @@ export class TileImageCache {
         this.memUrls.set(row.key, url);
       }
     }
-    diag.info("image", `hydrated ${rows.length} cached tile image(s) from IDB`, {
-      count: rows.length,
-    });
+    diag.info(
+      "image",
+      `hydrated ${rows.length} cached tile image(s) from IDB`,
+      {
+        count: rows.length,
+      },
+    );
   }
 
   /**
@@ -270,7 +280,9 @@ export class TileImageCache {
       return placeholder;
     }
     if (this.mode === "per-tile") {
-      return this.getOrCreate(key, () => this.resolve(key, tile.kind, grid.biome));
+      return this.getOrCreate(key, () =>
+        this.resolve(key, tile.kind, grid.biome),
+      );
     }
     return this.getOrCreate(key, () => this.resolveMosaicSlice(grid, key));
   }
@@ -312,7 +324,9 @@ export class TileImageCache {
         const tile = grid.tiles[y * grid.width + x];
         if (!tile) continue;
         perTileKeys.add(tileImageKey(tile.kind, grid.biome, this.style));
-        mosaicKeys.add(mosaicTileKey(grid.scope, grid.ownerId, x, y, this.style));
+        mosaicKeys.add(
+          mosaicTileKey(grid.scope, grid.ownerId, x, y, this.style),
+        );
       }
     }
     const keys = new Set<string>([...perTileKeys, ...mosaicKeys]);
@@ -367,12 +381,7 @@ export class TileImageCache {
 
   // ------------------------------------------------------------------ private
 
-  private keyForTile(
-    grid: TileGrid,
-    x: number,
-    y: number,
-    tile: Tile,
-  ): string {
+  private keyForTile(grid: TileGrid, x: number, y: number, tile: Tile): string {
     if (this.mode === "mosaic") {
       return mosaicTileKey(grid.scope, grid.ownerId, x, y, this.style);
     }
@@ -425,7 +434,6 @@ export class TileImageCache {
       try {
         listener(key);
       } catch (err) {
-        // eslint-disable-next-line no-console
         console.warn("[tileImageCache] listener threw", err);
       }
     }
@@ -456,6 +464,28 @@ export class TileImageCache {
     await this.fillMosaicForGrid(grid);
     const url = this.memUrls.get(key);
     if (url) return url;
+    // #region agent log
+    fetch("http://127.0.0.1:7637/ingest/7037aa25-0b5a-4c3e-aa0c-e8b0c270a47d", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "db47a6",
+      },
+      body: JSON.stringify({
+        sessionId: "db47a6",
+        runId: "initial",
+        hypothesisId: "H8",
+        location: "tileImageCache.ts:resolveMosaicSlice",
+        message: "No URL after mosaic fill; fallback placeholder returned",
+        data: {
+          scope: grid.scope,
+          ownerId: grid.ownerId,
+          key,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     return fallbackPlaceholder(key);
   }
 
@@ -476,12 +506,46 @@ export class TileImageCache {
 
     const promise = (async () => {
       const prompt = composeMosaicImagePrompt(grid, this.style);
+      // #region agent log
+      fetch(
+        "http://127.0.0.1:7637/ingest/7037aa25-0b5a-4c3e-aa0c-e8b0c270a47d",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Debug-Session-Id": "db47a6",
+          },
+          body: JSON.stringify({
+            sessionId: "db47a6",
+            runId: "initial",
+            hypothesisId: "H5",
+            location: "tileImageCache.ts:fillMosaicForGrid",
+            message: "Final prompt sent to image provider",
+            data: {
+              scope: grid.scope,
+              ownerId: grid.ownerId,
+              provider: this.imageProvider.id,
+              promptChars: prompt.length,
+              promptHead: prompt.slice(0, 500),
+              promptFeatureSectionPreview: prompt.slice(
+                Math.max(0, prompt.indexOf("Feature placement")),
+                Math.max(0, prompt.indexOf("Feature placement")) + 900,
+              ),
+            },
+            timestamp: Date.now(),
+          }),
+        },
+      ).catch(() => {});
+      // #endregion
       const blueprintPrompt =
         `${prompt}\n\n` +
         "A blueprint guide image is provided. Treat it as the authoritative spatial layout: keep each landmark/motif contained within its guide cell and preserve the full edge-to-edge map extent.";
       const requestW = this.mosaicSliceSize * grid.width;
       const requestH = this.mosaicSliceSize * grid.height;
-      const blueprint = await createMosaicBlueprintImage(grid, this.mosaicSliceSize);
+      const blueprint = await createMosaicBlueprintImage(
+        grid,
+        this.mosaicSliceSize,
+      );
       const anchorCells = grid.tiles.filter((t) => !!t.locationId).length;
       const dangerousCells = grid.tiles.filter((t) => !!t.dangerous).length;
       const startedAt = performance.now();
@@ -524,7 +588,35 @@ export class TileImageCache {
       });
 
       let result;
+      let usedVariant: "mosaic-blueprint" | "mosaic" = "mosaic-blueprint";
+      let conditioningFailed = false;
       try {
+        // #region agent log
+        fetch(
+          "http://127.0.0.1:7637/ingest/7037aa25-0b5a-4c3e-aa0c-e8b0c270a47d",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Debug-Session-Id": "db47a6",
+            },
+            body: JSON.stringify({
+              sessionId: "db47a6",
+              runId: "initial",
+              hypothesisId: "H6",
+              location: "tileImageCache.ts:fillMosaicForGrid",
+              message: "Starting blueprint-conditioned provider call",
+              data: {
+                scope: grid.scope,
+                ownerId: grid.ownerId,
+                provider: this.imageProvider.id,
+                requestSize: `${requestW}x${requestH}`,
+              },
+              timestamp: Date.now(),
+            }),
+          },
+        ).catch(() => {});
+        // #endregion
         const blueprintReqStartedAt = performance.now();
         result = await this.imageProvider.generate({
           prompt: blueprintPrompt,
@@ -536,33 +628,47 @@ export class TileImageCache {
             mime: blueprint.mime,
           },
         });
-        diag.info("image", `mosaic blueprint-conditioned response for ${grid.ownerId}`, {
-          scope: grid.scope,
-          ownerId: grid.ownerId,
-          provider: this.imageProvider.id,
-          variant: "mosaic-blueprint",
-          elapsedMs: Math.round(performance.now() - blueprintReqStartedAt),
-          rawBytes: result.bytes.byteLength,
-          rawSize: `${result.width}x${result.height}`,
-        });
+        diag.info(
+          "image",
+          `mosaic blueprint-conditioned response for ${grid.ownerId}`,
+          {
+            scope: grid.scope,
+            ownerId: grid.ownerId,
+            provider: this.imageProvider.id,
+            variant: "mosaic-blueprint",
+            elapsedMs: Math.round(performance.now() - blueprintReqStartedAt),
+            rawBytes: result.bytes.byteLength,
+            rawSize: `${result.width}x${result.height}`,
+          },
+        );
       } catch (err) {
+        conditioningFailed = true;
+        usedVariant = "mosaic";
         // Provider/model may not support image conditioning; fall back to
         // classic prompt-only mosaic generation.
-        diag.warn("image", `mosaic blueprint conditioning failed; falling back`, {
-          scope: grid.scope,
-          ownerId: grid.ownerId,
-          provider: this.imageProvider.id,
-          error: err instanceof Error ? err.message : String(err),
-        });
+        diag.warn(
+          "image",
+          `mosaic blueprint conditioning failed; falling back`,
+          {
+            scope: grid.scope,
+            ownerId: grid.ownerId,
+            provider: this.imageProvider.id,
+            error: err instanceof Error ? err.message : String(err),
+          },
+        );
         const fallbackReqStartedAt = performance.now();
-        diag.info("image", `mosaic fallback request → provider for ${grid.ownerId}`, {
-          scope: grid.scope,
-          ownerId: grid.ownerId,
-          provider: this.imageProvider.id,
-          variant: "mosaic",
-          promptChars: prompt.length,
-          promptPreview: prompt.slice(0, 320),
-        });
+        diag.info(
+          "image",
+          `mosaic fallback request → provider for ${grid.ownerId}`,
+          {
+            scope: grid.scope,
+            ownerId: grid.ownerId,
+            provider: this.imageProvider.id,
+            variant: "mosaic",
+            promptChars: prompt.length,
+            promptPreview: prompt.slice(0, 320),
+          },
+        );
         result = await this.imageProvider.generate({
           prompt,
           width: requestW,
@@ -579,17 +685,89 @@ export class TileImageCache {
           rawSize: `${result.width}x${result.height}`,
         });
       }
+      // #region agent log
+      fetch(
+        "http://127.0.0.1:7637/ingest/7037aa25-0b5a-4c3e-aa0c-e8b0c270a47d",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Debug-Session-Id": "db47a6",
+          },
+          body: JSON.stringify({
+            sessionId: "db47a6",
+            runId: "initial",
+            hypothesisId: "H6",
+            location: "tileImageCache.ts:fillMosaicForGrid",
+            message: "Provider variant and conditioning result",
+            data: {
+              scope: grid.scope,
+              ownerId: grid.ownerId,
+              provider: this.imageProvider.id,
+              usedVariant,
+              conditioningFailed,
+              requestSize: `${requestW}x${requestH}`,
+              responseSize: `${result.width}x${result.height}`,
+              responseBytes: result.bytes.byteLength,
+            },
+            timestamp: Date.now(),
+          }),
+        },
+      ).catch(() => {});
+      // #endregion
       const slices = await sliceMosaic(result, grid.width, grid.height);
+      // #region agent log
+      {
+        const sig = (bytes: Uint8Array): string => {
+          const n = Math.min(24, bytes.length);
+          let out = "";
+          for (let i = 0; i < n; i += 1)
+            out += bytes[i].toString(16).padStart(2, "0");
+          return out;
+        };
+        const signatures = slices.map((s) => sig(s.bytes));
+        const uniqueSignatures = new Set(signatures).size;
+        fetch(
+          "http://127.0.0.1:7637/ingest/7037aa25-0b5a-4c3e-aa0c-e8b0c270a47d",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Debug-Session-Id": "db47a6",
+            },
+            body: JSON.stringify({
+              sessionId: "db47a6",
+              runId: "initial",
+              hypothesisId: "H7",
+              location: "tileImageCache.ts:fillMosaicForGrid",
+              message: "Slice uniqueness stats",
+              data: {
+                scope: grid.scope,
+                ownerId: grid.ownerId,
+                sliceCount: slices.length,
+                uniqueSliceSignatures: uniqueSignatures,
+                sampleSignatures: signatures.slice(0, 10),
+              },
+              timestamp: Date.now(),
+            }),
+          },
+        ).catch(() => {});
+      }
+      // #endregion
       const durationMs = Math.round(performance.now() - startedAt);
-      diag.info("image", `mosaic response (${durationMs}ms) for ${grid.ownerId}`, {
-        scope: grid.scope,
-        ownerId: grid.ownerId,
-        sliceCount: slices.length,
-        rawBytes: result.bytes.byteLength,
-        rawSize: `${result.width}x${result.height}`,
-        durationMs,
-        mode: "blueprint-then-fallback-if-needed",
-      });
+      diag.info(
+        "image",
+        `mosaic response (${durationMs}ms) for ${grid.ownerId}`,
+        {
+          scope: grid.scope,
+          ownerId: grid.ownerId,
+          sliceCount: slices.length,
+          rawBytes: result.bytes.byteLength,
+          rawSize: `${result.width}x${result.height}`,
+          durationMs,
+          mode: "blueprint-then-fallback-if-needed",
+        },
+      );
 
       await this.persistSlices(grid, slices);
     })().finally(() => {
@@ -624,7 +802,11 @@ export class TileImageCache {
     }
   }
 
-  private async resolve(key: string, kind: string, biome: string): Promise<string> {
+  private async resolve(
+    key: string,
+    kind: string,
+    biome: string,
+  ): Promise<string> {
     // 1. Persisted PNG?
     const persisted = await getTileImageRow(this.saveId, key);
     if (persisted) {
@@ -727,7 +909,11 @@ async function saveBlueprintForDebug(args: {
  * template here (rather than persisted) means a style/template tweak
  * applies to every freshly-generated tile without DB migration.
  */
-function composeImagePrompt(kind: string, biome: string, style: string): string {
+function composeImagePrompt(
+  kind: string,
+  biome: string,
+  style: string,
+): string {
   const readableKind = kind.replace(/-/g, " ");
   const readableBiome = biome.replace(/-/g, " ");
   return [

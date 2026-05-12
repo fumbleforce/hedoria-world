@@ -109,7 +109,7 @@ export const TileSchema = z.object({
    * attach a rich per-cell description for the single whole-map image pass.
    * Ignored in per-tile image mode (keys use kind+biome).
    */
-  mosaicDescribe: z.string().optional(),
+  desc: z.string().optional(),
 });
 export type Tile = z.infer<typeof TileSchema>;
 
@@ -146,16 +146,29 @@ export const TileGridSchema = z.object({
 });
 export type TileGrid = z.infer<typeof TileGridSchema>;
 
-export function tileIndex(grid: { width: number }, x: number, y: number): number {
+export function tileIndex(
+  grid: { width: number },
+  x: number,
+  y: number,
+): number {
   return y * grid.width + x;
 }
 
-export function getTile(grid: TileGrid, x: number, y: number): Tile | undefined {
+export function getTile(
+  grid: TileGrid,
+  x: number,
+  y: number,
+): Tile | undefined {
   if (x < 0 || y < 0 || x >= grid.width || y >= grid.height) return undefined;
   return grid.tiles[tileIndex(grid, x, y)];
 }
 
-export function withTile(grid: TileGrid, x: number, y: number, tile: Tile): TileGrid {
+export function withTile(
+  grid: TileGrid,
+  x: number,
+  y: number,
+  tile: Tile,
+): TileGrid {
   if (x < 0 || y < 0 || x >= grid.width || y >= grid.height) return grid;
   const tiles = grid.tiles.slice();
   tiles[tileIndex(grid, x, y)] = tile;

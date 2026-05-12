@@ -163,7 +163,7 @@ export class WorldNarrator {
     if (sawCanonical) return;
 
     // If the intent is a movement attempt against a tile we already
-    // know is impassable, the deterministic dispatcher would just
+    // know is blocked, the deterministic dispatcher would just
     // reject the call — there's no point firing it as a "safety net".
     // The LLM was told (via the system prompt) NOT to emit the
     // mechanical tool in that case; omitting it is the correct

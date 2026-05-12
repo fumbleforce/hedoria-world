@@ -961,7 +961,7 @@ input:focus {
     inset 0 0 0 1px rgba(201, 166, 107, 0.25),
     0 0 8px rgba(201, 166, 107, 0.18);
 }
-.tileGrid__cell--impassable {
+.tileGrid__cell--blocked {
   filter: grayscale(0.65) brightness(0.55);
   cursor: not-allowed;
 }

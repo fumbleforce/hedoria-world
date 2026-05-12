@@ -18,7 +18,6 @@ The engine has already chosen which cells the named locations occupy and will st
 Output strict JSON matching:
 {
   "biome": string,
-  "palette": string[],
   "cells": Array<{
     "x": int, "y": int,
     "kind": string,
@@ -41,7 +40,7 @@ Rules:
     - Cells with the highest x (e.g. x = width - 1) are the EASTERNMOST column.
     So 'mountains to the north' means MOUNTAIN-style kinds should fill the high-y rows (top of the map). 'Sea to the south' means SEA/SHORELINE kinds should fill the low-y rows. 'Coast to the east' means COAST/TIDAL kinds should fill the high-x columns. Mirror the prose's compass references in BAND placement.
  7. The geography should also reflect non-direction prose hints. If the region has a river, the river cells should form a continuous line or bend across the grid. If there is sea/coast, it should sit on ONE edge consistent with the prose. If there are mountains, they should cluster, not scatter.
- 8. \`passable=false\` for impassable terrain (deep water, cliffs, dense crag). Otherwise true.
+ 8. \`passable=false\` for blocked terrain (deep water, cliffs, dense crag). Otherwise true.
  9. \`dangerous=true\` only when crossing the cell would credibly trigger a hazard or hostile encounter.
  10. Reply with JSON ONLY. No prose, no markdown, no commentary.
 `);
@@ -55,7 +54,6 @@ Given prose describing a single named location and its sub-areas, you will desig
 Output strict JSON matching:
 {
   "biome": string,           // architectural/spatial label, e.g. 'old-quarter', 'farmstead', 'cellar'
-  "palette": string[],
   "cells": Array<{
     "x": int, "y": int,
     "kind": string,
@@ -72,7 +70,7 @@ Rules:
  4. Same rule for \`label\`: describe what the cell IS, not what it's named. 'Common room', 'Stable yard', 'Kitchen' are fine. 'The Farmer's Rest', 'Inn Garden', 'Heraldo's Workshop' are NOT — those are proper-noun names that belong only in the engine's data model, never in \`kind\` or \`label\`.
  5. If the prose references named sub-areas (rooms, halls, yards), surface each as one cell with a generic functional kind that matches the area's PURPOSE (e.g. 'The Farmer's Rest' (an inn) → kind 'inn-hall' or 'common-room'; 'Inn Garden' → 'garden-patch').
  6. The remaining cells fill in plausible connectors (alleys, gardens, walls) that make the layout coherent.
- 7. \`passable=false\` for solid walls or sealed rooms. Otherwise true.
+ 7. \`passable=false\` for blocked areas like solid walls or sealed rooms. Otherwise true.
  8. \`dangerous=true\` only when the cell is itself a hazard (e.g. a vermin nest, a collapsing floor).
  9. NO \`locationId\` on location-grid cells; that field is only used at region scope.
  10. Reply with JSON ONLY. No prose, no markdown, no commentary.
@@ -82,7 +80,7 @@ Rules:
   /**
    * Region grid when tile art uses one mosaic image per map (sliced into cells).
    * No tight terrain palette — each cell may be visually distinct. The image
-   * model reads `mosaicDescribe` per cell; `kind` stays a compact slug for gameplay.
+   * model reads `desc` per cell; `kind` stays a compact slug for gameplay.
    */
   tileRegionMosaicClassifierPrompt(): string {
     return classifierPromptBlock(`
@@ -94,28 +92,26 @@ The engine has already chosen which cells the named locations occupy and will st
 Output strict JSON matching:
 {
   "biome": string,
-  "palette": string[],   // optional diagnostic list of terrain tags you used (not limited in count)
   "cells": Array<{
     "x": int, "y": int,
     "kind": string,      // short kebab-case slug for engine/pathing (unique per cell is fine)
     "label": string,     // short UI / narration phrase
-    "mosaicDescribe": string,
+    "desc": string,
     "passable": boolean,
     "dangerous": boolean
   }>
 }
 
 Rules:
- 1. Cover EVERY cell — exactly width × height cells, no duplicates, no gaps. Reserved location cells may hold any plausible terrain; the engine overwrites anchors.
- 2. EVERY cell MUST include \`mosaicDescribe\`: 1 terse, concrete description telling an image model exactly what to paint in that square, top-down cell. Be specific: materials (mud, slate, sand), vegetation, water depth/color, building types, atmosphere. Simple instruction to the painter, NOT visible lettering on the map — do not say 'write' or 'label'.
- 3. \`label\` stays short and name-free: terrain read, e.g. 'Foggy sheep pasture', 'Shingle beach at low tide'.
- 4. The PROSE is authoritative for compass geography. Honour north/south/east/west bands from the region text; anchor positions do not override prose.
- 5. Coordinate convention: +x = EAST, +y = NORTH; highest y is north; (0,0) is south-west.
- 6. Rivers, roads, and coastlines should read as continuous features across adjacent cells; say so in \`mosaicDescribe\` where relevant.
- 7. Reserved-location context is LOCAL. Outside reserved anchor cells, do not replicate a location's signature identity into nearby cells (for example, avoid spreading forge-town / festival-ground / necropolis motifs as repeated district clones unless the region prose explicitly says that feature spans a broad area).
- 8. For non-anchor cells, keep \`kind\` and \`label\` as generic terrain/feature descriptors, not place-like paraphrases of named anchors.
- 9. \`dangerous=true\` only for real hazards.
- 10. Reply with JSON ONLY. No markdown, no commentary.
+ 1. Cover EVERY cell — exactly width × height cells, no duplicates, no gaps.
+ 2. For NON-RESERVED cells, output terrain/feature \`kind\` + short \`label\` and a concrete \`desc\` (materials, vegetation, water, structures, lighting). Keep \`kind\`/\`label\` generic and name-free.
+ 3. For ENGINE-RESERVED cells, keep \`kind\`/\`label\` as a short footprint read that matches the supplied visual brief for that named location. Do not spread that identity into surrounding non-reserved cells unless region prose says it spans broadly.
+ 4. \`desc\` is still required on every cell, including reserved cells, but reserved-cell \`desc\` can be brief.
+ 5. The PROSE is authoritative for compass geography. Honour north/south/east/west bands from region text; anchor positions do not override prose.
+ 6. Coordinate convention: +x = EAST, +y = NORTH; highest y is north; (0,0) is south-west.
+ 7. Rivers, roads, and coastlines should read as continuous features across adjacent cells.
+ 8. \`dangerous=true\` only for real hazards.
+ 9. Reply with JSON ONLY. No markdown, no commentary.
 `);
   },
 
@@ -125,17 +121,16 @@ Rules:
   tileLocationMosaicClassifierPrompt(): string {
     return classifierPromptBlock(`
 You are the location cartographer for a 2D fantasy adventure game.
-The player sees this site as ONE continuous top-down painting sliced into different sections. Each part must carry a rich \`mosaicDescribe\` for the image model. The user message gives exact width × height.
+The player sees this site as ONE continuous top-down painting sliced into different sections. Each part must carry a rich \`desc\` for the image model. The user message gives exact width × height.
 
 Output strict JSON matching:
 {
   "biome": string,
-  "palette": string[],
   "cells": Array<{
     "x": int, "y": int,
     "kind": string,
     "label": string,
-    "mosaicDescribe": string,
+    "desc": string,
     "passable": boolean,
     "dangerous": boolean
   }>
@@ -143,9 +138,9 @@ Output strict JSON matching:
 
 Rules:
  1. Cover EVERY cell — width × height, no gaps.
- 2. EVERY cell MUST include \`mosaicDescribe\`: 1–3 sentences, top-down art direction for that cell only — rooflines, courtyards, stairs, stalls, water, stonework, lighting. Instructions to the painter only; no request for visible text or signage.
+ 2. EVERY cell MUST include \`desc\`: 1–3 sentences, top-down art direction for that cell only — rooflines, courtyards, stairs, stalls, water, stonework, lighting. Instructions to the painter only; no request for visible text or signage.
  3. \`label\` is a short functional read for UI (e.g. 'Covered market aisle') — avoid echoing long proper-noun sub-area titles in \`kind\`.
- 4. Respect ENGINE-RESERVED sub-area coordinates from the user message; still output a full \`mosaicDescribe\` there (what the painter should show on that footprint).
+ 4. Respect ENGINE-RESERVED sub-area coordinates from the user message; still output a full \`desc\` there (what the painter should show on that footprint).
  5. \`passable\` / \`dangerous\` as usual.
  6. NO \`locationId\` on cells.
  7. Reply with JSON ONLY.

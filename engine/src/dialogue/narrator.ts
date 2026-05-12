@@ -312,7 +312,7 @@ export class Narrator {
       }
       const target = getTile(grid, nx, ny);
       if (target && !target.passable) {
-        return fail(`That way is impassable (${target.label ?? target.kind}).`);
+        return fail(`That way is blocked (${target.label ?? target.kind}).`);
       }
       useStore.getState().setRegionPos([nx, ny]);
       // Fire-and-forget pre-warm of the destination tile's image. Must be
@@ -376,7 +376,7 @@ export class Narrator {
       }
       const target = getTile(grid, nx, ny);
       if (target && !target.passable) {
-        return fail(`That way is impassable (${target.label ?? target.kind}).`);
+        return fail(`That way is blocked (${target.label ?? target.kind}).`);
       }
       useStore.getState().setLocationPos([nx, ny]);
       if (target) {
@@ -464,8 +464,8 @@ export class Narrator {
             });
           }
         }
-        // The chosen direction would step out of bounds or onto an
-        // impassable tile. Stay on the original cell (the player is
+        // The chosen direction would step out of bounds or onto a
+        // blocked tile. Stay on the original cell (the player is
         // still safely back in region mode), but report the failure so
         // the UI can narrate "you find no path that way" if it wants to.
         return ok(undefined, {
@@ -487,7 +487,7 @@ export class Narrator {
       }
       const tile = getTile(grid, args.x, args.y);
       if (!tile) return fail("Tile missing.");
-      if (!tile.passable) return fail(`That tile is impassable.`);
+      if (!tile.passable) return fail(`That tile is blocked.`);
       const store = useStore.getState();
       store.setLocationPos([args.x, args.y]);
       store.setCurrentSceneTile({

@@ -6,7 +6,7 @@ import { getTile, type Tile, type TileGrid } from "./tilePrimitives";
 type Cell = { x: number; y: number };
 
 /**
- * Lay down the `path` primitive over impassable-but-not-anchor cells along
+ * Lay down the `path` primitive over blocked-but-not-anchor cells along
  * the routes that connect every location-anchor to the region center and
  * to each other. Returns a NEW TileGrid; the input is not mutated.
  *
@@ -95,6 +95,9 @@ function pathOver(prior: Tile): Tile {
   return {
     kind: "path",
     label: prior.label,
+    // Preserve pre-path visual description so mosaic prompts do not degrade
+    // into repeated "path — <label>" fallbacks after route stamping.
+    desc: prior.desc,
     passable: true,
     priorKind: prior.kind,
     props: prior.props,

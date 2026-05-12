@@ -385,7 +385,7 @@ function TileGridCell({
     here ? "tileGrid__cell--here" : "",
     selected ? "tileGrid__cell--selected" : "",
     adjacent ? "tileGrid__cell--adjacent" : "",
-    !tile.passable ? "tileGrid__cell--impassable" : "",
+    !tile.passable ? "tileGrid__cell--blocked" : "",
     tile.dangerous ? "tileGrid__cell--dangerous" : "",
     isEngineKind(tile.kind) ? `tileGrid__cell--${tile.kind}` : "",
     tile.locationId ? "tileGrid__cell--anchor" : "",

@@ -25,6 +25,10 @@ import {
   type LocationAreaAnchor,
 } from "./locationAreaLayout";
 import { projectLocations, type ProjectedAnchor } from "./locationProjection";
+import {
+  buildAnchorBrief,
+  buildLocationLayoutBrief,
+} from "./tileClassificationContext";
 import { buildSystemPrompt, type PromptOperation } from "../llm/promptBuilder";
 import { TILE_CARTOGRAPHY_PROMPTS } from "../llm/tileCartographyPrompts";
 import { useStore } from "../state/store";
@@ -59,7 +63,7 @@ const FillerCellSchema = z.object({
    * Rich top-down art direction for mosaic mode (one big image per grid).
    * Omitted when the player uses per-tile image caching.
    */
-  mosaicDescribe: z.string().optional(),
+  desc: z.string().optional(),
   passable: z.boolean(),
   dangerous: z.boolean().default(false),
   /** If non-empty, this cell is a location-anchor for the named location. */
@@ -70,11 +74,6 @@ type FillerCell = z.infer<typeof FillerCellSchema>;
 const FillerResponseSchema = z.object({
   /** The biome label the model inferred from the prose. */
   biome: z.string().default("mixed-temperate"),
-  /**
-   * The model's chosen palette of kinds. Surfaced for diagnostics; not
-   * required to reuse — the engine just checks the cells.
-   */
-  palette: z.array(z.string()).default([]),
   cells: z.array(FillerCellSchema),
 });
 
@@ -115,7 +114,7 @@ export type TileFillerOptions = {
  * same save read directly from IndexedDB without touching the LLM.
  *
  * When the global tile-image mode is `mosaic` (see store), region/location
- * classification uses relaxed prompts and emits per-cell `mosaicDescribe`
+ * classification uses relaxed prompts and emits per-cell `desc`
  * for the whole-map image pass; `per-tile` mode keeps the tight palette rules.
  */
 export class TileFiller {
@@ -142,7 +141,10 @@ export class TileFiller {
     const key = `region::${input.regionId}`;
     const existing = this.inFlight.get(key);
     if (existing) {
-      diag.debug("tile-grid", `joining in-flight region fill ${input.regionId}`);
+      diag.debug(
+        "tile-grid",
+        `joining in-flight region fill ${input.regionId}`,
+      );
       return existing;
     }
     const promise = (async () => {
@@ -156,11 +158,15 @@ export class TileFiller {
         });
         return { ...cached, source: "llm" as const };
       }
-      diag.info("tile-grid", `region cache miss ${input.regionId} — calling filler`, {
-        scope: "region",
-        ownerId: input.regionId,
-        locationCount: input.locations.length,
-      });
+      diag.info(
+        "tile-grid",
+        `region cache miss ${input.regionId} — calling filler`,
+        {
+          scope: "region",
+          ownerId: input.regionId,
+          locationCount: input.locations.length,
+        },
+      );
       const result = await this.generateRegionGrid(input);
       // Only persist authoritative LLM output. A blank fallback grid is a
       // transient quota-exhausted artefact; caching it would pin the world
@@ -174,10 +180,14 @@ export class TileFiller {
           tiles: result.grid.tiles.length,
         });
       } else {
-        diag.warn("tile-grid", `region fallback grid used ${input.regionId} (not cached)`, {
-          scope: "region",
-          ownerId: input.regionId,
-        });
+        diag.warn(
+          "tile-grid",
+          `region fallback grid used ${input.regionId} (not cached)`,
+          {
+            scope: "region",
+            ownerId: input.regionId,
+          },
+        );
       }
       return { ...result.grid, source: result.source };
     })().finally(() => {
@@ -191,7 +201,10 @@ export class TileFiller {
     const key = `location::${input.locationId}`;
     const existing = this.inFlight.get(key);
     if (existing) {
-      diag.debug("tile-grid", `joining in-flight location fill ${input.locationId}`);
+      diag.debug(
+        "tile-grid",
+        `joining in-flight location fill ${input.locationId}`,
+      );
       return existing;
     }
     const promise = (async () => {
@@ -250,12 +263,17 @@ export class TileFiller {
    * inferred direction from the anchor positions instead of the
    * regional prose and ended up with the world upside-down).
    */
-  async clearGrid(scope: "region" | "location", ownerId: string): Promise<void> {
+  async clearGrid(
+    scope: "region" | "location",
+    ownerId: string,
+  ): Promise<void> {
     this.inFlight.delete(`${scope}::${ownerId}`);
     await deleteSceneSpecRow(
       this.saveId,
       "tile-grid",
-      scope === "location" ? `location-v4::${ownerId}` : `region-v3::${ownerId}`,
+      scope === "location"
+        ? `location-v4::${ownerId}`
+        : `region-v3::${ownerId}`,
     );
     diag.info("tile-grid", `cleared cached grid for ${scope} ${ownerId}`, {
       scope,
@@ -273,12 +291,15 @@ export class TileFiller {
     // Location: "v4" — dynamic grid size + engine-reserved sub-area cells
     // (replaces fixed 5×5 location grids from earlier builds).
     const cacheKey =
-      scope === "location" ? `location-v4::${ownerId}` : `region-v3::${ownerId}`;
+      scope === "location"
+        ? `location-v4::${ownerId}`
+        : `region-v3::${ownerId}`;
     const row = await getSceneSpecRow(this.saveId, "tile-grid", cacheKey);
     if (!row) return null;
     const parsed = TileGridSchema.safeParse(row.spec);
     if (!parsed.success) return null;
-    if (parsed.data.tiles.length !== parsed.data.width * parsed.data.height) return null;
+    if (parsed.data.tiles.length !== parsed.data.width * parsed.data.height)
+      return null;
     // Guard against earlier builds that persisted blank fallback grids
     // (every cell `path`, no location anchors). The current build only
     // writes authoritative LLM output; discarding the legacy row gives
@@ -316,7 +337,15 @@ export class TileFiller {
     // assignments are FIXED; if it nevertheless ignores them or echoes a
     // different cell, the engine overwrites the affected cells in
     // cellsToGrid using `forcedAnchors`.
-    const anchors = projectLocations({ locations, gridW: width, gridH: height });
+    const anchors = projectLocations({
+      locations,
+      gridW: width,
+      gridH: height,
+    });
+    const anchorBriefs = buildRegionAnchorBriefs(
+      region.basicInfo || "",
+      anchors,
+    );
 
     const mosaicImage = isTileImageMosaicMode();
     const operation = tileClassifierOperation("region", mosaicImage);
@@ -334,10 +363,35 @@ export class TileFiller {
       width,
       height,
       anchors,
+      anchorBriefs,
       activeQuestMarkers,
       worldBackground: this.worldBackgroundHint(),
       mosaicImageArt: mosaicImage,
     });
+    // #region agent log
+    fetch("http://127.0.0.1:7637/ingest/7037aa25-0b5a-4c3e-aa0c-e8b0c270a47d", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "db47a6",
+      },
+      body: JSON.stringify({
+        sessionId: "db47a6",
+        runId: "initial",
+        hypothesisId: "H1",
+        location: "tileFiller.ts:generateRegionGrid",
+        message: "Region user prompt constructed",
+        data: {
+          regionId,
+          mosaicImage,
+          anchorCount: anchors.length,
+          promptChars: user.length,
+          promptPreview: user.slice(0, 600),
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     if (input.llmCacheBuster) {
       user += `\n\n<!-- engine:grid-regenerate ${input.llmCacheBuster} -->`;
     }
@@ -350,6 +404,7 @@ export class TileFiller {
       system,
       user,
       forcedAnchors: anchors,
+      anchorBriefs,
       buildFallback: () =>
         deterministicRegionGrid({
           regionId,
@@ -363,7 +418,12 @@ export class TileFiller {
   private async generateLocationGrid(
     input: LocationFillerInput,
   ): Promise<FillerOutcome> {
-    const { location, locationId, regionBiome, activeQuestMarkers = [] } = input;
+    const {
+      location,
+      locationId,
+      regionBiome,
+      activeQuestMarkers = [],
+    } = input;
     const layout = layoutLocationAreas(location.areas);
     const { width, height, anchors: areaAnchors } = layout;
     const areas = Object.entries(location.areas ?? {})
@@ -393,6 +453,10 @@ export class TileFiller {
       height,
       areas,
       areaAnchors,
+      layoutBrief: buildLocationLayoutBrief({
+        locationProse: location.basicInfo || "",
+        areaDescriptions: areas.map((a) => a.description || ""),
+      }),
       activeQuestMarkers,
       worldBackground: this.worldBackgroundHint(),
       mosaicImageArt: mosaicImage,
@@ -422,15 +486,9 @@ export class TileFiller {
   }
 
   private worldBackgroundHint(): string {
-    const story = this.world.storyStarts;
-    const random = (story && (story.Random as unknown)) ?? null;
-    if (random && typeof random === "object") {
-      try {
-        return JSON.stringify(random).slice(0, 1500);
-      } catch {
-        return "";
-      }
-    }
+    // Scene-classify prompts should stay strictly map-focused.
+    // Injecting story-start/world-tone JSON (often long and narrative) dilutes
+    // cheap classifier models and can override concrete geography signals.
     return "";
   }
 
@@ -454,6 +512,7 @@ export class TileFiller {
      * anchors so every area always appears on the map.
      */
     forcedAreaAnchors?: LocationAreaAnchor[];
+    anchorBriefs?: Record<string, AnchorBrief>;
     /**
      * Called when the LLM is unavailable. Should return a grid that still
      * surfaces authored content (locations as anchors at region scope,
@@ -471,6 +530,7 @@ export class TileFiller {
       user,
       forcedAnchors,
       forcedAreaAnchors,
+      anchorBriefs,
       buildFallback,
     } = args;
 
@@ -487,17 +547,67 @@ export class TileFiller {
       const json = safeJson(response.text);
       parsed = json ? FillerResponseSchema.parse(json) : null;
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn(`[tileFiller] LLM call failed for ${scope}=${ownerId}:`, err);
+      console.warn(
+        `[tileFiller] LLM call failed for ${scope}=${ownerId}:`,
+        err,
+      );
     }
 
     if (!parsed) {
-      // eslint-disable-next-line no-console
       console.warn(
         `[tileFiller] using deterministic fallback grid for ${scope}=${ownerId}`,
       );
       return { grid: buildFallback(), source: "fallback" };
     }
+
+    // #region agent log
+    {
+      const uniqKinds = new Set(
+        parsed.cells.map((c) => c.kind.trim().toLowerCase()),
+      ).size;
+      const uniqLabels = new Set(
+        parsed.cells.map((c) => c.label.trim().toLowerCase()),
+      ).size;
+      const mdVals = parsed.cells
+        .map((c) => (c.desc ?? "").trim().toLowerCase())
+        .filter(Boolean);
+      const uniqMd = new Set(mdVals).size;
+      const blockedCells = parsed.cells.filter((c) => c.passable === false).length;
+      fetch(
+        "http://127.0.0.1:7637/ingest/7037aa25-0b5a-4c3e-aa0c-e8b0c270a47d",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Debug-Session-Id": "db47a6",
+          },
+          body: JSON.stringify({
+            sessionId: "db47a6",
+            runId: "initial",
+            hypothesisId: "H2",
+            location: "tileFiller.ts:invokeFiller",
+            message: "Classifier parsed response stats",
+            data: {
+              scope,
+              ownerId,
+              biome: parsed.biome,
+              cells: parsed.cells.length,
+              uniqKinds,
+              uniqLabels,
+              uniqMosaicDescribe: uniqMd,
+              descCoverage: mdVals.length,
+              blockedCells,
+              sampleKinds: parsed.cells.slice(0, 8).map((c) => c.kind),
+              sampleMosaicDescribe: parsed.cells
+                .slice(0, 5)
+                .map((c) => c.desc ?? ""),
+            },
+            timestamp: Date.now(),
+          }),
+        },
+      ).catch(() => {});
+    }
+    // #endregion
 
     return {
       grid: cellsToGrid({
@@ -509,6 +619,7 @@ export class TileFiller {
         cells: parsed.cells,
         forcedAnchors,
         forcedAreaAnchors,
+        anchorBriefs,
       }),
       source: "llm",
     };
@@ -539,7 +650,11 @@ function smartSnippet(text: string, maxChars: number): string {
   if (!cleaned) return "";
   if (cleaned.length <= maxChars) return cleaned;
   const hard = cleaned.slice(0, maxChars);
-  const punct = Math.max(hard.lastIndexOf(". "), hard.lastIndexOf("; "), hard.lastIndexOf(": "));
+  const punct = Math.max(
+    hard.lastIndexOf(". "),
+    hard.lastIndexOf("; "),
+    hard.lastIndexOf(": "),
+  );
   if (punct >= Math.floor(maxChars * 0.55)) {
     return `${hard.slice(0, punct + 1).trim()} …`;
   }
@@ -557,9 +672,10 @@ function userPromptForRegion(args: {
   width: number;
   height: number;
   anchors: ProjectedAnchor[];
+  anchorBriefs: Record<string, AnchorBrief>;
   activeQuestMarkers: QuestMarker[];
   worldBackground: string;
-  /** When true, the text model must emit `mosaicDescribe` on every cell. */
+  /** When true, the text model must emit `desc` on every cell. */
   mosaicImageArt?: boolean;
 }): string {
   const lines: string[] = [];
@@ -574,16 +690,20 @@ function userPromptForRegion(args: {
   );
   lines.push("");
   lines.push("Region prose:");
-  lines.push(args.regionProse || "(no prose authored — invent a coherent geography)");
+  lines.push(
+    args.regionProse || "(no prose authored — invent a coherent geography)",
+  );
   lines.push("");
   if (args.anchors.length > 0) {
     lines.push(
       "ENGINE-RESERVED CELLS — these (x,y) coordinates are already assigned to named locations. The engine will OVERWRITE these cells with location anchors regardless of what you put there, so emit plausible terrain on them and let your terrain choices around them respect the geography these locations imply:",
     );
     for (const a of args.anchors) {
-      const summary = smartSnippet(a.loc.basicInfo || "", 420);
+      const brief =
+        args.anchorBriefs[a.id] ??
+        buildAnchorBrief(args.regionProse || "", a.loc.basicInfo || "");
       lines.push(
-        `  - (${a.gx},${a.gy}) → "${a.loc.name || a.id}" :: ${summary}`,
+        `  - (${a.gx},${a.gy}) → "${a.loc.name || a.id}" | visual: ${brief.visualBrief} | regional: ${brief.regionalContext}${brief.sourceExcerpt ? ` | fallback: ${brief.sourceExcerpt}` : ""}`,
       );
     }
     lines.push("");
@@ -593,12 +713,19 @@ function userPromptForRegion(args: {
     lines.push(
       "Anchor descriptions are LOCAL context only. For non-reserved cells, do not clone a named location's unique motif/name-family (e.g. forge-*, necropolis/tomb-city, festival fairground) into surrounding cells unless region prose explicitly says that terrain district spans broadly. Adjacency may imply transitions, not copy-paste districts.",
     );
+    lines.push(
+      "Reserved cells are footprint hints for that coordinate only; surrounding cells remain region terrain.",
+    );
   } else {
-    lines.push("No named locations to place; populate the whole grid with regional terrain.");
+    lines.push(
+      "No named locations to place; populate the whole grid with regional terrain.",
+    );
   }
   lines.push("");
   if (args.activeQuestMarkers.length > 0) {
-    lines.push("Active quest hints (you don't need to mark cells for these — the engine overlays them — but pick kinds that could plausibly host these activities):");
+    lines.push(
+      "Active quest hints (you don't need to mark cells for these — the engine overlays them — but pick kinds that could plausibly host these activities):",
+    );
     for (const qm of args.activeQuestMarkers) {
       lines.push(`  - ${qm.role}: ${JSON.stringify(qm.params)}`);
     }
@@ -611,7 +738,7 @@ function userPromptForRegion(args: {
   }
   if (args.mosaicImageArt) {
     lines.push(
-      "Image pipeline: MOSAIC mode — one large top-down painting will be sliced into this grid. Every cell MUST include a substantial `mosaicDescribe` (see system rules). Reserved location cells need one too (what to paint before the engine stamps the settlement).",
+      "Image pipeline: MOSAIC mode — one large top-down painting will be sliced into this grid. Every cell MUST include `desc` (see system rules). For ENGINE-RESERVED coordinates, mosaic art for the anchor tile is driven by your terrain `kind` at that cell (preserved as context) plus the location summary — not by `desc`; align `kind`/`label` there with the settlement's overall look from above (see system rule 2 exception).",
     );
     lines.push("");
   }
@@ -630,6 +757,7 @@ function userPromptForLocation(args: {
   height: number;
   areas: Array<{ id: string; description: string }>;
   areaAnchors: LocationAreaAnchor[];
+  layoutBrief: string;
   activeQuestMarkers: QuestMarker[];
   worldBackground: string;
   mosaicImageArt?: boolean;
@@ -644,8 +772,14 @@ function userPromptForLocation(args: {
       `+x = east, +y = NORTH; (0,0) is the south-west cell.`,
   );
   lines.push("");
+  lines.push("Compact layout brief (highest priority):");
+  lines.push(args.layoutBrief);
+  lines.push("");
   lines.push("Location prose:");
-  lines.push(args.locationProse || "(no prose authored — invent a coherent layout that fits the region.)");
+  lines.push(
+    args.locationProse ||
+      "(no prose authored — invent a coherent layout that fits the region.)",
+  );
   lines.push("");
   if (args.areas.length > 0) {
     lines.push("Authored sub-areas you should surface as cells:");
@@ -676,7 +810,9 @@ function userPromptForLocation(args: {
     lines.push("");
   }
   if (args.activeQuestMarkers.length > 0) {
-    lines.push("Active quest hints (engine handles cell selection; pick a coherent layout):");
+    lines.push(
+      "Active quest hints (engine handles cell selection; pick a coherent layout):",
+    );
     for (const qm of args.activeQuestMarkers) {
       lines.push(`  - ${qm.role}: ${JSON.stringify(qm.params)}`);
     }
@@ -689,7 +825,7 @@ function userPromptForLocation(args: {
   }
   if (args.mosaicImageArt) {
     lines.push(
-      "Image pipeline: MOSAIC mode — one large top-down painting will be sliced into this grid. Every cell MUST include a substantial `mosaicDescribe` (see system rules), including ENGINE-RESERVED sub-area cells.",
+      "Image pipeline: MOSAIC mode — one large top-down painting will be sliced into this grid. Every cell MUST include a substantial `desc` (see system rules), including ENGINE-RESERVED sub-area cells.",
     );
     lines.push("");
   }
@@ -713,9 +849,19 @@ function cellsToGrid(args: {
    */
   forcedAnchors: ProjectedAnchor[];
   forcedAreaAnchors?: LocationAreaAnchor[];
+  anchorBriefs?: Record<string, AnchorBrief>;
 }): TileGrid {
-  const { scope, ownerId, width, height, biome, cells, forcedAnchors, forcedAreaAnchors } =
-    args;
+  const {
+    scope,
+    ownerId,
+    width,
+    height,
+    biome,
+    cells,
+    forcedAnchors,
+    forcedAreaAnchors,
+    anchorBriefs,
+  } = args;
 
   // Default-fill with `path` so any missing cell is still walkable.
   const tiles: Tile[] = [];
@@ -732,14 +878,15 @@ function cellsToGrid(args: {
   //    model attached because the engine owns location placement now;
   //    forcedAnchors below is the single source of truth for that.
   for (const cell of cells) {
-    if (cell.x < 0 || cell.y < 0 || cell.x >= width || cell.y >= height) continue;
-    const md = cell.mosaicDescribe?.trim();
+    if (cell.x < 0 || cell.y < 0 || cell.x >= width || cell.y >= height)
+      continue;
+    const md = cell.desc?.trim();
     const tile: Tile = {
       kind: normalizeKind(cell.kind),
       label: cell.label || undefined,
       passable: cell.passable,
       dangerous: cell.dangerous || undefined,
-      ...(md ? { mosaicDescribe: md } : {}),
+      ...(md ? { desc: md } : {}),
     };
     place(cell.x, cell.y, tile);
   }
@@ -749,28 +896,100 @@ function cellsToGrid(args: {
   //    `priorKind` so narration can still reference the surrounding
   //    geography ("Avenor's gates rise out of the riverflats").
   if (scope === "region") {
+    let keptClassifierAnchorDescribe = 0;
+    let replacedWithDeterministicAnchorDescribe = 0;
     for (const a of forcedAnchors) {
       const idx = a.gy * width + a.gx;
       const prior = tiles[idx];
       const slugFromName = (a.loc.name || a.id)
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "")
-        ;
+        .replace(/^-+|-+$/g, "");
+      const priorMd = prior.desc?.trim();
+      const keepPriorMd = shouldKeepClassifierAnchorMosaicDescribe(priorMd);
+      if (keepPriorMd) keptClassifierAnchorDescribe += 1;
+      else replacedWithDeterministicAnchorDescribe += 1;
       tiles[idx] = {
         kind: slugFromName || "settlement",
         label: a.loc.name || a.id,
         passable: true,
         locationId: a.id,
         priorKind: prior.kind !== "path" ? prior.kind : undefined,
-        ...(prior.mosaicDescribe?.trim()
-          ? { mosaicDescribe: prior.mosaicDescribe.trim() }
-          : {}),
+        desc: keepPriorMd
+          ? priorMd
+          : anchorLineForMosaic(
+              anchorBriefs?.[a.id] ??
+                buildAnchorBrief("", a.loc.basicInfo || ""),
+              prior.kind !== "path" ? prior.kind : undefined,
+              biome,
+            ),
       };
     }
+    // #region agent log
+    fetch("http://127.0.0.1:7637/ingest/7037aa25-0b5a-4c3e-aa0c-e8b0c270a47d", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "db47a6",
+      },
+      body: JSON.stringify({
+        sessionId: "db47a6",
+        runId: "post-fix",
+        hypothesisId: "H9",
+        location: "tileFiller.ts:cellsToGrid",
+        message: "Region anchor desc source selection",
+        data: {
+          ownerId,
+          keptClassifierAnchorDescribe,
+          replacedWithDeterministicAnchorDescribe,
+          anchorCount: forcedAnchors.length,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
   }
 
-  if (scope === "location" && forcedAreaAnchors && forcedAreaAnchors.length > 0) {
+  // #region agent log
+  if (scope === "region") {
+    const anchorTiles = tiles.filter((t) => !!t.locationId);
+    const nonAnchorTiles = tiles.filter((t) => !t.locationId);
+    const anchorMd = anchorTiles.filter((t) => !!t.desc?.trim()).length;
+    const nonAnchorMd = nonAnchorTiles.filter((t) => !!t.desc?.trim()).length;
+    fetch("http://127.0.0.1:7637/ingest/7037aa25-0b5a-4c3e-aa0c-e8b0c270a47d", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "db47a6",
+      },
+      body: JSON.stringify({
+        sessionId: "db47a6",
+        runId: "initial",
+        hypothesisId: "H3",
+        location: "tileFiller.ts:cellsToGrid",
+        message: "Region grid stamped and desc distribution",
+        data: {
+          ownerId,
+          anchorCount: anchorTiles.length,
+          anchorMosaicDescribeCount: anchorMd,
+          nonAnchorMosaicDescribeCount: nonAnchorMd,
+          anchorSamples: anchorTiles.slice(0, 5).map((t) => ({
+            kind: t.kind,
+            priorKind: t.priorKind ?? "",
+            desc: (t.desc ?? "").slice(0, 180),
+          })),
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+  }
+  // #endregion
+
+  if (
+    scope === "location" &&
+    forcedAreaAnchors &&
+    forcedAreaAnchors.length > 0
+  ) {
     for (const a of forcedAreaAnchors) {
       const idx = a.gy * width + a.gx;
       if (idx < 0 || idx >= tiles.length) continue;
@@ -780,9 +999,7 @@ function cellsToGrid(args: {
         label: a.id,
         passable: true,
         priorKind: prior.kind !== "path" ? prior.kind : undefined,
-        ...(prior.mosaicDescribe?.trim()
-          ? { mosaicDescribe: prior.mosaicDescribe.trim() }
-          : {}),
+        ...(prior.desc?.trim() ? { desc: prior.desc.trim() } : {}),
       };
     }
   }
@@ -796,6 +1013,56 @@ function cellsToGrid(args: {
     tiles,
     generatedAt: Date.now(),
   };
+}
+
+type AnchorBrief = {
+  visualBrief: string;
+  regionalContext: string;
+  sourceExcerpt?: string;
+};
+
+function buildRegionAnchorBriefs(
+  regionProse: string,
+  anchors: ProjectedAnchor[],
+): Record<string, AnchorBrief> {
+  const out: Record<string, AnchorBrief> = {};
+  for (const a of anchors) {
+    out[a.id] = buildAnchorBrief(regionProse, a.loc.basicInfo || "");
+  }
+  return out;
+}
+
+function anchorLineForMosaic(
+  brief: AnchorBrief,
+  priorKind: string | undefined,
+  biome: string,
+): string {
+  const surrounding = (priorKind || biome || "mixed-terrain")
+    .replace(/-/g, " ")
+    .trim();
+  const visual = brief.visualBrief.replace(/\s+/g, " ").trim();
+  const regional = brief.regionalContext.replace(/\s+/g, " ").trim();
+  if (brief.sourceExcerpt?.trim()) {
+    return `${visual}; ${regional}; integrated with surrounding ${surrounding}; ${brief.sourceExcerpt.trim()}`;
+  }
+  return `${visual}; ${regional}; integrated with surrounding ${surrounding}`;
+}
+
+function shouldKeepClassifierAnchorMosaicDescribe(
+  value: string | undefined,
+): boolean {
+  if (!value) return false;
+  const s = value.trim().toLowerCase();
+  if (!s) return false;
+  // Weak/placeholder-style lines should not dominate anchor imagery.
+  const weakPhrases = [
+    "mixed terrain and structures",
+    "surrounding mixed terrain",
+    "integrated with surrounding",
+  ];
+  if (weakPhrases.some((p) => s.includes(p))) return false;
+  const words = s.split(/\s+/).filter(Boolean);
+  return words.length >= 8;
 }
 
 /**

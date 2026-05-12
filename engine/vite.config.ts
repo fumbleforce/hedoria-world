@@ -34,6 +34,72 @@ async function appendJsonl(file: string, body: string): Promise<void> {
   await fs.appendFile(file, line + "\n");
 }
 
+async function appendPretty(file: string, body: string): Promise<void> {
+  const dir = path.dirname(file);
+  await fs.mkdir(dir, { recursive: true });
+  const ts = new Date().toISOString();
+  let parsed: unknown;
+  let pretty: string;
+  try {
+    parsed = JSON.parse(body);
+    pretty = JSON.stringify(parsed, null, 2);
+  } catch {
+    pretty = body;
+  }
+  await fs.appendFile(file, `\n--- ${ts} ---\n${pretty}\n`);
+}
+
+async function appendLlmPretty(file: string, body: string): Promise<void> {
+  const dir = path.dirname(file);
+  await fs.mkdir(dir, { recursive: true });
+  const ts = new Date().toISOString();
+  try {
+    const parsed = JSON.parse(body) as {
+      ts?: string;
+      kind?: string;
+      model?: string;
+      promptHash?: string;
+      cached?: boolean;
+      durationMs?: number;
+      request?: {
+        system?: string;
+        messages?: Array<{ role?: string; content?: string }>;
+        jsonMode?: boolean;
+      };
+      response?: { text?: string };
+    };
+    const lines: string[] = [];
+    lines.push(`\n--- ${ts} ---`);
+    lines.push(`kind: ${String(parsed.kind ?? "")}`);
+    lines.push(`model: ${String(parsed.model ?? "")}`);
+    lines.push(`promptHash: ${String(parsed.promptHash ?? "")}`);
+    lines.push(`cached: ${String(parsed.cached ?? false)}`);
+    lines.push(`durationMs: ${String(parsed.durationMs ?? "")}`);
+    lines.push(`jsonMode: ${String(parsed.request?.jsonMode ?? false)}`);
+    lines.push("");
+    lines.push("[request.system]");
+    lines.push(parsed.request?.system ?? "");
+    const messages = parsed.request?.messages ?? [];
+    for (let i = 0; i < messages.length; i += 1) {
+      lines.push("");
+      lines.push(`[request.messages.${i}.${messages[i]?.role ?? "unknown"}]`);
+      lines.push(messages[i]?.content ?? "");
+    }
+    lines.push("");
+    lines.push("[response.text]");
+    const responseText = parsed.response?.text ?? "";
+    try {
+      const maybeJson = JSON.parse(responseText);
+      lines.push(JSON.stringify(maybeJson, null, 2));
+    } catch {
+      lines.push(responseText);
+    }
+    await fs.appendFile(file, `${lines.join("\n")}\n`);
+  } catch {
+    await appendPretty(file, body);
+  }
+}
+
 function safeFilePart(raw: string): string {
   const s = raw.trim().replace(/[^a-zA-Z0-9._-]+/g, "-");
   return s.length > 0 ? s.slice(0, 80) : "unknown";
@@ -112,20 +178,155 @@ function makeJsonlEndpoint(opts: { name: string; url: string; file: string }): P
 }
 
 /**
- * Dev-only LLM transcript sink. The browser POSTs one JSON line per LLM call
- * (system prompt, messages, response, model, timing) and we append it as
- * JSONL to `engine/logs/llm-prompts.jsonl`. Useful for prompt engineering and
- * debugging — `tail -f engine/logs/llm-prompts.jsonl | jq` is your friend.
+ * Dev-only LLM transcript sink. In addition to the legacy aggregate file
+ * (`logs/llm-prompts.jsonl`), this writes each call into a per-kind file:
  *
- * Endpoint is unauthenticated; only available when running `vite` (dev mode).
- * Production builds simply 404 the call, which the client swallows.
+ *   logs/llm-calls/<kind>.jsonl
+ *
+ * so prompt categories can be inspected in isolation.
  */
 function llmLogEndpoint(): Plugin {
-  return makeJsonlEndpoint({
+  return {
     name: "llm-log-endpoint",
-    url: "/__llm-log",
-    file: path.resolve(__dirname, "logs", "llm-prompts.jsonl"),
-  });
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        if (req.method !== "POST" || req.url !== "/__llm-log") {
+          next();
+          return;
+        }
+        try {
+          const body = await readBody(req);
+          await appendJsonl(path.resolve(__dirname, "logs", "llm-prompts.jsonl"), body);
+          let kind = "other";
+          try {
+            const parsed = JSON.parse(body) as { kind?: unknown };
+            if (typeof parsed.kind === "string" && parsed.kind.trim()) {
+              kind = parsed.kind.trim();
+            }
+          } catch {
+            // Keep best-effort kind fallback.
+          }
+          await appendJsonl(
+            path.resolve(__dirname, "logs", "llm-calls", `${safeFilePart(kind)}.jsonl`),
+            body,
+          );
+          await appendLlmPretty(
+            path.resolve(__dirname, "logs", "llm-calls", "pretty", `${safeFilePart(kind)}.log`),
+            body,
+          );
+          res.statusCode = 200;
+          res.end(JSON.stringify({ ok: true }));
+        } catch (error) {
+          res.statusCode = 500;
+          res.end(
+            JSON.stringify({
+              ok: false,
+              error: error instanceof Error ? error.message : String(error),
+            }),
+          );
+        }
+      });
+    },
+  };
+}
+
+/**
+ * Dev-only image-call sink with split files:
+ *   - logs/image-calls/all.jsonl
+ *   - logs/image-calls/by-provider/<provider>.jsonl
+ *   - logs/image-calls/by-variant/<variant>.jsonl
+ */
+function imageLogEndpoint(): Plugin {
+  return {
+    name: "image-log-endpoint",
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        if (req.method !== "POST" || req.url !== "/__image-log") {
+          next();
+          return;
+        }
+        try {
+          const body = await readBody(req);
+          let provider = "unknown";
+          let variant = "unknown";
+          try {
+            const parsed = JSON.parse(body) as {
+              provider?: unknown;
+              variant?: unknown;
+              status?: unknown;
+            };
+            if (typeof parsed.provider === "string" && parsed.provider.trim()) {
+              provider = parsed.provider.trim();
+            }
+            if (typeof parsed.variant === "string" && parsed.variant.trim()) {
+              variant = parsed.variant.trim();
+            } else if (typeof parsed.status === "string" && parsed.status.trim()) {
+              variant = parsed.status.trim();
+            }
+          } catch {
+            // fall back to unknown splits
+          }
+          await appendJsonl(path.resolve(__dirname, "logs", "image-calls", "all.jsonl"), body);
+          await appendJsonl(
+            path.resolve(
+              __dirname,
+              "logs",
+              "image-calls",
+              "by-provider",
+              `${safeFilePart(provider)}.jsonl`,
+            ),
+            body,
+          );
+          await appendJsonl(
+            path.resolve(
+              __dirname,
+              "logs",
+              "image-calls",
+              "by-variant",
+              `${safeFilePart(variant)}.jsonl`,
+            ),
+            body,
+          );
+          await appendPretty(
+            path.resolve(__dirname, "logs", "image-calls", "pretty", "all.log"),
+            body,
+          );
+          await appendPretty(
+            path.resolve(
+              __dirname,
+              "logs",
+              "image-calls",
+              "pretty",
+              "by-provider",
+              `${safeFilePart(provider)}.log`,
+            ),
+            body,
+          );
+          await appendPretty(
+            path.resolve(
+              __dirname,
+              "logs",
+              "image-calls",
+              "pretty",
+              "by-variant",
+              `${safeFilePart(variant)}.log`,
+            ),
+            body,
+          );
+          res.statusCode = 200;
+          res.end(JSON.stringify({ ok: true }));
+        } catch (error) {
+          res.statusCode = 500;
+          res.end(
+            JSON.stringify({
+              ok: false,
+              error: error instanceof Error ? error.message : String(error),
+            }),
+          );
+        }
+      });
+    },
+  };
 }
 
 /**
@@ -551,6 +752,7 @@ export default defineConfig({
   plugins: [
     react(),
     llmLogEndpoint(),
+    imageLogEndpoint(),
     diagLogEndpoint(),
     blueprintDumpEndpoint(),
     openRouterProxyEndpoint(),

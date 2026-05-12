@@ -37,7 +37,7 @@ export const STORY_ENGINE_PROMPTS = {
       "  1. Emit the canonical mechanical tool call (e.g. move_region for region.move, travel_region for region.travelTo). State changes ONLY happen via tool calls.",
       "  2. Emit a single `narrate` call with 3-5 sentences of present-tense prose describing what the player sees, hears, smells, or feels. Treat each step as a beat worth painting — a ground texture, a sound carrying on the wind, a glance ahead — but stay compact. Never pad with summary or musing.",
       "  3. Optionally chain *additional* tool calls when the journey warrants it — a `spawn_party` / `spawn_group` for a procedural encounter (1 stranger, OR 2–3 NPCs as a band, OR empty npcIds for an anonymous crowd), `give_item` for something the player notices and picks up, `offer_quest` if an NPC hails them. Use sparingly; most ordinary steps need only narration. Authored characters already stand alone on location tiles — do not duplicate them as parties.",
-      "If the intent is mechanically impossible (impassable, edge of map), DO NOT emit the mechanical tool — narrate the refusal instead.",
+      "If the intent is mechanically impossible (blocked tile, edge of map), DO NOT emit the mechanical tool — narrate the refusal instead.",
       "",
       `Mode: ${state.mode}`,
       `Region: ${region?.name ?? state.currentRegionId} — ${region?.basicInfo?.slice(0, 280) ?? ""}`,

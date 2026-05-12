@@ -258,7 +258,7 @@ export function LocaleContextPanel({
                           </button>
                         ) : (
                           <span className="localeContextPanel__prose localeContextPanel__small">
-                            This tile is impassable.
+                            This tile is blocked.
                           </span>
                         )
                       ) : null}

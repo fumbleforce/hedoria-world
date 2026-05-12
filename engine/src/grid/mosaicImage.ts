@@ -97,28 +97,45 @@ function describeLocationTileForMosaic(tile: {
  *     slugs become plain hyphen phrases ("city gate") instead of a
  *     useless generic interior.
  *
- * When tiles carry `mosaicDescribe` (classifier output in mosaic image mode),
- * that string is passed through verbatim as the cell line — it is already
- * written for the image model.
+ * When tiles carry `desc`, that string is passed through verbatim
+ * as the cell line. Region scope location-anchor tiles now stamp a
+ * deterministic engine-authored brief into that field, replacing unreliable
+ * classifier blurbs while keeping non-anchor classifier descriptions intact.
  */
-function lineForMosaicCell(tile: Tile, biome: string, scope: "region" | "location"): string {
-  const md = tile.mosaicDescribe?.trim();
+function lineForMosaicCell(
+  tile: Tile,
+  biome: string,
+  scope: "region" | "location",
+): string {
+  const md = tile.desc?.trim();
   if (md) return md;
   return describeTileForPrompt(tile, biome, scope);
 }
 
-export function composeMosaicImagePrompt(grid: TileGrid, style: string): string {
+export function composeMosaicImagePrompt(
+  grid: TileGrid,
+  style: string,
+): string {
   const subject =
     grid.scope === "location"
       ? `top-down TILED MAP of a single ${prettify(grid.biome)} place — its courtyards, alleys, buildings, gardens, and other open ground seen from a map perspective`
       : `top-down TILED MAP of a ${prettify(grid.biome)} region`;
   const rowLines: string[] = [];
+  const cellLines: string[] = [];
+  let regionPathFallbackCells = 0;
+  let regionPathWithDescCells = 0;
   for (let y = grid.height - 1; y >= 0; y -= 1) {
     const rowLabel = rowDirectionLabel(y, grid.height);
     const cells: string[] = [];
     for (let x = 0; x < grid.width; x += 1) {
       const tile = grid.tiles[y * grid.width + x];
-      cells.push(lineForMosaicCell(tile, grid.biome, grid.scope));
+      if (grid.scope === "region" && tile.kind === "path") {
+        if (tile.desc?.trim()) regionPathWithDescCells += 1;
+        else regionPathFallbackCells += 1;
+      }
+      const cellLine = lineForMosaicCell(tile, grid.biome, grid.scope);
+      cells.push(cellLine);
+      cellLines.push(` - CELL[x=${x}, y=${y}] => ${cellLine}`);
     }
     rowLines.push(` ${rowLabel}: ${cells.join(" | ")}`);
   }
@@ -133,22 +150,71 @@ export function composeMosaicImagePrompt(grid: TileGrid, style: string): string 
           " - Forest canopies, fields, and grasslands have continuous textures across band edges; lighting and palette are uniform across the whole picture.",
         ].join("\n");
 
+  // #region agent log
+  {
+    let anchorCount = 0;
+    let anchorWithMd = 0;
+    let nonAnchorWithMd = 0;
+    for (const t of grid.tiles) {
+      if (t.locationId) {
+        anchorCount += 1;
+        if (t.desc?.trim()) anchorWithMd += 1;
+      } else if (t.desc?.trim()) {
+        nonAnchorWithMd += 1;
+      }
+    }
+    fetch("http://127.0.0.1:7637/ingest/7037aa25-0b5a-4c3e-aa0c-e8b0c270a47d", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "db47a6",
+      },
+      body: JSON.stringify({
+        sessionId: "db47a6",
+        runId: "initial",
+        hypothesisId: "H4",
+        location: "mosaicImage.ts:composeMosaicImagePrompt",
+        message: "Composed mosaic prompt input distribution",
+        data: {
+          scope: grid.scope,
+          ownerId: grid.ownerId,
+          biome: grid.biome,
+          width: grid.width,
+          height: grid.height,
+          anchorCount,
+          anchorWithMosaicDescribe: anchorWithMd,
+          nonAnchorWithMosaicDescribe: nonAnchorWithMd,
+          regionPathFallbackCells,
+          regionPathWithDescCells,
+          firstRowLine: rowLines[0] ?? "",
+          firstCellLine: cellLines[0] ?? "",
+          promptFormat: "cell-addressed",
+          promptStyle: style,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+  }
+  // #endregion
+
   return `
 A ${subject}, in this art style: ${style}.
 
 Hard rules — the finished image must satisfy ALL of these:
  - ENVIRONMENT ONLY. No text, no captions, no labels, no place names, no numbers, no letters, no symbols, no signs with readable writing.
- - NO VISIBLE GRID. The image must not contain any grid lines, cell borders, frames, gutters, seams, outlines, fences-of-pixels, or any other line marking subdivisions. The picture is one continuous painting.
+ - TILE-READABLE GAME MAP. The image must read as a tiled game map: each tile-sized area has a clear dominant motif that is distinguishable from neighboring tiles at gameplay zoom.
+ - NO VISIBLE GRID LINES. Do not draw explicit borders, but DO keep tile-sized motif separation clear. Avoid watercolor-style wash that blurs multiple cells into one undifferentiated painting.
  - NO MAP CHROME. No compass rose, no scale bar, no legend, no key, no border decoration, no inset, no arrows.
  - North is at the top of the image, south at the bottom; west is on the left, east on the right.
 
-Composition: the map fills the canvas edge-to-edge and is laid out so that ${grid.width} equal vertical tiles across the width and ${grid.height} equal horizontal tiles across the height each contain one of the features listed below. The tiling are an INVISIBLE layout reference — they must not be drawn, outlined, or hinted at. After you return the picture we slice it into ${grid.width} × ${grid.height} tiles externally; your job is to paint a single seamless image whose features happen to land in those positions.
+Composition: the map fills the canvas edge-to-edge and is laid out so that ${grid.width} equal vertical tiles across the width and ${grid.height} equal horizontal tiles across the height each contain one feature assignment listed below. Tile boundaries are not drawn, but composition MUST align so each CELL assignment is visually readable as its own tile.
 
-Feature placement (${grid.height} rows from top to bottom, each row listing west→east cells):
-${rowLines.join("\n")}
+Feature placement, strict by coordinate (x=west→east, y=south→north):
+${cellLines.join("\n")}
 
 Continuity rules:
 ${continuityLines}
+ - Continuity must not erase tile identity: roads/rivers can cross cells, but each addressed CELL keeps its assigned dominant look.
 `.trim();
 }
 
@@ -175,21 +241,19 @@ function describeTileForPrompt(
   fallbackBiome: string,
   scope: "region" | "location",
 ): string {
-  const passable = tile.passable === false ? " (impassable)" : "";
-
   if (scope === "region" && tile.locationId) {
     const surrounding = prettify(tile.priorKind || fallbackBiome);
-    return `named location footprint integrated into surrounding ${surrounding}${passable}`;
+    return `named location footprint integrated into surrounding ${surrounding}`;
   }
 
   if (scope === "location") {
-    return `${describeLocationTileForMosaic(tile)}${passable}`;
+    return `${describeLocationTileForMosaic(tile)}`;
   }
 
   // Region scope, non-anchor terrain. Both kind and label are safe by
   // the region prompt's own anti-proper-noun rule (#3).
   const label = (tile.label || prettify(tile.kind)).replace(/\s+/g, " ").trim();
-  return `${prettify(tile.kind)} — ${label}${passable}`;
+  return `${prettify(tile.kind)} — ${label}`;
 }
 
 /**
@@ -386,7 +450,10 @@ export async function createMosaicBlueprintImage(
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("createMosaicBlueprintImage: 2d canvas context unavailable");
+  if (!ctx)
+    throw new Error(
+      "createMosaicBlueprintImage: 2d canvas context unavailable",
+    );
 
   ctx.fillStyle = "#f2efe2";
   ctx.fillRect(0, 0, width, height);
@@ -406,7 +473,12 @@ export async function createMosaicBlueprintImage(
         const inset = Math.max(3, Math.floor(cellPx * 0.18));
         ctx.strokeStyle = "#101820";
         ctx.lineWidth = Math.max(2, Math.floor(cellPx * 0.05));
-        ctx.strokeRect(px + inset, py + inset, cellPx - inset * 2, cellPx - inset * 2);
+        ctx.strokeRect(
+          px + inset,
+          py + inset,
+          cellPx - inset * 2,
+          cellPx - inset * 2,
+        );
       }
 
       // Intentionally no danger glyphs/dots; they added visual noise and could
@@ -434,7 +506,8 @@ export async function createMosaicBlueprintImage(
   const blob = await new Promise<Blob | null>((resolve) =>
     canvas.toBlob((b) => resolve(b), "image/png"),
   );
-  if (!blob) throw new Error("createMosaicBlueprintImage: canvas.toBlob returned null");
+  if (!blob)
+    throw new Error("createMosaicBlueprintImage: canvas.toBlob returned null");
   const ab = await blob.arrayBuffer();
   return {
     bytes: new Uint8Array(ab),
@@ -460,7 +533,9 @@ export async function sliceMosaic(
   cols: number,
   rows: number,
 ): Promise<MosaicSlice[]> {
-  const blob = new Blob([image.bytes as unknown as BlobPart], { type: image.mime });
+  const blob = new Blob([image.bytes as unknown as BlobPart], {
+    type: image.mime,
+  });
   const bitmap = await createImageBitmap(blob);
   const tileW = Math.floor(bitmap.width / cols);
   const tileH = Math.floor(bitmap.height / rows);

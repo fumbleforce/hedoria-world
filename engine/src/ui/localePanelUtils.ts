@@ -3,7 +3,9 @@ import { getTile } from "../grid/tilePrimitives";
 import type { WorldLocation } from "../schema/worldSchema";
 import { tileMatchesAuthoredArea } from "../scene/npcPresence";
 
-export function locationAreaDescriptions(loc: WorldLocation | undefined): string {
+export function locationAreaDescriptions(
+  loc: WorldLocation | undefined,
+): string {
   if (!loc?.areas) return "";
   return Object.values(loc.areas)
     .map((a) => a.description?.trim())
@@ -24,8 +26,8 @@ export function tileClassifierRecord(tile: Tile): Record<string, unknown> {
   if (tile.dangerous === true) r.dangerous = true;
   const locId = tile.locationId?.trim();
   if (locId) r.locationId = locId;
-  const mosaic = tile.mosaicDescribe?.trim();
-  if (mosaic) r.mosaicDescribe = mosaic;
+  const mosaic = tile.desc?.trim();
+  if (mosaic) r.desc = mosaic;
   if (tile.props && Object.keys(tile.props).length > 0) r.props = tile.props;
   if (tile.questMarker) r.questMarker = tile.questMarker;
   return r;
