@@ -9,10 +9,6 @@ agent: npcs
 
 Read canon from `tabs/npcs.json`. Write proposals to `candidates/npcs.json` (top-level key: `npcs`). The runtime contract for fresh NPCs (base `generateNPCDetails` + Sephii's Enhanced NPC Details + Hedoria NPC Register mod) prescribes a 4-block hiddenInfo, distinctive basicInfo, and the personality format below — author NPCs in the same shape so the runtime sees consistent format whether the NPC was generated or pre-authored.
 
-## Hard Rules
-
-- **Magic-user sterility.** Witch and wizard NPCs (the human gendered system) cannot biologically reproduce. The act of channeling or generating mana unmakes that capacity — the body that holds and moves the world's living power does not also produce its own life.
-
 ## Required Fields
 
 | Field | Requirement |
@@ -22,9 +18,9 @@ Read canon from `tabs/npcs.json`. Write proposals to `candidates/npcs.json` (top
 | `currentLocation` | Use a fitting existing location, or invent one |
 | `currentArea` | Use `""` if not relevant, or a valid area from the location |
 | `gender` | Always set. Mostly male and female. Characters of unusual gender expression where their species or personal history calls for it (Molvar are biologically genderless; individual humans whose lives left them outside the usual). |
-| `basicInfo` | Distinctive prose — see format below |
-| `personality` | Comma-separated mix per format below |
-| `hiddenInfo` | Four labeled blocks: Background, Personality, Desire, Combat — see format below |
+| `basicInfo` | Distinctive prose — see format below. The full basic character sheet: identity, personality, background context, AND combat behavior. Everything observable about the character lives here |
+| `visualDescription` | One prose line, two terse sentences — see format below |
+| `hiddenInfo` | Two labeled blocks: Desire, Secrets — see format below. Only what is actually hidden. Minimal but salient |
 | `abilities` | At least five appropriate abilities |
 | `tier` | Always set to `mythic` for combat NPCs (determines intent complexity) |
 | `level` | Always set — each level adds +1 to damage output |
@@ -41,9 +37,10 @@ Read canon from `tabs/npcs.json`. Write proposals to `candidates/npcs.json` (top
 
 ## Never Include
 
-Omit these fields (auto-set or unused):
+Omit these fields (auto-set, unused, or absorbed elsewhere):
+- `personality` — public personality descriptors now live in `basicInfo`; the hidden detail still lives in `hiddenInfo`'s Personality block
 - `vulnerabilities`, `resistances`, `immunities`
-- `visualDescription`, `visualTags`
+- `visualTags`
 - `detailType`, `hpCurrent`, `activeBuffs`
 - `currentCoordinates`, `embeddingId`, `embedding`, `portraitUrl`
 - `properName`, `status`, `relationship`, `lastSeenTick`
@@ -52,70 +49,81 @@ Omit these fields (auto-set or unused):
 
 ## basicInfo Format
 
-Lead with what they do or what is wrong with them, not a "[gender] [race] [role]" template. Include a distinctive physical feature — an asymmetry, the wrong detail, a sensory specific (smell, voice texture, the way they hold a thing). Race-specific physiology should be included where unusual or specific: Draklid horn-spread and tail-marking, Hofnar mane-shape and clan-cycle-tally, Vorok tusk-character and house-sigil placement, Threshi chitin-coloration and wing-panel pattern, Cephalen scalp-tentacle arrangement, Fernwarg mane-trophy weave, Raknid pale-silk mantle, Prime relic-display, Molvar root-coloration. End with what they wear or carry that signals identity. If the NPC is publicly known for a specific item — a named weapon, a specific worn object — name it; that item should also exist in `tabs/items.json` when load-bearing.
+**High-signal keyword phrases, not prose.** Comma-separated `[modifier] [noun]` fragments. The runtime LLM in Voyage fleshes out scenes from your hooks — your job is dense signal, not authored narrative. No subject-verb-object sentences. No closing summaries. No flowing description. Pack the hooks; let runtime fill them. The sheet must be **portable** — generic enough to slot into any party scene, not welded to a single location through narrative description.
 
-## personality Format
+Each sub-section is a stream of phrases, comma-separated. Sub-section labels (`Identity:`, `Personality:`, `Background:`, `Combat:`) help the LLM parse.
 
-A comma-separated list mixing adjectives, descriptive phrases, and behavioral notes.
+*Identity:* [occupation], [age], [race], [current public role or establishment], [one distinctive physical hook — asymmetry, sensory specific, how they hold a thing], [race-specific physiology where unusual], [carry/wear identifier; name specific items if load-bearing in `tabs/items.json`]
 
-Include:
-- External manner — how they come across to strangers
-- Internal drive — what they actually want
-- A contradiction or complexity — something that cuts against the grain
-- A weakness, hidden or visible
+*Personality:* [default manner], [what changes under pressure], [social calibration], [deflection or openness], [one real competence], [one low-stakes tic]
 
-Don't include:
-- Verbal tics or catchphrases
-- Sitcom-style mannerisms or twee repetitions
+*Background:* [current situation as hook], [one local relationship as hook], [active want], [strong stance or opinion]
 
-Personality must not restate, reflect, or derive from profession or role. The job is what they do; personality is how they do it, why they do it, and who they are when they're not doing it.
+*Combat:* [style + range], [escalation/withdrawal cue], [one signature tactical habit]
+
+**Target: 40-80 words total** across all four sub-sections. If a clause has subject-verb-object-narration shape, rewrite as phrase fragments. If a phrase welds the character to one location (encyclopedic-knowledge-of-X-corridors, knows-every-rotation-of-the-Y-guard), generalize it (palace-insider, guard-savvy). Active wants only; no closed "settled, no longer seeks" non-states; no internal feelings the player cannot see (no "what surfaces in his mind", no "the calm itself solves problems"). Historical relationships are one token only (widowed / divorced / never-paired).
+
+(Race-specific physiology cues where unusual: Draklid horn-spread, Hofnar mane-cycle-tally, Vorok tusk-character, Threshi chitin-coloration, Cephalen scalp-tentacles, Fernwarg mane-trophy, Raknid pale-silk mantle, Prime relic-display, Molvar root-coloration.)
+
+## visualDescription Format
+
+**One prose line: two terse sentences built from phrases and a short race description.** Covers what a player sees on approach — their general racial appearance (depending on race) build, colouring, clothing, one memorable detail. Not a portrait; a silhouette with one sharp hook. Sentence fragments and noun-phrases are fine; full narrative is not. Target: 15-30 words total.
+
+First sentence: body shape, colouring, race cues. Second sentence: clothing/gear plus one sensory-specific detail that makes this NPC visually distinct from any other.
 
 ## hiddenInfo Format
 
-Four labeled blocks in this order: **Background, Personality, Desire, Combat**.
+Two labeled blocks in this order: **Desire, Secrets**. Everything observable — identity, personality, background, combat — lives in `basicInfo`. hiddenInfo holds only what is actually hidden until the right scene surfaces it.
 
-Format: `"Background: ...\n\nPersonality: ...\n\nDesire: ...\n\nCombat: ..."`
+Format: `"Desire: ...\n\nSecrets: ..."`
 
-### Background — 8-10 sentences
+**Minimal but salient. Keyword phrases, not prose.** Comma-separated `[modifier] [noun]` fragments. Both blocks are read by an LLM at play-time, not by a human; pack signal, do not narrate. No subject-verb-object sentences. No restating of facts already in `basicInfo`. Cut anything that does not earn its place — if a phrase would not change what the character does in a scene, it does not belong.
 
-Cover all of:
-- Name, age, race, occupation, how they earn their living
-- How they arrived at their current situation — what is unresolved or still affecting them. Not a full biography
-- At least one local relationship — someone who could be referenced in conversation. Describe the dynamic ("resents the guild clerk who denied her application"), not the fact ("knows a guild clerk named Tamsin")
-- What they currently want or care about. Can be mundane, satisfied, contradictory, or self-interested
-- One or two opinions about the world — their faction, local authority, neighbors, recent events, the kind of people they deal with
+**No formulaic phrasings repeated across the roster.** Each NPC's content must read distinctively. If two NPCs would have used the same opener or the same "resigned old person" shape, both are wrong — rewrite. Watch especially for recycled Desire formulas ("old and past the age where he seeks partnerships", "absorbed in her work and content with this", "does not require emotional intensity").
 
-### Personality — 9-11 sentences
+**Every block must give the runtime LLM something the player can interact with.** Describe active wants — what the character is currently pursuing, what they would say yes to, what they are doing right now. "Settled, content, no attachments, no interest" is a non-state; the player can do nothing with it. Internal feelings the player cannot see — old griefs, private memories, people they still think about — are also non-states; the LLM cannot surface them as gameplay.
 
-Cover all of:
-- How they talk — sentence length, vocabulary, verbal habits, favorite expressions; what makes them talkative versus terse
-- Default social behavior AND what changes it — pair these. "Friendly and familiar with everyone by default, but turns sharp and transactional when she thinks someone is wasting her time"
-- Low-stakes behavior — what they do when idle, small things they enjoy, what they complain about
-- Social calibration — how they treat people above, below, or equal in status; whether they adjust or treat everyone the same
-- What they deflect or lie about, if anything. Many characters are simply open, blunt, or indifferent — not everyone hides
-- One area of real competence or strong conviction
+**Historical relationships get a one-word footnote at most** (widowed, divorced, never-paired). Do not elaborate on past partners, old loves, or losses. Describe the active present instead.
 
-Equal space across these points. Do not let any single detail dominate.
+### Desire — keyword phrases, not prose
 
-### Desire — 4-6 sentences
+Format: comma-separated phrases. **Name the drives plainly and explicitly.** No euphemisms, no sanitising, no coy indirection. Use direct terms: sexdrive, submissive, voyeuristic, predatory, breeding-fixation, pain-seeking, etc. Taboo desires (incest-adjacent fixations, power-abuse arousal, bestiary-curiosity, corruption kinks, age-gap hunger, ownership fantasies) are valid dimensions — include where they fit the character without moralising or special emphasis. Treat them as another trait, not a spectacle.
 
-The character's private life and what they want bodily. Cover what fits this character; not all dimensions apply to every NPC:
-- Orientation and experience — broad, narrow, or shifting. Many characters are open or roughly so; bisexual or all-comers is common; narrow specificity is character-specific, not the default
-- What draws them — could be a general trait (kindness, stamina, wit, danger, station, scars), a kind of company, a particular act, or none in particular. Not every character has a strong "type"; many just want good company
-- A line they will or will not cross — what they refuse, what they have never done, what they have done once and regret
-- Where the character's history calls for it: survivor / witness / complicit / perpetrator / profiteer texture with the bestiary's predation, the magic-trade extraction, the Quelled trade, captive-camps. Not for every NPC; never sanitized from characters whose history carries it
+No "what surfaces now is..." narrative constructions. No past-partner counts or stories. Widowed / divorced / never-paired is the only past-relationship token allowed.
 
-Range: open and uncomplicated → transgressive → tortured → political/transactional. Never blank, but openness is fine content — "drawn to good company, doesn't worry about the rest" is a valid Desire block.
+Pick **2-4 dimensions** per NPC and write each as a terse phrase:
+- **Sexdrive** (near-asexual / low / moderate / high / insatiable / compulsive; most are not "moderate" — pick a side)
+- **Orientation** (narrow / broad / shifting / exclusively-X)
+- **Kinks or fetishes** (most characters have at least one — name the shape plainly: an act, a partner-category, a dynamic, a power-configuration, a bodily fixation)
+- **Pursuit style** (predatory / transactional / romantic / opportunistic / passive-receptive / coercive / seductive / manipulative)
+- **History shape** (one word: unremarkable / scandalous / mercenary / monkish / traumatic / late-bloomer / political / abusive / exploitative)
+- **Active pursuit or specific opening** (who they're after, conditions for yes, what they refuse now; for monkish/low-drive characters, the specific exception phrase)
+- **Survivor / witness / complicit / perpetrator / profiteer texture** where history demands it (bestiary predation, magic-trade extraction, Quelled trade, captive-camps)
 
-Keep partners grounded in the character's current life — current company, recent encounters, possibilities they imagine. Avoid the distant-lover-in-another-region pattern.
+**Target: under 25 words.** Phrase fragments only, comma-separated.
 
-### Combat — 5-6 sentences
+**Forced variance across the roster.** No two NPCs should land on the same dimension-combo. If the previous NPC was "broadly open, no kinks, moderate sexdrive", this one is not. Range across the full roster: monkish → uncomplicated → kink-specific → insatiable → mercenary/transactional → traumatic-with-specific-key → exclusively-particular → taboo-driven → predatory.
 
-Cover all of:
-- Fighting style, aggression level, preferred range
-- What makes them start, escalate, or abandon a fight; how they react when wounded
-- One tactical habit or signature behavior that makes their combat feel distinct
-- Combat-trained characters fight like it; civilians react to violence consistent with their background — panic, submission, reckless aggression, desperate resourcefulness
+**Never the "no longer seeks anyone" pattern.** Even low-drive, monkish, or traumatized characters need a specific texture — a vow with a specific exception, a sexdrive that wakes for a particular kind of partner, a transactional door, a body that responds to one trait only. Past relationships still get one-word footnotes (widowed, divorced, never-paired); the active present always has shape.
+
+### Secrets — keyword phrases, not prose
+
+Format: comma-separated specific facts. **2-4 secrets per NPC is the norm.** Only write `"None"` for genuinely transparent characters (rare — most people are hiding something).
+
+Each fact must be specific enough that the runtime LLM can surface it in the right scene. Vague "carries shame" / "old guilt about the past" is a non-secret — cut. Phrase fragments only, no narrative explanation of how it came to be.
+
+**Target: under 30 words** across all secrets.
+
+Draw from the full range — nothing is off-limits:
+- [Past crime: murder, theft, arson, poisoning, fraud]
+- [Forbidden liaison: affair, incest, cross-species, with an enemy]
+- [Hidden allegiance or double-dealing]
+- [Active lie or false identity they maintain]
+- [Addiction: substance, gambling, sexual compulsion]
+- [Debt, blackmail leverage held or owed]
+- [Illegitimate children, secret heirs]
+- [Betrayal: sold out a friend, collaborated with an enemy]
+- [Knowledge they shouldn't have: witnessed a crime, knows a weakness, overheard a plot]
 
 ## abilities Format
 
@@ -153,9 +161,9 @@ interface NPC {
   tier?: 'trivial' | 'weak' | 'average' | 'strong' | 'elite' | 'boss' | 'mythic'
   gender?: string
   faction?: string
+  visualDescription?: string
   basicInfo?: string
   hiddenInfo?: string
-  personality?: string[]
   abilities?: string[]
   level?: number
   hpMax?: number

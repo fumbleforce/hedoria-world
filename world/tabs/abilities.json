@@ -1734,6 +1734,19 @@
       ],
       "bonus": 8,
       "cooldown": 6
+    },
+    "Vine-Binding": {
+      "name": "Vine-Binding",
+      "description": "A skellach fetish-discipline that binds and immobilizes captives through living plant-matter. Vines answer to the practitioner's hands and coil into unbreakable restraints within seconds. The binding cannot be broken without a blade or another skellach's deliberate release; combat use lays a captive flat and ends an engagement; ritual use prepares a passer for the slow methodical work that follows.",
+      "requirements": [
+        {
+          "type": "skill",
+          "variable": "carnal-arts",
+          "amount": 5
+        }
+      ],
+      "bonus": 5,
+      "cooldown": 5
     }
   }
 }

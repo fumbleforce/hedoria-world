@@ -30,6 +30,14 @@ Edit `tabs/items.json`.
 Omit these fields (calculated at runtime):
 - `uuid`, `quantity`, `equippedSlot`
 
+## Description Voice
+
+Item descriptions must stay brief — material + cultural context + a small escalation cue is enough. Cut anything that doesn't earn its place.
+
+Do not name specific contemporary factions, orders, races, or NPCs. Use generic role language (an old apothecary master, a senior wizard) instead. No invented place-name battles or historical events.
+
+**Exception for Legendary and Epic items:** these tiers may reference a single long-lost figure (a mythic pre-Ensoulment witch, an ancient Wartide-era mage, a distant historical craftmaster) if it genuinely fits the world's established eras and races. Keep such a reference to one brief mention; let the figure feel mythic and distant. Common, Uncommon, and Rare items get no named figures at all.
+
 ## Item Types
 
 ### Armor
