@@ -5,6 +5,7 @@ import { loadRoomImage, migrateLegacyRoomImage } from "./persist/imageStore";
 import { migrateLegacy, saveStorageKey, updateActiveMeta } from "./persist/saves";
 import { GameController } from "./game/controller";
 import { useStore } from "./state/store";
+import { normalizeCharacter } from "./game/characters";
 import { diag } from "./diag/log";
 
 export interface BootResult {
@@ -31,7 +32,10 @@ async function runBoot(): Promise<BootResult> {
   // Persisted roster keeps relationships/memories, but nobody is "online" across
   // a reload — reset presence so the next stream rebuilds the room.
   const cleared = Object.fromEntries(
-    Object.entries(store.roster).map(([id, c]) => [id, { ...c, online: false }]),
+    Object.entries(store.roster).map(([id, c]) => [
+      id,
+      { ...normalizeCharacter(c), online: false },
+    ]),
   );
   store.setRoster(cleared);
 

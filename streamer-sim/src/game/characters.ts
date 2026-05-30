@@ -51,6 +51,25 @@ export interface CharacterSheet {
   threat: number;
   firstSeenClock: number;
   lastSeenClock: number;
+
+  /** Relationship-milestone ids already fired, so a beat never repeats. */
+  milestones: string[];
+  /** Day the stalker threat last advanced; -1 = never. Paces the arc to ≤1/day. */
+  escalationDay: number;
+  /** Distinct stream-days this viewer has shown up for. */
+  streamsAttended: number;
+  /** metrics.day of the last stream they appeared in (0 = never). */
+  lastStreamDay: number;
+  /** Consecutive stream-days attended. */
+  attendanceStreak: number;
+  /** LLM-authored richer bio ("" until generated). */
+  backstory: string;
+  /** LLM-authored quirks ("" until generated). */
+  quirks: string;
+  /** A portrait blob exists for this character in IndexedDB. */
+  hasPortrait: boolean;
+  /** Id of the regular whose word-of-mouth "brought" them, if any. */
+  referredBy?: string;
 }
 
 export type Roster = Record<string, CharacterSheet>;
@@ -92,6 +111,33 @@ export function seedCharacter(arch: Archetype, clock: number): CharacterSheet {
     threat: arch.segment === "stalkers" ? 1 : 0,
     firstSeenClock: clock,
     lastSeenClock: clock,
+    milestones: [],
+    escalationDay: -1,
+    streamsAttended: 0,
+    lastStreamDay: 0,
+    attendanceStreak: 0,
+    backstory: "",
+    quirks: "",
+    hasPortrait: false,
+  };
+}
+
+/**
+ * Fill in any fields a rehydrated sheet is missing. Saves from before these
+ * fields existed lack them; this keeps `.push`/numeric math from hitting
+ * `undefined`. No save-version bump needed — defaults are inert.
+ */
+export function normalizeCharacter(c: CharacterSheet): CharacterSheet {
+  return {
+    ...c,
+    milestones: c.milestones ?? [],
+    escalationDay: c.escalationDay ?? -1,
+    streamsAttended: c.streamsAttended ?? 0,
+    lastStreamDay: c.lastStreamDay ?? 0,
+    attendanceStreak: c.attendanceStreak ?? 0,
+    backstory: c.backstory ?? "",
+    quirks: c.quirks ?? "",
+    hasPortrait: c.hasPortrait ?? false,
   };
 }
 

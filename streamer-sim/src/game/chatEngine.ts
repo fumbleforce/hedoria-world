@@ -51,26 +51,46 @@ export function audienceSummary(a: AudienceState): string {
 // --------------------------------------------------------------- LLM path
 
 function buildRequest(ctx: ChatContext) {
-  const named = ctx.online
-    .map((id) => ctx.roster[id])
-    .filter(Boolean)
-    .slice(0, 12)
+  const onlineChars = ctx.online.map((id) => ctx.roster[id]).filter(Boolean).slice(0, 12);
+  const named = onlineChars
     .map((c) => `${c.handle} (${ARCHETYPE_BY_ID[c.archetypeId]?.label}, affinity ${Math.round(c.affinity)})`)
     .join("; ");
+  const dynamics = describeDynamics(onlineChars);
   const recent = ctx.recentChat?.length
     ? `Recent chat (continue naturally, don't repeat):\n${ctx.recentChat.slice(-6).join("\n")}`
     : "";
   const user = [
     `Audience mix: ${audienceSummary(ctx.audience)}`,
     named ? `Named regulars currently watching (use some of these handles): ${named}` : "",
+    dynamics,
     `Vibe — viewers: ${Math.round(ctx.metrics.currentViewers)}, hype: ${Math.round(ctx.metrics.hype)}/100.`,
     recent,
     `>>> ${ctx.settings.streamerName} just did this, REACT SPECIFICALLY TO IT: ${ctx.actionContext}`,
-    `Produce about ${ctx.count} short messages reacting directly to that. Prefer the named regulars for some lines.`,
+    `Produce about ${ctx.count} short messages reacting directly to that. Prefer the named regulars for some lines. Occasionally let two regulars talk to EACH OTHER (a troll baiting a simp, a mod clapping back, two regulars shipping or bantering) by @-mentioning a handle, not just reacting to the streamer.`,
   ]
     .filter(Boolean)
     .join("\n");
   return { system: ctx.systemPrompt, messages: [{ role: "user" as const, content: user }], jsonMode: true };
+}
+
+/**
+ * Spot pairs of online regulars who'd play off each other and hint the model to
+ * let them interact, so feuds/ships emerge from the named cast — not just
+ * reactions to the streamer.
+ */
+function describeDynamics(chars: CharacterSheet[]): string {
+  const seg = (c: CharacterSheet) => ARCHETYPE_BY_ID[c.archetypeId]?.segment;
+  const find = (s: string) => chars.find((c) => seg(c) === s);
+  const lines: string[] = [];
+  const troll = find("trolls");
+  const simp = find("simps");
+  const mod = chars.find((c) => c.isMod);
+  if (troll && simp) lines.push(`${troll.handle} loves baiting ${simp.handle} — let them spar.`);
+  if (mod && troll) lines.push(`${mod.handle} (mod) won't let ${troll.handle} run wild.`);
+  // Two high-affinity regulars who aren't antagonists may "ship"/banter.
+  const friendly = chars.filter((c) => c.affinity >= 50 && seg(c) !== "trolls" && seg(c) !== "stalkers");
+  if (friendly.length >= 2) lines.push(`${friendly[0].handle} and ${friendly[1].handle} are chat buddies; they riff together.`);
+  return lines.length ? `Chat dynamics: ${lines.join(" ")}` : "";
 }
 
 function parseChat(text: string, roster: Roster): ChatMessage[] {
@@ -114,6 +134,11 @@ export function mockBurst(ctx: ChatContext): ChatMessage[] {
       out.push(anonLine(intensity));
     }
   }
+  // ~20% of bursts: one regular @-mentions another (a feud or a ship).
+  if (onlineChars.length >= 2 && chance(0.2)) {
+    const line = crossTalk(onlineChars);
+    if (line) out.push(line);
+  }
   if (chance(0.05)) out.push(anonLine(intensity, "follow"));
   return out;
 }
@@ -138,6 +163,22 @@ function fromCharacter(c: CharacterSheet, intensity: number): ChatMessage {
     text = `tipped $${amount} — ${text}`;
   }
   return { id: uid("msg"), user: c.handle, text, kind, amount, characterId: c.id, ts: Date.now() };
+}
+
+/** One online regular talking AT another — bait, clapback, or shipping. */
+function crossTalk(chars: CharacterSheet[]): ChatMessage | null {
+  const a = pick(chars);
+  const others = chars.filter((c) => c.id !== a.id);
+  if (!others.length) return null;
+  const b = pick(others);
+  const segA = ARCHETYPE_BY_ID[a.archetypeId]?.segment;
+  let text: string;
+  let kind: ChatMessageKind = "normal";
+  if (segA === "trolls") { text = `@${b.handle} you're so easy to wind up lol`; kind = "troll"; }
+  else if (a.isMod) { text = `@${b.handle} knock it off 😤`; kind = "mod"; }
+  else if (segA === "simps") { text = `@${b.handle} stop ratioing me 😭`; kind = "flirty"; }
+  else text = pick([`@${b.handle} fr fr`, `@${b.handle} we're always here huh`, `lol @${b.handle} called it`]);
+  return { id: uid("msg"), user: a.handle, text, kind, characterId: a.id, ts: Date.now() };
 }
 
 function anonLine(intensity: number, force?: ChatMessageKind): ChatMessage {

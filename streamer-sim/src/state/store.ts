@@ -121,6 +121,8 @@ export interface StoreState {
   /** Persistent 1:1 DM history, keyed by character id. */
   dmThreads: Record<string, DmLine[]>;
   dmBusy: boolean;
+  /** Character id whose portrait is currently being generated, or null. */
+  portraitBusyId: string | null;
   shopOpen: boolean;
   settingsOpen: boolean;
   /** Active tab in the Settings modal. */
@@ -164,6 +166,7 @@ export interface StoreState {
   openCharacter: (id: string | null) => void;
   pushDm: (charId: string, line: DmLine) => void;
   setDmBusy: (b: boolean) => void;
+  setPortraitBusy: (id: string | null) => void;
   setShopOpen: (b: boolean) => void;
   setSettingsOpen: (b: boolean) => void;
   setSettingsTab: (tab: SettingsTab) => void;
@@ -209,6 +212,7 @@ export const useStore = create<StoreState>()(
       openCharId: null,
       dmThreads: {},
       dmBusy: false,
+      portraitBusyId: null,
       shopOpen: false,
       settingsOpen: false,
       settingsTab: "general",
@@ -311,6 +315,7 @@ export const useStore = create<StoreState>()(
           dmThreads: { ...s.dmThreads, [charId]: [...(s.dmThreads[charId] ?? []), line] },
         })),
       setDmBusy: (dmBusy) => set({ dmBusy }),
+      setPortraitBusy: (portraitBusyId) => set({ portraitBusyId }),
       setShopOpen: (shopOpen) => set({ shopOpen }),
       setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
       setSettingsTab: (settingsTab) => set({ settingsTab }),

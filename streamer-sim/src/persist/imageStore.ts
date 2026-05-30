@@ -131,6 +131,18 @@ export async function migrateLegacyRoomImage(slotId: string): Promise<void> {
   }
 }
 
+// --- Per-character portraits (same KV store, prefixed keys) ------------------
+
+const portraitKey = (charId: string) => `portrait:${charId}`;
+
+export async function savePortrait(charId: string, dataUrl: string): Promise<void> {
+  try {
+    await kvPut(portraitKey(charId), dataUrl);
+  } catch {
+    /* best-effort */
+  }
+}
+
 // --- image library ----------------------------------------------------------
 
 export async function putImage(rec: Omit<StoredImage, "slotId"> | StoredImage): Promise<StoredImage> {
@@ -231,6 +243,22 @@ export async function deleteImagesForSlot(slotId: string): Promise<void> {
   db.close();
   try {
     await kvDel(roomKey(slotId));
+  } catch {
+    /* best-effort */
+  }
+}
+
+export async function loadPortrait(charId: string): Promise<string | null> {
+  try {
+    return await kvGet(portraitKey(charId));
+  } catch {
+    return null;
+  }
+}
+
+export async function deletePortrait(charId: string): Promise<void> {
+  try {
+    await kvDel(portraitKey(charId));
   } catch {
     /* best-effort */
   }

@@ -1,8 +1,10 @@
 import type { LlmAdapter } from "../llm/adapter";
 import { logLlmRaw } from "../llm/adapter";
+import { extractJson } from "../llm/json";
 import {
   type ImageBackend,
   fillImagePrompt,
+  generatePortrait,
 } from "../llm/imageProvider";
 import { effectiveImagePrompt } from "../llm/imagePresets";
 import {
@@ -13,6 +15,7 @@ import {
   getImage,
   deleteImage as deleteStoredImage,
   imageCacheKey,
+  savePortrait,
 } from "../persist/imageStore";
 import { diag } from "../diag/log";
 import { useStore, type ActionMenu } from "../state/store";
@@ -36,8 +39,16 @@ import {
 } from "./presence";
 import {
   relationshipLevel,
+  seedCharacter,
+  rollArchetype,
   type CharacterSheet,
 } from "./characters";
+import {
+  advanceStalkerArc,
+  checkMilestones,
+  sourReview,
+  type MilestoneOutcome,
+} from "./relationships";
 import {
   STREAM_START,
   NIGHT_END,
@@ -451,6 +462,42 @@ export class GameController {
     }
   }
 
+  /** Whether portrait generation is wired (an image backend is present). */
+  get canGeneratePortrait(): boolean {
+    return this.imageBackend !== null;
+  }
+
+  /** Generate (and cache) a portrait for a named character, on demand. */
+  async generatePortrait(charId: string): Promise<void> {
+    const s = this.s;
+    const c = s.roster[charId];
+    if (!c) return;
+    if (!this.imageBackend) {
+      s.setToast("Set a Gemini or OpenRouter key to generate portraits.");
+      return;
+    }
+    if (s.portraitBusyId) return;
+    s.setPortraitBusy(charId);
+    s.setToast(`Generating a portrait for ${c.handle}…`);
+    try {
+      const url = await generatePortrait(this.imageBackend, {
+        handle: c.handle,
+        archetypeLabel: ARCHETYPE_BY_ID[c.archetypeId]?.label ?? "viewer",
+        vibe: c.backstory || c.vibe,
+      });
+      await savePortrait(charId, url);
+      s.patchCharacter(charId, { hasPortrait: true });
+      s.setToast(`Portrait ready for ${c.handle}!`);
+    } catch (err) {
+      diag.error("world", "portrait failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      s.setToast(`Portrait failed: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      s.setPortraitBusy(null);
+    }
+  }
+
   private get s() {
     return useStore.getState();
   }
@@ -482,6 +529,49 @@ export class GameController {
   private sysChat(text: string): ChatMessage {
     return { id: uid("sys"), user: "system", text, kind: "system", ts: Date.now() };
   }
+  /** Push a status/notification line into the live chat (viewer/follow/sub etc). */
+  private notify(text: string): void {
+    this.s.pushChat([this.sysChat(text)]);
+  }
+
+  // ----------------------------------------------------------- viewer count
+
+  /** Last viewer count we announced, so we only notify on real movement. */
+  private lastNotifiedViewers = 0;
+
+  /** Distinct non-system handles seen in recent chat — the visible room. */
+  private distinctChatters(): number {
+    const seen = new Set<string>();
+    for (const m of this.s.chat.slice(-40)) {
+      if (m.kind === "system" || m.user === "system") continue;
+      seen.add(m.user.toLowerCase());
+    }
+    return seen.size;
+  }
+
+  /**
+   * Keep the displayed viewer count in step with what the room actually looks
+   * like. Presence (online roster + anon floor) is the base, but the chat is
+   * often busier than presence alone — especially with LLM-invented handles that
+   * aren't in the roster — so the count is grounded to at least the number of
+   * distinct recent chatters. Announces meaningful changes in chat.
+   */
+  private syncViewers(): void {
+    const s = this.s;
+    if (!s.session.isLive) return;
+    const presence = totalViewers(s.audience);
+    const next = Math.max(presence, this.distinctChatters());
+    const prev = Math.round(s.metrics.currentViewers);
+    if (next === prev) return;
+    s.patchMetrics({ currentViewers: next });
+    s.setSession({ peak: Math.max(s.session.peak, next) });
+    // Announce on real movement (>=2) so we don't spam single-viewer wobble.
+    if (Math.abs(next - this.lastNotifiedViewers) >= 2) {
+      const delta = next - this.lastNotifiedViewers;
+      this.notify(`👀 ${next} watching (${delta > 0 ? "+" : ""}${delta})`);
+      this.lastNotifiedViewers = next;
+    }
+  }
 
   // ----------------------------------------------------------- presence helpers
 
@@ -506,13 +596,62 @@ export class GameController {
     s.setRoster(res.roster);
     s.setAudience(audience);
     s.patchMetrics({ currentViewers: totalViewers(audience) });
+    this.syncViewers();
 
+    const day = s.metrics.day;
     for (const id of res.arrivals) {
       const c = res.roster[id];
-      if (c && c.affinity >= 35) {
-        this.s.pushChat([this.sysChat(`${c.handle} (${relationshipLevel(c.affinity)}) joined`)]);
+      if (!c) continue;
+      // Cross-stream continuity: count distinct stream-days + streaks.
+      if (c.lastStreamDay < day) {
+        const streak = c.lastStreamDay === day - 1 ? c.attendanceStreak + 1 : 1;
+        this.s.patchCharacter(id, {
+          lastStreamDay: day,
+          streamsAttended: c.streamsAttended + 1,
+          attendanceStreak: streak,
+        });
+        if (streak >= 3) {
+          this.s.pushChat([this.sysChat(`${c.displayName || c.handle} — ${streak} streams running 🔥`)]);
+        }
+      }
+      if (c.affinity >= 35) {
+        this.s.pushChat([this.sysChat(`${c.displayName || c.handle} (${relationshipLevel(c.affinity)}) joined`)]);
       }
     }
+  }
+
+  /**
+   * Advance the stalker escalation arc for the scariest online stalker. Returns
+   * true if it raised an interrupting event (the threat-3 confrontation), so the
+   * caller skips the normal event roll / ambient restart this beat.
+   */
+  private advanceStalkerArcs(): boolean {
+    const s = this.s;
+    const stalkers = Object.values(s.roster)
+      .filter((c) => c.online && c.threat >= 1 && c.threat < 3)
+      .sort((a, b) => b.threat - a.threat);
+    if (!stalkers.length) return false;
+    const target = stalkers[0];
+    const fed = s.metrics.comfort < 75; // oversharing / not setting boundaries
+    const outcome = advanceStalkerArc(target, s.metrics.day, fed);
+    if (!outcome) return false;
+    s.patchCharacter(target.id, outcome.patch);
+    this.sysStory(outcome.story);
+    if (outcome.chat) {
+      s.pushChat([{ id: uid("msg"), user: target.handle, text: outcome.chat, kind: "creepy", characterId: target.id, ts: Date.now() }]);
+    }
+    s.setToast(`⚠ ${target.displayName || target.handle} is escalating.`);
+    diag.info("event", "stalker escalated", { handle: target.handle, threat: outcome.patch.threat });
+    // At max threat, force the confrontation rather than waiting for the roll.
+    if (outcome.patch.threat === 3) {
+      const ev = rollEvent(this.eventCtx());
+      // rollEvent will heavily favour the threat-3 confront trigger; raise it.
+      if (ev) {
+        void this.raiseEvent(ev);
+        return true;
+      }
+    }
+    return false;
   }
 
   private intensity(): number {
@@ -547,6 +686,7 @@ export class GameController {
       s.setSession({ isLive: true, round: 1 });
       s.setPlaying(null);
     });
+    this.lastNotifiedViewers = 0;
     this.presenceTick();
     this.sysStory(`Day ${s.metrics.day} — you go live at ${formatClock(STREAM_START)}.`);
     this.dm("The 'LIVE' dot blinks red. Regulars filter in, saying hi as the numbers tick up.");
@@ -584,6 +724,7 @@ export class GameController {
       if (msgs.length) {
         this.s.pushChat([msgs[0]]);
         this.applyChatEffects([msgs[0]]);
+        this.syncViewers();
       }
       pushed += 1;
       if (pushed < AMBIENT_MAX) this.ambientTimer = setTimeout(() => void step(), AMBIENT_GAP_MS);
@@ -747,6 +888,9 @@ export class GameController {
           // Brief stage direction (her demeanor) follows her words, then the
           // mechanical outcome summary.
           this.dm(verdict.narration);
+          if (result.gainedFollowers > 0) {
+            this.notify(`📈 +${result.gainedFollowers} new follower${result.gainedFollowers > 1 ? "s" : ""} · ${this.s.metrics.followers.toLocaleString()} total`);
+          }
           if (result.summary) this.outcome(result.summary);
 
           const count = clamp(Math.round(totalViewers(result.audience) / 6) + 2, 3, 8);
@@ -855,6 +999,11 @@ export class GameController {
 
     this.presenceTick();
 
+    // Stalker arc: advance the most-threatening online stalker, at most once a
+    // day, when the room is "feeding" them (low comfort = oversharing). Its own
+    // events (too-specific DM, door knock, confrontation) ride the normal roll.
+    if (this.advanceStalkerArcs()) return;
+
     const ev = rollEvent(this.eventCtx());
     if (ev && Math.random() < 0.28) {
       void this.raiseEvent(ev);
@@ -895,12 +1044,64 @@ export class GameController {
 
   // ----------------------------------------------------------- chat effects
 
+  /**
+   * Apply the beats a relationship milestone unlocked: inline ones drop into the
+   * feed and patch the character; event-kind ones interrupt with a choice modal
+   * (only the first per call, to avoid clobbering pendingEvent). Word-of-mouth
+   * (referred friends, follower bumps) rides along. Returns true if an event was
+   * raised so callers can stop ambient chat.
+   */
+  private applyMilestones(charId: string, outcomes: MilestoneOutcome[]): boolean {
+    const s = this.s;
+    let raised = false;
+    let followerDelta = 0;
+    for (const o of outcomes) {
+      // Record the milestone so it never refires.
+      const cur = s.roster[charId];
+      if (!cur) continue;
+      s.patchCharacter(charId, {
+        ...o.patch,
+        milestones: [...cur.milestones, o.id],
+      });
+      if (o.story) this.sysStory(o.story);
+      if (o.chat) {
+        const c = s.roster[charId];
+        if (c) s.pushChat([{ id: uid("msg"), user: c.handle, text: o.chat, kind: "normal", characterId: charId, ts: Date.now() }]);
+      }
+      if (o.spawnFriend) this.spawnReferredFriend(charId);
+      if (o.followerDelta) followerDelta += o.followerDelta;
+      if (o.kind === "event" && o.event && !raised && !s.pendingEvent) {
+        void this.raiseEvent(o.event);
+        raised = true;
+      }
+    }
+    if (followerDelta) s.patchMetrics({ followers: s.metrics.followers + followerDelta });
+    return raised;
+  }
+
+  /** Word-of-mouth: a happy regular brings a compatible new viewer along. */
+  private spawnReferredFriend(referrerId: string): void {
+    const s = this.s;
+    const referrer = s.roster[referrerId];
+    if (!referrer) return;
+    if (Object.values(s.roster).filter((c) => c.online).length >= 16) return;
+    const arch = rollArchetype(this.intensity());
+    const friend = seedCharacter(arch, s.clock);
+    friend.referredBy = referrerId;
+    friend.affinity = clamp(friend.affinity + 6, 0, 100); // arrives a touch warmer
+    s.upsertCharacter(friend);
+    const who = referrer.displayName || referrer.handle;
+    this.sysStory(`${who} brought a friend — ${friend.handle} just showed up because of them.`);
+  }
+
   private applyChatEffects(msgs: ChatMessage[]): void {
     const s = this.s;
     const mult = this.mults();
     let cash = 0, followers = 0, subscribers = 0, hype = 0, mood = 0, comfort = 0;
     const roster = { ...s.roster };
     let rosterChanged = false;
+    // Track affinity before this burst so we can fire milestones after.
+    const prevAffinity = new Map<string, number>();
 
     for (const msg of msgs) {
       switch (msg.kind) {
@@ -915,6 +1116,7 @@ export class GameController {
       // Attribute to a named character: grow relationship, log tips.
       if (msg.characterId && roster[msg.characterId]) {
         const c = roster[msg.characterId];
+        if (!prevAffinity.has(c.id)) prevAffinity.set(c.id, c.affinity);
         roster[msg.characterId] = {
           ...c,
           messageCount: c.messageCount + 1,
@@ -926,6 +1128,15 @@ export class GameController {
       }
     }
     if (rosterChanged) s.setRoster(roster);
+    // Fire any milestones the affinity bumps just unlocked.
+    let eventRaised = false;
+    for (const [id, prev] of prevAffinity) {
+      const c = this.s.roster[id];
+      if (!c) continue;
+      const outcomes = checkMilestones(c, prev, s.metrics.day);
+      if (outcomes.length) eventRaised = this.applyMilestones(id, outcomes) || eventRaised;
+    }
+    void eventRaised;
     if (cash || followers || subscribers || hype || mood || comfort) {
       const m = s.metrics;
       s.patchMetrics({
@@ -942,6 +1153,9 @@ export class GameController {
           newFollowers: s.session.newFollowers + followers + subscribers,
         });
       }
+      // Surface the gains as chat notifications.
+      if (followers > 0) this.notify(`📈 +${followers} new follower${followers > 1 ? "s" : ""} · ${this.s.metrics.followers.toLocaleString()} total`);
+      if (subscribers > 0) this.notify(`⭐ +${subscribers} new sub${subscribers > 1 ? "s" : ""}!`);
     }
   }
 
@@ -1085,10 +1299,35 @@ export class GameController {
     if (choice.effects.cash && s.session.isLive) {
       s.setSession({ earnings: s.session.earnings + choice.effects.cash });
     }
-    // Boundary-style choices cool a bound stalker.
-    if (event.characterId && /block|boundary|report|don't open|wait them/i.test(choice.label)) {
+    // Stalker arc resolution + cool-downs.
+    if (event.characterId) {
       const c = s.roster[event.characterId];
-      if (c) s.patchCharacter(c.id, { threat: Math.max(0, c.threat - 1), affinity: Math.max(0, c.affinity - 10) });
+      if (c) {
+        const label = choice.label.toLowerCase();
+        if (/block|report|move apartments|confront/.test(label)) {
+          // Decisive resolution: arc ends. Block/move also remove them from view;
+          // blocking dents growth via a sour review.
+          const removed = /block|report|move apartments/.test(label);
+          s.patchCharacter(c.id, {
+            threat: 0,
+            escalationDay: -1,
+            affinity: Math.max(0, c.affinity - 20),
+            online: removed ? false : c.online,
+          });
+          if (/block|report/.test(label)) {
+            const sour = sourReview(c);
+            s.patchMetrics({ followers: s.metrics.followers + sour.followerDelta });
+            s.logEvent(sour.log);
+          }
+        } else if (/boundary|don't open|wait them/.test(label)) {
+          // Softer boundary: step the arc down one notch.
+          s.patchCharacter(c.id, {
+            threat: Math.max(0, c.threat - 1),
+            escalationDay: -1,
+            affinity: Math.max(0, c.affinity - 10),
+          });
+        }
+      }
     }
     this.dm(choice.resolution);
     s.logEvent(`${event.title} → ${choice.resolution}`);
@@ -1106,6 +1345,52 @@ export class GameController {
     this.s.openCharacter(id);
     this.s.patchCharacter(id, { known: true });
     diag.info("world", "open character", { handle: c.handle });
+    // Lazily flesh them out the first time you really look at them.
+    if (!c.backstory) void this.generateBackstory(id);
+  }
+
+  /** Generate a richer bio + quirks (and a name, if still unknown) on demand. */
+  private async generateBackstory(id: string): Promise<void> {
+    const c = this.s.roster[id];
+    if (!c || c.backstory) return;
+    const arch = ARCHETYPE_BY_ID[c.archetypeId];
+    if (this.llm.isMock) {
+      // Offline fallback: expand the archetype seed into a usable bio.
+      this.s.patchCharacter(id, {
+        backstory: `${arch?.blurb ?? "A viewer"} They want ${c.wants}.`,
+        quirks: arch ? pick(arch.lines) : "",
+      });
+      return;
+    }
+    try {
+      const res = await this.llm.complete(
+        {
+          system: this.resolvePrompt("narrator"),
+          messages: [
+            {
+              role: "user",
+              content: [
+                `Invent a short, grounded backstory for a livestream viewer named ${c.handle} (archetype: ${arch?.label} — ${arch?.blurb}).`,
+                `Return JSON: {"backstory": "2-3 sentences, third person", "quirks": "one short phrase", "name": "a plausible first name"}.`,
+                `Keep it human and specific, not melodramatic.`,
+              ].join("\n"),
+            },
+          ],
+          jsonMode: true,
+        },
+        { kind: "story" },
+      );
+      const json = extractJson<{ backstory?: string; quirks?: string; name?: string }>(res.text);
+      if (json) {
+        this.s.patchCharacter(id, {
+          backstory: (json.backstory ?? "").slice(0, 400) || `${arch?.blurb ?? ""}`,
+          quirks: (json.quirks ?? "").slice(0, 120),
+          ...(c.displayName ? {} : json.name ? { displayName: String(json.name).slice(0, 24) } : {}),
+        });
+      }
+    } catch {
+      this.s.patchCharacter(id, { backstory: arch?.blurb ?? "A regular viewer." });
+    }
   }
 
   async sendDm(text: string): Promise<void> {
@@ -1125,9 +1410,16 @@ export class GameController {
       const reply = await this.dmReply(c, history);
       this.s.pushDm(id, { role: "them", text: reply });
       // Talking 1:1 builds the relationship and a condensed memory.
+      const prevAffinity = c.affinity;
       const affinity = clamp(c.affinity + 3, 0, 100);
       const memory = await this.condenseMemory(c, t, reply);
       this.s.patchCharacter(id, { affinity, memory, known: true, lastSeenClock: s.clock });
+      // A 1:1 talk can push past a relationship threshold.
+      const updated = this.s.roster[id];
+      if (updated) {
+        const outcomes = checkMilestones(updated, prevAffinity, s.metrics.day);
+        if (outcomes.length) this.applyMilestones(id, outcomes);
+      }
       diag.info("world", "dm exchange", { handle: c.handle, affinity: Math.round(affinity) });
     } finally {
       this.s.setDmBusy(false);

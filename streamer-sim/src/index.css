@@ -170,9 +170,11 @@ body {
 }
 .card:hover { background: #ffffff12; border-color: var(--line); }
 .card--online { background: #8ce99a10; }
-.card__avatar { font-size: 1.25em; }
+.card__avatar { font-size: 1.25em; display: inline-flex; align-items: center; }
+.card__portrait { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; }
 .card__body { display: flex; flex-direction: column; min-width: 0; }
 .card__handle { font-weight: 700; font-size: 0.86em; display: flex; align-items: center; gap: 6px; }
+.card__streak { font-size: 0.78em; color: #ffb05a; font-weight: 700; }
 .card__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--good); display: inline-block; box-shadow: 0 0 6px #8ce99a99; }
 .card__rel { font-size: 0.74em; color: var(--fg-2); }
 
@@ -196,6 +198,7 @@ input:focus, textarea:focus, select:focus { outline: 1px solid var(--accent-2); 
 .btn--primary:hover:not(:disabled) { filter: brightness(1.08); }
 .btn--spicy { background: linear-gradient(90deg, var(--accent), var(--accent-2)); border: none; color: #fff; }
 .btn--danger { border-color: #ff6b6b66; color: var(--danger); }
+.btn--ghost { background: transparent; border-color: var(--line); font-size: 0.82em; padding: 6px 12px; }
 .chiplink { background: none; border: none; color: var(--accent); cursor: pointer; font: inherit; text-decoration: underline; margin-left: 6px; }
 
 /* ---------------------------------------------------------------- action bar */
@@ -244,10 +247,13 @@ input:focus, textarea:focus, select:focus { outline: 1px solid var(--accent-2); 
 .menu__freeform input { flex: 1; }
 
 /* ---------------------------------------------------------------- character modal */
-.char__avatar { font-size: 1.8em; }
+.char__avatar { font-size: 1.8em; display: inline-flex; align-items: center; }
+.char__portrait { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; }
 .char__id { display: flex; flex-direction: column; }
 .char__id h2 { margin: 0; }
+.char__handle-sub { font-size: 0.6em; font-weight: 500; color: var(--fg-2); }
 .char__rel { font-size: 0.78em; color: var(--fg-2); }
+.char__portrait-actions { margin-bottom: 12px; }
 .char__sheet { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
 .char__row { display: grid; grid-template-columns: 100px 1fr; gap: 10px; font-size: 0.86em; }
 .char__label { color: var(--fg-2); }
