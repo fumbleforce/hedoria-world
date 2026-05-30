@@ -4,6 +4,7 @@ import type { GameController } from "../game/controller";
 import type { DmLine } from "../game/types";
 import { ARCHETYPE_BY_ID } from "../game/archetypes";
 import { avatarFor, relationshipLevel } from "../game/characters";
+import { loadPortrait } from "../persist/imageStore";
 import { formatClock } from "../game/time";
 
 // Stable reference so the zustand selector doesn't return a fresh [] each render
@@ -16,9 +17,23 @@ export function CharacterModal({ controller }: { controller: GameController }) {
   const roster = useStore((s) => s.roster);
   const convo = useStore((s) => (s.openCharId ? s.dmThreads[s.openCharId] ?? EMPTY : EMPTY));
   const busy = useStore((s) => s.dmBusy);
+  const portraitBusyId = useStore((s) => s.portraitBusyId);
   const [text, setText] = useState("");
+  const [portrait, setPortrait] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const hasPortrait = id ? roster[id]?.hasPortrait : false;
+  // Load the cached portrait blob whenever it exists / regenerates.
+  useEffect(() => {
+    let alive = true;
+    if (id && hasPortrait) {
+      void loadPortrait(id).then((url) => { if (alive) setPortrait(url); });
+    } else {
+      setPortrait(null);
+    }
+    return () => { alive = false; };
+  }, [id, hasPortrait, portraitBusyId]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -35,6 +50,7 @@ export function CharacterModal({ controller }: { controller: GameController }) {
   const c = roster[id];
   if (!c) return null;
   const arch = ARCHETYPE_BY_ID[c.archetypeId];
+  const portraitBusy = portraitBusyId === id;
 
   const close = () => useStore.getState().openCharacter(null);
 
@@ -42,9 +58,11 @@ export function CharacterModal({ controller }: { controller: GameController }) {
     <div className="modal" onClick={close}>
       <div className="modal__card" onClick={(e) => e.stopPropagation()}>
         <div className="modal__head">
-          <span className="char__avatar">{avatarFor(c)}</span>
+          <span className="char__avatar">
+            {portrait ? <img className="char__portrait" src={portrait} alt={c.handle} /> : avatarFor(c)}
+          </span>
           <div className="char__id">
-            <h2>{c.handle}</h2>
+            <h2>{c.displayName ? `${c.displayName} ` : ""}<span className="char__handle-sub">{c.handle}</span></h2>
             <span className="char__rel">
               {relationshipLevel(c.affinity)} · {arch?.label}
               {c.online ? " · online" : ` · last seen ${formatClock(c.lastSeenClock)}`}
@@ -53,13 +71,28 @@ export function CharacterModal({ controller }: { controller: GameController }) {
           <button className="modal__close" onClick={close}>✕</button>
         </div>
 
+        {controller.canGeneratePortrait && (
+          <div className="char__portrait-actions">
+            <button
+              className="btn btn--ghost"
+              disabled={portraitBusy}
+              onClick={() => void controller.generatePortrait(c.id)}
+            >
+              {portraitBusy ? "Generating…" : c.hasPortrait ? "Regenerate portrait" : "Generate portrait"}
+            </button>
+          </div>
+        )}
+
         <div className="char__sheet">
+          {c.backstory && <Row label="Backstory" value={c.backstory} />}
+          {c.quirks && <Row label="Quirk" value={c.quirks} />}
           <Row label="Vibe" value={c.vibe} />
           <Row label="Wants" value={c.wants} />
           <Row label="Messages" value={String(c.messageCount)} />
           <Row label="Tipped" value={`$${c.tipped.toFixed(0)}`} />
           <Row label="Affinity" value={`${Math.round(c.affinity)}/100`} />
-          {c.threat >= 1 && <Row label="⚠ Threat" value={`level ${c.threat}`} danger />}
+          {c.attendanceStreak >= 2 && <Row label="Attendance" value={`${c.attendanceStreak} streams running (${c.streamsAttended} total)`} />}
+          {c.threat >= 1 && <Row label="⚠ Threat" value={threatLabel(c.threat)} danger />}
           {c.memory && <Row label="You remember" value={c.memory} />}
         </div>
 
@@ -97,6 +130,12 @@ export function CharacterModal({ controller }: { controller: GameController }) {
       </div>
     </div>
   );
+}
+
+function threatLabel(threat: number): string {
+  if (threat >= 3) return "level 3 — real-world threat";
+  if (threat === 2) return "level 2 — getting personal";
+  return "level 1 — watch this one";
 }
 
 function Row({ label, value, danger }: { label: string; value: string; danger?: boolean }) {

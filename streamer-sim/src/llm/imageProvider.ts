@@ -100,3 +100,20 @@ export async function generateRoomImage(
   diag.info("world", "room image generated", { bytes: url.length });
   return url;
 }
+
+export async function generatePortrait(
+  backend: ImageBackend,
+  vars: { handle: string; archetypeLabel: string; vibe: string },
+): Promise<string> {
+  const prompt = [
+    `A small square profile avatar for a livestream viewer named "${vars.handle}".`,
+    `Stylized semi-realistic game art, warm purple-and-pink lighting to match the app,`,
+    `head-and-shoulders, friendly readable icon at small sizes.`,
+    `Personality: ${vars.archetypeLabel} — ${vars.vibe}.`,
+    `Tasteful and non-explicit. No text, no watermark, no UI. Plain soft background.`,
+  ].join(" ");
+  diag.info("world", "generating portrait", { backend: backend.id, handle: vars.handle });
+  const url = await backend.generate(prompt);
+  diag.info("world", "portrait generated", { bytes: url.length });
+  return url;
+}

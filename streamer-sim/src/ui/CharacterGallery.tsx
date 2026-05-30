@@ -1,6 +1,8 @@
+import { useEffect, useState } from "react";
 import { useStore } from "../state/store";
 import type { GameController } from "../game/controller";
-import { avatarFor, relationshipLevel } from "../game/characters";
+import { avatarFor, relationshipLevel, type CharacterSheet } from "../game/characters";
+import { loadPortrait } from "../persist/imageStore";
 import { SEGMENTS, SEGMENT_IDS } from "../game/segments";
 
 /**
@@ -58,10 +60,11 @@ export function CharacterGallery({ controller }: { controller: GameController })
         ) : (
           chars.map((c) => (
             <button key={c.id} className={`card ${c.online ? "card--online" : ""}`} onClick={() => controller.openCharacter(c.id)}>
-              <span className="card__avatar">{avatarFor(c)}</span>
+              <CardAvatar c={c} />
               <span className="card__body">
                 <span className="card__handle">
-                  {c.handle}
+                  {c.displayName || c.handle}
+                  {c.attendanceStreak >= 3 && <span className="card__streak" title={`${c.attendanceStreak} streams running`}>🔥{c.attendanceStreak}</span>}
                   {c.online && <span className="card__dot" title="online" />}
                 </span>
                 <span className="card__rel">{relationshipLevel(c.affinity)}{c.threat >= 2 ? " · ⚠ stalker" : ""}</span>
@@ -71,6 +74,22 @@ export function CharacterGallery({ controller }: { controller: GameController })
         )}
       </div>
     </aside>
+  );
+}
+
+/** Avatar glyph, swapped for a cached portrait thumbnail when one exists. */
+function CardAvatar({ c }: { c: CharacterSheet }) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    if (c.hasPortrait) void loadPortrait(c.id).then((u) => { if (alive) setUrl(u); });
+    else setUrl(null);
+    return () => { alive = false; };
+  }, [c.id, c.hasPortrait]);
+  return (
+    <span className="card__avatar">
+      {url ? <img className="card__portrait" src={url} alt={c.handle} /> : avatarFor(c)}
+    </span>
   );
 }
 

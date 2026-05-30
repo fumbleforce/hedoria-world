@@ -69,3 +69,31 @@ export async function loadRoomImage(): Promise<string | null> {
     return null;
   }
 }
+
+// --- Per-character portraits (same KV store, prefixed keys) ------------------
+
+const portraitKey = (charId: string) => `portrait:${charId}`;
+
+export async function savePortrait(charId: string, dataUrl: string): Promise<void> {
+  try {
+    await put(portraitKey(charId), dataUrl);
+  } catch {
+    /* best-effort */
+  }
+}
+
+export async function loadPortrait(charId: string): Promise<string | null> {
+  try {
+    return await get(portraitKey(charId));
+  } catch {
+    return null;
+  }
+}
+
+export async function deletePortrait(charId: string): Promise<void> {
+  try {
+    await del(portraitKey(charId));
+  } catch {
+    /* best-effort */
+  }
+}

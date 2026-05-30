@@ -30,7 +30,7 @@ export interface EventTrigger {
   live?: boolean;
 }
 
-const choice = (label: string, resolution: string, effects: Partial<Metrics>): EventChoice => ({
+export const choice = (label: string, resolution: string, effects: Partial<Metrics>): EventChoice => ({
   label,
   resolution,
   effects,
@@ -118,6 +118,49 @@ export const EVENT_TRIGGERS: EventTrigger[] = [
       ], who);
     },
   },
+  // ---- Stalker arc resolution (threat maxed) --------------------------------
+  {
+    id: "stalker-confront",
+    weight: (c) => {
+      const maxThreat = Math.max(
+        0,
+        ...c.online.map((id) => c.roster[id]?.threat ?? 0),
+      );
+      return maxThreat >= 3 ? 3 : 0;
+    },
+    bindsCharacter: true,
+    build: (_c, who) => {
+      const name = who?.handle ?? "they";
+      return ev(
+        "🚨 This has to stop",
+        `It's gone too far. ${name} has crossed every line — you have to decide how this ends.`,
+        "danger",
+        [
+          choice(
+            "Block & report",
+            "You block them and file a report. Quieter, safer — a couple of their friends leave with them.",
+            { comfort: 18, mood: 4, followers: -4 },
+          ),
+          choice(
+            "Confront on stream",
+            "You call it out live. Clips fly, the room rallies behind you — but your hands are shaking.",
+            { hype: 16, followers: 12, comfort: -10, mood: -6 },
+          ),
+          choice(
+            "Move apartments",
+            "You break the lease and disappear for a few days. Expensive, but you can breathe again.",
+            { cash: -300, comfort: 24, mood: 6 },
+          ),
+          choice(
+            "Wait it out",
+            "You tell yourself it'll pass. It doesn't. You feel watched all night.",
+            { comfort: -12, mood: -6 },
+          ),
+        ],
+        who,
+      );
+    },
+  },
   // ---- Brand / career -------------------------------------------------------
   {
     id: "brand-deal",
@@ -151,7 +194,7 @@ export const EVENT_TRIGGERS: EventTrigger[] = [
   },
 ];
 
-function ev(
+export function ev(
   title: string,
   narrationSeed: string,
   tone: GameEvent["tone"],
