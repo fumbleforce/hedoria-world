@@ -1,4 +1,5 @@
 import type { LlmAdapter } from "../llm/adapter";
+import { completeJsonWithRepair } from "../llm/adapter";
 import { diag } from "../diag/log";
 import { ACTION_TAGS, type ActionTag, type ActionVerdict, type PlayerAction } from "./actions";
 import { SEGMENT_IDS, type SegmentId } from "./segments";
@@ -21,6 +22,8 @@ export interface EvalContext {
   recentChat?: string[];
   /** Her current stat vibe (changes every beat), so narration doesn't repeat. */
   vibe?: string;
+  /** Rolling summary of the stream so far, for callbacks and continuity. */
+  streamMemory?: string;
 }
 
 /**
@@ -49,6 +52,7 @@ export async function evaluateAction(
             `STREAM STATUS: ${ctx.isLive ? "LIVE (broadcasting on webcam right now)" : "OFFLINE (not broadcasting — she is just at home)"}.`,
             `HER LOCATION: ${ctx.zoneLabel}.`,
             ctx.isLive ? `Audience right now: ${ctx.audienceSummary}` : "",
+            ctx.isLive && ctx.streamMemory?.trim() ? `Stream so far: ${ctx.streamMemory.trim()}` : "",
             ctx.isLive && ctx.vibe ? `Her current vibe: ${ctx.vibe}.` : "",
             ctx.isLive && ctx.recentChat?.length
               ? `Live chat in the last moment:\n${ctx.recentChat.join("\n")}`
@@ -64,16 +68,22 @@ export async function evaluateAction(
         },
       ],
       jsonMode: true,
+      jsonSchema: verdictSchema(),
     };
-    const res = await adapter.complete(req, { kind: "story" });
-    const parsed = parseVerdict(res.text);
+    const parsed = await completeJsonWithRepair(adapter, req, parseVerdict, "story");
     if (parsed) {
+      // Self-consistency: for high-impact beats, draw a second independent
+      // verdict and reconcile, so one odd classification can't swing the economy.
+      if (ctx.settings.selfConsistency && isHighImpact(parsed)) {
+        const second = await completeJsonWithRepair(adapter, req, parseVerdict, "story");
+        const verdict = second ? reconcileVerdicts(parsed, second) : parsed;
+        logVerdict(second ? "llm-2x" : "llm", action, verdict);
+        return verdict;
+      }
       logVerdict("llm", action, parsed);
       return parsed;
     }
-    diag.warn("evaluator", "LLM verdict unparseable; using local fallback", {
-      raw: res.text.slice(0, 200),
-    });
+    diag.warn("evaluator", "LLM verdict unparseable after repair; using local fallback");
   } catch (err) {
     diag.warn("evaluator", "LLM evaluate failed; using local fallback", {
       error: err instanceof Error ? err.message : String(err),
@@ -127,6 +137,63 @@ function parseVerdict(text: string): ActionVerdict | null {
     pressure,
     narration,
     setsBoundary: json.setsBoundary === true,
+  };
+}
+
+/** JSON Schema describing the verdict, for native structured output. */
+function verdictSchema(): Record<string, unknown> {
+  const dir = { type: "string", enum: ["up", "down", "none"] };
+  return {
+    type: "object",
+    properties: {
+      plausible: { type: "boolean" },
+      reason: { type: "string" },
+      tags: { type: "array", items: { type: "string", enum: [...ACTION_TAGS] } },
+      intensity: { type: "integer" },
+      appeal: {
+        type: "object",
+        properties: Object.fromEntries(SEGMENT_IDS.map((id) => [id, { type: "number" }])),
+      },
+      pressure: {
+        type: "object",
+        properties: { hype: dir, energy: dir, mood: dir, comfort: dir },
+      },
+      narration: { type: "string" },
+      setsBoundary: { type: "boolean" },
+    },
+    required: ["plausible", "tags", "intensity", "narration"],
+  };
+}
+
+/** A beat worth double-checking: intense, boundary-setting, or economically swingy. */
+function isHighImpact(v: ActionVerdict): boolean {
+  if (v.intensity >= 4 || v.setsBoundary) return true;
+  if (v.tags.some((t) => ["suggestive", "bold", "edgy", "drama", "chaotic"].includes(t))) return true;
+  return Object.values(v.appeal).some((n) => Math.abs(n ?? 0) >= 3);
+}
+
+/** Merge two independent verdicts into a stabler consensus. */
+function reconcileVerdicts(a: ActionVerdict, b: ActionVerdict): ActionVerdict {
+  const appeal: Partial<Record<SegmentId, number>> = {};
+  for (const id of SEGMENT_IDS) {
+    const avg = ((a.appeal[id] ?? 0) + (b.appeal[id] ?? 0)) / 2;
+    const rounded = Math.round(avg);
+    if (rounded !== 0) appeal[id] = clamp(rounded, -3, 3);
+  }
+  const pressure: ActionVerdict["pressure"] = {};
+  for (const k of ["hype", "energy", "mood", "comfort"] as const) {
+    pressure[k] = a.pressure[k] === b.pressure[k] ? a.pressure[k] : "none";
+  }
+  return {
+    // Tie (one says no) → allow, so a single odd misread doesn't block the action.
+    plausible: a.plausible === b.plausible ? a.plausible : true,
+    reason: a.reason ?? b.reason,
+    tags: [...new Set([...a.tags, ...b.tags])],
+    intensity: clamp(Math.round((a.intensity + b.intensity) / 2), 1, 5),
+    appeal,
+    pressure,
+    narration: a.narration,
+    setsBoundary: a.setsBoundary || b.setsBoundary,
   };
 }
 

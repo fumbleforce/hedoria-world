@@ -1,4 +1,5 @@
 import type { LlmAdapter } from "../llm/adapter";
+import { completeJsonWithRepair } from "../llm/adapter";
 import { diag } from "../diag/log";
 import type { ChatMessage, ChatMessageKind, Metrics, Settings } from "./types";
 import { tierIntensity } from "./content";
@@ -19,6 +20,10 @@ export interface ChatContext {
   actionContext: string;
   /** Last few chat lines, so replies flow from the conversation. */
   recentChat?: string[];
+  /** Rolling summary of the stream so far, so callbacks/running jokes emerge. */
+  streamMemory?: string;
+  /** Each online regular's own recent lines, to keep their voice consistent. */
+  characterVoices?: Array<{ handle: string; lines: string[] }>;
   count: number;
 }
 
@@ -28,10 +33,17 @@ export async function generateChatBurst(
 ): Promise<ChatMessage[]> {
   if (adapter.isMock) return mockBurst(ctx);
   try {
-    const res = await adapter.complete(buildRequest(ctx), { kind: "chat" });
-    const parsed = parseChat(res.text, ctx.roster);
-    if (parsed.length > 0) return parsed;
-    diag.warn("chat", "LLM chat empty/unparseable; using mock burst");
+    const parsed = await completeJsonWithRepair(
+      adapter,
+      buildRequest(ctx),
+      (text) => {
+        const msgs = parseChat(text, ctx.roster);
+        return msgs.length > 0 ? msgs : null;
+      },
+      "chat",
+    );
+    if (parsed && parsed.length > 0) return parsed;
+    diag.warn("chat", "LLM chat empty/unparseable after repair; using mock burst");
   } catch (err) {
     diag.warn("chat", "LLM chat failed; using mock burst", {
       error: err instanceof Error ? err.message : String(err),
@@ -56,6 +68,16 @@ function buildRequest(ctx: ChatContext) {
     .map((c) => `${c.handle} (${ARCHETYPE_BY_ID[c.archetypeId]?.label}, affinity ${Math.round(c.affinity)})`)
     .join("; ");
   const dynamics = describeDynamics(onlineChars);
+  const memory = ctx.streamMemory?.trim()
+    ? `Stream so far (callbacks/running jokes welcome): ${ctx.streamMemory.trim()}`
+    : "";
+  const voices = ctx.characterVoices?.length
+    ? "Keep each regular's voice consistent with how they've talked tonight:\n" +
+      ctx.characterVoices
+        .filter((v) => v.lines.length)
+        .map((v) => `- ${v.handle}: ${v.lines.slice(-3).map((l) => `"${l}"`).join(" ")}`)
+        .join("\n")
+    : "";
   const recent = ctx.recentChat?.length
     ? `Recent chat (continue naturally, don't repeat):\n${ctx.recentChat.slice(-6).join("\n")}`
     : "";
@@ -63,6 +85,8 @@ function buildRequest(ctx: ChatContext) {
     `Audience mix: ${audienceSummary(ctx.audience)}`,
     named ? `Named regulars currently watching (use some of these handles): ${named}` : "",
     dynamics,
+    memory,
+    voices,
     `Vibe — viewers: ${Math.round(ctx.metrics.currentViewers)}, hype: ${Math.round(ctx.metrics.hype)}/100.`,
     recent,
     `>>> ${ctx.settings.streamerName} just did this, REACT SPECIFICALLY TO IT: ${ctx.actionContext}`,

@@ -60,6 +60,18 @@ export interface Settings {
   textBackend: TextBackend;
   geminiModel: string;
   openRouterModel: string;
+  /**
+   * Two-tier routing: when on, lightweight chat bursts use the *fast* model
+   * below while the evaluator, narration, and DMs use the main model above.
+   */
+  tieredModels: boolean;
+  /** Cheap/fast model used for chat bursts when tiered routing is on. */
+  geminiFastModel: string;
+  openRouterFastModel: string;
+  /** Sample high-impact action verdicts twice and reconcile, for stability. */
+  selfConsistency: boolean;
+  /** Stream DM replies token-by-token so they type out progressively. */
+  streamReplies: boolean;
   /** Image models for room generation. */
   geminiImageModel: string;
   openRouterImageModel: string;

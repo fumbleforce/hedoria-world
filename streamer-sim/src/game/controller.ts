@@ -70,6 +70,10 @@ const AMBIENT_MAX = 3;
  */
 export class GameController {
   private ambientTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Rolling LLM-written summary of the current stream (running jokes, callbacks). */
+  private streamMemory = "";
+  /** Beats since the stream summary was last refreshed (throttles the summariser). */
+  private beatsSinceSummary = 0;
 
   constructor(
     private readonly llm: LlmAdapter,
@@ -687,6 +691,8 @@ export class GameController {
       s.setPlaying(null);
     });
     this.lastNotifiedViewers = 0;
+    this.streamMemory = "";
+    this.beatsSinceSummary = 0;
     this.presenceTick();
     this.sysStory(`Day ${s.metrics.day} — you go live at ${formatClock(STREAM_START)}.`);
     this.dm("The 'LIVE' dot blinks red. Regulars filter in, saying hi as the numbers tick up.");
@@ -697,6 +703,8 @@ export class GameController {
     const s = this.s;
     if (!s.session.isLive) return;
     this.stopAmbient();
+    this.streamMemory = "";
+    this.beatsSinceSummary = 0;
     const { earnings, newFollowers, peak, round } = s.session;
     s.setSession({ isLive: false });
     s.setPlaying(null);
@@ -747,6 +755,8 @@ export class GameController {
       systemPrompt: this.resolvePrompt("chat"),
       actionContext,
       recentChat: this.recentChatLines(),
+      streamMemory: this.streamMemory,
+      characterVoices: this.characterVoices(),
       count,
     };
   }
@@ -759,11 +769,82 @@ export class GameController {
       .map((m) => `${m.user}: ${m.text}`);
   }
 
+  /**
+   * Each currently-online named regular paired with their own recent lines from
+   * this stream, so the chat model keeps every personality stable across the
+   * night rather than re-rolling a voice per burst.
+   */
+  private characterVoices(): Array<{ handle: string; lines: string[] }> {
+    const online = new Set(this.onlineIds());
+    const byChar = new Map<string, string[]>();
+    for (const m of this.s.chat) {
+      if (!m.characterId || !online.has(m.characterId) || m.kind === "system") continue;
+      const arr = byChar.get(m.characterId) ?? [];
+      arr.push(m.text);
+      byChar.set(m.characterId, arr);
+    }
+    const out: Array<{ handle: string; lines: string[] }> = [];
+    for (const [id, lines] of byChar) {
+      const c = this.s.roster[id];
+      if (c && lines.length) out.push({ handle: c.handle, lines });
+    }
+    return out.slice(0, 8);
+  }
+
   /** A short, ever-changing read on her state — keeps per-beat narration fresh. */
   private vibeSummary(): string {
     const m = this.s.metrics;
     const band = (v: number) => (v >= 70 ? "high" : v >= 35 ? "okay" : "low");
     return `energy ${band(m.energy)}, mood ${band(m.mood)}, hype ${band(m.hype)}, ~${Math.round(totalViewers(this.s.audience))} watching`;
+  }
+
+  /**
+   * Roll a compact running summary of the stream so the chat/evaluator models can
+   * reference earlier beats — running jokes, callbacks, "remember when" moments.
+   * Throttled (every few beats) and cheap; folds the prior summary into the new
+   * one so old context survives the chat/story ring buffers. No-op when mocked.
+   */
+  private async refreshStreamMemory(force = false): Promise<void> {
+    const s = this.s;
+    if (this.llm.isMock || !s.session.isLive) return;
+    this.beatsSinceSummary += 1;
+    if (!force && this.beatsSinceSummary < 3) return;
+    this.beatsSinceSummary = 0;
+
+    const recentStory = s.story
+      .filter((e) => e.kind === "action" || e.kind === "dm" || e.kind === "outcome" || e.kind === "quote")
+      .slice(-8)
+      .map((e) => (e.kind === "quote" ? `${s.settings.streamerName} said: "${e.text}"` : e.text))
+      .join("\n");
+    const recentChat = this.recentChatLines().join("\n");
+    try {
+      const res = await this.llm.complete(
+        {
+          system:
+            "You maintain a terse memory log for a livestream sim. Given the running summary and the latest beats, return an updated summary in 2-4 short sentences. Track running jokes, callbacks, recurring viewers, promises she made, and the current bit — drop stale detail. Plain prose only, no preamble.",
+          messages: [
+            {
+              role: "user",
+              content: [
+                this.streamMemory ? `Running summary:\n${this.streamMemory}` : "Running summary: (stream just started)",
+                recentStory ? `Latest beats:\n${recentStory}` : "",
+                recentChat ? `Latest chat:\n${recentChat}` : "",
+                "Updated summary:",
+              ]
+                .filter(Boolean)
+                .join("\n\n"),
+            },
+          ],
+        },
+        { kind: "chat" },
+      );
+      const text = res.text.trim().replace(/^updated summary:?\s*/i, "").trim();
+      if (text) this.streamMemory = text.slice(0, 700);
+    } catch (err) {
+      diag.warn("chat", "stream memory refresh failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
   }
 
   // ----------------------------------------------------------- action pipeline
@@ -852,6 +933,7 @@ export class GameController {
               content: [
                 `She is LIVE on cam at the ${ZONES[s.zone]?.label ?? "studio"}.`,
                 playing ? `She is playing ${playing}.` : "",
+                this.streamMemory ? `Stream so far: ${this.streamMemory}` : "",
                 `Her current vibe: ${this.vibeSummary()}.`,
                 this.recentStoryContext()
                   ? `The story so far (oldest first, newest last):\n${this.recentStoryContext()}`
@@ -910,6 +992,7 @@ export class GameController {
           zoneLabel: ZONES[s.zone]?.label ?? "the studio",
           recentChat: this.recentChatLines(),
           vibe: this.vibeSummary(),
+          streamMemory: this.streamMemory,
         });
 
         if (!verdict.plausible) {
@@ -1002,6 +1085,7 @@ export class GameController {
               content: [
                 `You are LIVE on cam, at the ${ZONES[s.zone]?.label ?? "studio"}.`,
                 `Audience right now: ${audienceSummary(s.audience)}`,
+                this.streamMemory ? `Stream so far: ${this.streamMemory}` : "",
                 `What you are doing this moment: ${action.text}`,
                 verdict.tags.length ? `Vibe: ${verdict.tags.join(", ")}.` : "",
                 `Recent chat:\n${this.recentChatLines().join("\n") || "(quiet)"}`,
@@ -1063,6 +1147,7 @@ export class GameController {
     if (s.clock >= NIGHT_END) return this.endStream("it got late");
 
     this.presenceTick();
+    void this.refreshStreamMemory();
 
     // Stalker arc: advance the most-threatening online stalker, at most once a
     // day, when the room is "feeding" them (low comfort = oversharing). Its own
@@ -1472,8 +1557,7 @@ export class GameController {
       // Pass the FULL running conversation (now including the line just pushed)
       // so replies are contextual instead of cold non-sequiturs.
       const history = this.s.dmThreads[id] ?? [];
-      const reply = await this.dmReply(c, history);
-      this.s.pushDm(id, { role: "them", text: reply });
+      const reply = await this.dmReply(c, history, id);
       // Talking 1:1 builds the relationship and a condensed memory.
       const prevAffinity = c.affinity;
       const affinity = clamp(c.affinity + 3, 0, 100);
@@ -1491,36 +1575,75 @@ export class GameController {
     }
   }
 
-  private async dmReply(c: CharacterSheet, history: DmLine[]): Promise<string> {
+  /** Build the DM reply request: the character replying in-voice to the thread. */
+  private dmRequest(c: CharacterSheet, history: DmLine[]) {
+    const arch = ARCHETYPE_BY_ID[c.archetypeId];
+    // Map the running conversation to alternating chat turns. The streamer
+    // ("me") is the user; the character ("them") is the assistant.
+    const messages = history.map((l) => ({
+      role: (l.role === "me" ? "user" : "assistant") as "user" | "assistant",
+      content: l.text,
+    }));
+    return {
+      system: [
+        `You are ${c.handle}, a viewer privately DMing the streamer ${this.s.settings.streamerName}. You are NOT the streamer — you are the fan.`,
+        `You are a ${arch?.label}: ${arch?.blurb}`,
+        `You want: ${c.wants}. Your relationship with her: ${relationshipLevel(c.affinity)}.`,
+        c.memory ? `What you remember about your past chats with her: ${c.memory}` : "",
+        steeringForTier(this.s.settings),
+        `Reply to her LAST message directly and relevantly, staying in character.`,
+        `If she asks you a question, actually answer it. ONE short message, lowercase, casual, like a real DM. No quotes, no stage directions.`,
+      ].filter(Boolean).join("\n"),
+      messages: messages.length ? messages : [{ role: "user" as const, content: "hey" }],
+    };
+  }
+
+  /**
+   * Get the character's DM reply and push it into the thread. When streaming is
+   * enabled and supported, a placeholder line is appended and filled token-by-
+   * token; otherwise the full reply is pushed at once. Returns the final text.
+   */
+  private async dmReply(c: CharacterSheet, history: DmLine[], threadId: string): Promise<string> {
     const arch = ARCHETYPE_BY_ID[c.archetypeId];
     if (this.llm.isMock) {
-      return arch ? `${pick(arch.lines)}` : "haha yeah";
+      const reply = arch ? `${pick(arch.lines)}` : "haha yeah";
+      this.s.pushDm(threadId, { role: "them", text: reply });
+      return reply;
     }
+
+    const req = this.dmRequest(c, history);
+    if (this.s.settings.streamReplies && this.llm.canStream) {
+      this.s.pushDm(threadId, { role: "them", text: "" });
+      let acc = "";
+      try {
+        const res = await this.llm.stream(
+          req,
+          (delta) => {
+            acc += delta;
+            this.s.updateLastDm(threadId, acc.slice(0, 280));
+          },
+          { kind: "chat" },
+        );
+        const final = (res.text.trim() || acc.trim()).slice(0, 280) || "…";
+        this.s.updateLastDm(threadId, final);
+        return final;
+      } catch (err) {
+        diag.warn("chat", "dm stream failed", { error: err instanceof Error ? err.message : String(err) });
+        const final = acc.trim().slice(0, 280) || (arch ? pick(arch.lines) : "…");
+        this.s.updateLastDm(threadId, final);
+        return final;
+      }
+    }
+
     try {
-      // Map the running conversation to alternating chat turns. The streamer
-      // ("me") is the user; the character ("them") is the assistant.
-      const messages = history.map((l) => ({
-        role: (l.role === "me" ? "user" : "assistant") as "user" | "assistant",
-        content: l.text,
-      }));
-      const res = await this.llm.complete(
-        {
-          system: [
-            `You are ${c.handle}, a viewer privately DMing the streamer ${this.s.settings.streamerName}. You are NOT the streamer — you are the fan.`,
-            `You are a ${arch?.label}: ${arch?.blurb}`,
-            `You want: ${c.wants}. Your relationship with her: ${relationshipLevel(c.affinity)}.`,
-            c.memory ? `What you remember about your past chats with her: ${c.memory}` : "",
-            steeringForTier(this.s.settings),
-            `Reply to her LAST message directly and relevantly, staying in character.`,
-            `If she asks you a question, actually answer it. ONE short message, lowercase, casual, like a real DM. No quotes, no stage directions.`,
-          ].filter(Boolean).join("\n"),
-          messages: messages.length ? messages : [{ role: "user", content: "hey" }],
-        },
-        { kind: "chat" },
-      );
-      return res.text.trim().slice(0, 280) || "…";
+      const res = await this.llm.complete(req, { kind: "chat" });
+      const reply = res.text.trim().slice(0, 280) || "…";
+      this.s.pushDm(threadId, { role: "them", text: reply });
+      return reply;
     } catch {
-      return arch ? pick(arch.lines) : "…";
+      const reply = arch ? pick(arch.lines) : "…";
+      this.s.pushDm(threadId, { role: "them", text: reply });
+      return reply;
     }
   }
 

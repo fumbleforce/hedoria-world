@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useStore, type SettingsTab } from "../state/store";
+import { getLlmStats, subscribeLlmStats, clearLlmStats } from "../llm/stats";
 import type { GameController } from "../game/controller";
 import type { ContentTier, LogLevel, TextBackend } from "../game/types";
 import { PROMPTS, PROMPT_IDS, type PromptId } from "../game/prompts";
@@ -39,6 +40,7 @@ const TABS: Array<{ id: SettingsTab; label: string }> = [
   { id: "character", label: "Character" },
   { id: "gallery", label: "Gallery" },
   { id: "saves", label: "Saves" },
+  { id: "llm", label: "LLM" },
 ];
 
 export function SettingsPanel({ controller }: { controller: GameController }) {
@@ -67,6 +69,7 @@ export function SettingsPanel({ controller }: { controller: GameController }) {
         {tab === "character" && <CharacterTab controller={controller} />}
         {tab === "gallery" && <GalleryTab controller={controller} />}
         {tab === "saves" && <SavesTab />}
+        {tab === "llm" && <LlmTab />}
       </div>
     </div>
   );
@@ -160,6 +163,45 @@ function GeneralTab() {
           <input value={settings.openRouterImageModel} onChange={(e) => set({ openRouterImageModel: e.target.value })} />
         </label>
       </div>
+
+      <hr className="rule" />
+
+      <label className="toggleRow">
+        <input type="checkbox" checked={settings.tieredModels} onChange={(e) => set({ tieredModels: e.target.checked })} />
+        <span>
+          <b>Two-tier model routing</b>
+          <small>Use a cheap/fast model for chat bursts; the main model above handles the evaluator, narration & DMs.</small>
+        </span>
+      </label>
+
+      {settings.tieredModels && (
+        <div className="field2">
+          <label className="field">
+            <span>Gemini fast (chat) model</span>
+            <input value={settings.geminiFastModel} onChange={(e) => set({ geminiFastModel: e.target.value })} />
+          </label>
+          <label className="field">
+            <span>OpenRouter fast (chat) model</span>
+            <input value={settings.openRouterFastModel} onChange={(e) => set({ openRouterFastModel: e.target.value })} />
+          </label>
+        </div>
+      )}
+
+      <label className="toggleRow">
+        <input type="checkbox" checked={settings.selfConsistency} onChange={(e) => set({ selfConsistency: e.target.checked })} />
+        <span>
+          <b>Self-consistency on big beats</b>
+          <small>For high-impact actions, sample the verdict twice and reconcile so one odd read can't swing the economy.</small>
+        </span>
+      </label>
+
+      <label className="toggleRow">
+        <input type="checkbox" checked={settings.streamReplies} onChange={(e) => set({ streamReplies: e.target.checked })} />
+        <span>
+          <b>Stream DM replies</b>
+          <small>Type direct-message replies out progressively instead of appearing in one lump.</small>
+        </span>
+      </label>
 
       <hr className="rule" />
 
@@ -506,6 +548,63 @@ function SavePortrait({ slot }: { slot: SaveSlotMeta }) {
   const src = useStoredImage(slot.portraitId);
   if (!src) return <div className="savePortrait savePortrait--empty">No portrait</div>;
   return <img className="savePortrait" src={src} alt={`${slot.name} portrait`} loading="lazy" />;
+}
+
+const KIND_TITLE: Record<string, string> = {
+  chat: "Chat bursts",
+  story: "Evaluator / narration / DMs",
+  other: "Other",
+};
+
+function LlmTab() {
+  const stats = useSyncExternalStore(subscribeLlmStats, getLlmStats, getLlmStats);
+  const [selected, setSelected] = useState<string | null>(null);
+  const active = stats.find((s) => s.kind === selected) ?? stats[0] ?? null;
+
+  return (
+    <div className="llmtab">
+      <div className="saves__head">
+        <p className="hint">
+          Live per-call telemetry for this session — latency, rough token counts (~4 chars/token), and the
+          raw prompt/response of the most recent call of each kind. Resets on reload.
+        </p>
+        <button className="btn" onClick={() => clearLlmStats()}>Clear</button>
+      </div>
+
+      {stats.length === 0 ? (
+        <p className="rail__empty">No LLM calls yet this session. Go live and take an action.</p>
+      ) : (
+        <>
+          <div className="llmStats">
+            {stats.map((s) => (
+              <button
+                key={s.kind}
+                className={`llmStat ${active?.kind === s.kind ? "llmStat--on" : ""} ${s.ok ? "" : "llmStat--err"}`}
+                onClick={() => setSelected(s.kind)}
+              >
+                <b>{KIND_TITLE[s.kind] ?? s.kind}</b>
+                <span className="llmStat__model">{s.model}</span>
+                <span className="llmStat__nums">
+                  {s.durationMs} ms · {s.promptTokens}→{s.responseTokens} tok · ×{s.count}
+                </span>
+                {!s.ok && <span className="llmStat__err">error</span>}
+              </button>
+            ))}
+          </div>
+
+          {active && (
+            <div className="llmRaw">
+              <div className="prompts__group">Last {KIND_TITLE[active.kind] ?? active.kind} prompt</div>
+              {active.error && <p className="hint llmStat__err">Error: {active.error}</p>}
+              <textarea className="prompts__editor" rows={10} readOnly value={active.rawPrompt} />
+              <div className="prompts__group">Last response</div>
+              <textarea className="prompts__editor" rows={10} readOnly value={active.rawResponse || "(empty)"} />
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
 }
 
 function PromptsTab() {

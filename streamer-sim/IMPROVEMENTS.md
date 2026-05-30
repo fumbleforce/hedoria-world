@@ -6,7 +6,7 @@ for you to pick from. Items marked ⭐ are the ones I'd reach for first.
 
 ---
 
-## 1. LLM harness & quality (make the AI feel smart)
+## DONE: 1. LLM harness & quality (make the AI feel smart)
 
 - ⭐ **Conversation memory for live chat** (M, LLM). Chat bursts currently see the
   last ~6 lines. Give the chat model a rolling summary of the whole stream so
@@ -51,7 +51,8 @@ for you to pick from. Items marked ⭐ are the ones I'd reach for first.
   characters of a compatible archetype); angry ones leave reviews that dent growth.
 
 ## 3. Events & story (variety and consequence)
-
+- **Rework events** (M). The current events are just annoying and static. Rework them to use LLM generation, be genuinely interesting, and allow freeform responses depending on what the event is. Random noise like technical issues or troll intrustion is not interesting.
+  recur back-to-back; reference past events in narration ("after last week's raid…").
 - ⭐ **Multi-step event chains** (L, LLM+code). Events that span turns/days: a brand
   deal becomes a sponsorship arc; a stalker becomes a police report; a viral clip
   becomes a follower surge then a backlash.
@@ -153,9 +154,7 @@ for you to pick from. Items marked ⭐ are the ones I'd reach for first.
   with a hotkey, so you don't need the console or logfile.
 - **Deterministic seeded mode** (S). Seed the RNG for reproducible playthroughs when
   debugging balance.
-- **Undo** (M, LLM). Undo the latest beat, removing messages, changes made, narration. Should be possible to rewind all the way back.
-  "return ONLY valid JSON" retry before falling back to the local engine.
-  
+
 ---
 
 ## 11. Cameras & set design

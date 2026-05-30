@@ -57,6 +57,11 @@ const initialSettings = (): Settings => ({
   textBackend: "mock",
   geminiModel: "gemini-2.5-flash",
   openRouterModel: "google/gemini-2.5-flash",
+  tieredModels: false,
+  geminiFastModel: "gemini-2.5-flash-lite",
+  openRouterFastModel: "google/gemini-2.5-flash-lite",
+  selfConsistency: true,
+  streamReplies: true,
   geminiImageModel: "gemini-2.5-flash-image",
   openRouterImageModel: "google/gemini-2.5-flash-image",
   imageStylePreset: "cozy-neon",
@@ -77,7 +82,7 @@ export interface ActionMenu {
 }
 
 /** Tabs in the unified Settings modal. */
-export type SettingsTab = "general" | "prompts" | "room" | "character" | "gallery" | "saves";
+export type SettingsTab = "general" | "prompts" | "room" | "character" | "gallery" | "saves" | "llm";
 
 export interface StoreState {
   booted: boolean;
@@ -165,6 +170,8 @@ export interface StoreState {
   setGamePickerOpen: (b: boolean) => void;
   openCharacter: (id: string | null) => void;
   pushDm: (charId: string, line: DmLine) => void;
+  /** Replace the text of the most recent line in a thread (for streaming). */
+  updateLastDm: (charId: string, text: string) => void;
   setDmBusy: (b: boolean) => void;
   setPortraitBusy: (id: string | null) => void;
   setShopOpen: (b: boolean) => void;
@@ -314,6 +321,14 @@ export const useStore = create<StoreState>()(
         set((s) => ({
           dmThreads: { ...s.dmThreads, [charId]: [...(s.dmThreads[charId] ?? []), line] },
         })),
+      updateLastDm: (charId, text) =>
+        set((s) => {
+          const thread = s.dmThreads[charId];
+          if (!thread?.length) return s;
+          const next = thread.slice();
+          next[next.length - 1] = { ...next[next.length - 1], text };
+          return { dmThreads: { ...s.dmThreads, [charId]: next } };
+        }),
       setDmBusy: (dmBusy) => set({ dmBusy }),
       setPortraitBusy: (portraitBusyId) => set({ portraitBusyId }),
       setShopOpen: (shopOpen) => set({ shopOpen }),

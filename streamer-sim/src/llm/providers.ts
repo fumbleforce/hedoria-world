@@ -31,6 +31,14 @@ export class DelegatingTextProvider implements LlmProvider {
   complete(request: LlmRequest): Promise<LlmResponse> {
     return this.pick().complete(request);
   }
+  async stream(request: LlmRequest, onToken: (delta: string) => void): Promise<LlmResponse> {
+    const provider = this.pick();
+    if (provider.stream) return provider.stream(request, onToken);
+    // Provider has no native streaming: emit the whole completion as one chunk.
+    const res = await provider.complete(request);
+    onToken(res.text);
+    return res;
+  }
 }
 
 export function resolveTextProvider(geminiKey: string, openRouterOk: boolean): LlmProvider {

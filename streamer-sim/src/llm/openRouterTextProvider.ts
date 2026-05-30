@@ -10,7 +10,15 @@ function buildBody(model: string, request: LlmRequest): Record<string, unknown> 
   if (request.system.trim()) messages.push({ role: "system", content: request.system });
   for (const m of request.messages) messages.push({ role: m.role, content: m.content });
   const body: Record<string, unknown> = { model, messages, stream: false };
-  if (request.jsonMode) body.response_format = { type: "json_object" };
+  if (request.jsonSchema) {
+    // Native structured output: constrain the model to the schema directly.
+    body.response_format = {
+      type: "json_schema",
+      json_schema: { name: "response", strict: false, schema: request.jsonSchema },
+    };
+  } else if (request.jsonMode) {
+    body.response_format = { type: "json_object" };
+  }
   return body;
 }
 
@@ -19,8 +27,13 @@ export class OpenRouterTextProvider implements LlmProvider {
   get id(): string {
     return `openrouter:${this.model()}`;
   }
-  private model(): string {
-    return useStore.getState().settings.openRouterModel.trim() || DEFAULT_MODEL;
+  /** Resolve the model, honouring two-tier routing (fast model for chat). */
+  private model(kind?: LlmRequest["kind"]): string {
+    const s = useStore.getState().settings;
+    if (s.tieredModels && kind === "chat") {
+      return s.openRouterFastModel.trim() || s.openRouterModel.trim() || DEFAULT_MODEL;
+    }
+    return s.openRouterModel.trim() || DEFAULT_MODEL;
   }
 
   async complete(request: LlmRequest): Promise<LlmResponse> {
@@ -30,7 +43,7 @@ export class OpenRouterTextProvider implements LlmProvider {
       const response = await fetch(PROXY, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildBody(this.model(), request)),
+        body: JSON.stringify(buildBody(this.model(request.kind), request)),
         signal: controller.signal,
       });
       const raw = await response.text();
