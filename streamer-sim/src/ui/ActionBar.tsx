@@ -103,6 +103,7 @@ export function ActionBar({ controller }: { controller: GameController }) {
             ) : (
               <button className="btn" disabled={resolving} onClick={() => useStore.getState().setGamePickerOpen(true)}>🎮 Game</button>
             )}
+            <button className="btn" onClick={() => useStore.getState().setGoalsOpen(true)} title="Goals">🎯</button>
             <button className="btn" onClick={() => useStore.getState().openSettings("character")} title="Character appearance">🎭</button>
             <button className="btn" onClick={() => useStore.getState().openSettings("gallery")} title="Gallery">🖼</button>
             <button className="btn" onClick={() => useStore.getState().openSettings()} title="Settings">⚙</button>
@@ -113,6 +114,7 @@ export function ActionBar({ controller }: { controller: GameController }) {
             <button className="btn btn--primary" disabled={resolving} onClick={() => controller.goLive()}>● Go Live</button>
             <button className="btn" disabled={resolving} onClick={() => controller.sleep()}>🛏️ Sleep</button>
             <button className="btn" onClick={() => useStore.getState().setShopOpen(true)}>📦 Shop</button>
+            <button className="btn" onClick={() => useStore.getState().setGoalsOpen(true)} title="Goals">🎯</button>
             <button className="btn" onClick={() => useStore.getState().openSettings("character")} title="Character appearance">🎭</button>
             <button className="btn" onClick={() => useStore.getState().openSettings("gallery")} title="Gallery">🖼</button>
             <button className="btn" onClick={() => useStore.getState().openSettings()} title="Settings">⚙</button>

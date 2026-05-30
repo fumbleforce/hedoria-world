@@ -14,6 +14,7 @@ import { GamePicker } from "./ui/GamePicker";
 import { ShopPanel } from "./ui/ShopPanel";
 import { SettingsPanel } from "./ui/SettingsPanel";
 import { EventModal } from "./ui/EventModal";
+import { GoalsPanel } from "./ui/GoalsPanel";
 
 export function App() {
   const [services, setServices] = useState<BootResult | null>(null);
@@ -63,6 +64,7 @@ export function App() {
       <ShopPanel controller={controller} />
       <SettingsPanel controller={controller} />
       <EventModal controller={controller} />
+      <GoalsPanel />
 
       {toast && <div className="toast">{toast}</div>}
       <div className="backendChip">{llm.isMock ? "offline engine" : useStore.getState().settings.textBackend}</div>

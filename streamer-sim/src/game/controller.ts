@@ -1,5 +1,5 @@
 import type { LlmAdapter } from "../llm/adapter";
-import { logLlmRaw } from "../llm/adapter";
+import { logLlmRaw, completeJsonWithRepair } from "../llm/adapter";
 import { extractJson } from "../llm/json";
 import {
   type ImageBackend,
@@ -25,6 +25,9 @@ import { generateChatBurst, audienceSummary } from "./chatEngine";
 import { evaluateAction } from "./evaluator";
 import { resolveAction, totalViewers } from "./resolver";
 import { rollEvent, type EventContext } from "./events";
+import { startArc, arcEventDue, advanceArc } from "./arcs";
+import { occasionForDay } from "./calendar";
+import { newlyCompletedGoals } from "./goals";
 import { multipliersFor, UPGRADES } from "./shop";
 import { fillPrompt, PROMPTS, type PromptId } from "./prompts";
 import { steeringForTier } from "./content";
@@ -695,7 +698,10 @@ export class GameController {
     this.beatsSinceSummary = 0;
     this.presenceTick();
     this.sysStory(`Day ${s.metrics.day} — you go live at ${formatClock(STREAM_START)}.`);
+    this.applySeasonalBeat();
     this.dm("The 'LIVE' dot blinks red. Regulars filter in, saying hi as the numbers tick up.");
+    // A due arc beat (sponsor deliverable, viral wave, …) opens the night.
+    if (this.maybeArcEvent()) return;
     this.startAmbient("the stream just went live");
   }
 
@@ -717,6 +723,7 @@ export class GameController {
     s.logEvent(`Day ${s.metrics.day}: ${round} rounds · +${newFollowers} followers · $${earnings.toFixed(0)}.`);
     diag.info("round", "stream ended", { reason, round, earnings, newFollowers });
     s.setToast(`Stream over: +${newFollowers} followers, $${earnings.toFixed(0)} earned.`);
+    this.checkGoals();
   }
 
   // ----------------------------------------------------------- ambient chat
@@ -1148,6 +1155,7 @@ export class GameController {
 
     this.presenceTick();
     void this.refreshStreamMemory();
+    this.checkGoals();
 
     // Stalker arc: advance the most-threatening online stalker, at most once a
     // day, when the room is "feeding" them (low comfort = oversharing). Its own
@@ -1170,7 +1178,105 @@ export class GameController {
       isLive: s.session.isLive,
       roster: s.roster,
       online: this.onlineIds(),
+      recentTriggerIds: s.recentEvents.map((r) => r.triggerId),
     };
+  }
+
+  // ----------------------------------------------------------- seasonal / arcs / goals
+
+  /** If today is a holiday/anniversary/birthday, apply its tailwind + narrate. */
+  private applySeasonalBeat(): void {
+    const s = this.s;
+    const occ = occasionForDay(s.metrics.day, { birthday: s.settings.streamerBirthday });
+    if (!occ) return;
+    const b = occ.bonus;
+    const patch: Partial<Metrics> = {};
+    if (b.hype) patch.hype = s.metrics.hype + b.hype;
+    if (b.mood) patch.mood = s.metrics.mood + b.mood;
+    if (b.cashTips) patch.cash = s.metrics.cash + b.cashTips;
+    s.patchMetrics(patch);
+    if (b.cashTips && s.session.isLive) {
+      s.setSession({ earnings: s.session.earnings + b.cashTips });
+    }
+    this.sysStory(`${occ.name} — ${occ.seed}`);
+    s.logEvent(occ.name);
+    s.setToast(occ.name);
+    diag.info("event", "seasonal beat", { id: occ.id, day: s.metrics.day });
+  }
+
+  /** Raise the first due arc-stage event, if any. Returns true if one fired. */
+  private maybeArcEvent(): boolean {
+    const s = this.s;
+    if (s.pendingEvent) return false;
+    for (const arc of s.arcs) {
+      const event = arcEventDue(arc, s.metrics.day);
+      if (event) {
+        void this.raiseEvent(event);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /** Start a multi-step arc when a seed event was resolved a particular way. */
+  private maybeStartArc(event: GameEvent, choiceLabel: string): void {
+    const s = this.s;
+    const day = s.metrics.day;
+    const label = choiceLabel.toLowerCase();
+    if (event.triggerId === "brand-deal" && label.includes("take it")) {
+      const offer = 50 + Math.round(s.metrics.followers / 4);
+      s.addArc(startArc("sponsorship", { day, data: { brand: pick(BRANDS), offer } }));
+      this.sysStory("You sign on with the sponsor — they'll expect a real segment in a day or two.");
+    } else if (event.triggerId === "viral-clip" && label.includes("lean")) {
+      s.addArc(startArc("viral", { day, data: { topic: "your clip" } }));
+      this.sysStory("You ride the clip. Word is spreading fast — this could snowball over the next day.");
+    } else if (event.triggerId === "stalker-confront" && /block|report/.test(label)) {
+      const c = event.characterId ? s.roster[event.characterId] : undefined;
+      s.addArc(startArc("stalker-legal", { day, characterId: event.characterId, data: { handle: c?.displayName || c?.handle || "them" } }));
+    }
+  }
+
+  /** Shared post-resolution bookkeeping: event memory, arc advance, goal checks. */
+  private finishEvent(event: GameEvent, choiceLabel: string, resolution: string): void {
+    const s = this.s;
+    s.pushEventRecord({
+      triggerId: event.triggerId ?? "unknown",
+      title: event.title,
+      day: s.metrics.day,
+      choice: choiceLabel,
+      resolution,
+    });
+    if (event.advancesArc) {
+      const arc = s.arcs.find((a) => a.id === event.advancesArc!.id);
+      if (arc) {
+        const next = advanceArc(arc, s.metrics.day);
+        if (next) s.updateArc(arc.id, next);
+        else s.removeArc(arc.id);
+      }
+    }
+    this.maybeStartArc(event, choiceLabel);
+    this.checkGoals();
+  }
+
+  /** Award any soft objectives newly satisfied this tick. */
+  private checkGoals(): void {
+    const s = this.s;
+    const done = newlyCompletedGoals(
+      { metrics: s.metrics, peakViewers: s.metrics.peakViewers },
+      s.completedGoals,
+    );
+    for (const g of done) {
+      s.completeGoal(g.id);
+      const patch: Partial<Metrics> = {};
+      for (const [k, v] of Object.entries(g.reward) as Array<[keyof Metrics, number]>) {
+        patch[k] = (s.metrics[k] as number) + v;
+      }
+      s.patchMetrics(patch);
+      this.sysStory(`🎯 Goal reached — ${g.label}. ${g.rewardText}`);
+      s.logEvent(`Goal: ${g.label}`);
+      s.setToast(`🎯 ${g.label}`);
+      diag.info("event", "goal completed", { id: g.id });
+    }
   }
 
   // ----------------------------------------------------------- mini-games
@@ -1368,6 +1474,9 @@ export class GameController {
         ? `Day ${m.day + 1}. Rent of $${rent.toFixed(0)} put you in the red!`
         : `Day ${m.day + 1}. Rent: -$${rent.toFixed(0)}.`,
     );
+    this.checkGoals();
+    // A new day may bring a due arc beat (sponsor deliverable, police follow-up).
+    this.maybeArcEvent();
   }
 
   private orderFood(): void {
@@ -1414,6 +1523,11 @@ export class GameController {
     const whoLine = who
       ? `The viewer involved: ${who.handle} — ${ARCHETYPE_BY_ID[who.archetypeId]?.label}, ${relationshipLevel(who.affinity)}.${who.memory ? " Memory: " + who.memory : ""}`
       : "";
+    // Let narration lightly call back to a recent, different beat for continuity.
+    const lastRec = [...s.recentEvents].reverse().find((r) => r.triggerId !== ev.triggerId);
+    const callback = lastRec
+      ? `You MAY lightly reference a recent beat for continuity (don't force it): "${lastRec.title}" on day ${lastRec.day}${lastRec.resolution ? ` — ${lastRec.resolution}` : ""}.`
+      : "";
     try {
       const res = await this.llm.complete(
         {
@@ -1425,6 +1539,7 @@ export class GameController {
                 `Write 1-2 vivid sentences narrating this beat for the player (second person).`,
                 `Beat: ${ev.narrationSeed}`,
                 whoLine,
+                callback,
                 `Do not list the choices; just set the scene.`,
               ].filter(Boolean).join("\n"),
             },
@@ -1484,7 +1599,90 @@ export class GameController {
     s.setPendingEvent(null);
     diag.info("event", "event resolved", { id: event.id, choice: choice.label });
     s.setToast(choice.resolution);
+    this.finishEvent(event, choice.label, choice.resolution);
+    // Some choices cut the night short (e.g. bailing on a power cut).
+    if (s.session.isLive && event.triggerId === "power-cut" && /call it early/i.test(choice.label)) {
+      this.endStream("power cut");
+      return;
+    }
     if (s.session.isLive) this.startAmbient("after that little moment");
+  }
+
+  /**
+   * Resolve an event from a freeform, typed response. The LLM judges what the
+   * player did and returns a bespoke resolution + metric effects — so events
+   * aren't limited to the canned choices.
+   */
+  async resolveEventFreeform(event: GameEvent, text: string): Promise<void> {
+    const s = this.s;
+    const t = text.trim();
+    if (!t || s.resolving) return;
+    s.setResolving(true);
+    try {
+      const outcome = await this.judgeEventResponse(event, t);
+      const patch: Partial<Metrics> = {};
+      for (const [k, v] of Object.entries(outcome.effects) as Array<[keyof Metrics, number]>) {
+        patch[k] = (s.metrics[k] as number) + v;
+      }
+      s.patchMetrics(patch);
+      if (outcome.effects.cash && s.session.isLive) {
+        s.setSession({ earnings: s.session.earnings + outcome.effects.cash });
+      }
+      this.s.pushStory({ kind: "action", text: `(You: ${t})` });
+      this.dm(outcome.resolution);
+      s.logEvent(`${event.title} → ${outcome.resolution}`);
+      s.setPendingEvent(null);
+      diag.info("event", "event resolved (freeform)", { id: event.id, effects: outcome.effects });
+      this.finishEvent(event, "freeform", outcome.resolution);
+      if (s.session.isLive) this.startAmbient("after handling that your way");
+    } finally {
+      s.setResolving(false);
+    }
+  }
+
+  /** LLM judge for a freeform event response → bespoke resolution + effects. */
+  private async judgeEventResponse(
+    event: GameEvent,
+    text: string,
+  ): Promise<{ resolution: string; effects: Partial<Metrics> }> {
+    const fallback = {
+      resolution: `You handle it your own way. ${text.slice(0, 80)}… and the moment passes.`,
+      effects: { mood: 1 } as Partial<Metrics>,
+    };
+    if (this.llm.isMock) return fallback;
+    const req = {
+      system: [
+        this.resolvePrompt("narrator"),
+        "You are judging how a freeform player choice resolves during a streamer life-sim event.",
+        "Return JSON: { resolution: string (1-2 vivid second-person sentences), effects: { hype?, energy?, mood?, comfort?, followers?, cash?, subscribers? } }.",
+        "Effects are DELTAS. Keep stat deltas within -20..20, followers -30..60, cash -300..300. Be fair: reward clever/kind/brave responses, let reckless ones cost comfort/mood. Most responses are modest.",
+      ].join("\n"),
+      messages: [
+        {
+          role: "user" as const,
+          content: [
+            `EVENT: ${event.title}`,
+            `Situation: ${event.description}`,
+            event.stakes ? `Stakes: ${event.stakes}` : "",
+            `The player responds, in their own words: "${text}"`,
+            "Judge the outcome.",
+          ]
+            .filter(Boolean)
+            .join("\n"),
+        },
+      ],
+      jsonMode: true,
+      jsonSchema: EVENT_OUTCOME_SCHEMA,
+    };
+    try {
+      const parsed = await completeJsonWithRepair(this.llm, req, parseEventOutcome, "story");
+      return parsed ?? fallback;
+    } catch (err) {
+      diag.warn("event", "freeform judge failed; using fallback", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return fallback;
+    }
   }
 
   // ----------------------------------------------------------- direct chat (DMs)
@@ -1699,6 +1897,47 @@ function cleanQuote(text: string): string | null {
     t = t.slice(1, -1).trim();
   }
   return t ? t.slice(0, 600) : null;
+}
+
+/** In-world sponsor names, picked when a brand-deal arc starts. */
+const BRANDS = ["VoltFizz Energy", "PixelPaw Pet Co.", "NoctaBrew Coffee", "AuraGlow Skincare", "ByteSnacks", "Hyperion GG"];
+
+const STAT_KEYS = ["hype", "energy", "mood", "comfort"] as const;
+const EVENT_OUTCOME_SCHEMA: Record<string, unknown> = {
+  type: "object",
+  properties: {
+    resolution: { type: "string" },
+    effects: {
+      type: "object",
+      properties: {
+        hype: { type: "number" },
+        energy: { type: "number" },
+        mood: { type: "number" },
+        comfort: { type: "number" },
+        followers: { type: "number" },
+        cash: { type: "number" },
+        subscribers: { type: "number" },
+      },
+    },
+  },
+  required: ["resolution"],
+};
+
+/** Parse + sanitise the LLM's freeform-event verdict into safe metric deltas. */
+function parseEventOutcome(text: string): { resolution: string; effects: Partial<Metrics> } | null {
+  const json = extractJson<Record<string, unknown>>(text);
+  if (!json || typeof json !== "object") return null;
+  const resolution = typeof json.resolution === "string" ? json.resolution.trim() : "";
+  if (!resolution) return null;
+  const effects: Partial<Metrics> = {};
+  const raw = (json.effects && typeof json.effects === "object" ? json.effects : {}) as Record<string, unknown>;
+  for (const k of STAT_KEYS) {
+    if (typeof raw[k] === "number") effects[k] = clamp(raw[k] as number, -20, 20);
+  }
+  if (typeof raw.followers === "number") effects.followers = clamp(raw.followers, -30, 60);
+  if (typeof raw.cash === "number") effects.cash = clamp(raw.cash, -300, 300);
+  if (typeof raw.subscribers === "number") effects.subscribers = clamp(raw.subscribers, -10, 20);
+  return { resolution: resolution.slice(0, 400), effects };
 }
 
 /** Offline canned spoken lines so the feature still works without an API key. */

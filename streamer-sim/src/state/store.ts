@@ -10,6 +10,8 @@ import type {
   PlayingState,
   DmLine,
   CharacterVisual,
+  StoryArc,
+  EventRecord,
 } from "../game/types";
 import { SPAWN_ZONE, type ZoneId } from "../game/studio";
 import { saveRoomImage } from "../persist/imageStore";
@@ -62,6 +64,7 @@ const initialSettings = (): Settings => ({
   openRouterFastModel: "google/gemini-2.5-flash-lite",
   selfConsistency: true,
   streamReplies: true,
+  streamerBirthday: "",
   geminiImageModel: "gemini-2.5-flash-image",
   openRouterImageModel: "google/gemini-2.5-flash-image",
   imageStylePreset: "cozy-neon",
@@ -138,6 +141,15 @@ export interface StoreState {
   promptOverrides: Partial<Record<PromptId, string>>;
   toast: string | null;
 
+  /** Condensed history of recent events (cooldowns + callback narration). */
+  recentEvents: EventRecord[];
+  /** Live multi-step story chains (sponsorship, viral arc, …). */
+  arcs: StoryArc[];
+  /** Ids of soft objectives the player has already achieved. */
+  completedGoals: string[];
+  /** Whether the goals panel is open. */
+  goalsOpen: boolean;
+
   setBooted: (b: boolean) => void;
   patchMetrics: (patch: Partial<Metrics>) => void;
   setAudience: (a: AudienceState) => void;
@@ -184,7 +196,16 @@ export interface StoreState {
   logEvent: (line: string) => void;
   addUpgrade: (id: string) => void;
   setToast: (t: string | null) => void;
+
+  pushEventRecord: (rec: EventRecord) => void;
+  addArc: (arc: StoryArc) => void;
+  updateArc: (id: string, patch: Partial<StoryArc>) => void;
+  removeArc: (id: string) => void;
+  completeGoal: (id: string) => void;
+  setGoalsOpen: (b: boolean) => void;
 }
+
+const MAX_EVENT_MEMORY = 14;
 
 let storySeq = 0;
 const nextStoryId = () => `st-${(storySeq += 1)}`;
@@ -228,6 +249,11 @@ export const useStore = create<StoreState>()(
       ownedUpgrades: [],
       promptOverrides: {},
       toast: null,
+
+      recentEvents: [],
+      arcs: [],
+      completedGoals: [],
+      goalsOpen: false,
 
       setBooted: (booted) => set({ booted }),
       patchMetrics: (patch) =>
@@ -351,6 +377,17 @@ export const useStore = create<StoreState>()(
       addUpgrade: (id) =>
         set((s) => (s.ownedUpgrades.includes(id) ? s : { ownedUpgrades: [...s.ownedUpgrades, id] })),
       setToast: (toast) => set({ toast }),
+
+      pushEventRecord: (rec) =>
+        set((s) => ({ recentEvents: [...s.recentEvents, rec].slice(-MAX_EVENT_MEMORY) })),
+      addArc: (arc) =>
+        set((s) => ({ arcs: [...s.arcs.filter((a) => a.id !== arc.id), arc] })),
+      updateArc: (id, patch) =>
+        set((s) => ({ arcs: s.arcs.map((a) => (a.id === id ? { ...a, ...patch } : a)) })),
+      removeArc: (id) => set((s) => ({ arcs: s.arcs.filter((a) => a.id !== id) })),
+      completeGoal: (id) =>
+        set((s) => (s.completedGoals.includes(id) ? s : { completedGoals: [...s.completedGoals, id] })),
+      setGoalsOpen: (goalsOpen) => set({ goalsOpen }),
     }),
     {
       name: "limelight-save-v3",
@@ -372,6 +409,9 @@ export const useStore = create<StoreState>()(
         ownedUpgrades: s.ownedUpgrades,
         promptOverrides: s.promptOverrides,
         eventLog: s.eventLog,
+        recentEvents: s.recentEvents,
+        arcs: s.arcs,
+        completedGoals: s.completedGoals,
         roomImage: s.roomImage,
         dmThreads: s.dmThreads,
         // Only the small ids persist here; the large blobs live in IndexedDB.

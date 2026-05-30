@@ -50,7 +50,7 @@ for you to pick from. Items marked ⭐ are the ones I'd reach for first.
 - **Reputation/word-of-mouth** (M). Happy named regulars "bring friends" (spawn new
   characters of a compatible archetype); angry ones leave reviews that dent growth.
 
-## 3. Events & story (variety and consequence)
+## DONE: 3. Events & story (variety and consequence)
 - **Rework events** (M). The current events are just annoying and static. Rework them to use LLM generation, be genuinely interesting, and allow freeform responses depending on what the event is. Random noise like technical issues or troll intrustion is not interesting.
   recur back-to-back; reference past events in narration ("after last week's raid…").
 - ⭐ **Multi-step event chains** (L, LLM+code). Events that span turns/days: a brand

@@ -333,6 +333,24 @@ input:focus, textarea:focus, select:focus { outline: 1px solid var(--accent-2); 
 .llmStat__err { color: #ff8a8a; font-size: 0.74em; }
 .llmRaw .prompts__group { margin-top: 12px; }
 
+/* Event freeform response */
+.event__freeform { display: flex; gap: 8px; margin-top: 12px; }
+.event__freeform .actionbar__input { flex: 1; }
+
+/* Goals panel */
+.goals { display: flex; flex-direction: column; gap: 12px; margin-top: 6px; }
+.goal { background: #ffffff0a; border: 1px solid var(--line); border-radius: 11px; padding: 11px 13px; }
+.goal--done { border-color: var(--accent); opacity: 0.85; }
+.goal__top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.goal__label { font-weight: 700; }
+.goal__value { font-size: 0.78em; color: var(--accent-2); white-space: nowrap; }
+.goal__bar { margin: 7px 0 5px; height: 7px; border-radius: 6px; background: #ffffff14; overflow: hidden; }
+.goal__fill { display: block; height: 100%; background: linear-gradient(90deg, var(--accent-2), var(--accent)); border-radius: 6px; transition: width 0.3s ease; }
+.goal--done .goal__fill { background: var(--accent); }
+.goal__hint { font-size: 0.77em; color: var(--fg-2); }
+.goal--thread { border-color: var(--accent-2); }
+.goal--thread .goal__hint { margin-top: 4px; display: block; }
+
 /* ---------------------------------------------------------------- event */
 .event__title { margin: 0 0 10px; }
 .event__desc { color: var(--fg); line-height: 1.55; margin-bottom: 16px; }

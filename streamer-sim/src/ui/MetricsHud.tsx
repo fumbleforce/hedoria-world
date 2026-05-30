@@ -1,5 +1,6 @@
 import { useStore } from "../state/store";
 import { formatClock } from "../game/time";
+import { dateForDay } from "../game/calendar";
 import { getActiveSlot } from "../persist/saves";
 
 function Bar({ label, value, color }: { label: string; value: number; color: string }) {
@@ -25,7 +26,7 @@ export function MetricsHud() {
       <div className="hud__brand">
         <span className="hud__logo">◉ Limelight</span>
         <span className="hud__name">
-          {name} · {slotName} · Day {m.day} · {session.isLive ? `🔴 ${formatClock(clock)}` : "offline"}
+          {name} · {slotName} · Day {m.day} ({dateForDay(m.day).label}) · {session.isLive ? `🔴 ${formatClock(clock)}` : "offline"}
         </span>
       </div>
 

@@ -72,6 +72,8 @@ export interface Settings {
   selfConsistency: boolean;
   /** Stream DM replies token-by-token so they type out progressively. */
   streamReplies: boolean;
+  /** Streamer's in-world birthday as "MM-DD" (empty = none), for seasonal beats. */
+  streamerBirthday: string;
   /** Image models for room generation. */
   geminiImageModel: string;
   openRouterImageModel: string;
@@ -158,6 +160,48 @@ export interface GameEvent {
   choices: EventChoice[];
   /** Optional bound character this event is about. */
   characterId?: string;
+  /** Catalogue id of the trigger, for cooldowns + event memory. */
+  triggerId?: string;
+  /** When set, the player can also type a freeform response (LLM-judged). */
+  allowFreeform?: boolean;
+  /** Placeholder/hint shown in the freeform box. */
+  freeformHint?: string;
+  /** When this event belongs to a multi-step arc, its id. */
+  arcId?: string;
+  /** When resolving this event should advance/finish an arc. */
+  advancesArc?: { id: string; kind: ArcKind };
+  /** Extra context handed to the LLM judge when resolving freeform. */
+  stakes?: string;
+}
+
+/** Kinds of multi-step story chains that span turns/days. */
+export type ArcKind = "sponsorship" | "viral" | "stalker-legal";
+
+/** A live multi-step chain: spawns follow-up events on later days. */
+export interface StoryArc {
+  id: string;
+  kind: ArcKind;
+  /** Which stage fires next (0-based index into the arc's stage list). */
+  stage: number;
+  /** Short label for logs/UI. */
+  title: string;
+  /** In-world day the next stage becomes eligible. */
+  nextDay: number;
+  /** Optional bound character (e.g. the stalker, the sponsor contact). */
+  characterId?: string;
+  /** Free-form per-arc payload (offer size, clip topic, …). */
+  data?: Record<string, string | number>;
+}
+
+/** A condensed record of a past event, for cooldowns + callback narration. */
+export interface EventRecord {
+  triggerId: string;
+  title: string;
+  day: number;
+  /** The choice label the player picked (or "freeform"). */
+  choice?: string;
+  /** The resolution text shown. */
+  resolution?: string;
 }
 
 /** Active mini-game sub-state (set when the player starts a game at the desk). */

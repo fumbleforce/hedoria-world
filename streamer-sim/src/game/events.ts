@@ -16,6 +16,8 @@ export interface EventContext {
   roster: Roster;
   /** Online character ids, for events that reference someone. */
   online: string[];
+  /** Recently-fired trigger ids (oldest→newest), for cooldowns. */
+  recentTriggerIds?: string[];
 }
 
 export interface EventTrigger {
@@ -173,24 +175,67 @@ export const EVENT_TRIGGERS: EventTrigger[] = [
       ]);
     },
   },
-  // ---- Tech / life ----------------------------------------------------------
+  // ---- Viral moment (starts the viral arc when you lean in) -----------------
   {
-    id: "tech-glitch",
+    id: "viral-clip",
     live: true,
-    weight: () => 0.7,
-    build: () => ev("⚠️ Tech gremlins", "Your audio cuts out mid-sentence; chat spams 'we can't hear you'.", "danger", [
-      choice("Fix it fast", "You scramble and recover. Minor wobble.", { hype: -3, energy: -3 }),
-      choice("Laugh it off", "You make a bit out of it. Chat eats it up.", { hype: 4, mood: 2, energy: -2 }),
-    ]),
+    weight: (c) => (c.metrics.hype > 60 ? 1.1 : 0.35),
+    build: () =>
+      ev(
+        "🎬 A clip is taking off",
+        "A moment from tonight got clipped and it's climbing fast on the timeline — strangers are quote-posting it.",
+        "good",
+        [
+          choice("Lean into it", "You pin the clip and play it up, riding the wave. This could snowball.", { hype: 10, followers: 20 }),
+          choice("Stay measured", "You acknowledge it but keep your head down and your night normal.", { hype: 4, followers: 8 }),
+        ],
+      ),
+  },
+  // ---- Real-life intrusions (the "life" half of life-sim) -------------------
+  {
+    id: "landlord-visit",
+    live: false,
+    weight: (c) => (c.metrics.cash < 250 ? 1.3 : 0.5),
+    build: () =>
+      ev(
+        "🏠 The landlord drops by",
+        "A knock at the door — your landlord, 'just checking in' about this month's rent, eyeing the camera gear.",
+        "neutral",
+        [
+          choice("Pay on the spot (-$150)", "You hand over the cash with a tight smile. Tense, but handled.", { cash: -150, comfort: 4 }),
+          choice("Ask for a few days", "You buy time with a nervous laugh. The worry coils in your stomach.", { mood: -5, comfort: -5 }),
+        ],
+      ),
   },
   {
-    id: "troll-raid",
+    id: "sick-day",
+    live: false,
+    weight: (c) => (c.metrics.energy < 45 || c.metrics.mood < 40 ? 1.1 : 0.3),
+    build: () =>
+      ev(
+        "🤒 You wake up sick",
+        "Scratchy throat, heavy head, everything aches. Streaming today would be miserable.",
+        "neutral",
+        [
+          choice("Rest and recover", "You take the day off. Money's tight, but you'll come back stronger.", { energy: 20, mood: 6, comfort: 6 }),
+          choice("Push through anyway", "You power through on tea and willpower. Tomorrow you'll pay for it.", { energy: -10, mood: -6, comfort: -3 }),
+        ],
+      ),
+  },
+  {
+    id: "power-cut",
     live: true,
-    weight: (c) => (c.metrics.currentViewers > 15 ? 1 : 0.3),
-    build: () => ev("💥 Troll brigade", "A flood of copy-pasted spam pours into chat.", "danger", [
-      choice("Mods handle it", "Your mods nuke the spam; regulars rally.", { hype: 6, mood: -3, followers: 6 }),
-      choice("Clap back on mic", "Your comeback gets clipped. Risky, but lands.", { hype: 10, mood: -6, comfort: -4 }),
-    ]),
+    weight: () => 0.45,
+    build: () =>
+      ev(
+        "🔌 The power flickers",
+        "The lights stutter — a brownout threatens to drop your whole setup mid-stream.",
+        "danger",
+        [
+          choice("Switch to phone + hotspot", "You scramble onto a scrappy backup and stay live. Chat loves the chaos.", { hype: 4, energy: -5, comfort: -2 }),
+          choice("Call it early", "You apologize and wrap early to be safe. Better than losing the gear.", { hype: -4, mood: -3 }),
+        ],
+      ),
   },
 ];
 
@@ -220,18 +265,32 @@ export function rollEvent(ctx: EventContext, opts?: { offlineOnly?: boolean }): 
     if (t.live === false && ctx.isLive) return false;
     return true;
   });
+
+  // Cooldowns: never the same event twice in a row, and strongly discourage any
+  // event seen in the last few beats — so the same template doesn't recur
+  // back-to-back. High-priority triggers (the stalker confrontation) are exempt.
+  const recent = ctx.recentTriggerIds ?? [];
+  const last = recent[recent.length - 1];
+  const recentSet = new Set(recent.slice(-4));
   const weighted = eligible
-    .map((t) => ({ t, w: t.weight(ctx) }))
+    .map((t) => {
+      let w = t.weight(ctx);
+      if (t.id !== "stalker-confront") {
+        if (t.id === last) w = 0;
+        else if (recentSet.has(t.id)) w *= 0.25;
+      }
+      return { t, w };
+    })
     .filter((x) => x.w > 0);
   if (weighted.length === 0) return null;
 
   const total = weighted.reduce((s, x) => s + x.w, 0);
   let target = Math.random() * total;
-  for (const { t } of weighted) {
-    target -= t.weight(ctx);
-    if (target <= 0) return finalize(t, ctx);
+  for (const x of weighted) {
+    target -= x.w;
+    if (target <= 0) return finalize(x.t, ctx);
   }
-  return finalize(weighted[0].t, ctx);
+  return finalize(weighted[weighted.length - 1].t, ctx);
 }
 
 function finalize(t: EventTrigger, ctx: EventContext): GameEvent {
@@ -239,7 +298,18 @@ function finalize(t: EventTrigger, ctx: EventContext): GameEvent {
   if (t.bindsCharacter && ctx.online.length) {
     who = ctx.roster[pick(ctx.online)];
   }
-  return t.build(ctx, who);
+  const event = t.build(ctx, who);
+  event.triggerId = t.id;
+  // Every event accepts a freeform response by default (the player can type
+  // their own reaction, judged by the LLM) unless the builder opted out. The
+  // stalker confrontation is exempt: its discrete choices drive safety-critical
+  // threat-resolution logic that a freeform reply would bypass.
+  if (event.allowFreeform === undefined) {
+    const discreteOnly = t.id === "stalker-confront";
+    event.allowFreeform = !discreteOnly;
+    if (!discreteOnly) event.freeformHint = "…or respond in your own words";
+  }
+  return event;
 }
 
 /** Probability an event fires this round, scaled by night progress + intensity. */

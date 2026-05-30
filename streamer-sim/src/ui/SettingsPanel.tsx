@@ -222,6 +222,15 @@ function GeneralTab() {
         </select>
       </label>
 
+      <label className="field">
+        <span>Streamer birthday (MM-DD, optional)</span>
+        <input
+          value={settings.streamerBirthday}
+          placeholder="e.g. 03-14 — triggers a birthday stream"
+          onChange={(e) => set({ streamerBirthday: e.target.value })}
+        />
+      </label>
+
       <p className="hint">
         Changes apply immediately. Open the browser console (F12) to watch the game's internals.
       </p>
