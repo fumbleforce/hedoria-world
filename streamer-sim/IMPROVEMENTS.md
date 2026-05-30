@@ -24,11 +24,12 @@ for you to pick from. Items marked ⭐ are the ones I'd reach for first.
   kind; a "last raw response" viewer so you can debug prompts without the logfile.
 - **Retry-with-repair** (S, LLM). On an unparseable verdict/chat, do one cheap
   "return ONLY valid JSON" retry before falling back to the local engine.
+
 - **Self-consistency for the evaluator** (M, LLM). For high-impact actions, sample
   the verdict twice and reconcile, so a single odd classification can't swing the
   economy.
 
-## 2. The viewer cast (deepen the named characters)
+## DONE: 2. The viewer cast (deepen the named characters)
 
 - ⭐ **Stalker escalation arcs** (L, LLM+code). Promote a stalker from chat → DM →
   door → real-world threat across days, gated by comfort and your choices. A named
@@ -152,7 +153,9 @@ for you to pick from. Items marked ⭐ are the ones I'd reach for first.
   with a hotkey, so you don't need the console or logfile.
 - **Deterministic seeded mode** (S). Seed the RNG for reproducible playthroughs when
   debugging balance.
-
+- **Undo** (M, LLM). Undo the latest beat, removing messages, changes made, narration. Should be possible to rewind all the way back.
+  "return ONLY valid JSON" retry before falling back to the local engine.
+  
 ---
 
 ## 11. Cameras & set design

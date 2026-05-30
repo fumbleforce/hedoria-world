@@ -809,22 +809,87 @@ export class GameController {
     }
     this.stopAmbient();
     s.setResolving(true);
+    await diag.group("action", "continue", async () => {
+      try {
+        // Continue PICKS UP the current moment and moves it forward — if the last
+        // beat only set something up (cued music to dance), she now actually does
+        // it and it develops. It is NOT an idle "nothing happens" filler.
+        const continuation = await this.narrateContinuation();
+        this.dm(continuation);
+        const msgs = await generateChatBurst(this.llm, this.chatCtx(`the scene continues — ${continuation}`, 4));
+        this.s.pushChat(msgs);
+        this.applyChatEffects(msgs);
+        this.advanceTime(TIME_COST.continue);
+        this.afterBeat(continuation);
+      } finally {
+        this.s.setResolving(false);
+      }
+    });
+  }
+
+  /**
+   * Generate the next narrative beat when the player hits Continue: pick up from
+   * the most recent story beats and actually advance the moment (follow through
+   * on whatever was set up), rather than resetting or stalling.
+   */
+  private async narrateContinuation(): Promise<string> {
+    const s = this.s;
+    const playing = s.playing ? GAME_BY_ID[s.playing.gameId]?.name ?? "" : "";
+    const fallback = () =>
+      pick([
+        "You stop hesitating and actually commit — the moment takes off and the room lifts with it.",
+        "You follow through for real now, and it snowballs into something genuinely fun.",
+        `You lean all the way into it${playing ? ` mid-${playing}` : ""}, and the energy kicks up a gear.`,
+      ]);
+    if (this.llm.isMock) return fallback();
     try {
-      const playing = s.playing ? ` (playing ${GAME_BY_ID[s.playing.gameId]?.name})` : "";
-      this.dm(pick([
-        `You let the stream breathe${playing}, chatting idly as chat scrolls by.`,
-        `A quiet stretch${playing}. You sip your drink and read messages.`,
-        `You vibe with the chat for a bit${playing}, no agenda.`,
-      ]));
-      const msgs = await generateChatBurst(this.llm, this.chatCtx("a relaxed lull in the stream", 4));
-      this.s.pushChat(msgs);
-      this.applyChatEffects(msgs);
-      // Gentle satisfaction settle + tiny tips already handled via chat.
-      this.advanceTime(TIME_COST.continue);
-      this.afterBeat("a relaxed lull");
-    } finally {
-      this.s.setResolving(false);
+      const res = await this.llm.complete(
+        {
+          system: this.resolvePrompt("narrator"),
+          messages: [
+            {
+              role: "user",
+              content: [
+                `She is LIVE on cam at the ${ZONES[s.zone]?.label ?? "studio"}.`,
+                playing ? `She is playing ${playing}.` : "",
+                `Her current vibe: ${this.vibeSummary()}.`,
+                this.recentStoryContext()
+                  ? `The story so far (oldest first, newest last):\n${this.recentStoryContext()}`
+                  : "",
+                `Recent chat:\n${this.recentChatLines().join("\n") || "(quiet)"}`,
+                "CONTINUE the scene from exactly here and MOVE IT FORWARD. If the most",
+                "recent beat only set something up or was about to begin (e.g. cueing",
+                "music to dance), she now ACTUALLY does it and it unfolds with a fresh,",
+                "concrete development — a real next thing happens. Never reset the scene,",
+                "never repeat the previous beat, and never say nothing happens. 1-3 vivid",
+                "second-person sentences.",
+              ]
+                .filter(Boolean)
+                .join("\n"),
+            },
+          ],
+        },
+        { kind: "story" },
+      );
+      const text = res.text.trim().replace(/\*+/g, "").trim();
+      return text || fallback();
+    } catch (err) {
+      diag.warn("action", "continuation failed; using fallback", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return fallback();
     }
+  }
+
+  /** Recent story beats (action/quote/narration/outcome) for continuation context. */
+  private recentStoryContext(): string {
+    return this.s.story
+      .filter((e) => e.kind === "action" || e.kind === "dm" || e.kind === "outcome" || e.kind === "quote")
+      .slice(-5)
+      .map((e) => (e.kind === "quote" ? `She said: "${e.text}"` : e.text))
+      .join("\n")
+      .slice(-700)
+      .trim();
   }
 
   async submitAction(action: PlayerAction): Promise<void> {
