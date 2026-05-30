@@ -1,0 +1,67 @@
+import { useEffect, useState } from "react";
+import { boot, type BootResult } from "./boot";
+import { useStore } from "./state/store";
+import { StudioRoom } from "./render/StudioRoom";
+import { MetricsHud } from "./ui/MetricsHud";
+import { ChatPanel } from "./ui/ChatPanel";
+import { NarratorPanel } from "./ui/NarratorPanel";
+import { CharacterGallery } from "./ui/CharacterGallery";
+import { ActionBar } from "./ui/ActionBar";
+import { ActionMenuModal } from "./ui/ActionMenuModal";
+import { CharacterModal } from "./ui/CharacterModal";
+import { GamePicker } from "./ui/GamePicker";
+import { ShopPanel } from "./ui/ShopPanel";
+import { SettingsPanel } from "./ui/SettingsPanel";
+import { EventModal } from "./ui/EventModal";
+
+export function App() {
+  const [services, setServices] = useState<BootResult | null>(null);
+  const toast = useStore((s) => s.toast);
+
+  useEffect(() => {
+    void boot().then(setServices);
+  }, []);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => useStore.getState().setToast(null), 3500);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  if (!services) {
+    return <div className="boot"><div className="boot__card">◉ Limelight — booting…</div></div>;
+  }
+
+  const { controller, llm } = services;
+
+  return (
+    <div className="app">
+      <MetricsHud />
+
+      <main className="stage">
+        <NarratorPanel />
+
+        <div className="stage__center">
+          <StudioRoom controller={controller} />
+        </div>
+
+        <div className="stage__right">
+          <ChatPanel controller={controller} />
+          <CharacterGallery controller={controller} />
+        </div>
+      </main>
+
+      <ActionBar controller={controller} />
+
+      <ActionMenuModal controller={controller} />
+      <CharacterModal controller={controller} />
+      <GamePicker controller={controller} />
+      <ShopPanel controller={controller} />
+      <SettingsPanel controller={controller} />
+      <EventModal controller={controller} />
+
+      {toast && <div className="toast">{toast}</div>}
+      <div className="backendChip">{llm.isMock ? "offline engine" : useStore.getState().settings.textBackend}</div>
+    </div>
+  );
+}

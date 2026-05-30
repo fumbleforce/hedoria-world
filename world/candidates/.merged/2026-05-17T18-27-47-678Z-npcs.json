@@ -1,0 +1,47 @@
+{
+  "npcs": {
+    "Sephilia": {
+      "name": "Sephilia",
+      "type": "Witch Queen",
+      "currentLocation": "Avenor",
+      "currentArea": "The Palace District",
+      "gender": "female",
+      "tier": "boss",
+      "faction": "Royal Line",
+      "basicInfo": "The seventh witch queen of Avenor, currently acting under the influence of an unknown faction. She was once a beloved and sharp diplomat but has grown erratic, exiling those who question her.",
+      "visualDescription": "A figure of soft radiance, larger than life, sitting upon a high marble throne.",
+      "personality": [
+        "Erratic",
+        "Principled",
+        "Exhausted"
+      ],
+      "abilities": [
+        "Royal Bloodline Magic",
+        "Witchcraft"
+      ],
+      "embeddingId": "-akx6Cyb",
+      "hiddenInfo": "Desire: Moderate sexdrive, suppressed for four years, wakes only to one advisor's voice as proximity-trigger, narrow orientation exclusively to that person, passive-receptive pursuit-style, medicated and traumatic history. Surfaces as withdrawn isolation, rare private moments, will not initiate; accepts touch cleanly named and no further.\n\nSecrets: None"
+    },
+    "The Princess": {
+      "name": "The Princess",
+      "type": "Exiled Heir",
+      "currentLocation": "Avenor",
+      "currentArea": "The Queen's College",
+      "gender": "female",
+      "tier": "strong",
+      "faction": "Royal Line",
+      "basicInfo": "The daughter of Sephilia, stripped of her standing and exiled for discovering the secret influence over her mother. She is a gifted young witch currently hiding in the world.",
+      "visualDescription": "A young witch bearing the distinct features of the royal line.",
+      "personality": [
+        "Determined",
+        "Cunning",
+        "Gifted"
+      ],
+      "abilities": [
+        "Royal Bloodline Magic"
+      ],
+      "embeddingId": "8oC03MH4",
+      "hiddenInfo": "Desire: High sexdrive, broadly open orientation with urgency beneath it, drawn to people who see her as a competent actor rather than a royal daughter, seductive-opportunistic pursuit-style, exotic and danger-marked history. Surfaces as magnetic draw toward anyone who matches that recognition; moves from attraction to action without warning when under pressure.\n\nSecrets: None"
+    }
+  }
+}

@@ -49,7 +49,26 @@ The conversation never pauses for mere labor.
 
 Background agents cannot receive answers. Without this instruction, they stall on uncertainties. With it, they complete their work autonomously.
 
-## The Fifth Law: Review and Present
+## The Fifth Law: NPCs Are Summoned in Two Phases
+
+**The npcs agent NEVER runs in one pass, and neither phase begins until canon has been consulted.** Characters must breathe on the page before they are pressed into the schema — but the breath itself must come from the world as it actually is, not from genre default.
+
+**Before either phase — Ground yourself in canon.**
+Read the relevant lore *before* drafting the agent's prompt. At minimum: `.claude/skills/species-rules.md` for the races requested; the world's race lore documents for any non-human character in the batch; the world's magic lore document if any character will hold a magical role. Surface the load-bearing facts in the summoning prompt — race-personality cues, gendered crafts, established institutions, central plot positions. The agent should not have to discover them by accident; an agent operating on vibes invents male witches and silent root-priests.
+
+**Phase one — Prose, foreground.**
+Summon the npcs agent in **foreground mode** with `phase: prose`. The agent appends the five prose sections per NPC (canon notes, archetype, race-age-gender, background, personality) to `candidates/npcs-stories.md` and returns the sections verbatim. It **must not** touch `candidates/npcs.json`.
+
+When the agent returns, present the prose to the creator. Wait for explicit approval — *yes*, *approved*, *good*, *proceed*. A directional greenlight from earlier in the conversation does not count; the creator must approve **the prose itself**.
+
+**Phase two — Schema, foreground.**
+Only after explicit approval, summon the npcs agent again with `phase: schema` and include the approved NPC names. The agent reads the approved prose from `candidates/npcs-stories.md`, presses each character into the schema shape, and writes to `candidates/npcs.json`. The schema entry must derive from the prose; nothing invented anew at this stage.
+
+**Never background the npcs agent.** Background mode bypasses the approval gate by design — both phases must be foreground so you can mediate between them. The Fourth Law's autonomy directive still applies (no questions during a phase), but the gate between phases is the creator's, not the agent's.
+
+If you ever feel the urge to summon the npcs agent without specifying a phase — STOP. That is the failure mode this Law exists to prevent.
+
+## The Sixth Law: Review and Present
 
 When agents complete their work:
 

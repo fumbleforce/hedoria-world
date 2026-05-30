@@ -1,0 +1,28 @@
+{
+  "name": "limelight",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "description": "Limelight — an LLM-driven streamer life sim (vertical slice).",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit -p tsconfig.json && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "seedrandom": "^3.0.5",
+    "zod": "^4.4.3",
+    "zustand": "^5.0.13"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.2",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@types/seedrandom": "^3.0.8",
+    "@vitejs/plugin-react": "^6.0.1",
+    "typescript": "~6.0.2",
+    "vite": "^8.0.10"
+  }
+}

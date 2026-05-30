@@ -1,0 +1,148 @@
+/** Core domain types shared by the store, engines, and UI. */
+
+export type ChatMessageKind =
+  | "normal"
+  | "hype"
+  | "question"
+  | "troll"
+  | "flirty"
+  | "creepy"
+  | "donation"
+  | "follow"
+  | "sub"
+  | "raid"
+  | "mod"
+  | "system"
+  | "streamer";
+
+export interface ChatMessage {
+  id: string;
+  user: string;
+  text: string;
+  kind: ChatMessageKind;
+  /** For donation/sub messages: money in dollars. */
+  amount?: number;
+  /** If this line came from a named character in the roster. */
+  characterId?: string;
+  ts: number;
+}
+
+/**
+ * Content-intensity dial. This sets the CEILING on how far things can escalate —
+ * it does not force content to that level. Even at the maximum tier most chat is
+ * ordinary; the tier just removes the cap so the player (and pushy viewers) can
+ * drive escalation as far as they choose. `custom` layers the author's own
+ * steering on top (see game/content.ts).
+ */
+export type ContentTier = "wholesome" | "flirty" | "risque" | "unhinged" | "custom";
+
+export type TextBackend = "mock" | "gemini" | "openrouter";
+
+export type LogLevel = "debug" | "info" | "warn" | "error";
+
+export interface Settings {
+  streamerName: string;
+  /** A short persona/bio that flavours the chat + storyteller prompts. */
+  streamerPersona: string;
+  contentTier: ContentTier;
+  /** Author-supplied steering appended verbatim when contentTier === "custom". */
+  customSteering: string;
+  textBackend: TextBackend;
+  geminiModel: string;
+  openRouterModel: string;
+  /** Image models for room generation. */
+  geminiImageModel: string;
+  openRouterImageModel: string;
+  /** Minimum diag level printed to the browser console. */
+  consoleLevel: LogLevel;
+}
+
+/**
+ * One line in the Narrator (DM) sidebar. `dm` is prose, `action` echoes what the
+ * player did, `outcome` is the coded summary of effects, `system` is meta.
+ */
+export interface StoryEntry {
+  id: string;
+  ts: number;
+  kind: "dm" | "action" | "outcome" | "system";
+  text: string;
+}
+
+export interface Metrics {
+  cash: number;
+  followers: number;
+  subscribers: number;
+  currentViewers: number;
+  peakViewers: number;
+  /** 0-100 momentum of the stream; drives viewer growth. */
+  hype: number;
+  /** 0-100 stamina; drains live, regenerates on sleep. */
+  energy: number;
+  /** 0-100 wellbeing; trolls/creeps lower it, rest raises it. */
+  mood: number;
+  /** 0-100 how far inside her comfort zone she is. Pushing boundaries lowers it. */
+  comfort: number;
+  day: number;
+}
+
+export interface StreamSession {
+  isLive: boolean;
+  /** Turn counter for the current stream. */
+  round: number;
+  seconds: number;
+  earnings: number;
+  newFollowers: number;
+  peak: number;
+}
+
+export interface EventChoice {
+  label: string;
+  /** Plain-language outcome shown after the choice resolves. */
+  resolution: string;
+  /** Metric deltas applied on choose. */
+  effects: Partial<Metrics>;
+}
+
+export interface GameEvent {
+  id: string;
+  title: string;
+  /** Player-facing body — starts as the seed, replaced by LLM narration. */
+  description: string;
+  /** The raw mechanical seed the LLM rewrites into bespoke prose. */
+  narrationSeed: string;
+  /** Visual accent for the modal. */
+  tone: "neutral" | "good" | "creepy" | "danger";
+  choices: EventChoice[];
+  /** Optional bound character this event is about. */
+  characterId?: string;
+}
+
+/** Active mini-game sub-state (set when the player starts a game at the desk). */
+export interface PlayingState {
+  gameId: string;
+  roundsPlayed: number;
+}
+
+/** A single line in a 1:1 direct-message conversation with a character. */
+export interface DmLine {
+  role: "me" | "them";
+  text: string;
+}
+
+export type UpgradeCategory = "gear" | "furniture" | "apartment";
+
+export interface Upgrade {
+  id: string;
+  name: string;
+  category: UpgradeCategory;
+  cost: number;
+  description: string;
+  /** Multiplier/flat effects folded into the live model (see game/shop.ts). */
+  effects: {
+    viewerMult?: number;
+    hypeMult?: number;
+    incomeMult?: number;
+    moodPerDay?: number;
+    rentPerDay?: number;
+  };
+}
