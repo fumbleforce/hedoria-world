@@ -9,9 +9,12 @@ import type {
   StoryEntry,
   PlayingState,
   DmLine,
+  CharacterVisual,
 } from "../game/types";
 import { SPAWN_ZONE, type ZoneId } from "../game/studio";
 import { saveRoomImage } from "../persist/imageStore";
+import { getActiveSlotId, updateActiveMeta } from "../persist/saves";
+import { applyTheme } from "../ui/themes";
 import { initialAudience, type AudienceState } from "../game/segments";
 import type { CharacterSheet, Roster } from "../game/characters";
 import type { PromptId } from "../game/prompts";
@@ -47,6 +50,8 @@ const initialSettings = (): Settings => ({
   streamerName: "Abby",
   streamerPersona:
     "A bubbly variety streamer in her early 20s trying to make rent and go full-time. Quick-witted, a little shy, warms up to chat.",
+  gender: "female",
+  theme: "limelight",
   contentTier: "flirty",
   customSteering: "",
   textBackend: "mock",
@@ -54,6 +59,13 @@ const initialSettings = (): Settings => ({
   openRouterModel: "google/gemini-2.5-flash",
   geminiImageModel: "gemini-2.5-flash-image",
   openRouterImageModel: "google/gemini-2.5-flash-image",
+  imageStylePreset: "cozy-neon",
+  imageStyle: "",
+  roomPrompt: "",
+  portraitPrompt: "",
+  bodyPrompt: "",
+  presencePrompt: "",
+  scenePrompt: "",
   consoleLevel: "debug",
 });
 
@@ -63,6 +75,9 @@ export interface ActionMenu {
   options: ActionOption[];
   allowFreeform: boolean;
 }
+
+/** Tabs in the unified Settings modal. */
+export type SettingsTab = "general" | "prompts" | "room" | "character" | "gallery" | "saves";
 
 export interface StoreState {
   booted: boolean;
@@ -88,9 +103,19 @@ export interface StoreState {
   /** True while a room image is being generated. */
   generatingRoom: boolean;
 
+  /** Player character visual identity (description + portrait/body image ids). */
+  character: CharacterVisual;
+  /** Per-zone presence image ids (the character placed in each zone). */
+  presenceImages: Partial<Record<ZoneId, string>>;
+  /** In-memory cache of image id -> data URL, hydrated from IndexedDB. */
+  imageCache: Record<string, string>;
+  /** Most recently generated/seen image id — shown center-stage. */
+  lastImageId: string | null;
+  /** Label of the image job currently running (null = idle). */
+  imageBusy: string | null;
+
   // transient UI
   gamePickerOpen: boolean;
-  galleryOpen: boolean;
   /** Character id whose detail/DM panel is open. */
   openCharId: string | null;
   /** Persistent 1:1 DM history, keyed by character id. */
@@ -98,6 +123,8 @@ export interface StoreState {
   dmBusy: boolean;
   shopOpen: boolean;
   settingsOpen: boolean;
+  /** Active tab in the Settings modal. */
+  settingsTab: SettingsTab;
 
   eventLog: string[];
   ownedUpgrades: string[];
@@ -121,17 +148,27 @@ export interface StoreState {
   setRoomImage: (url: string | null) => void;
   setGeneratingRoom: (b: boolean) => void;
 
+  setCharacter: (patch: Partial<CharacterVisual>) => void;
+  setPresenceImage: (zone: ZoneId, imageId: string | null) => void;
+  clearPresenceImages: () => void;
+  cacheImage: (id: string, dataUrl: string) => void;
+  uncacheImage: (id: string) => void;
+  setLastImage: (id: string | null) => void;
+  setImageBusy: (label: string | null) => void;
+
   upsertCharacter: (c: CharacterSheet) => void;
   patchCharacter: (id: string, patch: Partial<CharacterSheet>) => void;
   setRoster: (r: Roster) => void;
 
   setGamePickerOpen: (b: boolean) => void;
-  setGalleryOpen: (b: boolean) => void;
   openCharacter: (id: string | null) => void;
   pushDm: (charId: string, line: DmLine) => void;
   setDmBusy: (b: boolean) => void;
   setShopOpen: (b: boolean) => void;
   setSettingsOpen: (b: boolean) => void;
+  setSettingsTab: (tab: SettingsTab) => void;
+  /** Open the Settings modal directly on a given tab. */
+  openSettings: (tab?: SettingsTab) => void;
   setSettings: (patch: Partial<Settings>) => void;
   setPromptOverride: (id: PromptId, body: string | null) => void;
   logEvent: (line: string) => void;
@@ -162,13 +199,19 @@ export const useStore = create<StoreState>()(
       roomImage: null,
       generatingRoom: false,
 
+      character: { description: "", portraitId: null, bodyId: null },
+      presenceImages: {},
+      imageCache: {},
+      lastImageId: null,
+      imageBusy: null,
+
       gamePickerOpen: false,
-      galleryOpen: false,
       openCharId: null,
       dmThreads: {},
       dmBusy: false,
       shopOpen: false,
       settingsOpen: false,
+      settingsTab: "general",
 
       eventLog: [],
       ownedUpgrades: [],
@@ -188,6 +231,7 @@ export const useStore = create<StoreState>()(
           m.subscribers = Math.max(0, Math.round(m.subscribers));
           m.currentViewers = Math.max(0, Math.round(m.currentViewers));
           m.peakViewers = Math.max(m.peakViewers, m.currentViewers);
+          if (m.day !== s.metrics.day) updateActiveMeta({ day: m.day });
           return { metrics: m };
         }),
       setAudience: (audience) => set({ audience }),
@@ -219,9 +263,37 @@ export const useStore = create<StoreState>()(
       setZone: (zone) => set({ zone }),
       setRoomImage: (roomImage) => {
         set({ roomImage });
-        void saveRoomImage(roomImage); // large blob → IndexedDB, not localStorage
+        void saveRoomImage(getActiveSlotId(), roomImage); // large blob → IndexedDB, not localStorage
       },
       setGeneratingRoom: (generatingRoom) => set({ generatingRoom }),
+
+      setCharacter: (patch) =>
+        set((s) => {
+          if ("portraitId" in patch) updateActiveMeta({ portraitId: patch.portraitId ?? null });
+          return { character: { ...s.character, ...patch } };
+        }),
+      setPresenceImage: (zone, imageId) =>
+        set((s) => {
+          const next = { ...s.presenceImages };
+          if (imageId) next[zone] = imageId;
+          else delete next[zone];
+          return { presenceImages: next };
+        }),
+      clearPresenceImages: () => set({ presenceImages: {} }),
+      cacheImage: (id, dataUrl) => set((s) => ({ imageCache: { ...s.imageCache, [id]: dataUrl } })),
+      uncacheImage: (id) =>
+        set((s) => {
+          const patch: Partial<StoreState> = {};
+          if (id in s.imageCache) {
+            const next = { ...s.imageCache };
+            delete next[id];
+            patch.imageCache = next;
+          }
+          if (s.lastImageId === id) patch.lastImageId = null;
+          return patch;
+        }),
+      setLastImage: (lastImageId) => set({ lastImageId }),
+      setImageBusy: (imageBusy) => set({ imageBusy }),
 
       upsertCharacter: (c) => set((s) => ({ roster: { ...s.roster, [c.id]: c } })),
       patchCharacter: (id, patch) =>
@@ -233,7 +305,6 @@ export const useStore = create<StoreState>()(
       setRoster: (roster) => set({ roster }),
 
       setGamePickerOpen: (gamePickerOpen) => set({ gamePickerOpen }),
-      setGalleryOpen: (galleryOpen) => set({ galleryOpen }),
       openCharacter: (openCharId) => set({ openCharId }),
       pushDm: (charId, line) =>
         set((s) => ({
@@ -242,7 +313,13 @@ export const useStore = create<StoreState>()(
       setDmBusy: (dmBusy) => set({ dmBusy }),
       setShopOpen: (shopOpen) => set({ shopOpen }),
       setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
-      setSettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
+      setSettingsTab: (settingsTab) => set({ settingsTab }),
+      openSettings: (tab) => set(tab ? { settingsOpen: true, settingsTab: tab } : { settingsOpen: true }),
+      setSettings: (patch) => {
+        set((s) => ({ settings: { ...s.settings, ...patch } }));
+        if (patch.theme) applyTheme(patch.theme);
+        if (patch.streamerName !== undefined) updateActiveMeta({ characterName: patch.streamerName });
+      },
       setPromptOverride: (id, body) =>
         set((s) => {
           const next = { ...s.promptOverrides };
@@ -257,6 +334,18 @@ export const useStore = create<StoreState>()(
     }),
     {
       name: "limelight-save-v3",
+      skipHydration: true,
+      // Deep-merge `settings` so saves made before a new setting existed still
+      // get its default (otherwise the persisted object replaces the defaults
+      // wholesale and new fields come back `undefined`).
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<StoreState>;
+        return {
+          ...current,
+          ...p,
+          settings: { ...current.settings, ...(p.settings ?? {}) },
+        };
+      },
       partialize: (s) => ({
         metrics: s.metrics,
         settings: s.settings,
@@ -265,10 +354,17 @@ export const useStore = create<StoreState>()(
         eventLog: s.eventLog,
         roomImage: s.roomImage,
         dmThreads: s.dmThreads,
+        // Only the small ids persist here; the large blobs live in IndexedDB.
+        character: s.character,
+        presenceImages: s.presenceImages,
+        lastImageId: s.lastImageId,
         // Persist the roster so relationships/memories survive — but strip
         // transient online flags on rehydrate (handled at boot).
         roster: s.roster,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (state?.settings?.theme) applyTheme(state.settings.theme);
+      },
     },
   ),
 );

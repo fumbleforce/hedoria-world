@@ -5,6 +5,7 @@ import { StudioRoom } from "./render/StudioRoom";
 import { MetricsHud } from "./ui/MetricsHud";
 import { ChatPanel } from "./ui/ChatPanel";
 import { NarratorPanel } from "./ui/NarratorPanel";
+import { VisualizationPanel } from "./ui/VisualizationPanel";
 import { CharacterGallery } from "./ui/CharacterGallery";
 import { ActionBar } from "./ui/ActionBar";
 import { ActionMenuModal } from "./ui/ActionMenuModal";
@@ -39,10 +40,13 @@ export function App() {
       <MetricsHud />
 
       <main className="stage">
-        <NarratorPanel />
+        <div className="stage__left">
+          <StudioRoom controller={controller} />
+        </div>
 
         <div className="stage__center">
-          <StudioRoom controller={controller} />
+          <VisualizationPanel />
+          <NarratorPanel controller={controller} />
         </div>
 
         <div className="stage__right">

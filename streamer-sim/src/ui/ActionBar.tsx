@@ -70,7 +70,7 @@ export function ActionBar({ controller }: { controller: GameController }) {
           placeholder={isLive ? "What do you do? (type anything — e.g. tell a joke, react to a clip, lie on the couch…)" : "What do you do? (tidy up, scroll fan mail, change outfit…)"}
           disabled={resolving}
         />
-        <button className="btn btn--primary" type="submit" disabled={resolving || !text.trim()}>
+        <button className={`btn btn--primary ${resolving ? "is-loading" : ""}`} type="submit" disabled={resolving || !text.trim()}>
           {resolving ? "…" : "Act"}
         </button>
         <button className="btn" type="button" disabled={resolving} onClick={() => void controller.continueStory()} title="Let the moment ride — pass a little time">
@@ -103,7 +103,9 @@ export function ActionBar({ controller }: { controller: GameController }) {
             ) : (
               <button className="btn" disabled={resolving} onClick={() => useStore.getState().setGamePickerOpen(true)}>🎮 Game</button>
             )}
-            <button className="btn" onClick={() => useStore.getState().setSettingsOpen(true)} title="Settings">⚙</button>
+            <button className="btn" onClick={() => useStore.getState().openSettings("character")} title="Character appearance">🎭</button>
+            <button className="btn" onClick={() => useStore.getState().openSettings("gallery")} title="Gallery">🖼</button>
+            <button className="btn" onClick={() => useStore.getState().openSettings()} title="Settings">⚙</button>
             <button className="btn btn--danger" disabled={resolving} onClick={() => controller.endStream()}>⏹ End</button>
           </>
         ) : (
@@ -111,7 +113,9 @@ export function ActionBar({ controller }: { controller: GameController }) {
             <button className="btn btn--primary" disabled={resolving} onClick={() => controller.goLive()}>● Go Live</button>
             <button className="btn" disabled={resolving} onClick={() => controller.sleep()}>🛏️ Sleep</button>
             <button className="btn" onClick={() => useStore.getState().setShopOpen(true)}>📦 Shop</button>
-            <button className="btn" onClick={() => useStore.getState().setSettingsOpen(true)} title="Settings">⚙</button>
+            <button className="btn" onClick={() => useStore.getState().openSettings("character")} title="Character appearance">🎭</button>
+            <button className="btn" onClick={() => useStore.getState().openSettings("gallery")} title="Gallery">🖼</button>
+            <button className="btn" onClick={() => useStore.getState().openSettings()} title="Settings">⚙</button>
           </>
         )}
       </div>

@@ -7,7 +7,7 @@
 import { ACTION_TAGS } from "./actions";
 import { SEGMENTS, SEGMENT_IDS } from "./segments";
 
-export type PromptId = "evaluator" | "narrator" | "chat";
+export type PromptId = "evaluator" | "narrator" | "chat" | "performance";
 
 export interface PromptDef {
   id: PromptId;
@@ -57,7 +57,12 @@ export const PROMPTS: Record<PromptId, PromptDef> = {
       "   comfort, each one of: up, down, none.",
       "6. setsBoundary — true if she is setting/enforcing a personal boundary.",
       "7. narration — 1-3 sentences, second person ('You ...'), vivid, like a dungeon",
-      "   master. Match the tone steering. Never break the fourth wall.",
+      "   master. Match the tone steering. Never break the fourth wall. When she is",
+      "   LIVE, keep this to a brief STAGE DIRECTION: describe only her delivery, body",
+      "   language, expression, and the room's energy. Do NOT write out her actual",
+      "   spoken words (the joke, the answer, the song, the line) and do NOT narrate",
+      "   chat's messages or reaction — her real words and the live chat are shown",
+      "   separately, so repeating them here reads as a duplicate.",
       "",
       "Respond with ONLY this JSON shape:",
       '{"plausible":true,"reason":"","tags":["funny"],"intensity":2,',
@@ -80,6 +85,30 @@ export const PROMPTS: Record<PromptId, PromptDef> = {
       "React to what the player just did and the state of her life and apartment.",
       "Be evocative but grounded — this is a small apartment, a webcam, a hustle.",
       "Never use asterisks, never break the fourth wall, never mention game mechanics.",
+    ].join("\n"),
+  },
+
+  performance: {
+    id: "performance",
+    label: "Streamer Performance (live quote)",
+    description:
+      "When live, turns a performance action (tell a joke, sing, answer chat, flirt, tell a story) into the streamer's ACTUAL spoken words — a first-person quote she says on stream, not a description of it.",
+    base: [
+      "You ARE {{name}}, a live streamer on webcam, speaking out loud to your chat right now.",
+      "PERSONA: {{persona}}",
+      "{{steering}}",
+      "",
+      "You are given the thing you are doing this moment. ACTUALLY PERFORM IT, in first person —",
+      "say the real words out loud:",
+      "  - If it's telling a joke, tell a genuine, complete joke (setup + punchline).",
+      "  - If it's singing, sing actual lines.",
+      "  - If it's answering chat / a Q&A, give the real answer.",
+      "  - If it's flirting or being bold, say the actual line.",
+      "  - If it's telling a story, tell it in your own words.",
+      "Stay fully in character, in her natural spoken voice, matching the tone steering.",
+      "",
+      "Output ONLY her spoken words — no narration, no stage directions, no asterisks, no",
+      "quotation marks, no name prefix. 1-4 sentences, natural spoken cadence.",
     ].join("\n"),
   },
 

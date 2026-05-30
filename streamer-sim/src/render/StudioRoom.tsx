@@ -1,4 +1,5 @@
 import { useStore } from "../state/store";
+import { useStoredImage } from "../persist/useStoredImage";
 import type { GameController } from "../game/controller";
 import { ZONE_LIST, ZONES, GRID, type ZoneId } from "../game/studio";
 
@@ -21,6 +22,14 @@ export function StudioRoom({ controller }: { controller: GameController }) {
   const playing = useStore((s) => s.playing);
   const roomImage = useStore((s) => s.roomImage);
   const generating = useStore((s) => s.generatingRoom);
+  const presenceId = useStore((s) => s.presenceImages[zone]);
+  const portraitId = useStore((s) => s.character.portraitId);
+  const presenceUrl = useStoredImage(presenceId);
+  const portraitUrl = useStoredImage(portraitId);
+  const avatarUrl = presenceUrl ?? portraitUrl;
+  const imageBusy = useStore((s) => s.imageBusy);
+  const hasCharacter = useStore((s) => !!s.character.bodyId || !!s.character.description.trim());
+  const canGenImages = controller.canGenerateImages;
   const [px, py] = center(ZONES[zone].cell);
 
   return (
@@ -82,16 +91,52 @@ export function StudioRoom({ controller }: { controller: GameController }) {
           );
         })}
 
-        {/* the streamer */}
+        {/* the streamer — a generated presence image if we have one, else a dot */}
         <g style={{ transform: `translate(${px}px, ${py}px)`, transition: "transform 0.35s cubic-bezier(.4,1.3,.5,1)" }}>
-          <ellipse cx="0" cy="26" rx="16" ry="6" fill="rgba(0,0,0,0.4)" />
-          <circle cx="0" cy="2" r="17" fill={isLive ? "#ff5d8f" : "#7cd3ff"} stroke="#fff" strokeWidth="2.5" />
-          <text x="0" y="9" textAnchor="middle" fontSize="20">{isLive ? "🔴" : "🙂"}</text>
+          <ellipse cx="0" cy="42" rx="26" ry="7" fill="rgba(0,0,0,0.4)" />
+          {avatarUrl ? (
+            <>
+              <defs>
+                <clipPath id="presClip">
+                  <circle cx="0" cy="6" r="34" />
+                </clipPath>
+              </defs>
+              {/* Oversize the image past the clip circle so the subject fills
+                  it and we don't see the square's empty edges/background. */}
+              <image
+                href={avatarUrl}
+                x={-46}
+                y={-40}
+                width={92}
+                height={92}
+                preserveAspectRatio="xMidYMid slice"
+                clipPath="url(#presClip)"
+              />
+              <circle cx="0" cy="6" r="34" fill="none" stroke={isLive ? "var(--accent)" : "var(--offline)"} strokeWidth="3" />
+            </>
+          ) : (
+            <>
+              <circle cx="0" cy="2" r="17" fill={isLive ? "var(--accent)" : "var(--offline)"} stroke="#fff" strokeWidth="2.5" />
+              <text x="0" y="9" textAnchor="middle" fontSize="20">{isLive ? "🔴" : "🙂"}</text>
+            </>
+          )}
         </g>
       </svg>
 
-      <div className="studio__hint">
-        {generating ? "🖼 generating room art…" : playing ? "🎮 playing · click a spot to act" : "Click a spot to go there and act"}
+      <div className="studio__bar">
+        <div className={`studio__hint ${generating ? "is-loading" : ""}`}>
+          {generating ? "🖼 generating room art…" : playing ? "🎮 playing · click a spot to act" : "Click a spot to go there and act"}
+        </div>
+        {canGenImages && hasCharacter && (
+          <button
+            className={`btn btn--mini ${imageBusy ? "is-loading" : ""}`}
+            disabled={!!imageBusy}
+            onClick={() => void controller.generatePresence(zone, !!presenceUrl)}
+            title="Generate (and cache) your character at this spot"
+          >
+            {imageBusy ? imageBusy + "…" : presenceUrl ? "📸 Redo here" : "📸 Visualize here"}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -136,9 +181,9 @@ function Desk({ live }: { live: boolean }) {
   return (
     <g>
       <rect x={x - 36} y={y + 2} width="72" height="26" rx="6" fill="#4a3f63" />
-      <rect x={x - 30} y={y - 22} width="26" height="19" rx="3" fill="#10131c" stroke={live ? "#ff5d8f" : "#3a4a6a"} strokeWidth="2" />
-      <rect x={x + 4} y={y - 22} width="26" height="19" rx="3" fill="#10131c" stroke={live ? "#ff5d8f" : "#3a4a6a"} strokeWidth="2" />
-      <rect x={x - 36} y={y + 28} width="72" height="3" fill={live ? "#ff5d8f" : "#b079ff"} opacity="0.8" />
+      <rect x={x - 30} y={y - 22} width="26" height="19" rx="3" fill="#10131c" stroke={live ? "var(--accent)" : "#3a4a6a"} strokeWidth="2" />
+      <rect x={x + 4} y={y - 22} width="26" height="19" rx="3" fill="#10131c" stroke={live ? "var(--accent)" : "#3a4a6a"} strokeWidth="2" />
+      <rect x={x - 36} y={y + 28} width="72" height="3" fill={live ? "var(--accent)" : "var(--accent-2)"} opacity="0.8" />
     </g>
   );
 }

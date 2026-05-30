@@ -17,6 +17,10 @@ export interface EvalContext {
   isLive: boolean;
   /** Where in the apartment she currently is (e.g. "couch"). */
   zoneLabel: string;
+  /** Last few live chat lines, for fresh per-beat grounding (keeps prose varied). */
+  recentChat?: string[];
+  /** Her current stat vibe (changes every beat), so narration doesn't repeat. */
+  vibe?: string;
 }
 
 /**
@@ -45,10 +49,14 @@ export async function evaluateAction(
             `STREAM STATUS: ${ctx.isLive ? "LIVE (broadcasting on webcam right now)" : "OFFLINE (not broadcasting — she is just at home)"}.`,
             `HER LOCATION: ${ctx.zoneLabel}.`,
             ctx.isLive ? `Audience right now: ${ctx.audienceSummary}` : "",
+            ctx.isLive && ctx.vibe ? `Her current vibe: ${ctx.vibe}.` : "",
+            ctx.isLive && ctx.recentChat?.length
+              ? `Live chat in the last moment:\n${ctx.recentChat.join("\n")}`
+              : "",
             `She does this (${action.source}): ${action.text}`,
             action.hint ? `Hint: ${action.hint}` : "",
             ctx.isLive
-              ? "Classify how the live audience reacts."
+              ? "Classify how the live audience reacts. Ground the narration in THIS specific moment (her vibe, the chat above) so it reads fresh — never reuse stock phrasing."
               : "She is OFFLINE — set every segment appeal to 0 / omit appeal, since no one is watching. Just judge plausibility and narrate.",
           ]
             .filter(Boolean)

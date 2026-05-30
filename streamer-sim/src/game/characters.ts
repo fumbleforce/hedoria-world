@@ -15,6 +15,14 @@ export type RelationshipLevel =
   | "friend"
   | "confidant";
 
+export type RelationshipType =
+  | "none"
+  | "romantic"
+  | "sexual"
+  | "dominant"
+  | "submissive"
+  | "married";
+
 export interface CharacterSheet {
   id: string;
   /** Chat handle, e.g. "midnight_mara". */

@@ -72,7 +72,7 @@ export function CharacterModal({ controller }: { controller: GameController }) {
                 <b>{l.role === "me" ? "You" : c.handle}:</b> {l.text}
               </div>
             ))}
-            {busy && <div className="dm__line dm__line--them dm__pending">…typing…</div>}
+            {busy && <div className="dm__line dm__line--them dm__pending is-loading">…typing…</div>}
           </div>
           <form
             className="dm__form"

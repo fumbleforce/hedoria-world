@@ -1,7 +1,8 @@
 import { LlmAdapter } from "./llm/adapter";
 import { resolveTextProvider } from "./llm/providers";
 import { resolveImageBackend } from "./llm/imageProvider";
-import { loadRoomImage } from "./persist/imageStore";
+import { loadRoomImage, migrateLegacyRoomImage } from "./persist/imageStore";
+import { migrateLegacy, saveStorageKey, updateActiveMeta } from "./persist/saves";
 import { GameController } from "./game/controller";
 import { useStore } from "./state/store";
 import { diag } from "./diag/log";
@@ -19,6 +20,10 @@ export function boot(): Promise<BootResult> {
 }
 
 async function runBoot(): Promise<BootResult> {
+  const slot = migrateLegacy();
+  useStore.persist.setOptions({ name: saveStorageKey(slot.id) });
+  await useStore.persist.rehydrate();
+
   const store = useStore.getState();
   diag.configure({ consoleLevel: store.settings.consoleLevel });
   diag.info("boot", "starting");
@@ -31,7 +36,8 @@ async function runBoot(): Promise<BootResult> {
   store.setRoster(cleared);
 
   // Rehydrate the (large) room image from IndexedDB, not localStorage.
-  const savedRoom = await loadRoomImage();
+  await migrateLegacyRoomImage(slot.id);
+  const savedRoom = await loadRoomImage(slot.id);
   if (savedRoom) store.setRoomImage(savedRoom);
 
   const geminiKey = (import.meta.env.VITE_GEMINI_API_KEY as string | undefined)?.trim() ?? "";
@@ -41,12 +47,22 @@ async function runBoot(): Promise<BootResult> {
   const imageBackend = resolveImageBackend(geminiKey, openRouterOk);
   const controller = new GameController(llm, imageBackend);
 
+  // Pull persisted portrait/body/presence ids from IndexedDB into memory so the
+  // studio overlay and character UI can render them immediately.
+  void controller.hydrateImageCache();
+
   diag.info("boot", "ready", {
+    slot: slot.id,
     provider: llm.id,
     mock: llm.isMock,
     image: imageBackend?.id ?? "none",
     geminiKey: geminiKey ? "set" : "absent",
     openRouter: openRouterOk,
+  });
+  updateActiveMeta({
+    characterName: store.settings.streamerName,
+    day: store.metrics.day,
+    portraitId: store.character.portraitId,
   });
   useStore.getState().setBooted(true);
   return { controller, llm };

@@ -40,10 +40,20 @@ export type TextBackend = "mock" | "gemini" | "openrouter";
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
+/** UI color scheme. */
+export type ThemeId = "limelight" | "ocean" | "ember";
+
+export type { ImageStylePresetId } from "../llm/imagePresets";
+import type { ImageStylePresetId } from "../llm/imagePresets";
+
 export interface Settings {
   streamerName: string;
   /** A short persona/bio that flavours the chat + storyteller prompts. */
   streamerPersona: string;
+  /** "male", "female", or a custom free-text identity. Flavours image gen. */
+  gender: string;
+  /** Color theme for the app chrome. */
+  theme: ThemeId;
   contentTier: ContentTier;
   /** Author-supplied steering appended verbatim when contentTier === "custom". */
   customSteering: string;
@@ -53,6 +63,15 @@ export interface Settings {
   /** Image models for room generation. */
   geminiImageModel: string;
   openRouterImageModel: string;
+  /** Base image-prompt set. Per-field overrides take precedence when non-empty. */
+  imageStylePreset: ImageStylePresetId;
+  /** Editable image-prompt templates. Empty = use the active preset. */
+  imageStyle: string;
+  roomPrompt: string;
+  portraitPrompt: string;
+  bodyPrompt: string;
+  presencePrompt: string;
+  scenePrompt: string;
   /** Minimum diag level printed to the browser console. */
   consoleLevel: LogLevel;
 }
@@ -64,8 +83,20 @@ export interface Settings {
 export interface StoryEntry {
   id: string;
   ts: number;
-  kind: "dm" | "action" | "outcome" | "system";
+  kind: "dm" | "action" | "outcome" | "system" | "image" | "quote";
   text: string;
+  /** For kind === "image": the StoredImage id to render inline. */
+  imageId?: string;
+}
+
+/** The player character's visual identity for image generation. */
+export interface CharacterVisual {
+  /** Free-form description of how the streamer looks. */
+  description: string;
+  /** StoredImage id of the head-and-shoulders portrait. */
+  portraitId: string | null;
+  /** StoredImage id of the full-body T-pose template. */
+  bodyId: string | null;
 }
 
 export interface Metrics {

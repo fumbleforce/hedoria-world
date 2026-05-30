@@ -31,7 +31,7 @@ export class LlmAdapter {
         durationMs,
         chars: res.text.length,
       });
-      rawLog({ kind, model: this.provider.id, request, response: res, durationMs });
+      logLlmRaw({ kind, model: this.provider.id, request, response: res, durationMs });
       return res;
     } catch (err) {
       diag.error("llm", `failed (${kind})`, {
@@ -44,7 +44,11 @@ export class LlmAdapter {
   }
 }
 
-function rawLog(payload: object): void {
+/**
+ * Append a raw call record to the dev-server /__llm-log sink (logs/llm-prompts.jsonl
+ * + logs/llm-debug.log). Exported so non-text calls (image generation) log too.
+ */
+export function logLlmRaw(payload: object): void {
   void fetch("/__llm-log", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

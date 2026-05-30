@@ -6,29 +6,45 @@
  */
 
 import { useStore } from "../state/store";
-import { diag } from "../diag/log";
 
 const PROXY = "/__openrouter/chat";
 
 export interface ImageBackend {
   readonly id: string;
-  /** Generate an image from a prompt; returns a data URL. */
-  generate(prompt: string): Promise<string>;
+  /**
+   * Generate an image from a prompt; returns a data URL. Optional `refs` are
+   * data-URL images fed to the model for image-to-image templating (e.g. the
+   * character's T-pose body so they stay consistent across scenes).
+   */
+  generate(prompt: string, refs?: string[]): Promise<string>;
+}
+
+/** Split a `data:<mime>;base64,<data>` URL into its parts. */
+function splitDataUrl(url: string): { mimeType: string; data: string } | null {
+  const m = /^data:([^;]+);base64,(.*)$/s.exec(url);
+  if (!m) return null;
+  return { mimeType: m[1], data: m[2] };
 }
 
 class GeminiImageBackend implements ImageBackend {
   readonly id = "gemini-image";
   constructor(private readonly apiKey: string) {}
-  async generate(prompt: string): Promise<string> {
+  async generate(prompt: string, refs: string[] = []): Promise<string> {
     const model = useStore.getState().settings.geminiImageModel || "gemini-2.5-flash-image";
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
       model,
     )}:generateContent?key=${encodeURIComponent(this.apiKey)}`;
+    const parts: Array<Record<string, unknown>> = [];
+    for (const ref of refs) {
+      const split = splitDataUrl(ref);
+      if (split) parts.push({ inlineData: { mimeType: split.mimeType, data: split.data } });
+    }
+    parts.push({ text: prompt });
     const res = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        contents: [{ role: "user", parts }],
         generationConfig: { responseModalities: ["IMAGE"], imageConfig: { aspectRatio: "1:1" } },
       }),
     });
@@ -45,14 +61,16 @@ class GeminiImageBackend implements ImageBackend {
 
 class OpenRouterImageBackend implements ImageBackend {
   readonly id = "openrouter-image";
-  async generate(prompt: string): Promise<string> {
+  async generate(prompt: string, refs: string[] = []): Promise<string> {
     const model = useStore.getState().settings.openRouterImageModel || "google/gemini-2.5-flash-image";
+    const content: Array<Record<string, unknown>> = [{ type: "text", text: prompt }];
+    for (const ref of refs) content.push({ type: "image_url", image_url: { url: ref } });
     const res = await fetch(PROXY, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model,
-        messages: [{ role: "user", content: prompt }],
+        messages: [{ role: "user", content: refs.length ? content : prompt }],
         modalities: ["image", "text"],
         image_config: { aspect_ratio: "1:1" },
       }),
@@ -79,24 +97,73 @@ export function resolveImageBackend(geminiKey: string, openRouterOk: boolean): I
   return null;
 }
 
-export async function generateRoomImage(
-  backend: ImageBackend,
-  vars: { persona: string; upgrades: string[] },
-): Promise<string> {
-  const prompt = [
-    "A cozy top-down / high-angle view of a small studio apartment for a video-game,",
-    "stylized semi-realistic game art, warm purple-and-pink night lighting, clean and",
-    "readable. One room containing: an unmade bed (top-left), a streaming desk with",
-    "dual monitors, webcam, ring light and RGB (top-right), a comfy couch with a rug",
-    "(center), a small kitchenette with a hot plate and kettle (bottom-left), a front",
-    "door (bottom-center), and a tiny bathroom nook (bottom-right). No people, no text,",
-    "no UI. Square composition, viewed slightly from above like a life-sim.",
-    vars.upgrades.length ? `Nice touches: ${vars.upgrades.join(", ")}.` : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-  diag.info("world", "generating room image", { backend: backend.id });
-  const url = await backend.generate(prompt);
-  diag.info("world", "room image generated", { bytes: url.length });
-  return url;
+// --- editable prompt templates ----------------------------------------------
+
+/**
+ * The universal art-style line, shared by every generated image so they stay
+ * visually consistent. Injected into the other templates as `{{style}}`.
+ */
+export const DEFAULT_IMAGE_STYLE =
+  "Stylized semi-realistic video-game art, soft warm lighting, clean and appealing.";
+
+/**
+ * Default templates for the user-editable image prompts. `{{placeholders}}` are
+ * filled at generation time via `fillImagePrompt`. These can be overridden in
+ * Settings; an empty override falls back to the matching default here.
+ */
+export const DEFAULT_ROOM_PROMPT = [
+  "A cozy top-down / high-angle view of a small studio apartment for a video-game.",
+  "{{style}}",
+  "Warm purple-and-pink night lighting, clean and readable. One room containing:",
+  "an unmade bed (top-left), a streaming desk with dual monitors, webcam, ring light",
+  "and RGB (top-right), a comfy couch with a rug (center), a small kitchenette with a",
+  "hot plate and kettle (bottom-left), a front door (bottom-center), and a tiny",
+  "bathroom nook (bottom-right). No people, no text, no UI. Square composition,",
+  "viewed slightly from above like a life-sim. {{upgrades}}",
+].join(" ");
+
+export const DEFAULT_PORTRAIT_PROMPT = [
+  "Character portrait of {{name}}, a {{gender}} video-game streamer.",
+  "Appearance: {{description}}.",
+  "Head-and-shoulders framing, looking at camera, friendly expression,",
+  "simple soft-gradient background, no text, no watermark, no UI.",
+  "{{style}}",
+  "Square composition.",
+].join(" ");
+
+export const DEFAULT_BODY_PROMPT = [
+  "Full-body character reference sheet of {{name}}, a {{gender}} video-game streamer.",
+  "Appearance: {{description}}.",
+  "{{match}}",
+  "Standing in a neutral A-pose / T-pose, facing forward, full body visible head to toe,",
+  "plain flat light-grey studio background, even lighting, no shadows on the floor,",
+  "no text, no watermark, no UI. A clean character turnaround reference.",
+  "{{style}}",
+].join(" ");
+
+export const DEFAULT_PRESENCE_PROMPT = [
+  `Show this exact character, {{name}}, at the "{{zone}}" of her studio apartment.`,
+  "The spot: {{zoneDesc}}",
+  "Keep her appearance consistent with the reference image ({{description}}).",
+  "Natural pose appropriate for that spot, full scene, warm cozy night lighting,",
+  "no text, no watermark, no UI. Square composition, slight high angle like a life-sim.",
+  "{{style}}",
+].join(" ");
+
+export const DEFAULT_SCENE_PROMPT = [
+  "Illustrate this moment of {{name}}'s livestream.",
+  "Where she is right now: {{position}}.",
+  "What is happening: {{narrative}}",
+  "Keep her appearance consistent with the reference image ({{description}}).",
+  "Dynamic, expressive, in-the-moment framing that reflects what's happening,",
+  "cozy stream-room setting, no text, no watermark, no UI. Square composition.",
+  "{{style}}",
+].join(" ");
+
+/** Replace `{{key}}` placeholders, trimming any that resolve to empty. */
+export function fillImagePrompt(template: string, vars: Record<string, string>): string {
+  return template
+    .replace(/\{\{\s*(\w+)\s*\}\}/g, (_, k: string) => vars[k] ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
 }

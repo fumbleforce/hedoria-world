@@ -56,11 +56,7 @@ for you to pick from. Items marked ⭐ are the ones I'd reach for first.
   becomes a follower surge then a backlash.
 - **Event cooldowns & memory** (S). Track recent events so the same beat doesn't
   recur back-to-back; reference past events in narration ("after last week's raid…").
-- **Collab / guest streamer events** (M, LLM). Another streamer raids or co-streams;
-  a temporary second voice in chat; a follower-swap payoff.
-- **Platform meta-events** (M). Algorithm changes, a competitor blows up, a
-  TOS-strike scare, payout day, tax season — pressures beyond the room.
-- **Real-life intrusion events** (M, LLM). Landlord visit, a sick day, family calls,
+- **Real-life intrusion events** (M, LLM). Landlord visit, a sick day, 
   a power cut mid-stream — the "life" half of "life sim".
 - **Seasonal / dated content** (S). Holiday streams, anniversary of going live,
   birthday donations — uses the in-world calendar.
@@ -105,8 +101,6 @@ for you to pick from. Items marked ⭐ are the ones I'd reach for first.
 - ⭐ **The occasional "stream cam" image** (M, LLM-image). Your original ask: at
   notable beats, generate a tasteful framed image of the current moment (tier-gated)
   and drop it into the narrator feed.
-- **Character sprite & animation** (M). Replace the dot with a small animated avatar
-  (idle, walk, at-desk, sleeping); outfit changes show.
 - **Day/night lighting** (S). Tint the room with the in-world clock — warm evening
   → cool late-night — so time is felt, not just read.
 - **Stream-overlay framing** (S). Render the cam feed as an actual stream layout
@@ -162,7 +156,6 @@ for you to pick from. Items marked ⭐ are the ones I'd reach for first.
 ---
 
 ## 11. Cameras & set design
-
 - ⭐ **Camera placement as a system** (M, code+UI). You can only go live from a
   zone that has a camera. The streaming desk has the built-in cam; other zones
   (couch, bed, kitchenette, bathroom) require a camera placed there. Going live
@@ -179,6 +172,8 @@ for you to pick from. Items marked ⭐ are the ones I'd reach for first.
 - **"Off-camera" actions** (S). When live, doing something in a zone with no
   camera is private (no audience reaction) — useful for ducking out of view
   deliberately, and a natural tension with parasocial viewers wanting to see more.
+
+
 
 ---
 

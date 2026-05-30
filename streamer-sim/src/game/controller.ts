@@ -1,9 +1,23 @@
 import type { LlmAdapter } from "../llm/adapter";
-import { type ImageBackend, generateRoomImage } from "../llm/imageProvider";
+import { logLlmRaw } from "../llm/adapter";
+import {
+  type ImageBackend,
+  fillImagePrompt,
+} from "../llm/imageProvider";
+import { effectiveImagePrompt } from "../llm/imagePresets";
+import {
+  type StoredImage,
+  type ImageKind,
+  putImage,
+  getByCacheKey,
+  getImage,
+  deleteImage as deleteStoredImage,
+  imageCacheKey,
+} from "../persist/imageStore";
 import { diag } from "../diag/log";
 import { useStore, type ActionMenu } from "../state/store";
 import type { ChatMessage, DmLine, EventChoice, GameEvent, Metrics } from "./types";
-import type { PlayerAction, ActionOption } from "./actions";
+import type { PlayerAction, ActionOption, ActionVerdict } from "./actions";
 import { generateChatBurst, audienceSummary } from "./chatEngine";
 import { evaluateAction } from "./evaluator";
 import { resolveAction, totalViewers } from "./resolver";
@@ -70,11 +84,29 @@ export class GameController {
       const upgrades = s.ownedUpgrades
         .map((id) => UPGRADES.find((u) => u.id === id)?.name)
         .filter(Boolean) as string[];
-      const url = await generateRoomImage(this.imageBackend, {
+      const upgradesClause = upgrades.length ? `Nice touches: ${upgrades.join(", ")}.` : "";
+      const prompt = fillImagePrompt(effectiveImagePrompt(s.settings, "roomPrompt"), {
+        upgrades: upgradesClause,
         persona: s.settings.streamerPersona,
-        upgrades,
+        name: s.settings.streamerName,
+        style: this.imageStyle(),
       });
+      const url = await this.runImage("room", prompt, []);
       s.setRoomImage(url);
+      // Also register it in the media library so it appears in the Gallery.
+      const rec: Omit<StoredImage, "slotId"> = {
+        id: uid("img"),
+        cacheKey: imageCacheKey(["room", s.settings.streamerName, prompt]),
+        kind: "room",
+        label: "Studio room",
+        prompt,
+        dataUrl: url,
+        characterName: s.settings.streamerName,
+        createdAt: Date.now(),
+      };
+      await putImage(rec);
+      s.cacheImage(rec.id, url);
+      s.setLastImage(rec.id);
       s.setToast("Room art updated!");
     } catch (err) {
       diag.error("world", "room image failed", {
@@ -89,6 +121,334 @@ export class GameController {
   clearRoom(): void {
     this.s.setRoomImage(null);
     this.s.setToast("Reverted to the default room art.");
+  }
+
+  // ----------------------------------------------------------- image library
+
+  /** Whether image generation is wired (a backend + key is present). */
+  get canGenerateImages(): boolean {
+    return this.imageBackend !== null;
+  }
+
+  /** The universal art-style line shared by every generated image. */
+  private imageStyle(): string {
+    return effectiveImagePrompt(this.s.settings, "imageStyle");
+  }
+
+  /**
+   * Run one image generation, logging the FULL prompt, reference count, timing,
+   * and a response summary to both the diag stream (logs/events.jsonl) and the
+   * raw LLM sink (logs/llm-prompts.jsonl + logs/llm-debug.log). Image calls
+   * bypass the text adapter, so without this they were never written to file.
+   */
+  private async runImage(kind: ImageKind, prompt: string, refs: string[]): Promise<string> {
+    if (!this.imageBackend) throw new Error("no image backend configured");
+    const model = this.imageBackend.id;
+    const startedAt = performance.now();
+    diag.info("world", "image request", { kind, model, refs: refs.length, prompt });
+    try {
+      const url = await this.imageBackend.generate(prompt, refs);
+      const durationMs = Math.round(performance.now() - startedAt);
+      const meta = describeDataUrl(url);
+      diag.info("world", "image response", { kind, model, durationMs, mime: meta.mime, bytes: meta.bytes });
+      logLlmRaw({
+        kind: `image:${kind}`,
+        model,
+        durationMs,
+        request: {
+          system: "",
+          messages: [{ role: "user", content: refs.length ? `${prompt}\n[+${refs.length} reference image(s)]` : prompt }],
+          jsonMode: false,
+        },
+        response: { text: `[image ${meta.mime} ~${meta.bytes} bytes]` },
+      });
+      return url;
+    } catch (err) {
+      const durationMs = Math.round(performance.now() - startedAt);
+      const msg = err instanceof Error ? err.message : String(err);
+      diag.error("world", "image request failed", { kind, model, durationMs, error: msg, prompt });
+      logLlmRaw({
+        kind: `image:${kind}`,
+        model,
+        durationMs,
+        request: { system: "", messages: [{ role: "user", content: prompt }], jsonMode: false },
+        response: { text: `ERROR: ${msg}` },
+      });
+      throw err;
+    }
+  }
+
+  /**
+   * Core image helper: returns the cached image for a key, or generates a fresh
+   * one (optionally templated from `refs`), stores it permanently, and hydrates
+   * the in-memory cache. `force` bypasses the cache (regenerate).
+   */
+  private async genImage(opts: {
+    kind: ImageKind;
+    prompt: string;
+    label: string;
+    refs?: string[];
+    sourceImageId?: string;
+    meta?: Record<string, string>;
+    force?: boolean;
+    busyLabel: string;
+  }): Promise<StoredImage | null> {
+    const s = this.s;
+    if (!this.imageBackend) {
+      s.setToast("Set a Gemini or OpenRouter key to generate images.");
+      return null;
+    }
+    // Key the cache on the resolved prompt (and any reference image) so editing a
+    // prompt template, the description it embeds, or the source it templates from
+    // naturally produces a fresh image.
+    const cacheKey = imageCacheKey([opts.kind, s.settings.streamerName, opts.prompt, opts.sourceImageId]);
+    if (!opts.force) {
+      const hit = await getByCacheKey(cacheKey);
+      if (hit) {
+        s.cacheImage(hit.id, hit.dataUrl);
+        if (opts.kind !== "body") s.setLastImage(hit.id);
+        diag.info("world", "image cache hit", { kind: opts.kind, label: opts.label });
+        return hit;
+      }
+    }
+    if (s.imageBusy) {
+      s.setToast("An image is already generating…");
+      return null;
+    }
+    s.setImageBusy(opts.busyLabel);
+    s.setToast(`${opts.busyLabel}… (this can take a while)`);
+    try {
+      const url = await this.runImage(opts.kind, opts.prompt, opts.refs ?? []);
+      const rec: Omit<StoredImage, "slotId"> = {
+        id: uid("img"),
+        cacheKey,
+        kind: opts.kind,
+        label: opts.label,
+        prompt: opts.prompt,
+        dataUrl: url,
+        characterName: s.settings.streamerName,
+        meta: opts.meta,
+        sourceImageId: opts.sourceImageId,
+        createdAt: Date.now(),
+      };
+      const stored = await putImage(rec);
+      s.cacheImage(stored.id, url);
+      // The body T-pose is a template, not a "visualization" worth centering.
+      if (opts.kind !== "body") s.setLastImage(stored.id);
+      diag.info("world", "image generated", { kind: opts.kind, bytes: url.length });
+      return stored;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      diag.error("world", "image failed", { kind: opts.kind, error: msg });
+      s.setToast(`Image failed: ${msg}`);
+      return null;
+    } finally {
+      s.setImageBusy(null);
+    }
+  }
+
+  /** Generate the player character's portrait and reusable T-pose body. */
+  async generateCharacter(description: string, force = false): Promise<void> {
+    const s = this.s;
+    const desc = description.trim();
+    if (!desc) {
+      s.setToast("Describe how your streamer looks first.");
+      return;
+    }
+    s.setCharacter({ description: desc });
+    const name = s.settings.streamerName;
+    const vars = {
+      name,
+      description: desc,
+      style: this.imageStyle(),
+      gender: (s.settings.gender ?? "").trim(),
+    };
+
+    const portrait = await this.genImage({
+      kind: "portrait",
+      prompt: fillImagePrompt(effectiveImagePrompt(s.settings, "portraitPrompt"), vars),
+      label: `${name} — portrait`,
+      busyLabel: "Generating portrait",
+      force,
+    });
+    if (portrait) s.setCharacter({ portraitId: portrait.id });
+
+    // Build the body from the portrait so the face/outfit match — pass the
+    // just-generated portrait as a reference image.
+    const body = await this.genImage({
+      kind: "body",
+      prompt: fillImagePrompt(effectiveImagePrompt(s.settings, "bodyPrompt"), {
+        ...vars,
+        ...(portrait ? { match: "Match the face, hair, and outfit of the reference portrait exactly." } : {}),
+      }),
+      label: `${name} — body (template)`,
+      refs: portrait ? [portrait.dataUrl] : undefined,
+      sourceImageId: portrait?.id,
+      busyLabel: "Generating body template",
+      force,
+    });
+    if (body) s.setCharacter({ bodyId: body.id });
+
+    if (portrait || body) {
+      // The character changed, so every image templated from it (per-zone
+      // presence renders) is now stale — drop them so they're regenerated.
+      s.clearPresenceImages();
+      s.setToast("Character visuals updated — re-visualize locations to refresh them.");
+    }
+  }
+
+  /** The body data URL used as a templating reference, if available. */
+  private async bodyRef(): Promise<{ url: string; id: string } | null> {
+    const bodyId = this.s.character.bodyId;
+    if (!bodyId) return null;
+    const cached = this.s.imageCache[bodyId];
+    if (cached) return { url: cached, id: bodyId };
+    const rec = await getImage(bodyId);
+    if (!rec) return null;
+    this.s.cacheImage(rec.id, rec.dataUrl);
+    return { url: rec.dataUrl, id: rec.id };
+  }
+
+  /** Generate (or fetch cached) the character placed in a given zone. */
+  async generatePresence(zoneId: ZoneId, force = false): Promise<void> {
+    const s = this.s;
+    const desc = s.character.description.trim();
+    if (!desc) {
+      s.setToast("Create your character's look first (🎭 Character).");
+      return;
+    }
+    const zone = ZONES[zoneId];
+    if (!zone) return;
+    const ref = await this.bodyRef();
+    const rec = await this.genImage({
+      kind: "presence",
+      prompt: fillImagePrompt(effectiveImagePrompt(s.settings, "presencePrompt"), {
+        name: s.settings.streamerName,
+        description: desc,
+        zone: zone.label,
+        zoneDesc: zone.description,
+        style: this.imageStyle(),
+      }),
+      label: `${s.settings.streamerName} — ${zone.label}`,
+      refs: ref ? [ref.url] : undefined,
+      sourceImageId: ref?.id,
+      meta: { zone: zoneId },
+      busyLabel: `Visualizing ${zone.label}`,
+      force,
+    });
+    if (rec) s.setPresenceImage(zoneId, rec.id);
+  }
+
+  /** Generate an image of the current narrative beat and drop it in the feed. */
+  async generateScene(force = false): Promise<void> {
+    const s = this.s;
+    const desc = s.character.description.trim();
+    if (!desc) {
+      s.setToast("Create your character's look first (🎭 Character).");
+      return;
+    }
+    const narrative = this.recentNarrative();
+    if (!narrative) {
+      s.setToast("Nothing's happened yet to visualize.");
+      return;
+    }
+    const ref = await this.bodyRef();
+    const zone = ZONES[s.zone];
+    const positionLabel = zone ? `${zone.label} — ${zone.description}` : "her studio";
+    const rec = await this.genImage({
+      kind: "scene",
+      prompt: fillImagePrompt(effectiveImagePrompt(s.settings, "scenePrompt"), {
+        name: s.settings.streamerName,
+        description: desc,
+        position: positionLabel,
+        narrative,
+        style: this.imageStyle(),
+      }),
+      label: narrative.slice(0, 60),
+      refs: ref ? [ref.url] : undefined,
+      sourceImageId: ref?.id,
+      busyLabel: "Visualizing the scene",
+      force,
+    });
+    if (rec) {
+      s.pushStory({ kind: "image", text: rec.label, imageId: rec.id });
+    }
+  }
+
+  /** Recent narration to seed a scene image (newest dm/outcome lines). */
+  private recentNarrative(): string {
+    const lines = this.s.story
+      .filter((e) => e.kind === "dm" || e.kind === "outcome" || e.kind === "action")
+      .slice(-4)
+      .map((e) => e.text);
+    return lines.join(" ").slice(-500).trim();
+  }
+
+  /** Force a fresh render for an existing stored image (same cache key). */
+  async regenerateImage(rec: StoredImage): Promise<void> {
+    const s = this.s;
+    if (!this.imageBackend || s.imageBusy) return;
+    if (rec.kind === "portrait" || rec.kind === "body") {
+      await this.generateCharacter(s.character.description || rec.prompt, true);
+      return;
+    }
+    if (rec.kind === "presence" && rec.meta?.zone) {
+      await this.generatePresence(rec.meta.zone as ZoneId, true);
+      return;
+    }
+    s.setImageBusy("Regenerating");
+    try {
+      const ref = rec.sourceImageId ? await this.bodyRef() : null;
+      const url = await this.imageBackend.generate(rec.prompt, ref ? [ref.url] : undefined);
+      const next: StoredImage = { ...rec, id: uid("img"), dataUrl: url, createdAt: Date.now() };
+      await putImage(next);
+      s.cacheImage(next.id, url);
+      if (next.kind !== "body") s.setLastImage(next.id);
+      s.setToast("Regenerated.");
+    } catch (err) {
+      s.setToast(`Regenerate failed: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      s.setImageBusy(null);
+    }
+  }
+
+  /** Delete a stored image and detach it from any references that point to it. */
+  async deleteImage(rec: StoredImage): Promise<void> {
+    const s = this.s;
+    await deleteStoredImage(rec.id);
+    s.uncacheImage(rec.id);
+    if (s.character.portraitId === rec.id) s.setCharacter({ portraitId: null });
+    if (s.character.bodyId === rec.id) s.setCharacter({ bodyId: null });
+    for (const [zone, id] of Object.entries(s.presenceImages)) {
+      if (id === rec.id) s.setPresenceImage(zone as ZoneId, null);
+    }
+    s.setToast("Image deleted.");
+  }
+
+  /** Set a stored portrait/body as the active character image. */
+  setActiveImage(rec: StoredImage): void {
+    const s = this.s;
+    s.cacheImage(rec.id, rec.dataUrl);
+    if (rec.kind === "portrait") s.setCharacter({ portraitId: rec.id });
+    else if (rec.kind === "body") s.setCharacter({ bodyId: rec.id });
+    else if (rec.kind === "presence" && rec.meta?.zone) s.setPresenceImage(rec.meta.zone as ZoneId, rec.id);
+    s.setToast("Set as active.");
+  }
+
+  /** Pull persisted image ids (portrait/body/presence) into the memory cache. */
+  async hydrateImageCache(): Promise<void> {
+    const s = this.s;
+    const ids = [
+      s.character.portraitId,
+      s.character.bodyId,
+      s.lastImageId,
+      ...Object.values(s.presenceImages),
+    ].filter((x): x is string => !!x);
+    for (const id of ids) {
+      if (s.imageCache[id]) continue;
+      const rec = await getImage(id);
+      if (rec) s.cacheImage(rec.id, rec.dataUrl);
+    }
   }
 
   private get s() {
@@ -258,6 +618,13 @@ export class GameController {
       .map((m) => `${m.user}: ${m.text}`);
   }
 
+  /** A short, ever-changing read on her state — keeps per-beat narration fresh. */
+  private vibeSummary(): string {
+    const m = this.s.metrics;
+    const band = (v: number) => (v >= 70 ? "high" : v >= 35 ? "okay" : "low");
+    return `energy ${band(m.energy)}, mood ${band(m.mood)}, hype ${band(m.hype)}, ~${Math.round(totalViewers(this.s.audience))} watching`;
+  }
+
   // ----------------------------------------------------------- action pipeline
 
   chooseOption(opt: ActionOption): void {
@@ -335,6 +702,8 @@ export class GameController {
           audienceSummary: audienceSummary(s.audience),
           isLive: s.session.isLive,
           zoneLabel: ZONES[s.zone]?.label ?? "the studio",
+          recentChat: this.recentChatLines(),
+          vibe: this.vibeSummary(),
         });
 
         if (!verdict.plausible) {
@@ -348,8 +717,6 @@ export class GameController {
           const g = GAME_BY_ID[s.playing.gameId];
           if (g) for (const seg of g.pleases) verdict.appeal[seg] = (verdict.appeal[seg] ?? 0) + 1;
         }
-
-        this.dm(verdict.narration);
 
         const result = resolveAction({
           verdict,
@@ -367,13 +734,26 @@ export class GameController {
             newFollowers: s.session.newFollowers + result.gainedFollowers,
             peak: Math.max(s.session.peak, totalViewers(result.audience)),
           });
+
+          // Lead the beat with her ACTUAL spoken words (the real joke, answer,
+          // flirt) so the performance reads first. Only then the stage direction
+          // and the chat reacting to what she actually said — otherwise the feed
+          // describes the reaction before she's even spoken.
+          const say = await this.performLine(action, verdict);
+          // She's TALKING on stream, not typing — her words live in the narrator
+          // feed only, never in the chat panel (that's the audience).
+          if (say) this.s.pushStory({ kind: "quote", text: say });
+
+          // Brief stage direction (her demeanor) follows her words, then the
+          // mechanical outcome summary.
+          this.dm(verdict.narration);
           if (result.summary) this.outcome(result.summary);
 
           const count = clamp(Math.round(totalViewers(result.audience) / 6) + 2, 3, 8);
-          // Give chat both what she literally did and the narrated result so it
-          // can react to the actual content, not just the prose.
-          const reactTo =
-            action.source === "freeform"
+          // React to her ACTUAL words when we have them, else fall back to prose.
+          const reactTo = say
+            ? `${s.settings.streamerName} just said on stream: "${say}"`
+            : action.source === "freeform"
               ? `${s.settings.streamerName} did/said: "${action.text}". (In the moment: ${verdict.narration})`
               : verdict.narration;
           const msgs = await generateChatBurst(this.llm, this.chatCtx(reactTo, count));
@@ -381,6 +761,9 @@ export class GameController {
           this.applyChatEffects(msgs);
 
           if (s.playing) s.setPlaying({ ...s.playing, roundsPlayed: s.playing.roundsPlayed + 1 });
+        } else {
+          // Offline: no chat to react, so the narration carries the whole beat.
+          this.dm(verdict.narration);
         }
 
         const weight: TimeWeight = weightForIntensity(verdict.intensity);
@@ -390,6 +773,43 @@ export class GameController {
         this.s.setResolving(false);
       }
     });
+  }
+
+  /**
+   * Generate the streamer's ACTUAL spoken words for a live action (the real
+   * joke, the real answer, the flirty line) as a first-person quote. Returns
+   * null if it can't (so callers just skip the quote).
+   */
+  private async performLine(action: PlayerAction, verdict: ActionVerdict): Promise<string | null> {
+    const s = this.s;
+    if (this.llm.isMock) return mockPerformance(action, verdict);
+    try {
+      const res = await this.llm.complete(
+        {
+          system: this.resolvePrompt("performance"),
+          messages: [
+            {
+              role: "user",
+              content: [
+                `You are LIVE on cam, at the ${ZONES[s.zone]?.label ?? "studio"}.`,
+                `Audience right now: ${audienceSummary(s.audience)}`,
+                `What you are doing this moment: ${action.text}`,
+                verdict.tags.length ? `Vibe: ${verdict.tags.join(", ")}.` : "",
+                `Recent chat:\n${this.recentChatLines().join("\n") || "(quiet)"}`,
+                "Now say it out loud, in your own voice:",
+              ]
+                .filter(Boolean)
+                .join("\n"),
+            },
+          ],
+        },
+        { kind: "chat" },
+      );
+      return cleanQuote(res.text);
+    } catch (err) {
+      diag.warn("chat", "performance line failed", { error: err instanceof Error ? err.message : String(err) });
+      return null;
+    }
   }
 
   /** Coded (non-LLM) action: fixed mechanics + DM line + explicit time cost. */
@@ -528,8 +948,18 @@ export class GameController {
   // ----------------------------------------------------------- world / zones
 
   goToZone(zoneId: ZoneId): void {
-    this.s.setZone(zoneId);
+    const s = this.s;
+    s.setZone(zoneId);
     diag.debug("world", "move to zone", { zone: zoneId });
+    // Returning to a place that has a cached position visualization makes it the
+    // current center-stage image again.
+    const presenceId = s.presenceImages[zoneId];
+    if (presenceId) {
+      s.setLastImage(presenceId);
+      if (!s.imageCache[presenceId]) {
+        void getImage(presenceId).then((rec) => rec && s.cacheImage(rec.id, rec.dataUrl));
+      }
+    }
   }
 
   openZoneMenu(zoneId: ZoneId): void {
@@ -777,4 +1207,36 @@ export class GameController {
 
 function actionEcho(a: PlayerAction): string {
   return a.source === "freeform" ? `You: "${a.text}"` : `▸ ${a.text}`;
+}
+
+/** Strip wrapping quotes / asterisks / name prefixes from a spoken line. */
+function cleanQuote(text: string): string | null {
+  let t = text.trim().replace(/\*+/g, "").trim();
+  // Drop a leading "Name:" prefix if the model added one.
+  t = t.replace(/^[A-Za-z0-9_ ]{1,24}:\s+/, "").trim();
+  // Strip a single pair of surrounding quotes.
+  if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'"))) {
+    t = t.slice(1, -1).trim();
+  }
+  return t ? t.slice(0, 600) : null;
+}
+
+/** Offline canned spoken lines so the feature still works without an API key. */
+function mockPerformance(action: PlayerAction, verdict: ActionVerdict): string | null {
+  const tags = new Set(verdict.tags);
+  if (tags.has("funny")) return "Okay okay — why don't skeletons fight each other? They don't have the guts!";
+  if (tags.has("flirty") || tags.has("teasing")) return "Aww, you're all so sweet to me tonight… careful, you'll make me blush.";
+  if (tags.has("grateful")) return "Seriously, thank you — you have no idea how much you all keep me going.";
+  if (tags.has("vulnerable") || tags.has("personal")) return "Honestly? Some weeks are hard. But hanging out with you makes it lighter.";
+  if (tags.has("boundary-setting")) return "Hey — that's not okay, and I'm not going to entertain it. Moving on.";
+  if (tags.has("energetic") || tags.has("hype")) return "Let's GO chat! Turn it up, I'm feeling it tonight!";
+  const t = action.text.replace(/[.!?]+$/, "").trim();
+  return t ? `Alright chat — ${t}!` : null;
+}
+
+/** Summarize a generated data URL (mime + approx decoded byte size) for logs. */
+function describeDataUrl(url: string): { mime: string; bytes: number } {
+  const m = /^data:([^;]+);base64,(.*)$/s.exec(url);
+  if (!m) return { mime: "url", bytes: url.length };
+  return { mime: m[1], bytes: Math.round(m[2].length * 0.75) };
 }
