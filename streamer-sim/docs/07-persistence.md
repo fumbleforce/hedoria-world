@@ -3,6 +3,18 @@
 Files: `src/persist/saves.ts`, `imageStore.ts`, `useStoredImage.ts`,
 `src/state/store.ts`, `src/boot.ts`.
 
+## Policy
+
+**Full-state persistence:** refresh, slot reload, and browser restart must restore
+the **exact** gameplay state the player had — live session, activity, in-progress
+scenes, pending events, UI-relevant flags, chat/story, clock, zone, roster, audience,
+etc. See [`.cursor/rules/streamer-sim-persistence.mdc`](../../.cursor/rules/streamer-sim-persistence.mdc)
+for agent/engineering rules when adding state.
+
+The sections below describe **what the code does today**. Any field listed as "not
+persisted" that affects player-visible or sim behavior is **policy debt** until moved
+into `partialize` or restored in `boot` / `resumeLive()`.
+
 ## Two-tier model
 
 - **localStorage** — the save-slot index, per-slot game state (small JSON), and slot
@@ -38,27 +50,33 @@ Persist name is `limelight-save-v3` by default but is **retargeted at boot** to
 `merge` deep-merges `settings` so new settings fields get defaults on old saves.
 
 **Persisted:**
-`metrics`, `session`, `settings`, `ownedUpgrades`, `promptOverrides`, `eventLog`,
-`recentEvents`, `arcs`, `completedGoals`, `roomImage`, `dmThreads`, `chat`, `story`,
-`clock`, `zone`, `character` (ids only), `presenceImages` (ids), `lastImageId`,
-`roster` (online flags stripped at boot), `pendingVisits`, and the active `visitor`
-guest scene (so an in-progress visit survives a reload).
+`metrics`, `session`, `activity` (while live), `audience`, `settings`, `ownedUpgrades`, `ownedActivities`, `promptOverrides`,
+`eventLog`, `recentEvents`, `arcs`, `completedGoals`, `roomImage`, `dmThreads`, `chat`,
+`story`, `clock`, `zone`, `character` (ids only), `presenceImages` (ids), `lastImageId`,
+`roster` (verbatim, **including** online flags), `pendingVisits`, and the active
+`visitor` guest scene (so an in-progress visit survives a reload).
 
 > `chat`, `story`, `clock`, and `zone` were **recently added** to fix history being
 > wiped on reload. `chat` is capped at 140 messages, `story` at 200.
 >
-> `session` is now persisted too, so a **live** stream survives a reload (the `isLive`
-> flag plus the `round`/`earnings`/`newFollowers`/`peak` totals). The transient parts
-> of being live — `audience`, roster `online` flags, viewer count, and the ambient-chat
-> loop — are **not** persisted; `boot.ts` calls `controller.resumeLive()` to rebuild
-> them from the persisted roster when `session.isLive`. Old saves without a stored
-> `session` key keep the offline default (the persist `merge` only spreads keys present
-> in the saved blob).
+> `session` is persisted so a **live** stream survives a reload (the `isLive` flag plus
+> the `round`/`earnings`/`newFollowers`/`peak` totals). **`activity`** is saved with
+> it while live so an in-progress segment (game, ASMR, etc.) survives reload too.
+> The **full live room** is now
+> persisted too: the roster's `online` flags and the `audience` snapshot (segment
+> populations + satisfaction). `currentViewers` rides along inside `metrics`. So a
+> reload/load reproduces the **exact** room it was saved in — same cast online, same
+> audience mix — rather than re-rolling who's watching. `boot.ts` calls
+> `controller.resumeLive()` only to restore controller-internal counters; it does **not**
+> touch presence and does **not** fabricate chat. Old saves without a stored `session`
+> key keep the offline default (the persist `merge` only spreads keys present in the
+> saved blob).
 
 **Not persisted (reset/rebuilt on reload):**
-`booted`, `audience` (rebuilt by `resumeLive` → `presenceTick` when live), `playing`,
-`pendingEvent`, `resolving`, all UI modal flags, `toast`, busy flags, and the in-memory
-`imageCache` / `stylePreviews` (rebuilt from IndexedDB).
+`booted`, `pendingEvent`, `resolving`, all UI modal flags, `toast`, busy
+flags, and the in-memory `imageCache` / `stylePreviews` (rebuilt from IndexedDB). The
+ambient-chat loop isn't a state field — it isn't restarted on load and resumes on the
+player's next action.
 
 ## IndexedDB media (`imageStore.ts`)
 
@@ -87,7 +105,8 @@ IndexedDB.
 1. `migrateLegacy()` → resolve the active slot.
 2. Point the persist layer at `limelight-slot:{id}` and `rehydrate()`.
 3. Configure diagnostics from `consoleLevel`.
-4. Clear all roster `online` flags (keep relationships/memory).
+4. Normalize the roster (back-fill fields for old saves) **without** touching presence —
+   online flags are restored as saved.
 5. Load the room image from IndexedDB (migrating any legacy key).
 6. Read `VITE_GEMINI_API_KEY`, probe `/__openrouter/status`.
 7. **Reconcile the backend** (`effectiveBackend`): a stale/default `mock` upgrades to a
@@ -96,9 +115,10 @@ IndexedDB.
 8. Build the text provider, image backend, and `GameController`.
 9. `hydrateImageCache()` (async) pulls portrait/body/presence/last-image blobs into
    memory.
-10. If the persisted `session.isLive`, call `controller.resumeLive()` — rebuild presence
-    (online flags + audience) from the roster and restart the ambient-chat loop so a
-    mid-stream reload picks up where it left off.
+10. If the persisted `session.isLive`, call `controller.resumeLive()` — restore
+    controller-internal counters only. Presence (online flags) and `audience` are already
+    persisted, so the saved room is reproduced exactly; no chat is fabricated and the
+    ambient loop resumes on the player's next action.
 11. `updateActiveMeta`, then `setBooted(true)`.
 
 A `bootPromise` singleton ensures boot runs once.

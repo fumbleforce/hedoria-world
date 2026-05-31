@@ -26,8 +26,15 @@ Follow-ups (2026-05, post-review):
   supersedes them). Dropped the unused `masteryLevelsFor` export.
 - **`incomingDm` capability** — events that narrate a private message now land a real
   DM in the inbox (`pushDm` + unread + notify) instead of just describing one. The
-  author prompt requires DM-shaped beats to use `notice` + `incomingDm` with literal
-  `message` text, and forbids narrating any consequence without the matching effect.
+  director supplies the *gist* (`charRef` + `note`); the sender then writes the line
+  itself via `composeIncomingDm`, so voice + what they reveal stays in-character.
+- **NPC self-knowledge & natural reveals** — every character is seeded with a
+  persistent `realName` (and `characterVoiceBlock` now feeds their whole self into
+  NPC-voice prompts) with the rule to share only what fits the relationship and to
+  never censor (no `[Redacted]`). The player learns facts the natural way — the
+  relationship milestone exposes `realName`, or the NPC volunteers it and the DM
+  director emits a structured `reveal`. No forced/regex reveals; all paths resolve to
+  the same consistent `realName`.
 - **Scenes pass time slowly** — each beat advances the clock by
   `BALANCE.events.beatMinutes` (2 min) so events breathe without burning the night.
 
@@ -123,32 +130,25 @@ domain mastery, and the systems below). See `docs/02`, `docs/03`, `docs/08`.
 > win/lose/eviction state, and the difficulty arc targets in `docs/02` are proposals
 > to validate by playtest.
 
-## 5. The "playing a game" sub-state
-
-- **Actual mini-game feedback** (M). While playing, surface a tiny game-specific
-  widget (horror jump-scare meter, FPS K/D, farm day counter) that your actions
-  nudge — more than a flavor label.
+## 5. The "playing a game" + other sub-states
+- **Generic sub-state engine**, like the event/meet engine, where we are actively doing some activity over longer periods of time. It could be things like reading a book aloud, masturbating on cam, anything in between. Engagved via a start activity menu like for actions, with some pre-filled options plus a custom option. 
+- **Activity story** (M). While playing, we get a more detailed narration during the current activity
 - **Game-specific chat & events** (S, LLM). Backseat gamers during FPS, scream-clip
   requests during horror, route-voting during a dating sim.
 - **Game library as purchases** (S). Buy/unlock games from the shop; some please
   niches you're trying to grow.
 
-## 6. Graphics & presentation
 
-- ⭐ **LLM-generated room background** (M, LLM-image). The option you picked: generate
-  a detailed studio render and slot it behind the SVG zone hotspots; regenerate as
-  you upgrade furniture/apartment. SVG stays the offline fallback.
+## 6. Graphics & presentation
 - ⭐ **The occasional "stream cam" image** (M, LLM-image). Your original ask: at
   notable beats, generate a tasteful framed image of the current moment (tier-gated)
-  and drop it into the narrator feed.
+  and drop it into the narrator feed. Taken from the Camera perspective.
 - **Day/night lighting** (S). Tint the room with the in-world clock — warm evening
   → cool late-night — so time is felt, not just read.
 - **Stream-overlay framing** (S). Render the cam feed as an actual stream layout
   (webcam box, alerts, recent-follower toast) for theme.
 - **Animated metric/alert toasts** (S). Follower/sub/tip alerts slide in like a real
   stream, with sound.
-- **Polish pass on the SVG** (S). Nicer furniture, shadows, a rug, plants, props
-  that appear as you buy upgrades.
 
 ## 7. Audio
 
@@ -257,7 +257,7 @@ worth revisiting.
 
 ---
 
-## 13. NPC depth pass — motives, progressive reveal, layered memory
+## DONE: 13. NPC depth pass — motives, progressive reveal, layered memory
 
 The named cast (`game/characters.ts`) is seeded once and barely deepens after.
 A sheet's `vibe`/`wants` are fixed archetype constants; `backstory`/`quirks`

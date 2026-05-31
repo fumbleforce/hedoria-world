@@ -34,7 +34,7 @@ import { diag } from "../diag/log";
 import { useStore, type ActionMenu, setFeedbackContext, clearFeedbackContext } from "../state/store";
 import type { ChatMessage, ContentTier, DmLine, EventChoice, GameEvent, Metrics, PendingEventSeed } from "./types";
 import type { PlayerAction, ActionOption, ActionVerdict } from "./actions";
-import { generateChatBurst, audienceSummary, chatBurstCount, chatAmbientPlan } from "./chatEngine";
+import { generateChatBurst, audienceSummary, chatBurstCount, chatAmbientPlan, growthPing } from "./chatEngine";
 import { evaluateAction } from "./evaluator";
 import { resolveAction, totalViewers } from "./resolver";
 import { occasionForDay } from "./calendar";
@@ -49,11 +49,28 @@ import {
   type EventSpec,
 } from "./eventDirector";
 import { multipliersFor, UPGRADES } from "./shop";
-import { fillPrompt, PROMPTS, type PromptId } from "./prompts";
-import { steeringForTier } from "./content";
+import { fillPrompt, PROMPTS, promptSections, activityLockBlock, type PromptId, type ActivityPromptContext } from "./prompts";
+import { isNoLimits, steeringForTier, tierIntensity } from "./content";
+import {
+  clampHornyForTier,
+  drainNeeds,
+  hornyBuild,
+  hornySceneRelief,
+  nagForNeed,
+  nagMessage,
+  needsPenaltyPerBeat,
+  needsStrain,
+  physicalCues,
+} from "./needs";
+import { growthProjection, liveSubFractionPerBeat, subProjection, viewerDrivers } from "./derived";
 import { initialAudience, SEGMENT_IDS } from "./segments";
 import { ZONE_MENUS, ZONES, type ZoneId } from "./studio";
-import { GAME_BY_ID } from "./games";
+import {
+  ACTIVITY_BY_ID,
+  activityStateFrom,
+  customActivityState,
+  type Activity,
+} from "./activities";
 import { ARCHETYPE_BY_ID } from "./archetypes";
 import {
   advancePresence,
@@ -69,6 +86,7 @@ import {
   hasBackstoryLayer,
   syncBackstoryString,
   characterVoiceBlock,
+  personalityProse,
   pronouns,
   type CharacterSheet,
   type BackstoryLayer,
@@ -118,6 +136,10 @@ export class GameController {
   private beatsSinceLastEvent = 999;
   /** In-world day when the last director event fired (offline throttle). */
   private lastEventDay = 0;
+  /** Beats since a needs nag line (throttle). */
+  private beatsSinceNeedNag = 999;
+  /** Fractional subs accrued this stream — rolls into chat pings at 1.0. */
+  private subAccrual = 0;
 
   constructor(
     private readonly llm: LlmAdapter,
@@ -854,33 +876,17 @@ export class GameController {
 
   // ----------------------------------------------------------- presence helpers
 
-  private targetNamed(): number {
-    const m = this.s.metrics;
-    return clamp(Math.round(m.followers / 22) + 2, 2, 14);
-  }
-  private anonFloor(): number {
-    const m = this.s.metrics;
-    return Math.round(m.followers * 0.02 * (0.5 + m.hype / 100));
-  }
-  private reputation(): number {
-    return Math.min(1, this.s.metrics.followers / 300);
-  }
-
-  /**
-   * Drift the named cast + refresh segment populations from presence. Pass
-   * `announce: false` when rebuilding transient presence (e.g. resuming a live
-   * session after a reload) so the restored roster doesn't spam "joined" lines
-   * for people who were already in the room.
-   */
-  private presenceTick(announce = true): void {
+  /** Drift the named cast + refresh segment populations from presence. */
+  private presenceTick(): void {
     const s = this.s;
     const intensity = this.intensity();
     // Gear/production quality grows the audience: scale the named-cast target and
     // the anonymous floor by the (previously dead) viewer multiplier.
-    const viewerMult = this.mults().viewer;
-    const target = Math.round(this.targetNamed() * viewerMult);
-    const anon = Math.round(this.anonFloor() * viewerMult);
-    const res = advancePresence(s.roster, s.clock, intensity, this.reputation(), target, s.audience);
+    const mult = this.mults();
+    const drivers = viewerDrivers(s.metrics, mult);
+    const target = drivers.targetNamed;
+    const anon = drivers.anonFloor;
+    const res = advancePresence(s.roster, s.clock, intensity, drivers.reputation, target, s.audience);
     const audience = audienceFromPresence(res.roster, res.online, s.audience, anon, this.spawnBias());
     s.setRoster(res.roster);
     s.setAudience(audience);
@@ -899,11 +905,11 @@ export class GameController {
           streamsAttended: c.streamsAttended + 1,
           attendanceStreak: streak,
         });
-        if (announce && streak >= 3) {
+        if (streak >= 3) {
           this.s.pushChat([this.sysChat(`${c.displayName || c.handle} — ${streak} streams running 🔥`)]);
         }
       }
-      if (announce && c.affinity >= 35) {
+      if (c.affinity >= 35) {
         this.s.pushChat([this.sysChat(`${c.displayName || c.handle} (${relationshipLevel(c.affinity)}) joined`)]);
       }
     }
@@ -929,7 +935,7 @@ export class GameController {
     void this.enrichBackstory(target.id, `threat-${outcome.patch.threat}`);
     this.sysStory(outcome.story);
     if (outcome.chat) {
-      s.pushChat([{ id: uid("msg"), user: target.handle, text: outcome.chat, kind: "creepy", characterId: target.id, ts: Date.now() }]);
+      s.pushChat([{ id: uid("msg"), user: target.handle, text: outcome.chat, kind: "creepy", characterId: target.id, scripted: true, ts: Date.now() }]);
     }
     s.setToast(`⚠ ${target.displayName || target.handle} is escalating.`);
     s.logEvent(`⚠ ${target.displayName || target.handle} escalated to threat ${outcome.patch.threat}.`);
@@ -973,11 +979,12 @@ export class GameController {
       s.setRoster(clearPresence(s.roster));
       s.setAudience(initialAudience());
       s.setSession({ isLive: true, round: 1, streamStartClock: s.clock });
-      s.setPlaying(null);
+      s.setActivity(null);
     });
     this.lastNotifiedViewers = 0;
     this.streamMemory = "";
     this.beatsSinceSummary = 0;
+    this.subAccrual = 0;
     this.presenceTick();
     this.sysStory(`Day ${s.metrics.day} — you go live at ${formatClock(s.clock)}.`);
     s.logEvent(`Day ${s.metrics.day}: went live.`);
@@ -989,12 +996,13 @@ export class GameController {
   }
 
   /**
-   * Re-establish a live session that survived a reload. `session` is persisted,
-   * but the transient presence flags / audience snapshot / viewer count are not,
-   * so after boot we silently rebuild them around the restored session instead
-   * of dropping the player offline. Loading is a no-op in-fiction: no chat lines
-   * are fabricated and the ambient loop is NOT kicked here — it resumes on the
-   * player's next action. No-op when the saved session was already offline.
+   * Re-establish a live session that survived a reload. The full live state —
+   * session, the roster's online flags, the audience snapshot and the viewer
+   * count — is persisted, so this only restores controller-internal counters and
+   * does NOT touch presence: loading reproduces the exact room it was saved in.
+   * No "joined" lines, no re-rolled cast, no fresh ambient chat — the persisted
+   * chat history is restored as-is and the ambient loop resumes on the player's
+   * next action. No-op when the saved session was already offline.
    */
   resumeLive(): void {
     const s = this.s;
@@ -1005,12 +1013,7 @@ export class GameController {
     this.lastNotifiedViewers = Math.round(s.metrics.currentViewers);
     this.streamMemory = "";
     this.beatsSinceSummary = 0;
-    // Rebuild who's "in the room" (online flags + per-segment audience) from the
-    // persisted roster — silently. Loading an existing state must not fabricate
-    // anything: no "joined" lines, no fresh ambient chat. The persisted chat
-    // history is restored as-is, and the ambient loop resumes on the player's
-    // next action (resolve/event), so the stream picks up where it left off.
-    this.presenceTick(false);
+    this.subAccrual = 0;
     diag.info("round", "resumed live session after reload", { round: s.session.round });
   }
 
@@ -1020,9 +1023,10 @@ export class GameController {
     this.stopAmbient();
     this.streamMemory = "";
     this.beatsSinceSummary = 0;
+    this.subAccrual = 0;
     const { earnings, newFollowers, peak, round } = s.session;
     s.setSession({ isLive: false });
-    s.setPlaying(null);
+    s.setActivity(null);
     s.patchMetrics({ currentViewers: 0 });
     s.setRoster(clearPresence(s.roster));
     s.pushChat([this.sysChat(`— Stream ended${reason ? ` (${reason})` : ""} —`)]);
@@ -1064,6 +1068,8 @@ export class GameController {
 
   private chatCtx(actionContext: string, count: number) {
     const s = this.s;
+    const cues = physicalCues(s.metrics, s.settings.contentTier);
+    const act = s.activity;
     return {
       settings: s.settings,
       metrics: s.metrics,
@@ -1075,6 +1081,10 @@ export class GameController {
       recentChat: this.recentChatLines(),
       streamMemory: this.streamMemory,
       characterVoices: this.characterVoices(),
+      visibleCues: cues.public,
+      activity: act
+        ? { label: act.label, narrationHint: act.narrationHint, chatHint: act.chatHint, category: act.category }
+        : undefined,
       count,
     };
   }
@@ -1082,7 +1092,7 @@ export class GameController {
   /** Last few non-system chat lines, "handle: text", for conversational flow. */
   private recentChatLines(): string[] {
     return this.s.chat
-      .filter((m) => m.kind !== "system")
+      .filter((m) => m.kind !== "system" && !m.scripted)
       .slice(-6)
       .map((m) => `${m.user}: ${m.text}`);
   }
@@ -1097,6 +1107,9 @@ export class GameController {
     const byChar = new Map<string, string[]>();
     for (const m of this.s.chat) {
       if (!m.characterId || !online.has(m.characterId) || m.kind === "system") continue;
+      // Never feed canned/offline lines back as a character's "voice" — that's
+      // how a scripted archetype line gets latched onto and parroted all night.
+      if (m.scripted) continue;
       const arr = byChar.get(m.characterId) ?? [];
       // De-dupe per character: feeding a repeated line back as a "voice"
       // exemplar (e.g. "here we go" x3) reinforces it and the chat model just
@@ -1116,9 +1129,20 @@ export class GameController {
 
   /** A short, ever-changing read on her state — keeps per-beat narration fresh. */
   private vibeSummary(): string {
-    const m = this.s.metrics;
+    const s = this.s;
+    const m = s.metrics;
     const band = (v: number) => (v >= 70 ? "high" : v >= 35 ? "okay" : "low");
-    return `energy ${band(m.energy)}, mood ${band(m.mood)}, hype ${band(m.hype)}, ~${Math.round(totalViewers(this.s.audience))} watching`;
+    const base = `energy ${band(m.energy)}, comfort ${band(m.comfort)}, hype ${band(m.hype)}, ~${Math.round(totalViewers(s.audience))} watching`;
+    const cues = physicalCues(m, s.settings.contentTier).public;
+    return cues.length ? `${base}; visibly: ${cues.join("; ")}` : base;
+  }
+
+  /** Public + private body cues for narrator / DM POV. */
+  private bodyContext(): string {
+    const s = this.s;
+    const cues = physicalCues(s.metrics, s.settings.contentTier);
+    const all = [...cues.public, ...cues.private];
+    return all.length ? all.join("; ") : "";
   }
 
   /**
@@ -1177,17 +1201,21 @@ export class GameController {
     switch (opt.prompt) {
       case "__toggle_live__": return this.s.session.isLive ? this.endStream() : this.goLive();
       case "__sleep__": return this.sleep();
-      case "__game_picker__": this.s.setGamePickerOpen(true); return;
-      case "__cook__": return this.coded("You cook instant noodles. Energy and mood restored.", { energy: 15, mood: 4 }, "🍳 Cooked", 15);
+      case "__game_picker__": this.s.setActivityPickerOpen(true); return;
+      case "__cook__": return this.coded("You cook instant noodles. Energy and fullness restored.", { energy: 15, comfort: 4, hunger: 40 }, "🍳 Cooked", 15);
       case "__coffee__": return this.coded("You brew a strong coffee. A jolt of energy.", { energy: 10 }, "☕ Coffee", 8);
-      case "__nap__": return this.coded("You curl up for a quick power nap.", { energy: 22, mood: 3 }, "😴 Napped", 45);
-      case "__freshen__": return this.coded("A hot shower. You feel human again.", { mood: 6, comfort: 5, energy: 4 }, "🚿 Freshened up", 20);
-      case "__scroll__": return this.coded("You scroll fan mail in bed. Sweet messages, a couple of weird ones.", { mood: 3, comfort: -1 }, "📱 Read fan mail", 15);
+      case "__nap__": return this.coded("You curl up for a quick power nap.", { energy: 22, comfort: 3 }, "😴 Napped", 45);
+      case "__freshen__": return this.coded("You freshen up at the sink.", { comfort: 5, energy: 4, hygiene: 25 }, "🧴 Freshened up", 12);
+      case "__shower__": return this.coded("A hot shower. You feel human again.", { hygiene: 95, comfort: 8, energy: 4 }, "🚿 Showered", 20);
+      case "__bathroom__": return this.coded("Quick bathroom break. Much better.", { bladder: 100 }, "🚽 Bathroom", 5);
+      case "__eat__": return this.coded("You sit down to a proper meal. Warm food, full stomach.", { hunger: 90, energy: 12, comfort: 5 }, "🍽 Ate well", 25);
+      case "__scroll__": return this.coded("You scroll fan mail in bed. Sweet messages, a couple of weird ones.", { comfort: 2 }, "📱 Read fan mail", 15);
+      case "__relieve__": return this.coded("You take care of yourself in private. The heat eases.", { horny: -BALANCE.horny.reliefMasturbation, comfort: 4, energy: -6 }, "💫 Relieved", 20);
       case "__order_food__": return this.orderFood();
       case "__door__": void this.answerDoor(); return;
       case "__open_shop__": this.s.setShopOpen(true); return;
-      case "__outfit_cozy__": this.s.setSettings({ outfit: "cozy" }); return this.coded("You change into something soft and comfy. The cozy crowd melts.", { mood: 3, comfort: 4 }, "🧶 Cozy fit (cozy crowd ♥)", 10);
-      case "__outfit_cute__": this.s.setSettings({ outfit: "cute" }); return this.coded("You pick a cute, photogenic fit. Hype picks up.", { mood: 3, hype: 4 }, "✨ Cute fit (hype ♥)", 10);
+      case "__outfit_cozy__": this.s.setSettings({ outfit: "cozy" }); return this.coded("You change into something soft and comfy. The cozy crowd melts.", { comfort: 7 }, "🧶 Cozy fit (cozy crowd ♥)", 10);
+      case "__outfit_cute__": this.s.setSettings({ outfit: "cute" }); return this.coded("You pick a cute, photogenic fit. Hype picks up.", { comfort: 3, hype: 4 }, "✨ Cute fit (hype ♥)", 10);
       case "__outfit_bold__": this.s.setSettings({ outfit: "bold" }); return this.coded("You go for something bold and eye-catching. Simps take notice.", { hype: 6, comfort: -3 }, "🔥 Bold fit (simps/whales ♥)", 10);
       default:
         void this.submitAction({ text: opt.prompt, source: "menu" });
@@ -1234,6 +1262,13 @@ export class GameController {
         );
         this.s.pushChat(msgs);
         this.applyChatEffects(msgs);
+        if (s.activity && s.session.isLive) {
+          await this.narrateActivityBeat();
+          if (s.activity) {
+            s.setActivity({ ...s.activity, roundsPlayed: s.activity.roundsPlayed + 1 });
+            this.applyActivityRoundCosts();
+          }
+        }
         this.advanceTime(TIME_COST.continue);
         this.afterBeat(continuation);
       } finally {
@@ -1249,12 +1284,13 @@ export class GameController {
    */
   private async narrateContinuation(): Promise<string> {
     const s = this.s;
-    const playing = s.playing ? GAME_BY_ID[s.playing.gameId]?.name ?? "" : "";
+    const act = this.activityPrompt();
+    const actLabel = act?.label ?? "";
     const fallback = () =>
       pick([
         "You stop hesitating and actually commit — the moment takes off and the room lifts with it.",
         "You follow through for real now, and it snowballs into something genuinely fun.",
-        `You lean all the way into it${playing ? ` mid-${playing}` : ""}, and the energy kicks up a gear.`,
+        `You lean all the way into it${actLabel ? ` mid-${actLabel}` : ""}, and the energy kicks up a gear.`,
       ]);
     if (this.llm.isMock) return fallback();
     try {
@@ -1264,24 +1300,38 @@ export class GameController {
           messages: [
             {
               role: "user",
-              content: [
-                `She is LIVE on cam at the ${ZONES[s.zone]?.label ?? "studio"}.`,
-                playing ? `She is playing ${playing}.` : "",
-                this.streamMemory ? `Stream so far: ${this.streamMemory}` : "",
-                `Her current vibe: ${this.vibeSummary()}.`,
-                this.recentStoryContext()
-                  ? `The story so far (oldest first, newest last):\n${this.recentStoryContext()}`
-                  : "",
-                `Recent chat:\n${this.recentChatLines().join("\n") || "(quiet)"}`,
-                "CONTINUE the scene from exactly here and MOVE IT FORWARD. If the most",
-                "recent beat only set something up or was about to begin (e.g. cueing",
-                "music to dance), she now ACTUALLY does it and it unfolds with a fresh,",
-                "concrete development — a real next thing happens. Never reset the scene,",
-                "never repeat the previous beat, and never say nothing happens. 1-3 vivid",
-                "second-person sentences.",
-              ]
-                .filter(Boolean)
-                .join("\n"),
+              content: promptSections([
+                {
+                  heading: "Scene",
+                  body: `LIVE on cam at the ${ZONES[s.zone]?.label ?? "studio"}.`,
+                },
+                {
+                  heading: "Active activity (locked — do not transition)",
+                  body: act ? activityLockBlock(act) : undefined,
+                },
+                {
+                  heading: "Stream memory",
+                  body: this.streamMemory || undefined,
+                },
+                {
+                  heading: "Current vibe",
+                  body: `${this.vibeSummary()}.${this.bodyContext() ? ` Body: ${this.bodyContext()}.` : ""}`,
+                },
+                {
+                  heading: "Story so far (oldest first)",
+                  body: this.recentStoryContext() || undefined,
+                },
+                {
+                  heading: "Recent chat",
+                  body: this.recentChatLines().join("\n") || "(quiet)",
+                },
+                {
+                  heading: "Instructions",
+                  body: act
+                    ? "CONTINUE within the locked activity segment. Move the moment forward with a fresh beat INSIDE this format — never transition, wrap up, or pivot stream type. 1-3 vivid second-person sentences."
+                    : "CONTINUE the scene from exactly here and MOVE IT FORWARD. If the most recent beat only set something up, she now ACTUALLY does it. Never reset, never repeat the previous beat. 1-3 vivid second-person sentences.",
+                },
+              ]),
             },
           ],
         },
@@ -1344,6 +1394,7 @@ export class GameController {
           recentNarration: this.recentNarrationLines(),
           vibe: this.vibeSummary(),
           streamMemory: this.streamMemory,
+          activity: this.activityPrompt(),
         });
 
         if (!verdict.plausible) {
@@ -1352,10 +1403,11 @@ export class GameController {
           return;
         }
 
-        // Mini-game flavor nudge.
-        if (s.playing && s.session.isLive) {
-          const g = GAME_BY_ID[s.playing.gameId];
-          if (g) for (const seg of g.pleases) verdict.appeal[seg] = (verdict.appeal[seg] ?? 0) + 1;
+        // Activity flavor nudge.
+        if (s.activity && s.session.isLive) {
+          for (const seg of s.activity.pleases) {
+            verdict.appeal[seg] = (verdict.appeal[seg] ?? 0) + 1;
+          }
         }
 
         const result = resolveAction({
@@ -1405,11 +1457,26 @@ export class GameController {
           const msgs = await generateChatBurst(this.llm, this.chatCtx(reactTo, count));
           this.s.pushChat(msgs);
           this.applyChatEffects(msgs);
+          const spicyCount = msgs.filter((m) => m.kind === "flirty" || m.kind === "creepy").length;
+          const hornyGain = hornyBuild(verdict, spicyCount, s.settings.contentTier);
+          if (hornyGain > 0) {
+            setFeedbackContext("spicy moment", "warn");
+            s.patchMetrics({
+              horny: clampHornyForTier(s.metrics.horny + hornyGain, s.settings.contentTier),
+            });
+            clearFeedbackContext();
+          } else if (!isNoLimits(s.settings.contentTier) && s.metrics.horny !== 0) {
+            s.patchMetrics({ horny: 0 });
+          }
           this.distributeActionAffinity(action, verdict);
           this.earnMasteryXp(verdict);
           this.drainNovelty();
 
-          if (s.playing) s.setPlaying({ ...s.playing, roundsPlayed: s.playing.roundsPlayed + 1 });
+          if (s.activity) {
+            await this.narrateActivityBeat();
+            s.setActivity({ ...s.activity, roundsPlayed: s.activity.roundsPlayed + 1 });
+            this.applyActivityRoundCosts();
+          }
         } else {
           // Offline: no chat to react, so the narration carries the whole beat.
           this.dm(verdict.narration);
@@ -1431,6 +1498,7 @@ export class GameController {
    */
   private async performLine(action: PlayerAction, verdict: ActionVerdict): Promise<string | null> {
     const s = this.s;
+    const act = this.activityPrompt();
     if (this.llm.isMock) return mockPerformance(action, verdict);
     try {
       const res = await this.llm.complete(
@@ -1439,17 +1507,37 @@ export class GameController {
           messages: [
             {
               role: "user",
-              content: [
-                `You are LIVE on cam, at the ${ZONES[s.zone]?.label ?? "studio"}.`,
-                `Audience right now: ${audienceSummary(s.audience)}`,
-                this.streamMemory ? `Stream so far: ${this.streamMemory}` : "",
-                `What you are doing this moment: ${action.text}`,
-                verdict.tags.length ? `Vibe: ${verdict.tags.join(", ")}.` : "",
-                `Recent chat:\n${this.recentChatLines().join("\n") || "(quiet)"}`,
-                "Now say it out loud, in your own voice:",
-              ]
-                .filter(Boolean)
-                .join("\n"),
+              content: promptSections([
+                {
+                  heading: "Scene",
+                  body: `LIVE on cam at the ${ZONES[s.zone]?.label ?? "studio"}.`,
+                },
+                {
+                  heading: "Active activity (locked — perform inside it)",
+                  body: act ? activityLockBlock(act) : undefined,
+                },
+                { heading: "Audience", body: audienceSummary(s.audience) },
+                { heading: "Stream memory", body: this.streamMemory || undefined },
+                {
+                  heading: "This moment's action",
+                  body: [
+                    action.text,
+                    verdict.tags.length ? `Vibe tags: ${verdict.tags.join(", ")}` : "",
+                  ]
+                    .filter(Boolean)
+                    .join("\n"),
+                },
+                {
+                  heading: "Recent chat",
+                  body: this.recentChatLines().join("\n") || "(quiet)",
+                },
+                {
+                  heading: "Instructions",
+                  body: act
+                    ? "Say it out loud in the locked activity's format and voice. Do not announce a segment change."
+                    : "Say it out loud, in your natural on-stream voice:",
+                },
+              ]),
             },
           ],
         },
@@ -1481,13 +1569,24 @@ export class GameController {
 
   private advanceTime(minutes: number): void {
     const s = this.s;
+    const prev = { ...s.metrics };
     s.setClock(s.clock + minutes);
+    const needDrain = drainNeeds(s.metrics, minutes);
+    const patch: Partial<Metrics> = { ...needDrain };
     if (s.session.isLive) {
-      // Energy/hype drift scale with elapsed time.
-      s.patchMetrics({
-        energy: s.metrics.energy - minutes * 0.12,
-        hype: s.metrics.hype - minutes * 0.1,
-      });
+      patch.energy = s.metrics.energy - minutes * 0.12;
+      patch.hype = s.metrics.hype - minutes * 0.1;
+      Object.assign(patch, needsPenaltyPerBeat({ ...s.metrics, ...needDrain }));
+    }
+    s.patchMetrics(patch);
+    if (s.session.isLive) {
+      const nag = nagForNeed(s.metrics, prev);
+      if (nag && this.beatsSinceNeedNag >= BALANCE.needs.nagCooldownBeats) {
+        this.beatsSinceNeedNag = 0;
+        this.dm(nagMessage(nag));
+      } else {
+        this.beatsSinceNeedNag += 1;
+      }
       s.setSession({
         round: s.session.round + 1,
         seconds: streamElapsed(s.clock, s.session.streamStartClock ?? s.clock),
@@ -1508,6 +1607,28 @@ export class GameController {
     if (streamTooLate(s.clock)) return this.endStream("it got late");
 
     this.presenceTick();
+
+    const growth = growthProjection(s.metrics, s.audience, s.metrics.currentViewers);
+    if (growth.passiveFollowersPerBeat > 0) {
+      const online = this.onlineIds();
+      const followPings = Array.from({ length: growth.passiveFollowersPerBeat }, () =>
+        growthPing(s.roster, online, "follow"),
+      );
+      s.pushChat(followPings);
+      this.applyChatEffects(followPings);
+    }
+
+    this.subAccrual += liveSubFractionPerBeat(s.metrics, s.roster, s.audience);
+    const subPings: ChatMessage[] = [];
+    while (this.subAccrual >= 1) {
+      subPings.push(growthPing(s.roster, this.onlineIds(), "sub"));
+      this.subAccrual -= 1;
+    }
+    if (subPings.length) {
+      s.pushChat(subPings);
+      this.applyChatEffects(subPings);
+    }
+
     void this.refreshStreamMemory();
     this.checkGoals();
 
@@ -1529,7 +1650,7 @@ export class GameController {
     const b = occ.bonus;
     const patch: Partial<Metrics> = {};
     if (b.hype) patch.hype = s.metrics.hype + b.hype;
-    if (b.mood) patch.mood = s.metrics.mood + b.mood;
+    if (b.comfort) patch.comfort = s.metrics.comfort + b.comfort;
     if (b.cashTips) patch.cash = s.metrics.cash + b.cashTips;
     s.patchMetrics(patch);
     if (b.cashTips && s.session.isLive) {
@@ -1638,26 +1759,143 @@ export class GameController {
     }
   }
 
-  // ----------------------------------------------------------- mini-games
+  // ----------------------------------------------------------- activities
 
-  startGame(gameId: string): void {
-    const g = GAME_BY_ID[gameId];
-    if (!g) return;
-    this.s.setGamePickerOpen(false);
-    this.s.setPlaying({ gameId, roundsPlayed: 0 });
-    this.dm(`You boot up ${g.name} ${g.emoji} and get settled. Chat reacts to the loading screen.`);
-    this.outcome(`🎮 Now playing: ${g.name}`);
-    this.s.logEvent(`Started playing ${g.name}.`);
-    diag.info("action", "start game", { gameId });
-    if (this.s.session.isLive) this.afterBeat(`just started playing ${g.name}`);
+  /** Start a catalogue activity by id, or a custom freeform activity. */
+  startActivity(spec: string | { custom: string }): void {
+    const s = this.s;
+    if (typeof spec === "object") {
+      const text = spec.custom.trim();
+      if (!text) return s.setToast("Describe what you want to do first.");
+      if (!s.session.isLive) return s.setToast("Start an activity while you're live.");
+      s.setActivityPickerOpen(false);
+      s.setActivity(customActivityState(text, s.clock));
+      this.dm(`You settle in to ${text}. Chat notices the shift in vibe.`);
+      this.outcome(`🎬 Now: ${text.slice(0, 60)}`);
+      s.logEvent(`Started custom activity: ${text.slice(0, 40)}.`);
+      if (s.session.isLive) this.afterBeat(`just started ${text.slice(0, 40)}`);
+      return;
+    }
+
+    const def = ACTIVITY_BY_ID[spec];
+    if (!def) return;
+    const gate = this.activityGate(def);
+    if (gate) return s.setToast(gate);
+    if (def.liveOnly !== false && !s.session.isLive) {
+      return s.setToast("You need to be live to start that.");
+    }
+    s.setActivityPickerOpen(false);
+    s.setActivity(activityStateFrom(def, s.clock));
+    this.dm(`You get started: ${def.name} ${def.emoji}. Chat reacts to the new segment.`);
+    this.outcome(`${def.emoji} Now: ${def.name}`);
+    s.logEvent(`Started activity: ${def.name}.`);
+    diag.info("action", "start activity", { id: spec });
+    if (s.session.isLive) this.afterBeat(`just started ${def.name}`);
   }
 
-  stopGame(): void {
-    const g = this.s.playing ? GAME_BY_ID[this.s.playing.gameId] : null;
-    this.s.setPlaying(null);
-    if (g) {
-      this.dm(`You wrap up ${g.name} and stretch. "Okay chat, what's next?"`);
-      this.s.logEvent(`Stopped playing ${g.name}.`);
+  stopActivity(): void {
+    const s = this.s;
+    const label = s.activity?.label;
+    s.setActivity(null);
+    if (label) {
+      this.dm(`You wrap up ${label} and stretch. "Okay chat, what's next?"`);
+      s.logEvent(`Stopped activity: ${label}.`);
+    }
+  }
+
+  private activityGate(def: Activity): string | null {
+    const s = this.s;
+    const intensity = tierIntensity(s.settings.contentTier);
+    if (def.noLimitsOnly && !isNoLimits(s.settings.contentTier)) {
+      return "That activity needs No Limits or custom content tier.";
+    }
+    if (def.minIntensity != null && intensity < def.minIntensity) {
+      return "Your content tier isn't high enough for that activity yet.";
+    }
+    if (def.cost != null && def.cost > 0 && !s.ownedActivities.includes(def.id)) {
+      return "Buy that in the shop first.";
+    }
+    return null;
+  }
+
+  private applyActivityRoundCosts(): void {
+    const s = this.s;
+    const act = s.activity;
+    if (!act || !s.session.isLive) return;
+    const def = ACTIVITY_BY_ID[act.activityId];
+    if (!def) return;
+    const patch: Partial<Metrics> = {};
+    if (def.hypePerRound) {
+      patch.hype = Math.min(100, s.metrics.hype + def.hypePerRound * this.mults().hype);
+    }
+    if (def.energyPerRound) {
+      patch.energy = Math.max(0, s.metrics.energy - def.energyPerRound);
+    }
+    if (Object.keys(patch).length) s.patchMetrics(patch);
+  }
+
+  /** Activity context for LLM prompts when a segment is locked in. */
+  private activityPrompt(): ActivityPromptContext | undefined {
+    const act = this.s.activity;
+    if (!act || !this.s.session.isLive) return undefined;
+    return { label: act.label, narrationHint: act.narrationHint, chatHint: act.chatHint };
+  }
+
+  /** Richer per-beat narration while an activity is active. */
+  private async narrateActivityBeat(): Promise<void> {
+    const s = this.s;
+    const act = this.activityPrompt();
+    if (!act || !s.session.isLive) return;
+    const beat = (s.activity?.roundsPlayed ?? 0) + 1;
+    const fallback = () =>
+      pick([
+        `The ${act.label} segment keeps rolling — chat stays locked in.`,
+        `You push the ${act.label} moment forward; something small but real shifts on screen.`,
+        `Another beat of ${act.label}; the room feels the continuity.`,
+      ]);
+    if (this.llm.isMock) {
+      this.s.pushStory({ kind: "dm", text: fallback() });
+      return;
+    }
+    try {
+      const res = await this.llm.complete(
+        {
+          system: [
+            this.resolvePrompt("narrator"),
+            "You are narrating one beat of an ongoing LOCKED stream activity.",
+            "Advance THIS segment only. Never transition, wrap up, or pivot format.",
+          ].join("\n"),
+          messages: [
+            {
+              role: "user" as const,
+              content: promptSections([
+                {
+                  heading: "Active activity (locked)",
+                  body: activityLockBlock(act),
+                },
+                { heading: "Stream memory", body: this.streamMemory || undefined },
+                {
+                  heading: "Recent story",
+                  body: this.recentStoryContext() || undefined,
+                },
+                {
+                  heading: "Beat",
+                  body: `Beat ${beat} of this segment.`,
+                },
+                {
+                  heading: "Instructions",
+                  body: "Write 1-3 vivid second-person sentences advancing this activity beat. No transitions. Concrete sensory detail only.",
+                },
+              ]),
+            },
+          ],
+        },
+        { kind: "story" },
+      );
+      const text = res.text.trim().replace(/\*+/g, "").trim();
+      if (text) this.s.pushStory({ kind: "dm", text });
+    } catch {
+      this.s.pushStory({ kind: "dm", text: fallback() });
     }
   }
 
@@ -1686,12 +1924,13 @@ export class GameController {
       s.logEvent(`Milestone: ${who} → ${o.id}.`);
       if (o.chat) {
         const c = s.roster[charId];
-        if (c) s.pushChat([{ id: uid("msg"), user: c.handle, text: o.chat, kind: "normal", characterId: charId, ts: Date.now() }]);
+        if (c) s.pushChat([{ id: uid("msg"), user: c.handle, text: o.chat, kind: "normal", characterId: charId, scripted: true, ts: Date.now() }]);
       }
       if (o.spawnFriend) this.spawnReferredFriend(charId);
       if (o.followerDelta) followerDelta += o.followerDelta;
       this.recordInteraction(charId, "milestone", `Reached ${o.id}`);
       void this.enrichBackstory(charId, o.id);
+      void this.evolveCharacter(charId, o.id);
     }
     if (followerDelta) s.patchMetrics({ followers: s.metrics.followers + followerDelta });
   }
@@ -1876,7 +2115,7 @@ export class GameController {
 
   private applyChatEffects(msgs: ChatMessage[]): void {
     const s = this.s;
-    let followers = 0, subscribers = 0, hype = 0, mood = 0, comfort = 0;
+    let followers = 0, subscribers = 0, hype = 0, comfort = 0;
 
     for (const msg of msgs) {
       const isTip = msg.kind === "donation" || msg.kind === "sub";
@@ -1892,7 +2131,7 @@ export class GameController {
           break;
         case "follow": followers += 1; break;
         case "raid": followers += 5; hype += 4; break;
-        case "troll": mood -= 0.6; break;
+        case "troll": comfort -= 0.6; break;
         case "creepy": comfort -= 1; break;
         default: break;
       }
@@ -1918,13 +2157,12 @@ export class GameController {
         }
       }
     }
-    if (followers || subscribers || hype || mood || comfort) {
+    if (followers || subscribers || hype || comfort) {
       const m = s.metrics;
       s.patchMetrics({
         followers: m.followers + followers,
         subscribers: m.subscribers + subscribers,
         hype: m.hype + hype,
-        mood: m.mood + mood,
         comfort: m.comfort + comfort,
       });
       if (followers > 0 || subscribers > 0) {
@@ -1961,7 +2199,10 @@ export class GameController {
     const menu = ZONE_MENUS[zoneId];
     if (!zone || !menu) return;
     const live = this.s.session.isLive;
-    const options = menu.options.filter((o) => o.liveOnly === undefined || o.liveOnly === live);
+    let options = menu.options.filter((o) => o.liveOnly === undefined || o.liveOnly === live);
+    if (!isNoLimits(this.s.settings.contentTier)) {
+      options = options.filter((o) => o.prompt !== "__relieve__");
+    }
     if (options.length === 0) {
       this.s.setToast(live ? "Nothing to do there mid-stream." : "End the stream to use that.");
       return;
@@ -1988,15 +2229,31 @@ export class GameController {
     const utilityDue =
       newDay % BALANCE.economy.utilityEveryDays === 0 ? BALANCE.economy.utilityAmount : 0;
 
-    // Restorative overnight changes (energy/mood/comfort/hype) — surfaced as
-    // their own bubbles, no money "why".
+    const tier = s.settings.contentTier;
+    const hornyAfter = isNoLimits(tier)
+      ? Math.round(m.horny * BALANCE.horny.sleepHalve)
+      : 0;
+
+    // Restorative overnight changes — surfaced as their own bubbles, no money "why".
     s.patchMetrics({
       day: newDay,
       energy: Math.min(100, m.energy + BALANCE.recovery.sleepEnergy),
-      mood: m.mood + BALANCE.recovery.sleepMood + mult.moodPerDay,
       hype: Math.max(15, m.hype * 0.6),
-      comfort: m.comfort + BALANCE.recovery.sleepComfort,
+      comfort: m.comfort + BALANCE.recovery.sleepComfort + mult.comfortPerDay,
+      bladder: BALANCE.recovery.sleepBladder,
+      hygiene: Math.min(100, m.hygiene + BALANCE.recovery.sleepHygiene),
+      hunger: Math.min(100, m.hunger + BALANCE.recovery.sleepHunger),
+      horny: hornyAfter,
     });
+
+    const subProj = subProjection(s.metrics, s.roster);
+    if (subProj.estimatedChurn > 0) {
+      setFeedbackContext("sub churn overnight", "warn");
+      s.patchMetrics({
+        subscribers: Math.max(0, m.subscribers - subProj.estimatedChurn),
+      });
+      clearFeedbackContext();
+    }
     // The money debit, explained.
     setFeedbackContext(utilityDue ? "rent & utilities" : "rent", "bad");
     s.patchMetrics({ cash: s.metrics.cash - rent - utilityDue });
@@ -2039,7 +2296,7 @@ export class GameController {
   private orderFood(): void {
     const s = this.s;
     if (s.metrics.cash < 15) return s.setToast("Not enough cash to order out.");
-    this.coded("You order delivery. Twenty minutes later: a hot meal.", { cash: -15, energy: 18, mood: 6 }, "🛵 Ordered delivery (-$15)", 25);
+    this.coded("You order delivery. Twenty minutes later: a hot meal.", { cash: -15, energy: 18, comfort: 6, hunger: 50 }, "🛵 Ordered delivery (-$15)", 25);
   }
 
   private async answerDoor(): Promise<void> {
@@ -2143,7 +2400,7 @@ export class GameController {
     const name = c?.displayName || c?.handle || "a viewer";
     this.recordTip(charId, amount, { hype: 1 });
     s.pushChat([
-      { id: uid("tip"), user: c?.handle ?? "a_viewer", text: `donated $${amount}! 💸`, kind: "donation", amount, characterId: charId, ts: Date.now() },
+      { id: uid("tip"), user: c?.handle ?? "a_viewer", text: `donated $${amount}! 💸`, kind: "donation", amount, characterId: charId, scripted: true, ts: Date.now() },
     ]);
     s.setToast(`💸 $${amount} tip from ${name}!`);
     s.logEvent(`💸 ${name} tipped $${amount}.`);
@@ -2165,20 +2422,31 @@ export class GameController {
     return pool.length ? pick(pool).id : null;
   }
 
-  /** Write the sender's unsolicited opening line, in their voice. */
+  /**
+   * Write the sender's unsolicited opening line, in their own voice. The voice
+   * block already carries their full self-knowledge (name, life, story) and the
+   * rule that they share only what feels natural — so the model speaks as a whole
+   * person without censoring. `flavor` is the gist/intent of why they're reaching
+   * out (e.g. a scenario the director set up).
+   */
   private async composeIncomingDm(c: CharacterSheet, flavor: string): Promise<string> {
     const arch = ARCHETYPE_BY_ID[c.archetypeId];
     if (this.llm.isMock) return arch ? pick(arch.lines) : "hey, you around?";
+    const streamerName = this.s.settings.streamerName;
+    const name = c.realName || c.handle;
+    const p = pronouns(c.gender);
+    const ownPublic = this.recentPublicLinesFor(c.id);
     const req = {
       system: [
-        `You are ${c.handle}, a viewer privately DMing the streamer ${this.s.settings.streamerName} out of the blue. You are NOT the streamer — you are the fan.`,
-        characterVoiceBlock(c),
-        `Your relationship with her: ${relationshipLevel(c.affinity)}.`,
-        c.memory ? `What you remember about your past chats with her: ${c.memory}` : "",
+        `You are writing an unprompted private DM from ${name} (@${c.handle}) to ${streamerName}, the streamer ${p.subj} watches. Write ONLY ${name}'s side; never speak as ${streamerName}.`,
+        characterVoiceBlock(c, streamerName),
+        `Relationship with ${streamerName}: ${relationshipLevel(c.affinity)}.`,
+        c.memory ? `What ${name} recalls of past chats with ${streamerName}: ${c.memory}` : "",
+        ownPublic ? `${name}'s own recent public-chat messages (stay consistent): ${ownPublic}` : "",
         this.recentInteractionContext(c),
         steeringForTier(this.s.settings),
-        flavor ? `Open the conversation with ${flavor}.` : "Open the conversation.",
-        `ONE short message that STARTS the conversation, lowercase, casual, like a real DM. No quotes, no stage directions.`,
+        flavor ? `What's prompting this message: ${flavor}.` : "Open the conversation.",
+        `Usually one short message to start. If the prompt implies a question ${streamerName} asked, answer it. No quotes, no stage directions.`,
       ].filter(Boolean).join("\n"),
       messages: [{ role: "user" as const, content: "(start the DM)" }],
     };
@@ -2246,8 +2514,13 @@ export class GameController {
     } else if (maxThreat >= 2) {
       signals.push({ id: "threat-2", label: "A stalker is highly escalated" });
     }
-    if (!s.session.isLive && s.metrics.mood < 35 && s.metrics.comfort < 45) {
-      signals.push({ id: "burnout", label: "Chronic low mood and comfort — burnout pressure", mustAddress: true });
+    const { factor: strain } = needsStrain(s.metrics);
+    if (
+      !s.session.isLive &&
+      s.metrics.comfort < 35 &&
+      (s.metrics.energy < 45 || strain < 0.75)
+    ) {
+      signals.push({ id: "burnout", label: "Chronic low comfort and exhaustion — burnout pressure", mustAddress: true });
     }
     if (s.metrics.cash < mults.rentPerDay * 2) {
       signals.push({ id: "rent-crunch", label: "Cash is tight relative to rent" });
@@ -2265,6 +2538,13 @@ export class GameController {
     const avgNovelty =
       noveltyKeys.length ? noveltyKeys.reduce((a, b) => a + b, 0) / noveltyKeys.length : 1;
     if (avgNovelty < 0.5) signals.push({ id: "content-stale", label: "Content feels repetitive" });
+    const act = s.activity;
+    if (act && s.session.isLive && act.roundsPlayed >= 3) {
+      signals.push({
+        id: "activity-deep",
+        label: `Deep in "${act.label}" — activity-specific beat possible`,
+      });
+    }
 
     return {
       settings: s.settings,
@@ -2297,6 +2577,9 @@ export class GameController {
       rosterIds: Object.keys(s.roster),
       upgradeIds: UPGRADES.map((u) => u.id),
       seed,
+      activity: act && s.session.isLive
+        ? { label: act.label, narrationHint: act.narrationHint, roundsPlayed: act.roundsPlayed, category: act.category }
+        : undefined,
     };
   }
 
@@ -2676,7 +2959,7 @@ export class GameController {
         }
         case "grantItem": {
           setFeedbackContext(e.note ?? e.name, "good");
-          s.patchMetrics({ mood: s.metrics.mood + 2, comfort: s.metrics.comfort + 1 });
+          s.patchMetrics({ comfort: s.metrics.comfort + 3 });
           clearFeedbackContext();
           s.logEvent(`Received: ${e.name}.`);
           break;
@@ -2712,7 +2995,10 @@ export class GameController {
           if (!charId) break;
           const c = s.roster[charId];
           if (!c) break;
-          const opener = e.message?.trim() || (await this.composeIncomingDm(c, e.note ?? ""));
+          // Let the sender write their own line from self-knowledge, using the
+          // director's text as the gist — so the voice + what they reveal stays
+          // theirs (no censored placeholders, no out-of-character ventriloquism).
+          const opener = await this.composeIncomingDm(c, (e.message || e.note || "").trim());
           s.pushDm(charId, { role: "them", text: opener });
           if (s.openCharId !== charId) s.markDmUnread(charId);
           const label = c.displayName || c.handle;
@@ -2815,7 +3101,7 @@ export class GameController {
       this.endStream("power cut");
       return;
     }
-    if (s.session.isLive) this.startAmbient("after that little moment");
+    if (s.session.isLive) this.startAmbient("after the recent beat");
   }
 
   /**
@@ -2861,15 +3147,15 @@ export class GameController {
   ): Promise<{ resolution: string; effects: Partial<Metrics> }> {
     const fallback = {
       resolution: `You handle it your own way. ${text.slice(0, 80)}… and the moment passes.`,
-      effects: { mood: 1 } as Partial<Metrics>,
+      effects: { comfort: 1 } as Partial<Metrics>,
     };
     if (this.llm.isMock) return fallback;
     const req = {
       system: [
         this.resolvePrompt("narrator"),
         "You are judging how a freeform player choice resolves during a streamer life-sim event.",
-        "Return JSON: { resolution: string (1-2 vivid second-person sentences), effects: { hype?, energy?, mood?, comfort?, followers?, cash?, subscribers? } }.",
-        "Effects are DELTAS. Keep stat deltas within -20..20, followers -30..60, cash -300..300. Be fair: reward clever/kind/brave responses, let reckless ones cost comfort/mood. Most responses are modest.",
+        "Return JSON: { resolution: string (1-2 vivid second-person sentences), effects: { hype?, energy?, comfort?, horny?, followers?, cash?, subscribers? } }.",
+        "Effects are DELTAS. Keep stat deltas within -20..20, followers -30..60, cash -300..300. horny negative = relief after intimate beats (No Limits only). Be fair: reward clever/kind/brave responses, let reckless ones cost comfort. Most responses are modest.",
       ].join("\n"),
       messages: [
         {
@@ -2967,6 +3253,11 @@ export class GameController {
       for (const [k, v] of Object.entries(outcome.effects) as Array<[keyof Metrics, number]>) {
         patch[k] = (s.metrics[k] as number) + v;
       }
+      const tier = s.settings.contentTier;
+      if (outcome.relationshipSignal === "sexual" && isNoLimits(tier)) {
+        const relief = hornySceneRelief(Math.min(5, scene.beats + 1), tier);
+        patch.horny = (patch.horny ?? s.metrics.horny) - relief;
+      }
       s.patchMetrics(patch);
       const transcriptLine = playerText ? `You: ${playerText}` : "You: (waited and watched)";
       s.patchVisitor({
@@ -3058,7 +3349,7 @@ export class GameController {
       narration: passive
         ? `${name} shifts on the couch, then breaks the silence. "So… this is wild, huh? I keep thinking I'm gonna wake up." They glance around your place, taking it in.`
         : `You handle the moment carefully, feeling the room out. ${name} watches you, waiting to see where this goes.`,
-      effects: { mood: 1 } as Partial<Metrics>,
+      effects: { comfort: 1 } as Partial<Metrics>,
       relationshipSignal: "none" as CharacterSheet["relationship"],
       threatDelta: 0,
     };
@@ -3079,9 +3370,9 @@ export class GameController {
         {
           role: "user" as const,
           content: [
-            characterVoiceBlock(c),
+            characterVoiceBlock(c, this.s.settings.streamerName),
             `Relationship: ${c.relationship}, affinity ${Math.round(c.affinity)}, threat ${c.threat}.`,
-            c.memory ? `What they remember: ${c.memory}` : "",
+            c.memory ? `What ${c.realName || c.handle} remembers: ${c.memory}` : "",
             `Transcript so far:\n${transcript.slice(-1400)}`,
             passive ? "The streamer waits silently this beat — narrate what the VISITOR does next on their own." : `The streamer now: "${text}"`,
             `Beat number: ${beats + 1}.`,
@@ -3136,11 +3427,12 @@ export class GameController {
     });
   }
 
-  /** Recent log lines for LLM continuity. */
+  /** Recent durable beats for LLM continuity (third person, streamer by name). */
   private recentInteractionContext(c: CharacterSheet): string {
     const recent = c.interactionLog.slice(-6);
     if (!recent.length) return "";
-    return `Recent history with the streamer:\n${recent.map((e) => `- [${e.kind}] ${e.text}`).join("\n")}`;
+    const streamerName = this.s.settings.streamerName;
+    return `Notable beats with ${streamerName}:\n${recent.map((e) => `- [${e.kind}] ${e.text}`).join("\n")}`;
   }
 
   /**
@@ -3152,10 +3444,11 @@ export class GameController {
     if (!c || hasBackstoryLayer(c, trigger)) return;
     const arch = ARCHETYPE_BY_ID[c.archetypeId];
     const p = pronouns(c.gender);
+    const streamerName = this.s.settings.streamerName;
     const prior = c.backstoryLayers.map((l) => l.text).join(" ");
 
     const mockText = trigger.startsWith("threat-")
-      ? `${c.handle} is becoming fixated on ${c.traits.fixation ?? "getting closer"}. The obsession is no longer subtle.`
+      ? `${c.handle} is becoming fixated on ${c.personality.fixation ?? "getting closer"}. The obsession is no longer subtle.`
       : trigger === "seed"
         ? `${arch?.blurb ?? "A viewer."} ${p.subj} wants ${c.motive.surface}.`
         : `${p.subj.charAt(0).toUpperCase()}${p.subj.slice(1)} has opened up more — ${c.motive.need}.`;
@@ -3168,6 +3461,7 @@ export class GameController {
         backstory: syncBackstoryString(layers),
         quirks: c.quirks || (arch ? pick(arch.lines) : ""),
       });
+      if (trigger === "seed") void this.enrichVoiceProfile(id);
       return;
     }
 
@@ -3180,14 +3474,15 @@ export class GameController {
             {
               role: "user",
               content: [
-                `Write ONE new backstory fragment for viewer ${c.handle} (${arch?.label}, ${c.gender}).`,
+                `Write ONE new backstory fragment for viewer ${c.realName || c.handle} (@${c.handle}, ${arch?.label}, ${c.gender}).`,
                 `Trigger: ${trigger}. Prior layers: ${prior || "(none)"}.`,
-                `Personality: ${characterVoiceBlock(c)}`,
-                c.memory ? `Memory: ${c.memory}` : "",
+                characterVoiceBlock(c, streamerName),
+                c.memory ? `Shared history: ${c.memory}` : "",
                 trigger.startsWith("threat-")
-                  ? "Reveal something darker or more specific about their fixation. Escalate, don't contradict prior layers."
-                  : "Add a human, specific detail that deepens who they are. Stay consistent with prior layers.",
-                `Return JSON: {"text": "2-3 sentences third person"}. Do NOT invent a display name.`,
+                  ? `Reveal something darker or more specific about ${c.realName || c.handle}'s fixation. Escalate, don't contradict prior layers.`
+                  : `Reveal a NEW concrete fact about ${c.realName || c.handle}'s life OUTSIDE the stream — a piece of their past, a relationship, a habit, a private hope or wound — that ${streamerName} only now learned by getting closer. This must be NEW information: do NOT restate the memory, recent chat, or anything in prior layers. Stay consistent with them.`,
+                `PERSPECTIVE: write in the THIRD PERSON about ${c.realName || c.handle}. Refer to the streamer ONLY as ${streamerName} — NEVER "you" or "your". ${c.realName || c.handle} is the fan; ${streamerName} is the streamer they watch.`,
+                `Return JSON: {"text": "2-3 sentences, third person, streamer named ${streamerName}, no second person"}. Do NOT invent a display name.`,
                 `Names already used in roster (avoid): ${taken}.`,
               ].filter(Boolean).join("\n"),
             },
@@ -3211,6 +3506,119 @@ export class GameController {
         backstoryLayers: layers,
         backstory: syncBackstoryString(layers),
       });
+    }
+    if (trigger === "seed") void this.enrichVoiceProfile(id);
+  }
+
+  /**
+   * Hybrid LLM refinement of typing voice — once per character on first contact.
+   * Deterministic seedVoiceProfile is always present; this replaces it with richer
+   * guidance the model authored (tendencies only, no example tokens).
+   */
+  private async enrichVoiceProfile(id: string): Promise<void> {
+    const c = this.s.roster[id];
+    if (!c || c.voiceRefined) return;
+    if (this.llm.isMock) {
+      this.s.patchCharacter(id, { voiceRefined: true });
+      return;
+    }
+    const arch = ARCHETYPE_BY_ID[c.archetypeId];
+    try {
+      const res = await this.llm.complete(
+        {
+          system: [
+            "Summarize how this person types in private DMs as a SHORT list of key phrases (style tags), NOT prose.",
+            "Return 3-5 comma-separated tags describing typing HABITS only (e.g. 'all-lowercase, dry one-liners, rare emoji, Brazilian-style laughter').",
+            "Do NOT write sentences, example messages, or specific words/catchphrases to copy — tendencies only.",
+          ].join("\n"),
+          messages: [
+            {
+              role: "user",
+              content: [
+                `Character: ${c.realName} (@${c.handle}), ${c.age}, ${c.occupation}, from ${c.origin}.`,
+                `Native language: ${c.nativeLanguage}.`,
+                `Personality: ${personalityProse(c.personality)}.`,
+                `Archetype: ${arch?.label ?? "viewer"}.`,
+                `Current tags: ${c.voiceProfile}.`,
+                "Refined comma-separated style tags:",
+              ].join("\n"),
+            },
+          ],
+        },
+        { kind: "story" },
+      );
+      // Normalize to compact " · "-joined tags regardless of how the model delimits.
+      const text = res.text
+        .trim()
+        .replace(/^[\s"'-]+|[\s"'.]+$/g, "")
+        .split(/[,;\n·]+/)
+        .map((t) => t.trim())
+        .filter(Boolean)
+        .slice(0, 6)
+        .join(" · ")
+        .slice(0, 200);
+      this.s.patchCharacter(id, { voiceProfile: text || c.voiceProfile, voiceRefined: true });
+    } catch {
+      this.s.patchCharacter(id, { voiceRefined: true });
+    }
+  }
+
+  /**
+   * Deepen WHO a character is as the relationship crosses a level. Rather than a
+   * fresh trivia layer, this evolves their motive (surface want / deeper need /
+   * fear) and updates their vibe to reflect how they've opened up. Fires at
+   * regular/friend/confidant. Mock LLM: no-op (keeps tests deterministic).
+   */
+  private async evolveCharacter(id: string, level: string): Promise<void> {
+    if (level !== "regular" && level !== "friend" && level !== "confidant") return;
+    const c = this.s.roster[id];
+    if (!c || this.llm.isMock) return;
+    const arch = ARCHETYPE_BY_ID[c.archetypeId];
+    try {
+      const res = await this.llm.complete(
+        {
+          system: [
+            `${c.realName || c.handle}'s bond with the streamer ${this.s.settings.streamerName} has deepened. Evolve who they are NOW — they reveal more of themselves and what they want shifts.`,
+            "Keep it consistent with their archetype and prior self; EVOLVE, don't reinvent. Each field is one short phrase (no sentences for want/need/fear/boundary).",
+            `PERSPECTIVE: third person. "vibe" is one sentence on how ${c.realName || c.handle} reads now that ${this.s.settings.streamerName} is closer — refer to the streamer as ${this.s.settings.streamerName}, never "you".`,
+            'Return JSON: {"surface": string, "need": string, "fear": string, "boundary": string, "vibe": string}.',
+          ].join("\n"),
+          messages: [
+            {
+              role: "user",
+              content: [
+                `Viewer: @${c.handle} (${arch?.label ?? "viewer"}). New level: ${level}.`,
+                `Personality: ${personalityProse(c.personality)}.`,
+                `Current surface want: ${c.motive.surface}.`,
+                `Current deeper need: ${c.motive.need}.`,
+                `Current fear: ${c.motive.fear}.`,
+                `Current boundary: ${c.motive.boundary}.`,
+                c.memory ? `Shared history: ${c.memory}` : "",
+                "Evolved motive + vibe as JSON:",
+              ].filter(Boolean).join("\n"),
+            },
+          ],
+          jsonMode: true,
+        },
+        { kind: "story" },
+      );
+      const j = extractJson<{ surface?: string; need?: string; fear?: string; boundary?: string; vibe?: string }>(res.text);
+      if (!j) return;
+      const cur = this.s.roster[id];
+      if (!cur) return;
+      const trim = (v: string | undefined, max: number) => (v ?? "").trim().slice(0, max);
+      this.s.patchCharacter(id, {
+        motive: {
+          surface: trim(j.surface, 80) || cur.motive.surface,
+          need: trim(j.need, 80) || cur.motive.need,
+          fear: trim(j.fear, 80) || cur.motive.fear,
+          boundary: trim(j.boundary, 80) || cur.motive.boundary,
+        },
+        wants: trim(j.surface, 80) || cur.wants,
+        vibe: trim(j.vibe, 200) || cur.vibe,
+      });
+    } catch {
+      // Non-fatal: keep prior motive/vibe.
     }
   }
 
@@ -3290,6 +3698,7 @@ export class GameController {
     if (!c || s.dmBusy) return;
     const t = text.trim();
     if (!t) return;
+    if (!c.backstoryLayers.length) void this.enrichBackstory(id, "seed");
     s.pushDm(id, { role: "me", text: t });
     s.setDmBusy(true);
     try {
@@ -3300,8 +3709,15 @@ export class GameController {
       // Talking 1:1 builds the relationship and a condensed memory. The first DM
       // exchange of the in-world day is the real bump; same-day follow-ups are
       // tokens, so sending five messages in one sitting ≈ one meaningful beat.
+      // Long-term memory captures the substance of the chat; we deliberately do
+      // NOT echo raw DM lines into the interaction log (recent messages already
+      // ride in the prompt). The log is reserved for durable beats: milestones,
+      // tips, visits, threats. We only stamp one lightweight "talked" beat the
+      // first time you ever DM, so the timeline has a start point.
       const memory = await this.condenseMemory(c, t, reply);
-      this.recordInteraction(id, "dm", `You: "${t.slice(0, 60)}" → ${c.handle}: "${reply.slice(0, 60)}"`);
+      if (c.interactionLog.length === 0 && !c.memory) {
+        this.recordInteraction(id, "dm", `First DM exchange (day ${s.metrics.day})`);
+      }
       const day = s.metrics.day;
       const firstToday = c.lastDmAffinityDay !== day;
       this.bumpAffinity(
@@ -3319,7 +3735,6 @@ export class GameController {
           metrics: {
             cash: this.s.metrics.cash,
             comfort: this.s.metrics.comfort,
-            mood: this.s.metrics.mood,
             day: this.s.metrics.day,
           },
           streamMemory: this.streamMemory,
@@ -3334,26 +3749,37 @@ export class GameController {
 
   /** Build the DM reply request: the character replying in-voice to the thread. */
   private dmRequest(c: CharacterSheet, history: DmLine[]) {
-    const arch = ARCHETYPE_BY_ID[c.archetypeId];
     // Map the running conversation to alternating chat turns. The streamer
     // ("me") is the user; the character ("them") is the assistant.
     const messages = history.map((l) => ({
       role: (l.role === "me" ? "user" : "assistant") as "user" | "assistant",
       content: l.text,
     }));
+    const streamerName = this.s.settings.streamerName;
+    const name = c.realName || c.handle;
+    const p = pronouns(c.gender);
+    const ownPublic = this.recentPublicLinesFor(c.id);
     return {
       system: [
-        `You are ${c.handle}, a viewer privately DMing the streamer ${this.s.settings.streamerName}. You are NOT the streamer — you are the fan.`,
-        characterVoiceBlock(c),
-        `Your relationship with her: ${relationshipLevel(c.affinity)}.`,
-        c.memory ? `What you remember about your past chats with her: ${c.memory}` : "",
-        this.recentInteractionContext(c),
+        `You are writing the private DM replies of ${name} (@${c.handle}) to ${streamerName}, the streamer ${p.subj} watches. Write ONLY ${name}'s side; never speak as ${streamerName}.`,
+        characterVoiceBlock(c, streamerName),
+        `Relationship with ${streamerName}: ${relationshipLevel(c.affinity)}.`,
+        c.memory ? `What ${name} recalls of past chats with ${streamerName}: ${c.memory}` : "",
+        ownPublic ? `${name}'s own recent messages in ${streamerName}'s public chat (stay consistent with them): ${ownPublic}` : "",
         steeringForTier(this.s.settings),
-        `Reply to her LAST message directly and relevantly, staying in character.`,
-        `If she asks you a question, actually answer it. ONE short message, lowercase, casual, like a real DM. No quotes, no stage directions.`,
+        `Reply to ${streamerName}'s LAST message directly and in ${name}'s voice. If ${streamerName} asked a question, answer it. Usually one short message. No quotes, no stage directions.`,
       ].filter(Boolean).join("\n"),
       messages: messages.length ? messages : [{ role: "user" as const, content: "hey" }],
     };
+  }
+
+  /** A named character's own recent NON-scripted public chat lines, for DM continuity. */
+  private recentPublicLinesFor(charId: string, n = 4): string {
+    return this.s.chat
+      .filter((m) => m.characterId === charId && m.kind !== "system" && !m.scripted)
+      .slice(-n)
+      .map((m) => `"${m.text}"`)
+      .join(" ");
   }
 
   /**
@@ -3412,19 +3838,24 @@ export class GameController {
       const base = logSnippet ? `${logSnippet}; ${note}` : note;
       return base.slice(-180);
     }
+    const streamerName = this.s.settings.streamerName;
+    const name = c.realName || c.handle;
     try {
       const res = await this.llm.complete(
         {
-          system: "Condense this relationship into ONE short memory line (<=160 chars) the viewer would remember. Merge with prior memory and recent history; keep the most important bits.",
+          system: [
+            `Condense this relationship into ONE short memory line (<=160 chars): what ${name} would remember about ${streamerName}.`,
+            `Write in the THIRD PERSON, referring to the fan as ${name} and the streamer as ${streamerName}. Do NOT use "you", "your", or "I". Merge with prior memory; keep the most important bits.`,
+          ].join(" "),
           messages: [
             {
               role: "user",
               content: [
                 `Prior memory: ${c.memory || "(none)"}`,
-                logSnippet ? `Recent history: ${logSnippet}` : "",
-                `Streamer said: ${mine}`,
-                `${c.handle} replied: ${theirs}`,
-                `New condensed memory:`,
+                logSnippet ? `Recent beats: ${logSnippet}` : "",
+                `${streamerName} said: ${mine}`,
+                `${name} replied: ${theirs}`,
+                `New condensed third-person memory:`,
               ].filter(Boolean).join("\n"),
             },
           ],
@@ -3452,7 +3883,7 @@ export class GameController {
           s.logEvent(`DM: ${c.displayName || c.handle} tipped $${e.amount}.`);
           break;
         case "gift":
-          s.patchMetrics({ mood: s.metrics.mood + 2, comfort: s.metrics.comfort + 1 });
+          s.patchMetrics({ comfort: s.metrics.comfort + 3 });
           s.pushDm(charId, { role: "them", kind: "gift", text: `sent a gift: ${e.item}` });
           s.logEvent(`DM: ${c.displayName || c.handle} sent a gift (${e.item}).`);
           // A gift is genuine reciprocal investment — strong, cap-exempt.
@@ -3576,6 +4007,18 @@ export class GameController {
     diag.info("economy", "bought upgrade", { id, cost: up.cost });
     s.setToast(`Bought ${up.name}!`);
   }
+
+  buyActivity(id: string): void {
+    const s = this.s;
+    const def = ACTIVITY_BY_ID[id];
+    if (!def?.cost || s.ownedActivities.includes(id)) return;
+    if (s.metrics.cash < def.cost) return s.setToast("Not enough cash for that yet.");
+    s.patchMetrics({ cash: s.metrics.cash - def.cost });
+    s.addOwnedActivity(id);
+    s.logEvent(`Bought ${def.name} (−$${def.cost}).`);
+    diag.info("economy", "bought activity", { id, cost: def.cost });
+    s.setToast(`Unlocked ${def.name}!`);
+  }
 }
 
 function actionEcho(a: PlayerAction): string {
@@ -3617,7 +4060,7 @@ function cleanQuote(text: string): string | null {
   return t ? t.slice(0, 600) : null;
 }
 
-const STAT_KEYS = ["hype", "energy", "mood", "comfort"] as const;
+const STAT_KEYS = ["hype", "energy", "comfort", "hunger", "bladder", "hygiene", "horny"] as const;
 const EVENT_OUTCOME_SCHEMA: Record<string, unknown> = {
   type: "object",
   properties: {
@@ -3627,7 +4070,7 @@ const EVENT_OUTCOME_SCHEMA: Record<string, unknown> = {
       properties: {
         hype: { type: "number" },
         energy: { type: "number" },
-        mood: { type: "number" },
+        horny: { type: "number" },
         comfort: { type: "number" },
         followers: { type: "number" },
         cash: { type: "number" },
@@ -3672,7 +4115,7 @@ const VISIT_OUTCOME_SCHEMA: Record<string, unknown> = {
       properties: {
         hype: { type: "number" },
         energy: { type: "number" },
-        mood: { type: "number" },
+        horny: { type: "number" },
         comfort: { type: "number" },
         followers: { type: "number" },
         cash: { type: "number" },

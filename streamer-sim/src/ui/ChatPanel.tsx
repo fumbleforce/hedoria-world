@@ -3,6 +3,7 @@ import { useStore } from "../state/store";
 import type { GameController } from "../game/controller";
 import type { ChatMessage } from "../game/types";
 import { MentionText } from "./MentionText";
+import { MeterBar } from "./MeterBar";
 
 const KIND_CLASS: Record<string, string> = {
   hype: "chat__msg--hype",
@@ -21,6 +22,7 @@ const KIND_CLASS: Record<string, string> = {
 export function ChatPanel({ controller }: { controller: GameController }) {
   const chat = useStore((s) => s.chat);
   const isLive = useStore((s) => s.session.isLive);
+  const hype = useStore((s) => s.metrics.hype);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -31,7 +33,16 @@ export function ChatPanel({ controller }: { controller: GameController }) {
   return (
     <section className="chat">
       <div className="chat__head">
-        <span>Stream Chat</span>
+        <span className="chat__title">Stream Chat</span>
+        {isLive && (
+          <MeterBar
+            className="meter meter--chat-hype"
+            label="Hype"
+            metric="hype"
+            value={hype}
+            color="#ffd43b"
+          />
+        )}
         <span className={isLive ? "chat__dot chat__dot--live" : "chat__dot"}>{isLive ? "live" : "offline"}</span>
       </div>
       <div className="chat__scroll" ref={ref}>

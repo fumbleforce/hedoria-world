@@ -66,7 +66,7 @@ export const ZONE_MENUS: Record<ZoneId, { allowFreeform: boolean; options: Actio
     allowFreeform: true,
     options: [
       { id: "go-live", label: "● Go live / End stream", prompt: "__toggle_live__" },
-      { id: "play-game", label: "🎮 Start a game…", prompt: "__game_picker__", liveOnly: true },
+      { id: "play-game", label: "🎬 Start an activity…", prompt: "__game_picker__", liveOnly: true },
       { id: "react-video", label: "📺 React to a trending video", prompt: "react to a trending video chat is linking", liveOnly: true },
       { id: "qna", label: "❓ Do a Q&A from chat", prompt: "answer questions chat is asking", liveOnly: true },
       { id: "karaoke", label: "🎤 Sing a song", prompt: "sing a song for chat", liveOnly: true },
@@ -79,6 +79,7 @@ export const ZONE_MENUS: Record<ZoneId, { allowFreeform: boolean; options: Actio
       { id: "tell-story", label: "📖 Tell a story from your week", prompt: "tell chat a specific story from your week", liveOnly: true },
       { id: "open-up", label: "🫧 Open up about something", prompt: "get vulnerable and share something personal", liveOnly: true },
       { id: "nap", label: "😴 Power nap (off-cam)", prompt: "__nap__", liveOnly: false },
+      { id: "relieve", label: "💫 Take care of yourself (private)", prompt: "__relieve__", liveOnly: false },
     ],
   },
   bed: {
@@ -87,6 +88,7 @@ export const ZONE_MENUS: Record<ZoneId, { allowFreeform: boolean; options: Actio
       { id: "sleep", label: "🛏️ Sleep until tomorrow", prompt: "__sleep__", liveOnly: false },
       { id: "bed-stream", label: "🌙 Cozy bed stream", prompt: "do a soft late-night stream from bed", liveOnly: true },
       { id: "scroll", label: "📱 Read fan mail in bed", prompt: "__scroll__", liveOnly: false },
+      { id: "relieve-bed", label: "💫 Take care of yourself (private)", prompt: "__relieve__", liveOnly: false },
     ],
   },
   kitchenette: {
@@ -95,12 +97,15 @@ export const ZONE_MENUS: Record<ZoneId, { allowFreeform: boolean; options: Actio
       { id: "cook", label: "🍳 Cook instant noodles", prompt: "__cook__", liveOnly: false },
       { id: "cook-stream", label: "👩‍🍳 Cooking segment on-cam", prompt: "do a cooking segment live on cam", liveOnly: true },
       { id: "coffee", label: "☕ Make coffee", prompt: "__coffee__", liveOnly: false },
+      { id: "eat", label: "🍽 Eat a proper meal", prompt: "__eat__", liveOnly: false },
     ],
   },
   bathroom: {
     allowFreeform: false,
     options: [
-      { id: "freshen", label: "🚿 Freshen up", prompt: "__freshen__", liveOnly: false },
+      { id: "bathroom", label: "🚽 Use the bathroom", prompt: "__bathroom__", liveOnly: false },
+      { id: "shower", label: "🚿 Take a shower", prompt: "__shower__", liveOnly: false },
+      { id: "freshen", label: "🧴 Freshen up (quick)", prompt: "__freshen__", liveOnly: false },
       { id: "change-cozy", label: "🧶 Change into a cozy fit", prompt: "__outfit_cozy__", liveOnly: false },
       { id: "change-cute", label: "✨ Change into a cute fit", prompt: "__outfit_cute__", liveOnly: false },
       { id: "change-bold", label: "🔥 Change into a bold fit", prompt: "__outfit_bold__", liveOnly: false },

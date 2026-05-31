@@ -1,7 +1,7 @@
 # 02 — Game Loop, Metrics & Economy
 
 All numbers below are the actual constants in source as of writing. Files:
-`src/game/controller.ts`, `resolver.ts`, `time.ts`, `shop.ts`, `games.ts`,
+`src/game/controller.ts`, `resolver.ts`, `time.ts`, `shop.ts`, `activities.ts`,
 `studio.ts`, `content.ts`, `state/store.ts`, `game/types.ts`.
 
 ## Metrics
@@ -16,20 +16,23 @@ Persistent player stats (`Metrics`, initialized in `store.ts`):
 | `currentViewers` | ≥ 0 int | **0** | Live viewer count (display). |
 | `peakViewers` | ≥ 0 int | **0** | **Lifetime** peak (used by the 100-viewers goal). |
 | `hype` | 0–100 | **20** | Momentum; decays while live; drives tips/spawns. |
-| `energy` | 0–100 | **100** | Stamina; spent on active live beats + time drift; partial restore on sleep; lifestyle actions (coffee/nap) matter. |
-| `mood` | 0–100 | **70** | Wellbeing. |
-| `comfort` | 0–100 | **90** | Boundary/parasocial pressure. Low comfort "feeds" stalkers. |
+| `energy` | 0–100 | **100** | Stamina; spent on active live beats + time drift; partial restore on sleep. |
+| `comfort` | 0–100 | **90** | Wellbeing + boundaries; trolls/creeps lower it; readiness gate. Low comfort "feeds" stalkers. |
+| `hunger` | 0–100 | **100** | Fed (100 = full); drains over time; eat/cook/order restore. |
+| `bladder` | 0–100 | **100** | Relieved (100 = empty); drains over time; bathroom restores. |
+| `hygiene` | 0–100 | **100** | Clean; drains over time; shower/freshen restore. |
+| `horny` | 0–100 | **0** | Arousal; **No Limits / custom tiers only**; builds on spicy beats, halves on sleep, relief actions reduce. |
 | `day` | int ≥ 1 | **1** | In-world day counter. |
 
-`patchMetrics` clamps hype/energy/mood/comfort to 0–100 and updates
+`patchMetrics` clamps hype/energy/comfort/hunger/bladder/hygiene/horny to 0–100 and updates
 `peakViewers = max(peakViewers, currentViewers)`. It also **auto-diffs** changes
 into floating feedback bubbles (see [08 → Feedback layer](./08-ui-map.md)).
 
 ### Metrics taxonomy (how to think about them)
 The flat `Metrics` object groups conceptually, and the rebalance treats each group
 differently:
-- **Personal — body & psyche** (persist, restored by lifestyle): `energy`, `mood`,
-  `comfort`. **Comfort is the escalation gate** (readiness, below).
+- **Personal — body & psyche** (persist, restored by lifestyle): `energy`, `comfort`,
+  `hunger`, `bladder`, `hygiene`, and (when uncapped) `horny`. **Comfort is the escalation gate** (readiness, below).
 - **Personal progression — who she's becoming**: **mastery** XP per skill domain
   (`store.mastery`, see Mastery). The lever that bends *personal costs* down.
 - **Channel — the business / score** (persist): `cash`, `followers`, `subscribers`.
@@ -81,9 +84,36 @@ Event scenes are the exception — they advance only `BALANCE.events.beatMinutes
 ```
 energy -= minutes × 0.12
 hype   -= minutes × 0.10
+hunger/bladder/hygiene -= drainPerMin × minutes  (always, live or offline)
+critical needs → extra comfort/energy drain per live beat
 round  += 1
 seconds = clock − streamStartClock
 ```
+
+### Needs (`game/needs.ts`, `BALANCE.needs`)
+- Drains per minute: hunger **0.06**, bladder **0.09**, hygiene **0.035**.
+- Below **35** (`warnBelow`): `needsStrain` lowers viewer pull (`needsFactor` down to **0.6** floor).
+- Below **15** (`criticalBelow`): extra comfort/energy drain per live beat; throttled DM nag (`nagCooldownBeats` **6**).
+- **Physical cues** (`physicalCues`) feed narration/DM (public + private) and chat (`visibleCues` — public only; bladder is private, never in chat).
+
+### Viewer drivers (`game/derived.ts`)
+Displayed in Stats panel (and dev section when `settings.devMode`):
+```
+targetNamed = clamp(round(followers/22)+2, 2, 14) × viewerMult × needsFactor
+anonFloor   = round(followers × 0.02 × (0.5 + hype/100)) × viewerMult × needsFactor
+currentViewers = max(segment population sum, distinct recent chatters)
+```
+
+### Passive growth (while live + at sleep)
+- **Followers / beat** (live `afterBeat`): `round(currentViewers × happyNorm × passiveFollowerRate(0.012) × reach)` — each gain posts a **follow** chat line (like tips).
+- **Subs / beat** (live `afterBeat`): daily gain estimate spread over `liveBeatsPerDay` (48), scaled by `happyNorm` and hype; fractional accrual rolls into **sub** chat pings with tip-style effects.
+- **Sub churn / day** (at `sleep`): `round(subscribers × subChurnRate(0.01))`; recurring sub payout every 30 days unchanged.
+
+### Horny (No Limits / custom only — `isNoLimits` in `content.ts`)
+- Builds on live beats with intimate tags × intensity + spicy chat (`flirty`/`creepy`).
+- Sleep: `horny × 0.5` (else forced to 0).
+- Relief: `__relieve__` token (−**65**), sexual visit outcomes (`hornySceneRelief` by intensity).
+- High horny slightly eases intimate **comfort** costs (`comfortEaseMax` **0.2** at horny 100).
 
 ### Viewer watch windows (`characters.ts` + `presence.ts`)
 
@@ -161,7 +191,7 @@ audience + comfort first, then escalation pays.
 | `sub` | subs +1, `cash += (amount ?? 5) × mult.income`, hype +2 |
 | `follow` | followers +1 |
 | `raid` | followers +5, hype +4 |
-| `troll` | mood −0.6 |
+| `troll` | comfort −0.6 |
 | `creepy` | comfort −1 |
 
 A message from a **named character** also grants a tiny **+0.05 affinity** through
@@ -171,14 +201,18 @@ their `messageCount`. Tips route through `recordTip`/`bumpAffinity`.
 ### Coded lifestyle costs
 | Action | Cash | Other | Minutes |
 |--------|------|-------|---------|
-| Order food | −$15 (needs ≥$15) | energy +18, mood +6 | 25 |
-| Cook | — | energy +15, mood +4 | 15 |
+| Order food | −$15 (needs ≥$15) | energy +18, comfort +6, hunger +50 | 25 |
+| Cook | — | energy +15, comfort +4, hunger +40 | 15 |
 | Coffee | — | energy +10 | 8 |
-| Nap | — | energy +22, mood +3 | 45 |
-| Freshen up | — | mood +6, comfort +5, energy +4 | 20 |
-| Read fan mail | — | mood +3, comfort −1 | 15 |
-| Cozy outfit | — | mood +3, comfort +4 | 10 |
-| Cute outfit | — | mood +3, hype +4 | 10 |
+| Nap | — | energy +22, comfort +3 | 45 |
+| Eat (meal) | — | energy +12, comfort +5, hunger +90 | 25 |
+| Bathroom | — | bladder → 100 | 5 |
+| Shower | — | hygiene +95, comfort +8, energy +4 | 20 |
+| Freshen (quick) | — | hygiene +25, comfort +5, energy +4 | 12 |
+| Read fan mail | — | comfort +2 | 15 |
+| Relieve (No Limits) | — | horny −65, comfort +4, energy −6 | 20 |
+| Cozy outfit | — | comfort +7 | 10 |
+| Cute outfit | — | comfort +3, hype +4 | 10 |
 | Bold outfit | — | hype +6, comfort −3 | 10 |
 
 ## The resolver, in detail (`resolver.ts`)
@@ -195,17 +229,17 @@ on `down`, soften on `up`).
 | **Restful tags** (`chill`, `cozy`, `calm`, …) when not active | Recover `recoverEnergyPerIntensity (1.2) × intensity` |
 | **Comfort tags** (`flirty`, `teasing`, `suggestive`, `vulnerable`, …) | Spend `comfortPerIntensity (1.8) × intensity` (× Composure mastery; amplified when comfort already low) |
 | **`setsBoundary` / `boundary-setting`** | Restore `+6` comfort |
-| **Hype / mood** | Still LLM `pressure` × magnitude (bases hype 5, mood 4) |
+| **Hype** | LLM `pressure` × magnitude (base hype **5** × `mult.hype`) |
 
-Live time drift still drains energy/hype each beat. Lifestyle coded actions (coffee,
-nap, freshen) are the main recovery levers between streams.
+Live time drift still drains energy/hype and needs each beat. Lifestyle coded actions (eat,
+bathroom, shower, coffee, nap) are the main recovery levers between streams.
 
-### Stat pressure (hype/mood only)
-The verdict marks hype and mood as pressured `up`, `down`, or `none`. The delta:
+### Stat pressure (hype only)
+The verdict marks hype as pressured `up`, `down`, or `none`. The delta:
 ```
 pressureDelta = (±1) × base × (0.6 + intensity × 0.18)
 ```
-Bases: hype **5** (× `mult.hype`), mood **4**. (Energy/comfort costs are code-owned — see above.)
+Base: hype **5** (× `mult.hype`). Energy/comfort costs are code-owned — see above.
 Example: hype-up at intensity 3 with `mult.hype` 1.1 → **+6.27** hype.
 
 ### Segment satisfaction drift (per segment, live)
@@ -266,32 +300,61 @@ the full evaluate→resolve pipeline. **Token** prompts bypass the evaluator:
 | `__toggle_live__` | Go live / end stream |
 | `__sleep__` | Sleep (day +1, rent, reset) |
 | `__game_picker__` | Open mini-game picker |
-| `__cook__` | energy +15, mood +4, 15 min |
+| `__cook__` | energy +15, comfort +4, hunger +40, 15 min |
+| `__eat__` | hunger +90, energy +12, comfort +5, 25 min |
 | `__coffee__` | energy +10, 8 min |
-| `__nap__` | energy +22, mood +3, 45 min |
-| `__freshen__` | mood +6, comfort +5, energy +4, 20 min |
-| `__scroll__` | mood +3, comfort −1, 15 min |
-| `__order_food__` | −$15, energy +18, mood +6, 25 min (toast if broke) |
+| `__nap__` | energy +22, comfort +3, 45 min |
+| `__bathroom__` | bladder → 100, 5 min |
+| `__shower__` | hygiene +95, comfort +8, 20 min |
+| `__freshen__` | hygiene +25, comfort +5, 12 min |
+| `__scroll__` | comfort +2, 15 min |
+| `__relieve__` | horny −65, comfort +4, 20 min (No Limits; bed/couch) |
+| `__order_food__` | −$15, energy +18, comfort +6, hunger +50, 25 min (toast if broke) |
 | `__door__` | offline event roll or "empty hallway", 5 min |
 | `__outfit_cozy__` / `__outfit_cute__` / `__outfit_bold__` | outfit effects (see table above) |
 | `__open_shop__` | open shop — **implemented but not wired into any zone menu** (only the ActionBar shop button opens the shop) |
 
-## Mini-games (`games.ts`)
+## Activities (`activities.ts`)
 
-While `playing` a game and live, **each action adds +1 appeal to every segment in
-the game's `pleases` list**, on top of the normal verdict.
+The **activity** sub-state generalizes the old mini-game `playing` flag. While an
+activity is active, the player keeps using the normal Actions/freeform box (hybrid
+flavor layer — not a blocking scene loop). Started from **ActivityPicker** (ActionBar
+"🎬 Activity" or desk token `__game_picker__`); includes prefilled catalogue entries
+plus a custom freeform option.
 
-| Game | Pleases | hypePerRound* | energyPerRound* |
-|------|---------|---------------|-----------------|
+While `activity` is set and live, **each action adds +1 appeal to every segment in
+`activity.pleases`**, on top of the normal verdict. Per beat (action or Continue):
+
+- **`narrateActivityBeat`** — a dedicated LLM narration line in the story feed,
+  steered by `activity.narrationHint`.
+- **`hypePerRound` / `energyPerRound`** — applied from the catalogue definition
+  (× `mult.hype` for hype).
+- **Chat** — `chatCtx.activity` steers bursts (backseat gaming, clip requests, etc.).
+- **Event Director** — `EventDirectorContext.activity` + `activity-deep` signal after
+  3+ beats can author activity-specific scenes/notices.
+
+`activity` is **persisted while live** (clears on reload if offline, or when the stream ends).
+
+### Catalogue (categories)
+
+| Category | Examples | Shop |
+|----------|----------|------|
+| game | horror, fps, cozy-farm, rhythm, dating-sim, variety-party | $40–$80 each |
+| performance | read-aloud, ASMR, karaoke, workout | free |
+| creative | cook-on-cam, body-paint | free |
+| intimate | masturbate-on-cam | free (No Limits only) |
+
+Games in the shop **Game Library** section unlock via `ownedActivities[]` (persisted).
+Custom activities use neutral `pleases` and LLM-built hints from the typed text.
+
+| Game | Pleases | hypePerRound | energyPerRound |
+|------|---------|--------------|----------------|
 | horror | hype, trolls | 9 | 5 |
 | fps | hype | 8 | 6 |
 | cozy-farm | cozy, lonely | 4 | 2 |
 | rhythm | hype, simps | 7 | 4 |
 | dating-sim | simps, lonely | 6 | 3 |
 | variety-party | hype, cozy | 6 | 4 |
-
-\* **`hypePerRound` and `energyPerRound` are defined but never applied** — only the
-+1 appeal bump is used today.
 
 ## Shop & upgrades (`shop.ts`)
 
@@ -308,10 +371,10 @@ the game's `pleases` list**, on top of the normal verdict.
 | lava-lamp | $110 | **segmentAppeal {cozy+2, lonely+1}** |
 | neon-arcade | $160 | **segmentAppeal {hype+2, trolls+1}** |
 | premium-backdrop | $420 | **segmentAppeal {whales+2}**, income ×1.05 |
-| gaming-chair | $200 | moodPerDay +4 |
-| plant-wall | $130 | moodPerDay +3, viewer ×1.05 |
-| soundproofing | $180 | moodPerDay +3 |
-| loft-apartment | $1500 | viewer ×1.3, income ×1.1, **rentPerDay +25**, moodPerDay +5 |
+| gaming-chair | $200 | comfortPerDay +4 |
+| plant-wall | $130 | comfortPerDay +3, viewer ×1.05 |
+| soundproofing | $180 | comfortPerDay +3 |
+| loft-apartment | $1500 | viewer ×1.3, income ×1.1, **rentPerDay +25**, comfortPerDay +5 |
 
 **Two gear axes** drive the money loop (cash → the right gear → the right audience
 grows → more recurring income):
@@ -354,7 +417,7 @@ a small follower hit + a freshness reset. Picked from the offline ActionBar
 ## Novelty & burnout (`BALANCE.novelty`, `events.ts`)
 Per-content **freshness** (`store.contentNovelty`, keyed by niche) drains
 `drainPerRepeat` (0.18, floor 0.4) on each live action and dulls hype/tips/follower
-gain; rest + variety recover it (`recoverPerRest` on sleep). Chronic low **mood + comfort**
+gain; rest + variety recover it (`recoverPerRest` on sleep). Chronic low **comfort + energy/needs strain**
 arms a **burnout event** (offline) that forces a rest choice.
 
 ## Content tiers (`content.ts`)

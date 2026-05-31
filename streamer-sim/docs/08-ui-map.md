@@ -17,7 +17,7 @@ Files: `src/App.tsx`, `src/render/StudioRoom.tsx`, `src/ui/*`, `src/index.css`.
 │ ActionBar  (footer)                                      │
 └─────────────────────────────────────────────────────────┘
 
-Overlays (modals): ActionMenuModal · CharacterModal · GamePicker ·
+Overlays (modals): ActionMenuModal · CharacterModal · ActivityPicker ·
 ShopPanel · InventoryPanel · SettingsPanel · EventModal · GoalsPanel
 Floating: toast (bottom) · backendChip (bottom-right)
 ```
@@ -33,10 +33,10 @@ minmax(280px,340px)`, capped at 1340px. Until `boot()` resolves, a
 
 | Component | File | Where | Shows / does |
 |-----------|------|-------|--------------|
-| **MetricsHud** | `ui/MetricsHud.tsx` | header | Brand, streamer name, active save name, day + in-world date, live clock; cash/followers/subs/viewers; hype/energy/mood/comfort bars. |
+| **MetricsHud** | `ui/MetricsHud.tsx` | header | Brand, streamer name, active save name, day + in-world date, live clock; cash/followers/subs/viewers; hype/energy/comfort/hunger/bladder/hygiene bars (+ horny when No Limits). |
 | **StudioRoom** | `render/StudioRoom.tsx` | left (top) | Interactive room (zone hotspots + avatar) and the "Visualize here" button. See [06](./06-images-and-presentation.md). |
 | **ChangeLogPanel** | `ui/ChangeLogPanel.tsx` | left (below map) | Scrollable, newest-first **activity log** of every metric/affinity/alert change (signed delta, tone color, and the "why" when known). Fed from `store.changeLog`, the structured sibling of the floating bubbles. |
-| **StatsPanel** | `ui/StatsPanel.tsx` | left (below activity) | Live readout of setup + passive modifiers: niche, outfit, content freshness, gear multipliers (production quality, viewers, hype, income, rent, segment appeal), and mastery levels. Derived from `ownedUpgrades` + settings — not duplicated in `Metrics`. |
+| **StatsPanel** | `ui/StatsPanel.tsx` | left (below activity) | Compact **Channel**, **Live**, **Setup** (niche, outfit, freshness, skills). Needs meters are in the HUD; **Hype** is in the chat header while live. With `settings.devMode`, adds **Dev** (viewer drivers, passive followers/beat, sub fraction/beat, gear). |
 | **VisualizationPanel** | `ui/VisualizationPanel.tsx` | center top | The latest generated image (`lastImageId`); click → gallery. |
 | **NarratorPanel** | `ui/NarratorPanel.tsx` | center bottom | The story feed (dm / action / outcome / quote / image entries) and a "Visualize scene" button. |
 | **ChatPanel** | `ui/ChatPanel.tsx` | right top | Live chat log; clicking a known user's handle opens their CharacterModal. Streamer's spoken lines do **not** appear here (they go to the narrator). |
@@ -49,8 +49,8 @@ minmax(280px,340px)`, capped at 1340px. Until `boot()` resolves, a
 |-----------|------|-----------|--------------|
 | **ActionMenuModal** | `ui/ActionMenuModal.tsx` | clicking a zone | The zone's contextual actions + a freeform box (when the zone allows it). |
 | **CharacterModal** | `ui/CharacterModal.tsx` | clicking a chatter/regular | The character sheet (name + handle, relationship, archetype, memory), the DM thread, and "generate portrait". DM lines render by `kind`: plain text, inline **image**, 💸/🎁 **gift**, or italic **system** (requests). |
-| **GamePicker** | `ui/GamePicker.tsx` | "Game" (live) | Pick a mini-game (`MINI_GAMES`). |
-| **ShopPanel** | `ui/ShopPanel.tsx` | "Shop" / shop button | Upgrades by category; buy with cash. |
+| **ActivityPicker** | `ui/ActivityPicker.tsx` | "Activity" 🎬 (live) | Pick a catalogue activity (grouped by category, tier-gated, shop-locked games) or type a custom activity. |
+| **ShopPanel** | `ui/ShopPanel.tsx` | "Shop" / shop button | Game Library (purchasable activities) + upgrades by category; buy with cash. |
 | **InventoryPanel** | `ui/InventoryPanel.tsx` | "Inventory" 🎒 | Owned upgrades grouped by category, per-item effect tags, and combined passive bonuses from `multipliersFor`. |
 | **SettingsPanel** | `ui/SettingsPanel.tsx` | "Settings" / 🎭 / 🖼 | 7 tabs (see below). |
 | **EventModal** | `ui/EventModal.tsx` | a pending event | The event text + discrete choices, plus a freeform response box when `allowFreeform`. |
@@ -70,6 +70,7 @@ minmax(280px,340px)`, capped at 1340px. Until `boot()` resolves, a
 | character | Name, persona, gender, appearance description; portrait/body previews; generate. |
 | gallery | The full IndexedDB image library by kind; regenerate / set active / delete / lightbox. |
 | saves | Slot list; new / load / rename / delete (delete also purges that slot's images). |
+| dev | Show backend/derived stats toggle (`settings.devMode`); spawn-viewer cheats. |
 | llm | Session LLM telemetry (resets on reload). |
 
 ## Floating bits
@@ -95,7 +96,7 @@ The §4 overhaul added a legibility layer so every state change explains itself.
 - **Rendering** — `ui/FeedbackBubbles.tsx` exports `<FloatingFeedback>` (the float-up
   `+N/−N` chip) and the `useFeedbackJanitor` hook that expires bubbles (~1.5 s).
   - **HUD** (`MetricsHud.tsx`): chips float from the changed `Stat`
-    (cash/followers/subs) and `Bar` (hype/energy/mood/comfort); also hosts the
+    (cash/followers/subs) and `Bar` (hype/energy/comfort/hunger/bladder/hygiene[/horny]); also hosts the
     **mastery chips** readout (showmanship/composure levels).
   - **Character cards** (`CharacterGallery.tsx` / `CharacterModal.tsx`): affinity
     `+N/−N` bubble on the avatar, plus a persistent warming/**cooling arrow** so neglect

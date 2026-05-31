@@ -69,8 +69,9 @@ uniform.
 
 ## Named characters (`characters.ts`)
 
-`CharacterSheet` fields include: `handle`, `displayName` (real name once known, else
-`""`), `archetypeId`, `vibe`, `wants`, `affinity` (0–100), `relationship`
+`CharacterSheet` fields include: `handle`, `realName` (the character's actual name —
+self-knowledge, set at creation, always present), `displayName` (the name the
+**player** has learned, else `""`), `archetypeId`, `vibe`, `wants`, `affinity` (0–100), `relationship`
 (`RelationshipType`), `memory`, `tipped`, `messageCount`, `online`, `known`, `isMod`,
 `threat` (0–3), clocks, `milestones[]`, `escalationDay`, `lastVisitDay` (day of the
 last in-person visit / doorstep, `-1` = never; gates repeat meetups),
@@ -201,16 +202,20 @@ bond is neglected. Already-fired milestones don't refire on a re-climb.
 **Milestones** fire when a character's relationship-level index increases (handles
 multi-level jumps):
 - **familiar (≥15):** inline chat flavor line.
-- **regular (≥35):** **name reveal** — `displayName` set from a pool of 18 names;
-  story beat.
+- **regular (≥35):** **name reveal** — `displayName` is set to the character's own
+  `realName` (the name they've had all along); story beat.
 - **friend (≥60):** default inline beat + spawns a referred friend + **+3 followers**.
   **Whales** instead trigger a patronage **event** (+$120, +1 sub, +4 comfort).
 - **confidant (≥85):** **lonely/simp** archetypes trigger a confession **event**;
   others get an inline beat + **+2 followers**.
 
-> **Two name-reveal paths can conflict:** the milestone (at affinity ≥35, random name
-> from a pool) and `generateBackstory` (an LLM call when you first open a sheet, which
-> can set `displayName` earlier). Neither is deterministic per character id.
+> **Names are self-knowledge, revealed (never forced).** Every character is seeded
+> with a `realName` they know from the start; `characterVoiceBlock` feeds their full
+> self (name, age, job, story) into every NPC-voice prompt, with the rule to share
+> only what fits the relationship and to never censor (no `[Redacted]`). The player
+> learns the name when it surfaces: the **regular milestone** exposes `realName`, or
+> the NPC volunteers it in a DM and the **DM director** emits a structured `reveal`.
+> All paths now resolve to the same `realName`, so it's consistent per character.
 
 **Word-of-mouth** (`spawnReferredFriend`): on a friend milestone (non-whale), spawn a
 new character with `referredBy` set, +6 affinity, a random archetype at the current

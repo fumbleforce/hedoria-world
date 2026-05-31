@@ -8,10 +8,10 @@
 
 import type { GameEvent } from "./types";
 import type { CharacterSheet, RelationshipLevel } from "./characters";
-import { relationshipLevel } from "./characters";
+import { relationshipLevel, pickName } from "./characters";
 import { ARCHETYPE_BY_ID } from "./archetypes";
 import { ev, choice } from "./events";
-import { pick, clamp, randInt } from "../rng/rng";
+import { pick, clamp } from "../rng/rng";
 import { BALANCE, type AffinitySource } from "./balance";
 
 // --------------------------------------------------------------- affinity ledger
@@ -167,32 +167,15 @@ const LEVEL_ORDER: RelationshipLevel[] = [
   "confidant",
 ];
 
-/** Gendered first-name pools revealed at the "regular" milestone. */
-export const FEMALE_NAMES = [
-  "Mara", "June", "Robin", "Quinn", "Iris", "Noa", "Sky", "Wren", "Remy", "Lena",
-  "Zoe", "Mia", "Eva", "Nora", "Lily", "Ruby", "Jade", "Cleo", "Tess", "Vera",
-  "Hana", "Sage", "Faye", "Elle", "Rosa", "Nina", "Ada", "Bea", "Cora", "Dana",
-];
-export const MALE_NAMES = [
-  "Nico", "Eli", "Theo", "Kai", "Devon", "Casey", "Ash", "Sam", "Alex", "Marc",
-  "Leo", "Max", "Ian", "Owen", "Cole", "Dean", "Finn", "Gabe", "Hugo", "Jude",
-  "Knox", "Luke", "Miles", "Noah", "Reed", "Sean", "Troy", "Wade", "Zane", "Blake",
-];
-export const NEUTRAL_NAMES = [
-  "Sam", "Alex", "Casey", "Robin", "Quinn", "Remy", "Ash", "Sky", "Noa", "Devon",
-  "Rory", "Sage", "River", "Phoenix", "Rowan", "Emery", "Arlo", "Blair", "Drew", "Jules",
-];
-
-/** A unique first name for a character, respecting gender and roster. */
+/**
+ * The name the player learns when a character's identity surfaces. A character
+ * always knows their own `realName` from creation, so a reveal just exposes that
+ * (already-known) truth rather than inventing one. `taken` is honored only as a
+ * legacy fallback when an old save lacks a real name.
+ */
 export function revealName(c: CharacterSheet, taken: Set<string> = new Set()): string {
   if (c.displayName) return c.displayName;
-  const pool =
-    c.gender === "female" ? FEMALE_NAMES
-    : c.gender === "male" ? MALE_NAMES
-    : NEUTRAL_NAMES;
-  const available = pool.filter((n) => !taken.has(n.toLowerCase()));
-  if (available.length) return pick(available);
-  return `${pick(pool)}${randInt(2, 9)}`;
+  return c.realName || pickName(c.gender, taken);
 }
 
 /**
@@ -268,7 +251,7 @@ function milestoneFor(
             choice(
               "Keep it casual",
               "You deflect kindly. They respect it, mostly.",
-              { mood: 2 },
+              { comfort: 2 },
             ),
           ],
           c,
@@ -296,12 +279,12 @@ function milestoneFor(
             choice(
               "Let them down gently",
               `You're kind but honest about boundaries. ${name} is quiet, then grateful.`,
-              { comfort: 4, mood: -2 },
+              { comfort: 2 },
             ),
             choice(
               "Lean into the closeness",
               `You keep it warm and a little ambiguous. They're over the moon; it costs you something.`,
-              { hype: 6, comfort: -8, mood: 2 },
+              { hype: 6, comfort: -6 },
             ),
           ],
           c,

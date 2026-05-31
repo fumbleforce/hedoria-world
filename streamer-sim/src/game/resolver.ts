@@ -8,6 +8,7 @@ import {
 } from "./segments";
 import type { ContentTier, Metrics } from "./types";
 import { tierIntensity } from "./content";
+import { hornyComfortEase } from "./needs";
 import type { Multipliers } from "./shop";
 import { clamp } from "../rng/rng";
 import { BALANCE } from "./balance";
@@ -102,7 +103,7 @@ export function resolveAction(input: ResolveInput): ResolveResult {
     }
     if (verdict.pressure.comfort === "up") c *= cost.pressureRelief;
     else if (verdict.pressure.comfort === "down") c *= cost.pressureAmplify;
-    comfortDelta = -c * composureMult;
+    comfortDelta = -c * composureMult * hornyComfortEase(metrics.horny, input.contentTier);
   }
 
   // Content freshness: a stale, repeated format gives less of a hype lift.
@@ -113,7 +114,6 @@ export function resolveAction(input: ResolveInput): ResolveResult {
   const metricsPatch: Partial<Metrics> = {
     hype: metrics.hype + hypeDelta,
     energy: metrics.energy + energyDelta,
-    mood: metrics.mood + pressureDelta(verdict.pressure.mood, 4, intensity),
     comfort: metrics.comfort + comfortDelta,
   };
 

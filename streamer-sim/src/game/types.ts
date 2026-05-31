@@ -24,6 +24,13 @@ export interface ChatMessage {
   amount?: number;
   /** If this line came from a named character in the roster. */
   characterId?: string;
+  /**
+   * True if the text is canned/offline filler (archetype sample lines, generic
+   * persona pools, mock fallback) rather than LLM-authored. These are NEVER fed
+   * back to the chat model as "voice"/"recent chat" context, so the model can't
+   * latch onto a scripted line and parrot it across the night.
+   */
+  scripted?: boolean;
   ts: number;
 }
 
@@ -95,6 +102,8 @@ export interface Settings {
   scenePrompt: string;
   /** Minimum diag level printed to the browser console. */
   consoleLevel: LogLevel;
+  /** Show backend/derived numbers in the Stats panel (dev tooling). */
+  devMode: boolean;
 }
 
 /**
@@ -132,10 +141,16 @@ export interface Metrics {
   hype: number;
   /** 0-100 stamina; drains live, regenerates on sleep. */
   energy: number;
-  /** 0-100 wellbeing; trolls/creeps lower it, rest raises it. */
-  mood: number;
-  /** 0-100 how far inside her comfort zone she is. Pushing boundaries lowers it. */
+  /** 0-100 wellbeing + boundaries; trolls/creeps lower it, rest raises it. */
   comfort: number;
+  /** 0-100 fed (100 = full); drains over time. */
+  hunger: number;
+  /** 0-100 relieved (100 = empty); drains over time. */
+  bladder: number;
+  /** 0-100 clean (100 = fresh); drains over time. */
+  hygiene: number;
+  /** 0-100 arousal; only active in No Limits / custom tiers. */
+  horny: number;
   day: number;
 }
 
@@ -259,10 +274,19 @@ export interface EventRecord {
   resolution?: string;
 }
 
-/** Active mini-game sub-state (set when the player starts a game at the desk). */
-export interface PlayingState {
-  gameId: string;
+/** Active activity sub-state (games, performances, custom streams, etc.). */
+export type ActivityCategory = "game" | "performance" | "creative" | "chill" | "intimate";
+
+export interface ActivityState {
+  activityId: string;
+  label: string;
+  customText?: string;
+  pleases: SegmentId[];
+  narrationHint: string;
+  chatHint: string;
   roundsPlayed: number;
+  startedClock: number;
+  category?: ActivityCategory;
 }
 
 /** A single line in a 1:1 direct-message conversation with a character. */
@@ -336,7 +360,7 @@ export interface Upgrade {
     viewerMult?: number;
     hypeMult?: number;
     incomeMult?: number;
-    moodPerDay?: number;
+    comfortPerDay?: number;
     rentPerDay?: number;
     /** Global production quality: lifts appeal for ALL segments (camera/mic/lighting). */
     productionQuality?: number;

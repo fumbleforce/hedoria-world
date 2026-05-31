@@ -18,13 +18,14 @@ and spawn bias. *(historical note below.)* `shop.ts` computes `mult.viewer` (usb
 ×1.1, 1080p-cam ×1.25, plant-wall ×1.05,
 loft ×1.3), but **nothing read `mult.viewer`**. Viewer counts came purely from
 `presence.ts` (a function of followers + hype). So the entire "viewer multiplier"
-half of the shop was inert; only `mult.hype`, `mult.income`, `mult.moodPerDay`, and
+half of the shop was inert; only `mult.hype`, `mult.income`, `mult.comfortPerDay`, and
 `mult.rentPerDay` actually do anything. *(`shop.ts`, `resolver.ts`, `presence.ts`)*
 
-### 🔴 A2 — Mini-game `hypePerRound` / `energyPerRound` are ignored
-Each mini-game defines per-round hype/energy numbers, but the only thing applied
-while playing is **+1 appeal to each `pleases` segment**. The named tuning is dead.
-*(`games.ts`, `controller.ts`)*
+### ✅ A2 — Activity `hypePerRound` / `energyPerRound` *(resolved §5 activities)*
+Each catalogue activity defines per-round hype/energy; `applyActivityRoundCosts` in
+`controller.ts` applies them on every live beat while `activity` is set (hype ×
+`mult.hype`, energy drain direct). The +1 appeal bump to `pleases` segments remains.
+*(`activities.ts`, `controller.ts`)*
 
 ### ✅ A3 — Segments never shrink from being unhappy *(resolved §4 overhaul)*
 Population is still presence-driven, but **dissatisfied segments now leave faster**:
@@ -48,7 +49,7 @@ The reward text says "without going broke," but the goal only checks `day ≥ 30
 *(`goals.ts`)*
 
 ### 🟡 A7 — Seasonal occasions are passive
-Holidays/birthday/anniversary apply a hype/mood/tips tailwind + a narrated line at
+Holidays/birthday/anniversary apply a hype/comfort/tips tailwind + a narrated line at
 go-live, but there's **no interactive themed event** (no Halloween costume choice, no
 NYE countdown). *(`calendar.ts`, `controller.ts`)*
 
@@ -164,10 +165,13 @@ Presence/room prompts say "her studio apartment" regardless of `settings.gender`
 It reads the backend once at render and doesn't subscribe, so changing the backend
 without a reload won't update it. *(`App.tsx`)*
 
-### ✅ D7 — Live state now survives a reload (fixed)
-`session` is persisted, and `boot.ts` calls `controller.resumeLive()` when
-`session.isLive` to rebuild the transient presence/audience/ambient-chat around it —
-so a mid-stream refresh stays live instead of dropping offline.
+### ✅ D7 — Live state now survives a reload *exactly* (fixed)
+`session`, the roster's `online` flags and the `audience` snapshot are all persisted, so
+a mid-stream refresh/load reproduces the **exact** room it was saved in — same cast
+online, same audience mix, same viewer count — instead of re-rolling presence. `boot.ts`
+no longer strips online flags, and `controller.resumeLive()` only restores internal
+counters: it does not touch presence, fabricates no "joined"/welcome-back chat, and the
+ambient loop resumes on the player's next action.
 *(`store.ts`, `boot.ts`, `controller.resumeLive`)*
 
 ---
@@ -179,7 +183,7 @@ so a mid-stream refresh stays live instead of dropping offline.
 | `eventChance(base, intensity)` | `events.ts` | Exported, unused; events are state-driven via Event Director. |
 | `nightProgress(clock)` | `time.ts` | Never used for event gating. |
 | ~~`mult.viewer`~~ | `shop.ts` | **Now read** by `presenceTick` (A1 resolved). |
-| `hypePerRound` / `energyPerRound` | `games.ts` | Defined, never applied (see A2). |
+| `hypePerRound` / `energyPerRound` | `activities.ts` | Applied per live beat via `applyActivityRoundCosts` (see A2). |
 | `HANDLES`, `MOD_HANDLES` | `personas.ts` | Dead; anon handles are procedural. |
 | `deletePortrait(charId)` | `imageStore.ts` | Exported, never called. |
 | re-exports `steeringForTier`, `fillPrompt` | `evaluator.ts` | Unused re-exports. |

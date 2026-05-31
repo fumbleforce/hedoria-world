@@ -32,7 +32,7 @@ export interface Occasion {
   seed: string;
   tone: "good" | "neutral";
   /** A gentle tip/hype tailwind for streaming on this day. */
-  bonus: { hype?: number; mood?: number; cashTips?: number };
+  bonus: { hype?: number; comfort?: number; cashTips?: number };
 }
 
 /** Parse a "MM-DD" birthday string into [month, day], or null. */
@@ -60,7 +60,7 @@ export function occasionForDay(day: number, opts?: { birthday?: string }): Occas
       name: "🎂 Your birthday stream",
       seed: "It's your birthday and chat found out. The room fills with cake spam, gift subs, and an outpouring of donations.",
       tone: "good",
-      bonus: { hype: 14, mood: 12, cashTips: 120 },
+      bonus: { hype: 14, comfort: 12, cashTips: 120 },
     };
   }
 
@@ -79,7 +79,7 @@ export function occasionForDay(day: number, opts?: { birthday?: string }): Occas
       name: "🎄 Holiday stream",
       seed: "Christmas night. Cozy, sentimental, a little lonely for some of chat — gift subs rain down.",
       tone: "good",
-      bonus: { hype: 8, mood: 8, cashTips: 100 },
+      bonus: { hype: 8, comfort: 8, cashTips: 100 },
     };
   }
   if (month === 12 && dayOfMonth === 31) {
@@ -109,7 +109,7 @@ export function occasionForDay(day: number, opts?: { birthday?: string }): Occas
       name: `🎉 ${years}-year anniversary`,
       seed: `It's been ${years} year${years > 1 ? "s" : ""} since you first went live. Long-time regulars reminisce; the community celebrates how far you've come.`,
       tone: "good",
-      bonus: { hype: 12, mood: 10, cashTips: 70 },
+      bonus: { hype: 12, comfort: 10, cashTips: 70 },
     };
   }
 
@@ -121,7 +121,7 @@ export function occasionForDay(day: number, opts?: { birthday?: string }): Occas
       name: `📅 ${months} month${months > 1 ? "s" : ""} streaming`,
       seed: `Another month of streaming in the books (${months} total). A quiet sense of momentum; chat notes the milestone.`,
       tone: "neutral",
-      bonus: { mood: 6, cashTips: 25 },
+      bonus: { comfort: 6, cashTips: 25 },
     };
   }
 
@@ -153,7 +153,7 @@ export function monthLabel(year: number, month: number): string {
 export function formatOccasionBonus(bonus: Occasion["bonus"]): string {
   const parts: string[] = [];
   if (bonus.hype) parts.push(`+${bonus.hype} hype`);
-  if (bonus.mood) parts.push(`+${bonus.mood} mood`);
+  if (bonus.comfort) parts.push(`+${bonus.comfort} comfort`);
   if (bonus.cashTips) parts.push(`+$${bonus.cashTips} tips`);
   return parts.length ? parts.join(" · ") : "No mechanical bonus";
 }

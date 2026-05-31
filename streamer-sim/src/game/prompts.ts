@@ -53,10 +53,10 @@ export const PROMPTS: Record<PromptId, PromptDef> = {
       "4. appeal — for each viewer segment that cares, a number -3..+3. Segments:",
       SEGMENT_GUIDE,
       "   Omit segments that wouldn't react.",
-      "5. pressure — optional nudge on hype, energy, mood, comfort (up, down, none).",
+      "5. pressure — optional nudge on hype, energy, comfort (up, down, none).",
       "   Code owns routine energy/comfort costs from tags + intensity — only flag",
       "   energy/comfort down for an unusually draining/exposing beat, or up for a",
-      "   genuinely restful/reassuring one. Hype and mood still follow your judgment.",
+      "   genuinely restful/reassuring one. Hype and comfort still follow your judgment.",
       "6. setsBoundary — true if she is setting/enforcing a personal boundary.",
       "7. connection — 0 to 3: how much this action genuinely deepens a ONE-TO-ONE",
       "   bond with a specific viewer, versus generic crowd-pleasing. 0 = generic",
@@ -84,6 +84,10 @@ export const PROMPTS: Record<PromptId, PromptDef> = {
       "   her tone or breath, the monitor light. Prefer a real small ACTION over an",
       "   expression. Lead with a different subject and verb each time so no two",
       "   beats start the same way.",
+      "",
+      "When the user message includes ACTIVE ACTIVITY (LOCKED): every action and",
+      "narration happens INSIDE that segment. Never describe transitioning, wrapping",
+      "up, or switching stream format until the player stops the activity.",
       "",
       "Respond with ONLY this JSON shape:",
       '{"plausible":true,"reason":"","tags":["funny"],"intensity":2,',
@@ -128,6 +132,9 @@ export const PROMPTS: Record<PromptId, PromptDef> = {
       "  - If it's telling a story, tell it in your own words.",
       "Stay fully in character, in her natural spoken voice, matching the tone steering.",
       "",
+      "When ACTIVE ACTIVITY (LOCKED) is in the user message: match that segment's delivery",
+      "and voice. Do not announce or imply a segment change.",
+      "",
       "Output ONLY her spoken words — no narration, no stage directions, no asterisks, no",
       "quotation marks, no name prefix. 1-4 sentences, natural spoken cadence.",
     ].join("\n"),
@@ -147,9 +154,9 @@ export const PROMPTS: Record<PromptId, PromptDef> = {
       "personalities. Reflect the audience mix provided. Occasionally a viewer",
       "donates, follows, subscribes, or raids.",
       "",
-      "Usernames must be lowercase handle-style (e.g. pog_champ99, cozy_tea_x) —",
-      "NOT real first names like Mark or Marcus. Use the named regulars' handles",
-      "where provided; for anonymous lines invent varied internet-style handles.",
+      "Usernames must be lowercase internet handles — word fragments, numbers, underscores,",
+      "or leet; never real first names or display names. Use named regulars' handles",
+      "where provided; invent a fresh anonymous handle for each new anon line.",
       "",
       "CRITICAL: React SPECIFICALLY to exactly what {{name}} just said or did (given",
       "in the user message). Reference the actual content — answer her questions, riff",
@@ -159,7 +166,8 @@ export const PROMPTS: Record<PromptId, PromptDef> = {
       "",
       "Respond with ONLY JSON:",
       '{"messages":[{"user":"handle","text":"...","kind":"normal","amount":0}]}',
-      "In text fields, escape double quotes as \\\" or use single quotes (e.g. lol \\\"little moment\\\" — not lol \"little moment\").",
+      "If message text contains quoted words, escape inner double quotes as \\\" or use",
+      "single quotes for the quoted phrase so the JSON remains valid.",
       "kind ∈ normal, hype, question, troll, flirty, creepy, donation, follow, sub, raid, mod.",
       "amount (USD) only for donation/sub.",
     ].join("\n"),
@@ -177,4 +185,40 @@ export function fillPrompt(
     .replaceAll("{{name}}", vars.name)
     .replaceAll("{{persona}}", vars.persona)
     .replaceAll("{{steering}}", vars.steering);
+}
+
+/** Structured user-message blocks so context sections don't bleed together. */
+export function promptSections(
+  blocks: Array<{ heading: string; body?: string | false | null }>,
+): string {
+  return blocks
+    .filter((b) => b.body != null && String(b.body).trim())
+    .map((b) => `=== ${b.heading.toUpperCase()} ===\n${String(b.body).trim()}`)
+    .join("\n\n");
+}
+
+export interface ActivityPromptContext {
+  label: string;
+  narrationHint: string;
+  chatHint?: string;
+}
+
+/**
+ * When an activity sub-state is active, every LLM call must treat the stream
+ * as locked in that segment until the player stops it — no transitions.
+ */
+export function activityLockBlock(act: ActivityPromptContext): string {
+  return [
+    `Segment: ${act.label}`,
+    "Status: LOCKED — continues until the player explicitly stops it.",
+    "Every action happens INSIDE this segment (same format, same vibe).",
+    "Forbidden: transitions, segues, \"smoothly switching\", wrapping up, moving on,",
+    "pivoting to a different stream type, or ending the segment in narration.",
+    "Interpret every player action inside the current segment's format and tone —",
+    "menu picks are beats within the segment, not a switch to a different category.",
+    `Segment focus: ${act.narrationHint}`,
+    act.chatHint ? `Chat tone: ${act.chatHint}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
 }

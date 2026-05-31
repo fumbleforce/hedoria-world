@@ -1,0 +1,74 @@
+---
+description: Limelight must persist all gameplay state — reload restores exact state
+globs: streamer-sim/**
+alwaysApply: false
+---
+
+# Limelight — Full-state persistence
+
+**Policy:** After refresh, slot reload, or browser restart, the player must get the
+**exact same game state** they had before — not a partial restore. If something
+was true before reload (live, mid-activity, mid-event, open modal, pending choice,
+DM thread, visitor scene, clock, zone, chat, story, roster online flags, etc.), it
+must still be true after load.
+
+This is non-negotiable for new work in `streamer-sim/`. Do not ship features that
+only live in memory unless they are explicitly listed as allowed ephemera below.
+
+## Where persistence lives
+
+| Layer | File | Role |
+|-------|------|------|
+| Save blob | [`streamer-sim/src/state/store.ts`](streamer-sim/src/state/store.ts) | `partialize` (what is written), `merge` (defaults for old saves) |
+| Slots | [`streamer-sim/src/persist/saves.ts`](streamer-sim/src/persist/saves.ts) | Per-slot localStorage keys |
+| Media | [`streamer-sim/src/persist/imageStore.ts`](streamer-sim/src/persist/imageStore.ts) | IndexedDB blobs referenced by ids in the save |
+| Boot | [`streamer-sim/src/boot.ts`](streamer-sim/src/boot.ts) | Rehydrate, `hydrateImageCache`, `controller.resumeLive()` for live sessions |
+
+Canonical inventory of what is saved today: [`streamer-sim/docs/07-persistence.md`](streamer-sim/docs/07-persistence.md).
+
+## When you add or change state
+
+1. **New `StoreState` field** — if it affects what the player sees or what the sim
+   considers true, add it to `partialize` and give old saves a safe default in
+   `merge`.
+2. **New sub-state on `GameController`** (private fields, timers, counters) — either
+   move it into the store and persist it, or restore it explicitly in
+   `resumeLive()` / boot so behavior matches pre-reload. Examples that must not
+   be lost: `streamMemory`, event throttle counters, ambient-chat eligibility.
+3. **New modal / panel / in-progress flow** — persist open flags and any in-flight
+   scene payload (`eventScene`, `visitor`, `pendingEvent`, `activity`, …) the same
+   way existing scenes do.
+4. **Do not** gate persistence on `isLive` unless ending the stream genuinely clears
+   that field in code — if the stream can survive reload, everything attached to it
+   must too.
+
+## Allowed ephemera (do not persist)
+
+Only these categories may reset on reload without violating the policy:
+
+- **In-flight UI mechanics** — `resolving`, `toast`, `imageBusy`, `generatingRoom`,
+  `dmBusy`, `portraitBusyId`, `booted` (boot sets it again).
+- **Derived caches** — `imageCache`, `stylePreviews` (rebuilt from IndexedDB on boot
+  via `hydrateImageCache`).
+- **Timer handles** — e.g. `ambientTimer` (restart ambient from persisted live state
+  in `resumeLive`, do not serialize the timer id).
+- **Dev-only telemetry** — `llmStats`, `feedback` bubbles, `changeLog` (unless product
+  asks to persist them later).
+
+Everything else is gameplay state until proven otherwise.
+
+## Verification (required for persistence-touching work)
+
+- Start mid-stream with a non-default sub-state (activity, event scene, visitor, pending event).
+- Refresh the page (or switch save slot away and back).
+- Confirm: same live/offline, same activity/scene, same chat/story tail, same zone/clock/metrics, same roster online.
+
+If reload loses something the player could see or act on, that is a bug — fix
+`partialize` / `merge` / boot resume, and update [`docs/07-persistence.md`](streamer-sim/docs/07-persistence.md).
+
+## Docs
+
+Persistence policy changes and new persisted fields → update
+[`streamer-sim/docs/07-persistence.md`](streamer-sim/docs/07-persistence.md). Known
+gaps between this policy and the code →
+[`streamer-sim/docs/09-expectation-vs-reality.md`](streamer-sim/docs/09-expectation-vs-reality.md).

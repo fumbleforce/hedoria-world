@@ -27,7 +27,7 @@ const center = (cell: [number, number]): [number, number] => [
 export function StudioRoom({ controller }: { controller: GameController }) {
   const zone = useStore((s) => s.zone);
   const isLive = useStore((s) => s.session.isLive);
-  const playing = useStore((s) => s.playing);
+  const activity = useStore((s) => s.activity);
   const visitor = useStore((s) => s.visitor);
   const guestId = useStore((s) => s.visitor?.charId ?? null);
   const guestName = useStore((s) =>
@@ -186,7 +186,7 @@ export function StudioRoom({ controller }: { controller: GameController }) {
 
       <div className="studio__bar">
         <div className={`studio__hint ${generating ? "is-loading" : ""}`}>
-          {generating ? "🖼 generating room art…" : playing ? "🎮 playing · click a spot to act" : "Click a spot to go there and act"}
+          {generating ? "🖼 generating room art…" : activity ? `🎬 ${activity.label} · click a spot to act` : "Click a spot to go there and act"}
         </div>
         {canGenImages && hasCharacter && (
           <button

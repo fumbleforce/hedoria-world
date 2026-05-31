@@ -25,9 +25,10 @@ narration, DMs, event text, images) is produced by an LLM, with a fully playable
 offline fallback engine.
 
 **Stack:** React + TypeScript + Zustand, built with Vite. State persists to
-`localStorage`; large image blobs live in IndexedDB. LLM text comes from Gemini
-(direct) or OpenRouter (via a dev proxy); a Mock provider keeps the game playable
-with no keys.
+`localStorage` (full gameplay snapshot per save slot); large image blobs live in
+IndexedDB. Reload must restore the same state — see [07 — Persistence](./07-persistence.md).
+LLM text comes from Gemini (direct) or OpenRouter (via a dev proxy); a Mock provider
+keeps the game playable with no keys.
 
 ## How to read these docs
 

@@ -3,7 +3,7 @@ import { useStore } from "../state/store";
 import type { GameController } from "../game/controller";
 import type { DmLine } from "../game/types";
 import { ARCHETYPE_BY_ID } from "../game/archetypes";
-import { avatarFor, relationshipLevel, revealedSheet, type CharacterSheet, type RevealedSheet } from "../game/characters";
+import { avatarFor, relationshipLevel, revealedSheet, personalityProse, personalityTable, backstoryLayerLabel, type CharacterSheet, type RevealedSheet } from "../game/characters";
 import { loadPortrait } from "../persist/imageStore";
 import { useStoredImage } from "../persist/useStoredImage";
 import { FloatingFeedback } from "./FeedbackBubbles";
@@ -138,11 +138,14 @@ function PlayerSheet({ revealed, c }: { revealed: RevealedSheet; c: CharacterShe
       <Row label="Name" value={revealed.displayName ?? LOCKED} locked={!revealed.displayName} />
       <Row label="Age" value={revealed.age != null ? String(revealed.age) : LOCKED} locked={revealed.age == null} />
       <Row label="Occupation" value={revealed.occupation ?? LOCKED} locked={!revealed.occupation} />
+      <Row label="From" value={revealed.origin ?? LOCKED} locked={!revealed.origin} />
+      <Row label="Personality" value={revealed.personalitySummary ?? LOCKED} locked={!revealed.personalitySummary} />
+      <Row label="Types like" value={revealed.voiceProfile ?? LOCKED} locked={!revealed.voiceProfile} />
       {revealed.backstoryLayers.length > 0
         ? revealed.backstoryLayers.map((layer) => (
-          <Row key={layer.id} label="Backstory" value={layer.text} />
+          <Row key={layer.id} label={backstoryLayerLabel(layer.trigger)} value={layer.text} />
         ))
-        : <Row label="Backstory" value={LOCKED} locked />}
+        : <Row label="Background" value={LOCKED} locked />}
       <Row label="Quirk" value={revealed.quirks ?? LOCKED} locked={!revealed.quirks} />
       <Row label="Vibe" value={revealed.vibe ?? LOCKED} locked={!revealed.vibe} />
       <Row label="Wants" value={revealed.motiveSurface ?? LOCKED} locked={!revealed.motiveSurface} />
@@ -151,7 +154,7 @@ function PlayerSheet({ revealed, c }: { revealed: RevealedSheet; c: CharacterShe
       <Row label="Affinity" value={revealed.affinity != null ? `${Math.round(revealed.affinity)}/100` : LOCKED} locked={revealed.affinity == null} />
       {revealed.attendance && <Row label="Attendance" value={revealed.attendance} />}
       {revealed.threat != null && <Row label="⚠ Threat" value={threatLabel(revealed.threat)} danger />}
-      <Row label="You remember" value={revealed.memory ?? LOCKED} locked={!revealed.memory} />
+      <Row label="History together" value={revealed.memory ?? LOCKED} locked={!revealed.memory} />
       {history.length > 0 && (
         <div className="char__history">
           <span className="char__label">History</span>
@@ -182,23 +185,73 @@ function DevXray({ c, archLabel }: { c: CharacterSheet; archLabel?: string }) {
       </button>
       {open && (
         <div className="char__xray-body">
+          <div className="char__xray-section">Identity</div>
+          <Row label="Real name" value={c.realName || "—"} />
+          <Row label="Name learned" value={c.displayName ? `yes — ${c.displayName}` : "no"} />
+          <Row label="Handle" value={c.handle} />
           <Row label="Gender" value={c.gender} />
           <Row label="Age" value={String(c.age)} />
           <Row label="Occupation" value={c.occupation} />
           <Row label="Archetype" value={archLabel ?? c.archetypeId} />
-          <Row label="Trait" value={`${c.traits.trait} (${c.traits.intensity})`} />
-          {c.traits.fixation && <Row label="Fixation" value={c.traits.fixation} />}
+          <Row label="Relationship" value={`${relationshipLevel(c.affinity)} · ${Math.round(c.affinity)}/100`} />
+
+          <div className="char__xray-section">Personality</div>
+          <Row label="Summary" value={personalityProse(c.personality)} />
+          <PersonalityTable c={c} />
+          {c.personality.fixation && <Row label="Fixation" value={c.personality.fixation} />}
+          <Row label="Speech tic" value={c.personality.speechTic || "—"} />
+          <Row label="From" value={`${c.origin} (${c.nativeLanguage})`} />
+          <Row label="Types like" value={c.voiceProfile} />
+          <Row label="Voice refined" value={c.voiceRefined ? "yes" : "no"} />
+
+          <div className="char__xray-section">Drives</div>
+          <Row label="Vibe" value={c.vibe || "—"} />
+          <Row label="Wants" value={c.motive.surface} />
           <Row label="Need" value={c.motive.need} />
           <Row label="Fear" value={c.motive.fear} />
           <Row label="Boundary" value={c.motive.boundary} />
+          <Row label="Quirk" value={c.quirks || "—"} />
           <Row label="Threat (raw)" value={String(c.threat)} danger={c.threat >= 2} />
+
+          <div className="char__xray-section">Engagement</div>
+          <Row label="Messages" value={String(c.messageCount)} />
+          <Row label="Tipped" value={`$${c.tipped.toFixed(0)}`} />
+          <Row label="Online" value={c.online ? "yes" : "no"} />
+          <Row label="Attendance" value={`${c.attendanceStreak} streak · ${c.streamsAttended} total`} />
+          <Row label="Memory" value={c.memory || "—"} />
+
+          <div className="char__xray-section">Backstory</div>
           {c.backstoryLayers.map((layer) => (
             <Row key={layer.id} label={`Bio [${layer.trigger}]`} value={layer.text} />
           ))}
           {c.backstoryLayers.length === 0 && c.backstory && <Row label="Bio (legacy)" value={c.backstory} />}
+          {c.backstoryLayers.length === 0 && !c.backstory && <Row label="Bio" value="(none yet)" />}
         </div>
       )}
     </div>
+  );
+}
+
+function PersonalityTable({ c }: { c: CharacterSheet }) {
+  const rows = personalityTable(c.personality);
+  return (
+    <table className="char__axes">
+      <thead>
+        <tr><th>Axis</th><th>Lvl</th><th>Read</th><th>Effect</th></tr>
+      </thead>
+      <tbody>
+        {rows.map((r) => (
+          <tr key={r.axis}>
+            <td>{r.axis}</td>
+            <td className={`char__axis-val ${r.value > 0 ? "is-pos" : r.value < 0 ? "is-neg" : ""}`}>
+              {r.value > 0 ? `+${r.value}` : r.value}
+            </td>
+            <td>{r.word}</td>
+            <td className="char__axis-effect">{r.effect}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 

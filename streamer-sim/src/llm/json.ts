@@ -63,7 +63,7 @@ function isClosingStringQuote(s: string, i: number): boolean {
 
 /**
  * Escape `"` that appear inside JSON string values but were not backslash-escaped
- * by the model. Common when chat text quotes a phrase: `"lol "little moment" yeah"`.
+ * by the model. Common when chat text embeds unescaped quote characters inside a value.
  */
 function repairUnescapedQuotes(s: string): string {
   const start = s.search(/[{[]/);

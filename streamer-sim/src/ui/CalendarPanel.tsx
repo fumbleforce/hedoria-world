@@ -160,7 +160,7 @@ export function CalendarPanel() {
               <li>📅 Streaming milestone — every 30 in-world days</li>
             </ul>
             <p className="hint calendar__hint">
-              Streaming on a special day gives a small hype/mood/tips tailwind. Set your birthday in Settings.
+              Streaming on a special day gives a small hype/comfort/tips tailwind. Set your birthday in Settings.
             </p>
           </section>
         </div>

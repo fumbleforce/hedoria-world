@@ -46,7 +46,7 @@ See [02 — Zones & token actions](./02-game-loop-and-economy.md#zones--token-ac
 | Term | Meaning |
 |------|---------|
 | **Beat / turn** | One action (or Continue) and its full resolution pipeline. |
-| **Metrics** | The persistent player stats: cash, followers, subscribers, hype, energy, mood, comfort, day, peak viewers. |
+| **Metrics** | Persistent stats: cash, followers, subscribers, hype, energy, comfort, hunger, bladder, hygiene, horny (No Limits), day, peak viewers. |
 | **Session** | Transient per-stream tallies (round count, earnings, new followers, peak this stream). Not persisted. |
 | **Audience segment** | One of 7 economic buckets (hype, lonely, simps, trolls, cozy, whales, stalkers), each with a `population` and `satisfaction`. Drives tips/followers/comfort. |
 | **Named character / regular** | A procedurally generated viewer with a handle, archetype, affinity, and memory. Appears in chat and the Regulars gallery; can be DM'd. |
@@ -86,7 +86,7 @@ See [02 — Zones & token actions](./02-game-loop-and-economy.md#zones--token-ac
 | `arcs.ts` | The 4 multi-day story arcs (sponsorship, viral, stalker-legal, relationship) and their stages. |
 | `goals.ts` | The 7 soft goals and their rewards. |
 | `calendar.ts` | In-world date math and seasonal occasions. |
-| `games.ts` | The 6 mini-games. |
+| `activities.ts` | Activity catalogue (games + performances), sub-state helpers. |
 | `shop.ts` | Upgrades and their multipliers. |
 | `time.ts` | Clock constants and time-cost table. |
 | `content.ts` | Content tiers and steering text. |

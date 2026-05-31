@@ -170,15 +170,26 @@ body {
 
 /* passive modifiers under the activity log */
 .statspanel {
-  flex: none; margin-top: 10px; max-height: 168px;
+  flex: none; margin-top: 10px; max-height: min(24vh, 200px);
   display: flex; flex-direction: column;
   background: #ffffff08; border: 1px solid var(--line); border-radius: 12px;
-  padding: 8px 10px;
+  padding: 6px 10px;
+  overflow-y: auto;
 }
 .statspanel__head {
   display: flex; align-items: center; justify-content: space-between;
   font-size: 0.72em; text-transform: uppercase; letter-spacing: 0.8px;
   color: var(--fg-2); margin-bottom: 6px;
+}
+.statspanel__group { margin-bottom: 4px; }
+.statspanel__group:last-child { margin-bottom: 0; }
+.statspanel__group-head {
+  font-size: 0.68em; text-transform: uppercase; letter-spacing: 0.6px;
+  color: var(--accent-2); margin: 4px 0 3px; padding-top: 2px;
+  border-top: 1px solid #ffffff0c;
+}
+.statspanel__group:first-of-type .statspanel__group-head {
+  border-top: none; padding-top: 0;
 }
 .statspanel__list {
   list-style: none; margin: 0; padding: 0; min-height: 0;
@@ -220,7 +231,19 @@ body {
 
 /* ---------------------------------------------------------------- chat */
 .chat { display: flex; flex-direction: column; min-height: 0; flex: 1 1 50%; }
-.chat__head { display: flex; justify-content: space-between; align-items: center; font-size: 0.72em; text-transform: uppercase; letter-spacing: 0.8px; color: var(--fg-2); margin-bottom: 6px; }
+.chat__head {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 0.72em; text-transform: uppercase; letter-spacing: 0.8px;
+  color: var(--fg-2); margin-bottom: 6px;
+}
+.chat__title { flex: none; }
+.chat__head .meter--chat-hype {
+  flex: 1; min-width: 0; max-width: 200px; margin-left: auto;
+  text-transform: none; letter-spacing: 0;
+}
+.chat__head .meter--chat-hype .meter__label { width: 36px; }
+.chat__head .meter--chat-hype .meter__track { height: 5px; }
+.chat__dot { flex: none; margin-left: 0; }
 .chat__dot { color: var(--fg-2); }
 .chat__dot--live { color: var(--accent); }
 .chat__scroll { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; padding-right: 4px; }
@@ -370,6 +393,15 @@ input:focus, textarea:focus, select:focus { outline: 1px solid var(--accent-2); 
 .char__xray-toggle:hover { color: #f0abfc; }
 .char__xray-chevron { font-size: 0.9em; opacity: 0.85; }
 .char__xray-body { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e879f944; }
+.char__xray-section { margin-top: 6px; font-size: 0.64em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #e879f9aa; }
+.char__xray-section:first-child { margin-top: 0; }
+.char__axes { width: 100%; border-collapse: collapse; font-size: 0.74em; margin: 2px 0; }
+.char__axes th { text-align: left; font-weight: 600; color: var(--fg-2); padding: 2px 6px 2px 0; border-bottom: 1px solid #e879f933; }
+.char__axes td { padding: 2px 6px 2px 0; vertical-align: top; border-bottom: 1px solid #ffffff0a; }
+.char__axis-val { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--fg-2); }
+.char__axis-val.is-pos { color: #6ee7b7; }
+.char__axis-val.is-neg { color: #fca5a5; }
+.char__axis-effect { color: var(--fg-2); }
 .dm__head { font-size: 0.72em; text-transform: uppercase; letter-spacing: 0.8px; color: var(--fg-2); margin-bottom: 8px; }
 .dm__scroll { max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
 .dm__line { font-size: 0.88em; line-height: 1.4; }
@@ -392,6 +424,13 @@ input:focus, textarea:focus, select:focus { outline: 1px solid var(--accent-2); 
 .gamecard__name { font-weight: 700; }
 .gamecard__blurb { font-size: 0.8em; color: var(--fg-2); line-height: 1.35; }
 .gamecard__pleases { font-size: 0.72em; color: var(--accent-2); margin-top: 2px; }
+.gamecard--locked { opacity: 0.65; cursor: not-allowed; }
+.gamecard--locked:hover { background: #ffffff0a; border-color: var(--line); }
+.gamecard__lock { font-size: 0.72em; color: var(--warn); margin-top: 4px; }
+.activitypick__custom { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
+.activitypick__form { display: flex; gap: 8px; margin-top: 8px; }
+.activitypick__input { flex: 1; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg-2); color: var(--fg); }
+.shop__meta { font-size: 0.78em; color: var(--fg-2); margin: 4px 0; }
 
 /* ---------------------------------------------------------------- shop */
 .shop__group h3 { margin: 16px 0 8px; font-size: 0.8em; text-transform: uppercase; letter-spacing: 0.6px; color: var(--fg-2); }

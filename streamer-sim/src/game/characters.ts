@@ -6,7 +6,8 @@
  */
 
 import { ARCHETYPE_BY_ID, ARCHETYPES, type Archetype } from "./archetypes";
-import { pick, randInt, uid } from "../rng/rng";
+import type { SegmentId } from "./segments";
+import { pick, randInt, uid, clamp } from "../rng/rng";
 import { isInMinuteWindow, dayPhase } from "./time";
 import { BALANCE } from "./balance";
 
@@ -48,16 +49,33 @@ export interface CharLogEntry {
   text: string;
 }
 
-/** Per-instance personality modifiers rolled at seed time. */
-export interface TraitModifiers {
-  /** Short trait label, e.g. "anxious", "bold". */
-  trait: string;
-  /** 1–3 intensity of this instance. */
-  intensity: number;
+/** Per-instance personality axes rolled at seed time (-5..+5 each). */
+export interface Personality {
+  warmth: number;
+  energy: number;
+  formality: number;
+  boldness: number;
+  humor: number;
+  /** -5 platonic/averse … +5 openly flirtatious or suggestive when the vibe allows. */
+  horny: number;
   /** Stalker fixation axis — what they obsess over (stalkers only). */
   fixation?: string;
-  /** Speech tic injected into mock/LLM voice. */
+  /** Offline chatEngine mock filler only — never injected into LLM prompts. */
   speechTic: string;
+}
+
+/** @deprecated Legacy saves only — migrated to `personality` on normalize. */
+export interface TraitModifiers {
+  trait: string;
+  intensity: number;
+  fixation?: string;
+  speechTic: string;
+}
+
+export interface Origin {
+  place: string;
+  language: string;
+  markers: string[];
 }
 
 export interface RevealedSheet {
@@ -74,14 +92,24 @@ export interface RevealedSheet {
   attendance: string | null;
   age: number | null;
   occupation: string | null;
+  origin: string | null;
+  personalitySummary: string | null;
+  voiceProfile: string | null;
 }
 
 export interface CharacterSheet {
   id: string;
   /** Chat handle, e.g. "midnight_mara". */
   handle: string;
-  /** Display name once known, else "". */
+  /** Display name once the PLAYER has learned it, else "". */
   displayName: string;
+  /**
+   * The character's actual given name — self-knowledge, set at creation and known
+   * to the NPC from the start. They may choose to share it (which sets
+   * `displayName`); the game never forces it. Distinct from `displayName`, which
+   * tracks what the *player* has learned.
+   */
+  realName: string;
   archetypeId: string;
   gender: CharacterGender;
   /** Approximate age in years. */
@@ -93,8 +121,16 @@ export interface CharacterSheet {
   /** What they want from the streamer (legacy alias for motive.surface). */
   wants: string;
   motive: Motive;
-  /** Per-instance trait modifiers. */
-  traits: TraitModifiers;
+  /** Home region / city — self-knowledge. */
+  origin: string;
+  /** First language — self-knowledge. */
+  nativeLanguage: string;
+  /** Deterministic typing-style guidance for LLM prompts (may be LLM-refined once). */
+  voiceProfile: string;
+  /** True after hybrid LLM voice enrichment on first contact. */
+  voiceRefined?: boolean;
+  /** Per-instance personality axes. */
+  personality: Personality;
   /** Usual watch window start (minutes since midnight). */
   watchStart: number;
   /** Usual watch window end (minutes since midnight; may wrap past midnight). */
@@ -169,12 +205,283 @@ export function relationshipLevel(affinity: number): RelationshipLevel {
   return "stranger";
 }
 
+/** Gendered first-name pools used to seed each character's real name. */
+export const FEMALE_NAMES = [
+  "Mara", "June", "Robin", "Quinn", "Iris", "Noa", "Sky", "Wren", "Remy", "Lena",
+  "Zoe", "Mia", "Eva", "Nora", "Lily", "Ruby", "Jade", "Cleo", "Tess", "Vera",
+  "Hana", "Sage", "Faye", "Elle", "Rosa", "Nina", "Ada", "Bea", "Cora", "Dana",
+];
+export const MALE_NAMES = [
+  "Nico", "Eli", "Theo", "Kai", "Devon", "Casey", "Ash", "Sam", "Alex", "Marc",
+  "Leo", "Max", "Ian", "Owen", "Cole", "Dean", "Finn", "Gabe", "Hugo", "Jude",
+  "Knox", "Luke", "Miles", "Noah", "Reed", "Sean", "Troy", "Wade", "Zane", "Blake",
+];
+export const NEUTRAL_NAMES = [
+  "Sam", "Alex", "Casey", "Robin", "Quinn", "Remy", "Ash", "Sky", "Noa", "Devon",
+  "Rory", "Sage", "River", "Phoenix", "Rowan", "Emery", "Arlo", "Blair", "Drew", "Jules",
+];
+
+/** A gender-appropriate first name, avoiding any already in `taken` when possible. */
+export function pickName(gender: CharacterGender, taken: Set<string> = new Set()): string {
+  const pool =
+    gender === "female" ? FEMALE_NAMES
+    : gender === "male" ? MALE_NAMES
+    : NEUTRAL_NAMES;
+  const available = pool.filter((n) => !taken.has(n.toLowerCase()));
+  if (available.length) return pick(available);
+  return `${pick(pool)}${randInt(2, 9)}`;
+}
+
 export function pronouns(gender: CharacterGender): { subj: string; obj: string; poss: string } {
   switch (gender) {
     case "female": return { subj: "she", obj: "her", poss: "her" };
     case "male": return { subj: "he", obj: "him", poss: "his" };
     default: return { subj: "they", obj: "them", poss: "their" };
   }
+}
+
+// ---- personality / origin / voice --------------------------------------------
+
+const SPEECH_TICS = ["...", "lol", "tbh", "ngl", "fr", "honestly", "anyway", "idk", "haha", "👀"];
+const STALKER_FIXATIONS = [
+  "your schedule and routines",
+  "what you wear on stream",
+  "where you live",
+  "being your only close viewer",
+  "meeting you in person",
+  "your offline life details",
+  "photos you've posted anywhere",
+  "your real name and identity",
+];
+
+type PersonalityBase = Pick<Personality, "warmth" | "energy" | "formality" | "boldness" | "humor" | "horny">;
+
+const PERSONALITY_AXIS_MIN = -5;
+const PERSONALITY_AXIS_MAX = 5;
+const LEGACY_PERSONALITY_AXIS_MAX = 2;
+
+const PERSONALITY_AXES = ["warmth", "energy", "formality", "boldness", "humor", "horny"] as const;
+
+const SEGMENT_PERSONALITY_BASE: Record<SegmentId, PersonalityBase> = {
+  hype: { warmth: 3, energy: 5, formality: -2, boldness: 3, humor: 3, horny: -2 },
+  cozy: { warmth: 5, energy: -2, formality: 0, boldness: -2, humor: 0, horny: -2 },
+  lonely: { warmth: 5, energy: 0, formality: 0, boldness: -2, humor: -2, horny: 0 },
+  simps: { warmth: 3, energy: 3, formality: -2, boldness: 5, humor: 3, horny: 5 },
+  whales: { warmth: 0, energy: 0, formality: 3, boldness: 5, humor: 0, horny: 3 },
+  trolls: { warmth: -5, energy: 3, formality: -2, boldness: 5, humor: 5, horny: -2 },
+  stalkers: { warmth: 3, energy: -2, formality: 0, boldness: 0, humor: -2, horny: 3 },
+};
+
+export const ORIGINS: Origin[] = [
+  { place: "Manchester, UK", language: "English", markers: ["British regional slang", "dry understatement"] },
+  { place: "rural Ohio", language: "English", markers: ["casual Midwest register"] },
+  { place: "Los Angeles", language: "English", markers: ["Californian filler-word habit"] },
+  { place: "Toronto", language: "English", markers: ["soft Canadian politeness"] },
+  { place: "Sydney", language: "English", markers: ["Australian clipped slang"] },
+  { place: "São Paulo, Brazil", language: "Portuguese", markers: ["Brazilian-style typed laughter", "drops articles", "warm, emoji-forward"] },
+  { place: "Berlin", language: "German", markers: ["literal and blunt phrasing"] },
+  { place: "Seoul", language: "Korean", markers: ["polite, slightly formal register"] },
+  { place: "Manila", language: "Tagalog", markers: ["politeness particles leak in", "emoji-forward"] },
+  { place: "Mexico City", language: "Spanish", markers: ["warm diminutives", "Spanish-style typed laughter"] },
+  { place: "Mumbai", language: "Hindi", markers: ["earnest, slightly formal", "Indian-English tag words"] },
+  { place: "Stockholm", language: "Swedish", markers: ["understated, near-perfect English"] },
+];
+
+function jitterAxis(value: number): number {
+  return clamp(value + randInt(-2, 2), PERSONALITY_AXIS_MIN, PERSONALITY_AXIS_MAX);
+}
+
+/** Rescale pre-granularity saves that still use the old -2..+2 range. */
+function upgradePersonalityScale(p: Personality): Personality {
+  const peak = Math.max(...PERSONALITY_AXES.map((k) => Math.abs(p[k])));
+  if (peak > LEGACY_PERSONALITY_AXIS_MAX) return p;
+  const scale = PERSONALITY_AXIS_MAX / LEGACY_PERSONALITY_AXIS_MAX;
+  const next = { ...p };
+  for (const key of PERSONALITY_AXES) {
+    next[key] = clamp(Math.round(p[key] * scale), PERSONALITY_AXIS_MIN, PERSONALITY_AXIS_MAX);
+  }
+  return next;
+}
+
+export function rollPersonality(arch: Archetype): Personality {
+  const base = SEGMENT_PERSONALITY_BASE[arch.segment] ?? SEGMENT_PERSONALITY_BASE.cozy;
+  const fixation = arch.segment === "stalkers" ? pick(STALKER_FIXATIONS) : undefined;
+  return {
+    warmth: jitterAxis(base.warmth),
+    energy: jitterAxis(base.energy),
+    formality: jitterAxis(base.formality),
+    boldness: jitterAxis(base.boldness),
+    humor: jitterAxis(base.humor),
+    horny: jitterAxis(base.horny),
+    fixation,
+    speechTic: pick(SPEECH_TICS),
+  };
+}
+
+/** Pick a home region; cozy/lonely slightly more likely to be non-US English. */
+export function seedOrigin(arch: Archetype): Origin {
+  const nonUs = ORIGINS.filter((o) => !["rural Ohio", "Los Angeles"].includes(o.place));
+  const pool =
+    (arch.segment === "cozy" || arch.segment === "lonely") && Math.random() < 0.35
+      ? nonUs
+      : ORIGINS;
+  return pick(pool);
+}
+
+type PersonalityAxis = (typeof PERSONALITY_AXES)[number];
+
+interface AxisProse {
+  label: string;
+  /** Adjective ladder for magnitude 1..5 in the positive direction. */
+  pos: [string, string, string, string, string];
+  /** Adjective ladder for magnitude 1..5 in the negative direction. */
+  neg: [string, string, string, string, string];
+  /** Behavioural consequence when this axis leans positive. */
+  posEffect: string;
+  /** Behavioural consequence when this axis leans negative. */
+  negEffect: string;
+}
+
+/**
+ * Per-axis graduated descriptors. Every nonzero level (±1..±5) maps to a distinct
+ * word so the full -5..+5 range is actually expressed, plus a behavioural
+ * consequence used in the dev table and prompts.
+ */
+const AXIS_PROSE: Record<PersonalityAxis, AxisProse> = {
+  warmth: {
+    label: "Warmth",
+    pos: ["cordial", "warm", "very warm", "deeply caring", "radiantly affectionate"],
+    neg: ["a little cool", "distant", "cold", "frosty", "openly hostile"],
+    posEffect: "leads with kindness, reassurance, and personal interest",
+    negEffect: "keeps people at arm's length and can turn cutting",
+  },
+  energy: {
+    label: "Energy",
+    pos: ["lively", "upbeat", "high-energy", "hyper", "manic"],
+    neg: ["mellow", "low-key", "reserved", "withdrawn", "nearly silent"],
+    posEffect: "fires off fast, exclamation-heavy bursts",
+    negEffect: "slow to warm up; long pauses, easily drained",
+  },
+  formality: {
+    label: "Formality",
+    pos: ["tidy", "articulate", "polished", "formal", "stiffly proper"],
+    neg: ["casual", "slangy", "very slangy", "sloppy", "barely punctuated"],
+    posEffect: "writes clean, complete, capitalised sentences",
+    negEffect: "lowercase, abbreviations, loose grammar",
+  },
+  boldness: {
+    label: "Boldness",
+    pos: ["forthright", "forward", "bold", "brazen", "shameless"],
+    neg: ["soft-spoken", "timid", "meek", "skittish", "painfully shy"],
+    posEffect: "states wants directly and pushes for more",
+    negEffect: "hedges, waits for permission, retreats if rebuffed",
+  },
+  humor: {
+    label: "Humor",
+    pos: ["dryly amused", "jokey", "playful", "relentlessly funny", "incorrigible clown"],
+    neg: ["plain-spoken", "earnest", "serious", "grave", "humorless"],
+    posEffect: "turns most things into a bit",
+    negEffect: "takes things at face value; jokes can land flat",
+  },
+  horny: {
+    label: "Horny",
+    pos: ["faintly flirty", "flirty", "forward", "suggestive", "explicitly horny"],
+    neg: ["platonic", "strictly platonic", "sex-averse", "prudish", "repulsed by it"],
+    posEffect: "lets flirtation creep in when she invites it",
+    negEffect: "keeps things clean; flirting backfires",
+  },
+};
+
+/** Word for a single axis at its current value (empty string at 0). */
+function axisWord(axis: PersonalityAxis, value: number): string {
+  if (value === 0) return "";
+  const mag = Math.min(5, Math.abs(value));
+  const ladder = value > 0 ? AXIS_PROSE[axis].pos : AXIS_PROSE[axis].neg;
+  return ladder[mag - 1];
+}
+
+/**
+ * Short prose summary across all axes. Includes every nonzero axis so the full
+ * granular range is reflected (not just the strong extremes).
+ */
+export function personalityProse(p: Personality): string {
+  const parts = PERSONALITY_AXES.map((k) => axisWord(k, p[k])).filter(Boolean);
+  return parts.length ? parts.join(", ") : "even-keeled";
+}
+
+/** Per-axis table for dev surfaces: value, prose word, behavioural consequence. */
+export interface AxisRow {
+  axis: string;
+  value: number;
+  word: string;
+  effect: string;
+}
+
+export function personalityTable(p: Personality): AxisRow[] {
+  return PERSONALITY_AXES.map((k) => {
+    const value = p[k];
+    const spec = AXIS_PROSE[k];
+    const word = value === 0 ? "neutral" : axisWord(k, value);
+    const effect = value === 0 ? "—" : value > 0 ? spec.posEffect : spec.negEffect;
+    return { axis: spec.label, value, word, effect };
+  });
+}
+
+/** Raw axis readout for compact dev/debug surfaces (signed values). */
+export function personalityAxes(p: Personality): string {
+  const fmt = (n: number) => (n > 0 ? `+${n}` : String(n));
+  return PERSONALITY_AXES.map((k) => `${k} ${fmt(p[k])}`).join(", ");
+}
+
+/**
+ * Deterministic typing-style guidance as a SHORT list of key phrases (tags),
+ * not prose. Tendencies only — never literal tokens to copy. Kept to the few
+ * most salient tags so "Types like" reads as quick descriptors.
+ */
+export function seedVoiceProfile(personality: Personality, origin: Origin): string {
+  const tags: string[] = [];
+
+  // Casing
+  if (personality.formality >= 3) tags.push("proper capitalization");
+  else if (personality.formality <= -3) tags.push("all-lowercase");
+  else tags.push("casual casing");
+
+  // Pace / punctuation
+  if (personality.energy >= 3) tags.push("short bursts, lots of !!");
+  else if (personality.warmth >= 3 && personality.energy <= 0) tags.push("gentle, trailing …");
+  else if (personality.energy <= -3) tags.push("terse, sparse punctuation");
+
+  // Emoji
+  if (personality.warmth >= 3 || personality.energy >= 3) tags.push("emoji-heavy");
+  else if (personality.humor >= 3) tags.push("meme-y reactions");
+  else if (personality.formality >= 3 || personality.warmth <= -3) tags.push("rarely emoji");
+
+  // Length
+  tags.push(personality.energy >= 2 ? "one-liners" : personality.energy <= -2 ? "few words" : "short messages");
+
+  // Manner from the loudest non-style axis
+  if (personality.boldness >= 3) tags.push("blunt/direct");
+  else if (personality.boldness <= -3) tags.push("hedging/shy");
+  if (personality.humor >= 4) tags.push("constantly joking");
+  if (personality.horny >= 3) tags.push("flirty undertone");
+
+  // Origin colour (first marker only) + non-native flag
+  if (origin.markers.length) tags.push(origin.markers[0]);
+  if (origin.language !== "English") tags.push(`${origin.language}-native (minor slips)`);
+
+  // De-dupe and cap to keep it scannable.
+  return [...new Set(tags)].slice(0, 6).join(" · ");
+}
+
+/** Migrate legacy `traits` field from old saves. */
+export function migrateLegacyTraits(legacy: TraitModifiers | undefined, arch: Archetype): Personality {
+  if (!legacy) return rollPersonality(arch);
+  const p = rollPersonality(arch);
+  return {
+    ...p,
+    fixation: legacy.fixation ?? p.fixation,
+    speechTic: legacy.speechTic || p.speechTic,
+  };
 }
 
 /** Concatenate layers into the legacy `backstory` string for prompts. */
@@ -186,6 +493,22 @@ export function hasBackstoryLayer(c: CharacterSheet, trigger: string): boolean {
   return c.backstoryLayers.some((l) => l.trigger === trigger);
 }
 
+/** Human-facing heading for a backstory layer, so multiple rows aren't all "Backstory". */
+export function backstoryLayerLabel(trigger: string): string {
+  if (trigger.startsWith("threat-")) return "⚠ What you've uncovered";
+  switch (trigger) {
+    case "seed": return "Background";
+    case "familiar": return "Getting to know them";
+    case "regular": return "Opening up";
+    case "friend": return "Closer now";
+    case "confidant": return "What they've trusted you with";
+    default:
+      return trigger
+        .replace(/[-_]/g, " ")
+        .replace(/\b\w/g, (m) => m.toUpperCase());
+  }
+}
+
 /** Append a capped interaction entry. Returns the new log array. */
 export function appendInteraction(
   log: CharLogEntry[],
@@ -195,20 +518,37 @@ export function appendInteraction(
   return next.length > INTERACTION_LOG_CAP ? next.slice(-INTERACTION_LOG_CAP) : next;
 }
 
-/** What the player is allowed to see based on relationship + interaction. */
+/**
+ * What the player is allowed to see, gated by the RELATIONSHIP (affinity), which
+ * is the only thing that reflects genuinely getting to know someone.
+ *
+ * Deliberately NOT gated on:
+ *  - `c.known` — set the instant a sheet is opened, so it would leak everything.
+ *  - `c.messageCount` — counts the NPC's *passive* chat spam during streams, so a
+ *    chatty stranger would expose their age/personality without any real bond.
+ *
+ * Engagement stats the player already owns (their own message/tip/affinity tallies
+ * and condensed memory) show as soon as there's been any contact at all.
+ *
+ * Progression ladder:
+ *   stranger (<15)  — nothing personal
+ *   familiar (15+)  — first read: vibe, broad personality
+ *   regular  (35+)  — age, origin, occupation, wants, quirk
+ *   friend   (60+)  — typing voice, deeper backstory
+ *   confidant(85+)  — the deepest layers
+ */
 export function revealedSheet(c: CharacterSheet): RevealedSheet {
   const lvl = relationshipLevel(c.affinity);
-  const interacted = c.known || c.messageCount > 0 || c.interactionLog.length > 0;
+  const contacted = c.interactionLog.length > 0 || c.tipped > 0 || c.displayName !== "" || c.memory !== "";
+  const isFamiliar = lvl !== "stranger"; // affinity >= 15
+  const isRegularPlus = lvl === "regular" || lvl === "friend" || lvl === "confidant"; // >= 35
+  const isFriendPlus = lvl === "friend" || lvl === "confidant"; // >= 60
 
   const unlockedTriggers = new Set<string>();
-  if (interacted) unlockedTriggers.add("seed");
-  if (lvl !== "stranger" || c.messageCount >= 3) unlockedTriggers.add("familiar");
-  if (c.displayName) unlockedTriggers.add("regular");
-  if (lvl === "friend" || lvl === "confidant") {
-    unlockedTriggers.add("friend");
-    unlockedTriggers.add("regular");
-    unlockedTriggers.add("familiar");
-  }
+  if (isFamiliar) unlockedTriggers.add("seed");
+  if (isFamiliar) unlockedTriggers.add("familiar");
+  if (isRegularPlus || c.displayName) unlockedTriggers.add("regular");
+  if (isFriendPlus) unlockedTriggers.add("friend");
   if (lvl === "confidant") unlockedTriggers.add("confidant");
   for (let t = 1; t <= c.threat; t += 1) unlockedTriggers.add(`threat-${t}`);
 
@@ -216,18 +556,21 @@ export function revealedSheet(c: CharacterSheet): RevealedSheet {
 
   return {
     displayName: c.displayName || null,
-    vibe: (interacted || lvl !== "stranger") ? c.vibe : null,
-    motiveSurface: (lvl !== "stranger" || c.messageCount >= 2) ? c.motive.surface : null,
+    vibe: isFamiliar ? c.vibe : null,
+    motiveSurface: isRegularPlus ? c.motive.surface : null,
     backstoryLayers: visibleLayers,
-    quirks: (lvl === "friend" || lvl === "confidant" || c.known) ? (c.quirks || null) : null,
+    quirks: isRegularPlus ? (c.quirks || null) : null,
     threat: c.threat >= 1 ? c.threat : null,
-    memory: interacted ? (c.memory || null) : null,
-    messages: interacted ? c.messageCount : null,
-    tipped: (c.tipped > 0 || lvl !== "stranger") ? c.tipped : null,
-    affinity: interacted ? c.affinity : null,
+    memory: contacted ? (c.memory || null) : null,
+    messages: contacted ? c.messageCount : null,
+    tipped: c.tipped > 0 ? c.tipped : null,
+    affinity: contacted ? c.affinity : null,
     attendance: c.attendanceStreak >= 2 ? `${c.attendanceStreak} streams running (${c.streamsAttended} total)` : null,
-    age: (lvl !== "stranger" || c.messageCount >= 3) ? c.age : null,
-    occupation: (c.displayName || lvl === "regular" || lvl === "friend" || lvl === "confidant") ? c.occupation : null,
+    age: isRegularPlus ? c.age : null,
+    occupation: isRegularPlus ? c.occupation : null,
+    origin: isRegularPlus ? (c.origin || null) : null,
+    personalitySummary: isFamiliar ? personalityProse(c.personality) : null,
+    voiceProfile: isFriendPlus ? (c.voiceProfile || null) : null,
   };
 }
 
@@ -288,20 +631,7 @@ export function rosterHandles(roster: Roster): Set<string> {
   return new Set(Object.values(roster).map((c) => c.handle.toLowerCase()));
 }
 
-// ---- gender / traits / motives -----------------------------------------------
-
-const TRAIT_POOL = ["anxious", "bold", "shy", "witty", "intense", "chill", "needy", "guarded", "warm", "sarcastic"];
-const SPEECH_TICS = ["...", "lol", "tbh", "ngl", "fr", "honestly", "anyway", "idk", "haha", "👀"];
-const STALKER_FIXATIONS = [
-  "your schedule and routines",
-  "what you wear on stream",
-  "where you live",
-  "being your only close viewer",
-  "meeting you in person",
-  "your offline life details",
-  "photos you've posted anywhere",
-  "your real name and identity",
-];
+// ---- gender / motives --------------------------------------------------------
 
 /** Realistic gender mix, optionally skewed per segment. */
 export function rollGender(arch: Archetype): CharacterGender {
@@ -322,56 +652,44 @@ export function rollGender(arch: Archetype): CharacterGender {
   return "nonbinary";
 }
 
-export function rollTraitModifiers(arch: Archetype): TraitModifiers {
-  const fixation = arch.segment === "stalkers"
-    ? pick(STALKER_FIXATIONS)
-    : undefined;
-  return {
-    trait: pick(TRAIT_POOL),
-    intensity: randInt(1, 3),
-    fixation,
-    speechTic: pick(SPEECH_TICS),
-  };
-}
-
 const MOTIVE_SURFACES: Record<string, string[]> = {
-  hype: ["big entertaining moments to react to", "clips worth sharing", "hype they can ride"],
-  lonely: ["to feel personally seen and remembered", "a voice in the quiet hours", "someone who notices when they're there"],
-  simps: ["flirty attention and banter", "to feel special in chat", "a little validation"],
-  whales: ["to be acknowledged by name for their generosity", "VIP treatment", "recognition for their support"],
-  trolls: ["a reaction — any reaction", "to get under your skin", "entertainment from chaos"],
-  cozy: ["a calm, kind place to hang out", "background comfort", "low-stress company"],
-  stalkers: ["to get closer than is appropriate", "access you shouldn't give", "a bond that crosses lines"],
+  hype: ["big entertaining moments to react to", "clips worth sharing", "hype they can ride", "a crew to celebrate wins with", "loud, chaotic fun", "to be first on the best moments"],
+  lonely: ["a voice in the quiet hours", "someone who notices when they're there", "company while they wind down", "a low-pressure place to just be around people", "to feel personally seen", "a familiar face at the end of the day"],
+  simps: ["flirty attention and banter", "to feel special in chat", "a little validation", "to make you laugh on purpose", "to be your favorite regular", "a private inside joke with you"],
+  whales: ["to be acknowledged by name for their generosity", "VIP treatment", "recognition for their support", "to visibly shape the stream with money", "first-name familiarity", "to feel like a patron, not a viewer"],
+  trolls: ["a reaction — any reaction", "to get under your skin", "entertainment from chaos", "to test where your limits really are", "an audience for the bit", "to feel clever at your expense"],
+  cozy: ["a calm, kind place to hang out", "background comfort", "low-stress company", "a gentle routine to follow", "soft conversation, nothing heavy", "a pleasant corner of the internet"],
+  stalkers: ["to get closer than is appropriate", "access you shouldn't give", "a bond that crosses lines", "to learn things you didn't share", "to be the one who truly 'gets' you", "to close the gap between fan and creator"],
 };
 
 const MOTIVE_NEEDS: Record<string, string[]> = {
-  hype: ["belong to something exciting", "feel part of a winning moment"],
-  lonely: ["not feel invisible", "have someone who remembers them"],
-  simps: ["feel desired", "believe there's a real connection"],
-  whales: ["status and exclusivity", "to matter to someone successful"],
-  trolls: ["power over the mood of the room", "proof they can affect you"],
-  cozy: ["stability and warmth", "a routine that feels safe"],
-  stalkers: ["control or possession", "to collapse the distance between fan and creator"],
+  hype: ["to belong to something exciting", "to be part of a winning moment", "an outlet for restless energy", "to feel the room move together", "a reason to show up loud"],
+  lonely: ["to not feel invisible", "to be remembered between visits", "proof that someone would notice their absence", "a thread of human contact", "to matter to one specific person"],
+  simps: ["to feel desired", "to believe there's a real connection", "to be chosen over the crowd", "tenderness they don't get offline", "to be wanted, not just tolerated"],
+  whales: ["status and exclusivity", "to matter to someone they admire", "to convert money into being seen", "control over something that feels premium", "to outrank the ordinary fans"],
+  trolls: ["power over the mood of the room", "proof they can affect you", "to feel sharper than everyone watching", "to puncture something earnest", "to be impossible to ignore"],
+  cozy: ["stability and warmth", "a routine that feels safe", "to lower their guard somewhere", "quiet belonging without demands", "a soft landing after hard days"],
+  stalkers: ["control or possession", "to collapse the distance between fan and creator", "to be the exception to your rules", "certainty that you're 'theirs'", "to be irreplaceable to you"],
 };
 
 const MOTIVE_FEARS: Record<string, string[]> = {
-  hype: ["missing the best moment", "the stream getting boring"],
-  lonely: ["being forgotten", "reaching out and being ignored"],
-  simps: ["being one of many", "humiliation if rejected"],
-  whales: ["being treated like any other viewer", "their money not mattering"],
-  trolls: ["being banned before the bit lands", "you setting a boundary they can't break"],
-  cozy: ["drama ruining the vibe", "the channel changing tone"],
-  stalkers: ["you cutting them off", "someone else getting closer than them"],
+  hype: ["missing the best moment", "the stream going flat", "being the only one not in on it", "the energy dying"],
+  lonely: ["being forgotten", "reaching out and getting silence", "being just another handle in chat", "going a whole day unnoticed"],
+  simps: ["being one of many", "humiliation if rejected", "discovering the warmth was an act", "being seen as pathetic"],
+  whales: ["being treated like any other viewer", "their money not mattering", "being thanked and then ignored", "looking like a mark"],
+  trolls: ["being banned before the bit lands", "a boundary they can't break", "being boring", "being ignored instead of engaged"],
+  cozy: ["drama ruining the vibe", "the channel changing tone", "conflict they can't escape", "being put on the spot"],
+  stalkers: ["you cutting them off", "someone else getting closer first", "being seen as just a fan", "losing the access they've gained"],
 };
 
 const MOTIVE_BOUNDARIES: Record<string, string[]> = {
-  hype: ["doesn't want long personal DMs", "hates when the stream stalls"],
-  lonely: ["pulls back if dismissed twice", "won't tip if ignored"],
-  simps: ["gets hurt if flirtation feels fake", "won't push past your stated limits"],
-  whales: ["expects respect, not pity", "won't stay if publicly embarrassed"],
-  trolls: ["retreats if mods clamp down hard", "escalates if you engage angrily"],
-  cozy: ["leaves if things get too intense", "dislikes mean-spirited banter"],
-  stalkers: ["interprets kindness as invitation", "escalates when boundaries are vague"],
+  hype: ["bored by long personal DMs", "hates when the stream stalls", "checks out if it gets too quiet", "won't sit through slow segments"],
+  lonely: ["pulls back if dismissed twice", "won't tip if ignored", "goes quiet rather than fight for attention", "fades out if it feels one-sided"],
+  simps: ["gets hurt if flirtation feels fake", "won't push past your stated limits", "sulks if a joke lands wrong", "withdraws if it feels transactional"],
+  whales: ["expects respect, not pity", "won't stay if publicly embarrassed", "stops spending if taken for granted", "dislikes being lumped in with freeloaders"],
+  trolls: ["retreats if mods clamp down hard", "escalates if you engage angrily", "loses interest once it's not a game", "backs off if you stay genuinely calm"],
+  cozy: ["leaves if things get too intense", "dislikes mean-spirited banter", "won't be dragged into drama", "logs off when it gets loud"],
+  stalkers: ["reads kindness as invitation", "escalates when boundaries are vague", "ignores soft no's", "tests rules to see which ones hold"],
 };
 
 export function seedMotive(arch: Archetype): Motive {
@@ -492,27 +810,33 @@ export function rollArchetypeForTime(
 /** Seed a fresh character from an archetype (no LLM). */
 export function seedCharacter(arch: Archetype, clock: number, taken: Set<string> = new Set()): CharacterSheet {
   const motive = seedMotive(arch);
-  const traits = rollTraitModifiers(arch);
+  const personality = rollPersonality(arch);
+  const origin = seedOrigin(arch);
   const gender = rollGender(arch);
   const age = seedAge(arch);
   const occupation = seedOccupation(arch);
   const { watchStart, watchEnd } = seedWatchWindow(arch);
-  const vibe = traits.fixation
-    ? `${arch.blurb} Fixated on ${traits.fixation}.`
-    : `${arch.blurb} ${traits.trait.charAt(0).toUpperCase()}${traits.trait.slice(1)} energy.`;
+  const voiceProfile = seedVoiceProfile(personality, origin);
+  const vibe = personality.fixation
+    ? `${arch.blurb} Fixated on ${personality.fixation}.`
+    : `${arch.blurb} ${personalityProse(personality)}.`;
 
   return {
     id: uid("char"),
     handle: makeHandle(arch, taken),
     displayName: "",
+    realName: pickName(gender),
     archetypeId: arch.id,
     gender,
     age,
     occupation,
+    origin: origin.place,
+    nativeLanguage: origin.language,
+    voiceProfile,
     vibe,
     wants: motive.surface,
     motive,
-    traits,
+    personality,
     watchStart,
     watchEnd,
     affinity: randInt(2, 12),
@@ -535,7 +859,7 @@ export function seedCharacter(arch: Archetype, clock: number, taken: Set<string>
     attendanceStreak: 0,
     backstoryLayers: [],
     backstory: "",
-    quirks: traits.speechTic,
+    quirks: personality.speechTic,
     hasPortrait: false,
     hasBody: false,
     affinityDay: -1,
@@ -569,7 +893,13 @@ export function normalizeCharacter(c: CharacterSheet): CharacterSheet {
   const arch = ARCHETYPE_BY_ID[c.archetypeId];
   const fallback = arch ?? ARCHETYPES[0];
   const motive = c.motive ?? seedMotive(fallback);
-  const traits = c.traits ?? rollTraitModifiers(fallback);
+  const legacyTraits = (c as CharacterSheet & { traits?: TraitModifiers }).traits;
+  let personality = c.personality ?? migrateLegacyTraits(legacyTraits, fallback);
+  if (typeof personality.horny !== "number") {
+    const base = SEGMENT_PERSONALITY_BASE[fallback.segment] ?? SEGMENT_PERSONALITY_BASE.cozy;
+    personality = { ...personality, horny: jitterAxis(base.horny) };
+  }
+  personality = upgradePersonalityScale(personality);
   const watch = c.watchStart !== undefined && c.watchEnd !== undefined
     ? { watchStart: c.watchStart, watchEnd: c.watchEnd }
     : seedWatchWindow(fallback);
@@ -579,20 +909,33 @@ export function normalizeCharacter(c: CharacterSheet): CharacterSheet {
   }
   const backstory = syncBackstoryString(backstoryLayers) || (c.backstory ?? "");
 
+  const gender = c.gender ?? rollGender(fallback);
+  const originEntry =
+    c.origin && ORIGINS.some((o) => o.place === c.origin)
+      ? ORIGINS.find((o) => o.place === c.origin)!
+      : seedOrigin(fallback);
+  const origin = c.origin || originEntry.place;
+  const nativeLanguage = c.nativeLanguage || originEntry.language;
+  const voiceProfile = c.voiceProfile || seedVoiceProfile(personality, originEntry);
+
   return {
     ...c,
-    gender: c.gender ?? rollGender(fallback),
+    gender,
+    realName: c.realName || c.displayName || pickName(gender),
     age: needsSeedAge(c) ? seedAge(fallback) : c.age,
     occupation: needsSeedOccupation(c) ? seedOccupation(fallback) : c.occupation,
+    origin,
+    nativeLanguage,
+    voiceProfile,
     motive,
-    traits,
+    personality,
     watchStart: watch.watchStart,
     watchEnd: watch.watchEnd,
     wants: c.wants ?? motive.surface,
     interactionLog: c.interactionLog ?? [],
     backstoryLayers,
     backstory,
-    quirks: c.quirks ?? traits.speechTic,
+    quirks: c.quirks ?? personality.speechTic,
     milestones: c.milestones ?? [],
     relationship: c.relationship ?? "none",
     escalationDay: c.escalationDay ?? -1,
@@ -625,17 +968,39 @@ export function describeRelationship(c: CharacterSheet): string {
   return `${lvl} · ${arch?.label ?? "viewer"}`;
 }
 
-/** Build a prompt-friendly personality block for LLM/mock paths. */
-export function characterVoiceBlock(c: CharacterSheet): string {
+/** Reflexive pronoun ("himself"/"herself"/"themselves") from a subject pronoun. */
+function reflexive(subj: string): string {
+  return subj === "she" ? "herself" : subj === "he" ? "himself" : "themselves";
+}
+
+/**
+ * Build a prompt-friendly character block for LLM paths.
+ *
+ * IMPORTANT — perspective: this is written in the THIRD PERSON and refers to the
+ * character by name/pronoun and to the streamer by name. We never use "you"/"your"
+ * inside the character data, because the stored backstory/memory also refer to the
+ * streamer, and a mix of "you = the NPC" (framing) with "your = the streamer"
+ * (backstory) produces the classic perspective flip. Keeping everything in third
+ * person with explicit names removes that ambiguity entirely.
+ *
+ * The character knows everything about themselves and decides what to share; we
+ * never censor — if something wouldn't come up yet, they simply don't mention it.
+ */
+export function characterVoiceBlock(c: CharacterSheet, streamerName: string): string {
   const arch = ARCHETYPE_BY_ID[c.archetypeId];
   const p = pronouns(c.gender);
+  const name = c.realName || c.handle;
+  const Subj = p.subj.charAt(0).toUpperCase() + p.subj.slice(1);
+  const refl = reflexive(p.subj);
   const lines = [
-    `${c.handle} (${arch?.label ?? "viewer"}, ${c.age}, ${c.occupation}, ${p.subj}/${p.obj})`,
-    `Vibe: ${c.vibe}`,
-    `Wants: ${c.motive.surface}. Deeper need: ${c.motive.need}.`,
+    `Voice this character: ${name} (@${c.handle}) — a ${arch?.label ?? "viewer"}, ${c.age}yo ${c.occupation} from ${c.origin}, ${p.subj}/${p.obj}. ${Subj} is a fan who watches the streamer ${streamerName}; ${p.subj} is the fan, never ${streamerName}.`,
+    `Personality: ${personalityProse(c.personality)}.`,
+    c.personality.fixation ? `Fixation: ${c.personality.fixation}.` : "",
+    `Typing style (guidance, not a script): ${c.voiceProfile}.`,
+    `What ${p.subj} wants from ${streamerName}: ${c.motive.surface}. Deeper need: ${c.motive.need}.`,
     `Fear: ${c.motive.fear}. Boundary: ${c.motive.boundary}.`,
-    c.traits.fixation ? `Fixation: ${c.traits.fixation}.` : "",
-    `Trait: ${c.traits.trait} (intensity ${c.traits.intensity}). Speech tic: "${c.traits.speechTic}".`,
+    c.backstory ? `Background (${p.subj} lives this, never recites it): ${c.backstory}` : "",
+    `${Subj} knows ${refl} completely and reveals personal details (real name, job, past) only when it fits how close ${p.subj} and ${streamerName} are — a stranger earns less than a confidant.`,
   ];
   return lines.filter(Boolean).join("\n");
 }

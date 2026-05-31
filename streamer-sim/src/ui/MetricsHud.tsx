@@ -5,28 +5,18 @@ import { getActiveSlot } from "../persist/saves";
 import { FloatingFeedback, useFeedbackJanitor } from "./FeedbackBubbles";
 import { masteryProgress } from "../game/mastery";
 import { BALANCE } from "../game/balance";
-
-function Bar({ label, value, color, metric }: { label: string; value: number; color: string; metric: string }) {
-  const rounded = Math.round(value);
-  return (
-    <div className="meter" title={`${label}: ${rounded}/100`}>
-      <span className="meter__label">{label}</span>
-      <span className="meter__track">
-        <span className="meter__fill" style={{ width: `${value}%`, background: color }} />
-      </span>
-      <span className="meter__value">{rounded}</span>
-      <FloatingFeedback channel="metric" feedbackKey={metric} />
-    </div>
-  );
-}
+import { isNoLimits } from "../game/content";
+import { MeterBar } from "./MeterBar";
 
 export function MetricsHud() {
   const m = useStore((s) => s.metrics);
   const session = useStore((s) => s.session);
   const clock = useStore((s) => s.clock);
+  const contentTier = useStore((s) => s.settings.contentTier);
   const name = useStore((s) => s.settings.streamerName);
   const slotName = getActiveSlot().name;
   useFeedbackJanitor();
+  const noLimits = isNoLimits(contentTier);
 
   return (
     <header className="hud">
@@ -54,10 +44,12 @@ export function MetricsHud() {
       </div>
 
       <div className="hud__meters">
-        <Bar label="Hype" metric="hype" value={m.hype} color="#ffd43b" />
-        <Bar label="Energy" metric="energy" value={m.energy} color="#74c0fc" />
-        <Bar label="Mood" metric="mood" value={m.mood} color="#8ce99a" />
-        <Bar label="Comfort" metric="comfort" value={m.comfort} color="var(--accent-2)" />
+        <MeterBar label="Energy" metric="energy" value={m.energy} color="#74c0fc" />
+        <MeterBar label="Comfort" metric="comfort" value={m.comfort} color="var(--accent-2)" />
+        <MeterBar label="Hunger" metric="hunger" value={m.hunger} color="#e59949" />
+        <MeterBar label="Bladder" metric="bladder" value={m.bladder} color="#91a7ff" />
+        <MeterBar label="Hygiene" metric="hygiene" value={m.hygiene} color="#63e6be" />
+        {noLimits && <MeterBar label="Horny" metric="horny" value={m.horny} color="#ff6b9d" />}
       </div>
 
       <MasteryChips />

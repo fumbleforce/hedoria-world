@@ -34,7 +34,7 @@ export const GOALS: Goal[] = [
     label: "First 100 followers",
     hint: "Grow a little audience.",
     progress: (s) => ({ ratio: ratio(s.metrics.followers, 100), value: `${fmt(s.metrics.followers)} / 100` }),
-    reward: { hype: 6, mood: 5 },
+    reward: { hype: 6, comfort: 5 },
     rewardText: "100 followers! The room finally feels alive.",
   },
   {
@@ -42,7 +42,7 @@ export const GOALS: Goal[] = [
     label: "100 concurrent viewers",
     hint: "Pull a real crowd at once.",
     progress: (s) => ({ ratio: ratio(s.peakViewers, 100), value: `${fmt(s.peakViewers)} / 100 peak` }),
-    reward: { hype: 8, mood: 6 },
+    reward: { hype: 8, comfort: 6 },
     rewardText: "100 people watching at once — you're not talking to an empty room anymore.",
   },
   {
@@ -50,7 +50,7 @@ export const GOALS: Goal[] = [
     label: "10 subscribers",
     hint: "Build recurring support.",
     progress: (s) => ({ ratio: ratio(s.metrics.subscribers, 10), value: `${fmt(s.metrics.subscribers)} / 10` }),
-    reward: { cash: 50, mood: 6 },
+    reward: { cash: 50, comfort: 6 },
     rewardText: "10 subs — predictable income, and people who chose to stick around.",
   },
   {
@@ -58,7 +58,7 @@ export const GOALS: Goal[] = [
     label: "Bank a rent buffer",
     hint: "Save $2,000 so a slow week can't sink you.",
     progress: (s) => ({ ratio: ratio(s.metrics.cash, 2000), value: `$${fmt(s.metrics.cash)} / $2,000` }),
-    reward: { mood: 10, comfort: 8 },
+    reward: { comfort: 18 },
     rewardText: "$2,000 banked. For the first time, rent isn't a knot in your stomach.",
   },
   {
@@ -66,7 +66,7 @@ export const GOALS: Goal[] = [
     label: "1,000 followers",
     hint: "Cross into real-channel territory.",
     progress: (s) => ({ ratio: ratio(s.metrics.followers, 1000), value: `${fmt(s.metrics.followers)} / 1,000` }),
-    reward: { hype: 12, mood: 10, cash: 100 },
+    reward: { hype: 12, comfort: 10, cash: 100 },
     rewardText: "1,000 followers. This is a real channel now.",
   },
   {
@@ -74,7 +74,7 @@ export const GOALS: Goal[] = [
     label: "Survive a month",
     hint: "Make it to Day 30 without going broke.",
     progress: (s) => ({ ratio: ratio(s.metrics.day, 30), value: `Day ${s.metrics.day} / 30` }),
-    reward: { mood: 12, comfort: 10 },
+    reward: { comfort: 22 },
     rewardText: "A full month of making rent off the stream. You're actually doing this.",
   },
   {
@@ -82,7 +82,7 @@ export const GOALS: Goal[] = [
     label: "Go full-time",
     hint: "Hit 10,000 followers — quit-the-day-job numbers.",
     progress: (s) => ({ ratio: ratio(s.metrics.followers, 10000), value: `${fmt(s.metrics.followers)} / 10,000` }),
-    reward: { hype: 20, mood: 18, cash: 500 },
+    reward: { hype: 20, comfort: 18, cash: 500 },
     rewardText: "10,000 followers. You can do this full-time. The dream is real.",
   },
 ];

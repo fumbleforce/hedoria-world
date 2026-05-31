@@ -89,6 +89,8 @@ export const BALANCE = {
     /** Recurring utility bill: charged every N days for a flat amount. */
     utilityEveryDays: 7,
     utilityAmount: 18,
+    /** Passive discovery while live: viewers × happyNorm × rate × reach per beat. */
+    passiveFollowerRate: 0.012,
   },
 
   subs: {
@@ -96,6 +98,41 @@ export const BALANCE = {
     monthlyValue: 3.5,
     /** Recurring sub payout cadence, in in-world days. */
     cadenceDays: 30,
+    /** Daily sub conversion at sleep: fraction of followers. */
+    subDailyRate: 0.002,
+    /** Per friend+ regular per day. */
+    subRegularBonus: 0.15,
+    /** Fraction of subs that churn per day. */
+    subChurnRate: 0.01,
+    /** Typical live beats per active day — spreads daily sub gain across the stream. */
+    liveBeatsPerDay: 48,
+  },
+
+  needs: {
+    drainPerMin: { hunger: 0.06, bladder: 0.09, hygiene: 0.035 },
+    warnBelow: 35,
+    criticalBelow: 15,
+    strainFloor: 0.6,
+    criticalComfortDrainPerBeat: 1.5,
+    criticalEnergyDrainPerBeat: 1.0,
+    nagCooldownBeats: 6,
+    cueHornyMedium: 40,
+    cueHornyHigh: 70,
+    cueHungerBelow: 30,
+    cueBladderBelow: 30,
+    cueHygieneBelow: 25,
+  },
+
+  horny: {
+    buildPerIntensity: 3,
+    buildPerSpicyChat: 0.8,
+    sleepHalve: 0.5,
+    reliefMasturbation: 65,
+    /** Max fraction intimate comfort cost is reduced at horny 100 (0 = off). */
+    comfortEaseMax: 0.2,
+    /** Scene relief scales with intensity (min..max reduction). */
+    reliefSceneMin: 25,
+    reliefSceneMax: 55,
   },
 
   novelty: {
@@ -168,8 +205,10 @@ export const BALANCE = {
   recovery: {
     /** Nightly energy restored, capped at 100 (was hard reset to 100). */
     sleepEnergy: 70,
-    sleepMood: 3,
-    sleepComfort: 2,
+    sleepComfort: 5,
+    sleepBladder: 100,
+    sleepHygiene: 40,
+    sleepHunger: 30,
     /** Asserting a boundary restores comfort. */
     boundaryComfort: 6,
   },
@@ -183,7 +222,7 @@ export const BALANCE = {
     maxPendingFollowups: 5,
     followupDaysMin: 1,
     followupDaysMax: 14,
-    /** Per-effect metric delta clamp (hype/energy/mood/comfort). */
+    /** Per-effect metric delta clamp (hype/energy/comfort/needs). */
     metricDeltaBand: 25,
     cashMin: -500,
     cashMax: 500,

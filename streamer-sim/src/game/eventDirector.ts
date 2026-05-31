@@ -13,7 +13,7 @@ import { steeringForTier } from "./content";
 import type { Metrics, Settings } from "./types";
 
 export type EventEffect =
-  | { type: "metric"; key: "hype" | "energy" | "mood" | "comfort"; delta: number; note?: string }
+  | { type: "metric"; key: "hype" | "energy" | "comfort" | "hunger" | "bladder" | "hygiene" | "horny"; delta: number; note?: string }
   | { type: "money"; amount: number; charRef?: string; note?: string }
   | { type: "followers"; delta: number; note?: string }
   | { type: "subscribers"; delta: number; note?: string }
@@ -86,10 +86,17 @@ export interface EventDirectorContext {
   upgradeIds: string[];
   /** Optional seed text when continuing a scheduled follow-up. */
   seed?: string;
+  /** Active stream activity sub-state, if any. */
+  activity?: {
+    label: string;
+    narrationHint: string;
+    roundsPlayed: number;
+    category?: string;
+  };
 }
 
 const REL_VALUES = ["none", "romantic", "sexual", "dominant", "submissive", "married"] as const;
-const METRIC_KEYS = ["hype", "energy", "mood", "comfort"] as const;
+const METRIC_KEYS = ["hype", "energy", "comfort", "hunger", "bladder", "hygiene", "horny"] as const;
 const E = BALANCE.events;
 
 /** Static fallback specs for mock mode, parse failures, and must-address safety nets. */
@@ -99,7 +106,7 @@ export const FALLBACK_EVENT_SPECS: EventSpec[] = [
     title: "📦 Something at the door",
     tone: "neutral",
     opening: "A knock echoes through the apartment — unexpected, but not necessarily unwelcome.",
-    effects: [{ type: "metric", key: "mood", delta: 2, note: "a little surprise" }],
+    effects: [{ type: "metric", key: "comfort", delta: 2, note: "a little surprise" }],
   },
   {
     mode: "scene",
@@ -120,7 +127,7 @@ export const FALLBACK_EVENT_SPECS: EventSpec[] = [
     characterRef: null,
     effects: [
       { type: "metric", key: "comfort", delta: -8, note: "they crossed a line" },
-      { type: "metric", key: "mood", delta: -4 },
+      { type: "metric", key: "comfort", delta: -4 },
     ],
   },
   {
@@ -131,7 +138,7 @@ export const FALLBACK_EVENT_SPECS: EventSpec[] = [
       "Your body is sending signals you can't ignore anymore. The thought of performing makes your chest tighten — burnout isn't a metaphor tonight.",
     stakes: "Rest now or pay for it later.",
     effects: [
-      { type: "metric", key: "mood", delta: -4 },
+      { type: "metric", key: "comfort", delta: -4 },
       { type: "metric", key: "energy", delta: -6 },
     ],
   },
@@ -176,7 +183,7 @@ export async function authorEvent(
       "  - \"notice\": a single narrated beat with immediate effects (small passive happenings)",
       "Compose ONLY from listed capabilities in effects; never invent operations. Code owns every number — your deltas are suggestions and will be clamped.",
       "BACK YOUR NARRATION WITH CAPABILITIES: if your opening says a DM/message arrived, a tip came in, followers spiked, a gift showed up, or a viewer raided, you MUST include the matching effect (incomingDm, money, followers, grantItem, raid, …). Never narrate a consequence you didn't author as an effect.",
-      "If the beat is fundamentally someone messaging her privately (a DM, an off-stream ask, a troll's message), use mode \"notice\" with an `incomingDm` effect — put the actual message text in `message` and bind the sender via `charRef`. A real DM then lands in her inbox and she replies in the DM panel, where the DM director takes over. Do NOT open a scene that merely describes a DM.",
+      "If the beat is fundamentally someone messaging her privately (a DM, an off-stream ask, a troll's message), use mode \"notice\" with an `incomingDm` effect: bind the sender via `charRef` and give the GIST of why they're reaching out in `note`. The sender writes their own line in-voice and decides what to reveal — don't script their exact words or names. A real DM lands in her inbox and she replies in the DM panel, where the DM director takes over. Do NOT open a scene that merely describes a DM.",
       "Fit THIS state and her trajectory (niche/mastery/recent beats). Do NOT repeat any recent event title.",
       "Reference real online viewers by characterRef: \"online:<id>\"; use \"new\" to introduce someone.",
       mustAddress
@@ -367,7 +374,7 @@ function formatAuthorContext(ctx: EventDirectorContext): string {
     `Streamer: ${ctx.settings.streamerName}`,
     `Day ${ctx.metrics.day}, live: ${ctx.isLive}`,
     `Cash $${ctx.metrics.cash.toFixed(0)}, followers ${ctx.metrics.followers}, subs ${ctx.metrics.subscribers}`,
-    `Hype ${Math.round(ctx.metrics.hype)}, energy ${Math.round(ctx.metrics.energy)}, mood ${Math.round(ctx.metrics.mood)}, comfort ${Math.round(ctx.metrics.comfort)}`,
+    `Hype ${Math.round(ctx.metrics.hype)}, energy ${Math.round(ctx.metrics.energy)}, comfort ${Math.round(ctx.metrics.comfort)}, hunger ${Math.round(ctx.metrics.hunger)}, bladder ${Math.round(ctx.metrics.bladder)}, hygiene ${Math.round(ctx.metrics.hygiene)}`,
     `Build: niche=${ctx.niche}, outfit=${ctx.outfit}, showmanship L${ctx.mastery.showmanship}, composure L${ctx.mastery.composure}, production Q=${ctx.productionQuality}`,
     ctx.segmentAppealSummary ? `Gear appeal: ${ctx.segmentAppealSummary}` : "",
     ctx.recentNarrative ? `Recent beats:\n${ctx.recentNarrative.slice(-600)}` : "",
@@ -381,6 +388,9 @@ function formatAuthorContext(ctx: EventDirectorContext): string {
     ctx.recentEventTitles.length ? `Recent events (avoid repeating): ${ctx.recentEventTitles.join(" | ")}` : "",
     `Pacing: ${ctx.beatsSinceLastEvent} beats / ${ctx.daysSinceLastEvent} days since last event`,
     ctx.seed ? `Follow-up seed: ${ctx.seed}` : "",
+    ctx.activity
+      ? `Active activity: ${ctx.activity.label} (beat ${ctx.activity.roundsPlayed + 1}). ${ctx.activity.narrationHint} Author activity-specific scenes/notices that fit the current segment — stay in that format, do not pivot stream type.`
+      : "",
     'Return JSON: { "spec": EventSpec | null }.',
   ];
   return lines.filter(Boolean).join("\n");
@@ -417,7 +427,7 @@ const EFFECT_ITEM_SCHEMA: Record<string, unknown> = {
         "none",
       ],
     },
-    key: { type: "string", enum: ["hype", "energy", "mood", "comfort"] },
+    key: { type: "string", enum: ["hype", "energy", "comfort", "hunger", "bladder", "hygiene", "horny"] },
     delta: { type: "number" },
     amount: { type: "number" },
     charRef: { type: "string" },

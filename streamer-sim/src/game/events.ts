@@ -75,12 +75,13 @@ export const EVENT_TRIGGERS: EventTrigger[] = [
   {
     id: "burnout",
     live: false,
-    // Arms when both mood and comfort are chronically low — the body says stop.
-    weight: (c) => (c.metrics.mood < 35 && c.metrics.comfort < 45 ? 2.5 : 0),
+    // Arms when comfort and energy are chronically low — the body says stop.
+    weight: (c) =>
+      c.metrics.comfort < 35 && c.metrics.energy < 45 ? 2.5 : 0,
     build: () =>
       ev("🪫 Burnout is creeping in", "Everything feels heavy. The thought of going live makes your chest tighten.", "danger", [
-        choice("Take the day to truly rest", "You log off, silence the phone, and let yourself recover.", { mood: 18, comfort: 16, energy: 20 }),
-        choice("Push through it anyway", "You grind on, running on empty. It costs you.", { mood: -5, comfort: -4, energy: -12 }),
+        choice("Take the day to truly rest", "You log off, silence the phone, and let yourself recover.", { comfort: 34, energy: 20 }),
+        choice("Push through it anyway", "You grind on, running on empty. It costs you.", { comfort: -9, energy: -12 }),
       ]),
   },
   // ---- Door / deliveries ----------------------------------------------------
@@ -89,7 +90,7 @@ export const EVENT_TRIGGERS: EventTrigger[] = [
     live: false,
     weight: () => 1,
     build: () => ev("📦 A package arrives", "A delivery you half-remember ordering — or fan mail.", "good", [
-      choice("Open it now", "Cute gifts and merch samples from viewers. Mood up.", { mood: 6 }),
+      choice("Open it now", "Cute gifts and merch samples from viewers. A small lift.", { comfort: 6 }),
       choice("Set it aside", "You'll deal with it later.", {}),
     ]),
   },
@@ -102,12 +103,12 @@ export const EVENT_TRIGGERS: EventTrigger[] = [
       const creepy = c.intensity >= 1 && (who?.threat ?? 0) >= 1;
       if (creepy) {
         return ev("🚪 Someone's at the door", `Through the peephole: a stranger with flowers and a printout of your schedule.`, "creepy", [
-          choice("Don't open — wait them out", "They leave the flowers and go. You feel watched.", { comfort: -8, mood: -4 }),
-          choice("Open the door", "Tense and unsettling. You shut it fast, heart pounding.", { comfort: -16, mood: -8, followers: 3 }),
+          choice("Don't open — wait them out", "They leave the flowers and go. You feel watched.", { comfort: -12 }),
+          choice("Open the door", "Tense and unsettling. You shut it fast, heart pounding.", { comfort: -24, followers: 3 }),
         ], who);
       }
       return ev("🚪 A knock at the door", "Someone's outside. You're not expecting anyone.", "neutral", [
-        choice("Answer it", "Just a neighbor returning your mail. Pleasant enough.", { mood: 3 }),
+        choice("Answer it", "Just a neighbor returning your mail. Pleasant enough.", { comfort: 3 }),
         choice("Ignore it", "Whoever it was moves on.", {}),
       ]);
     },
@@ -160,22 +161,22 @@ export const EVENT_TRIGGERS: EventTrigger[] = [
           choice(
             "Block & report",
             "You block them and file a report. Quieter, safer — a couple of their friends leave with them.",
-            { comfort: 18, mood: 4, followers: -4 },
+            { comfort: 22, followers: -4 },
           ),
           choice(
             "Confront on stream",
             "You call it out live. Clips fly, the room rallies behind you — but your hands are shaking.",
-            { hype: 16, followers: 12, comfort: -10, mood: -6 },
+            { hype: 16, followers: 12, comfort: -16 },
           ),
           choice(
             "Move apartments",
             "You break the lease and disappear for a few days. Expensive, but you can breathe again.",
-            { cash: -300, comfort: 24, mood: 6 },
+            { cash: -300, comfort: 30 },
           ),
           choice(
             "Wait it out",
             "You tell yourself it'll pass. It doesn't. You feel watched all night.",
-            { comfort: -12, mood: -6 },
+            { comfort: -18 },
           ),
         ],
         who,
@@ -190,7 +191,7 @@ export const EVENT_TRIGGERS: EventTrigger[] = [
       const offer = 50 + Math.round(c.metrics.followers / 4);
       return ev("📧 A brand deal", `An energy-drink brand offers $${offer} for a mid-stream plug.`, "good", [
         choice(`Take it (+$${offer})`, "You read the ad copy; chat cries 'sellout' but you're paid.", { cash: offer, hype: -4, comfort: -2 }),
-        choice("Decline", "You keep it authentic. Chat respects it.", { hype: 4, mood: 3 }),
+        choice("Decline", "You keep it authentic. Chat respects it.", { hype: 4, comfort: 3 }),
       ]);
     },
   },
@@ -222,22 +223,22 @@ export const EVENT_TRIGGERS: EventTrigger[] = [
         "neutral",
         [
           choice("Pay on the spot (-$150)", "You hand over the cash with a tight smile. Tense, but handled.", { cash: -150, comfort: 4 }),
-          choice("Ask for a few days", "You buy time with a nervous laugh. The worry coils in your stomach.", { mood: -5, comfort: -5 }),
+          choice("Ask for a few days", "You buy time with a nervous laugh. The worry coils in your stomach.", { comfort: -10 }),
         ],
       ),
   },
   {
     id: "sick-day",
     live: false,
-    weight: (c) => (c.metrics.energy < 45 || c.metrics.mood < 40 ? 1.1 : 0.3),
+    weight: (c) => (c.metrics.energy < 45 || c.metrics.comfort < 40 ? 1.1 : 0.3),
     build: () =>
       ev(
         "🤒 You wake up sick",
         "Scratchy throat, heavy head, everything aches. Streaming today would be miserable.",
         "neutral",
         [
-          choice("Rest and recover", "You take the day off. Money's tight, but you'll come back stronger.", { energy: 20, mood: 6, comfort: 6 }),
-          choice("Push through anyway", "You power through on tea and willpower. Tomorrow you'll pay for it.", { energy: -10, mood: -6, comfort: -3 }),
+          choice("Rest and recover", "You take the day off. Money's tight, but you'll come back stronger.", { energy: 20, comfort: 12 }),
+          choice("Push through anyway", "You power through on tea and willpower. Tomorrow you'll pay for it.", { energy: -10, comfort: -9 }),
         ],
       ),
   },
@@ -252,7 +253,7 @@ export const EVENT_TRIGGERS: EventTrigger[] = [
         "danger",
         [
           choice("Switch to phone + hotspot", "You scramble onto a scrappy backup and stay live. Chat loves the chaos.", { hype: 4, energy: -5, comfort: -2 }),
-          choice("Call it early", "You apologize and wrap early to be safe. Better than losing the gear.", { hype: -4, mood: -3 }),
+          choice("Call it early", "You apologize and wrap early to be safe. Better than losing the gear.", { hype: -4, comfort: -3 }),
         ],
       ),
   },

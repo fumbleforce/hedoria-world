@@ -7,7 +7,7 @@ import type {
   Settings,
   StreamSession,
   StoryEntry,
-  PlayingState,
+  ActivityState,
   DmLine,
   CharacterVisual,
   EventRecord,
@@ -45,8 +45,11 @@ const FEEDBACK_METRICS = [
   "subscribers",
   "hype",
   "energy",
-  "mood",
   "comfort",
+  "hunger",
+  "bladder",
+  "hygiene",
+  "horny",
 ] as const;
 type FeedbackMetricKey = (typeof FEEDBACK_METRICS)[number];
 
@@ -57,8 +60,11 @@ const FEEDBACK_EPSILON: Record<FeedbackMetricKey, number> = {
   subscribers: 1,
   hype: 1,
   energy: 1,
-  mood: 1,
   comfort: 1,
+  hunger: 1,
+  bladder: 1,
+  hygiene: 1,
+  horny: 1,
 };
 
 /**
@@ -82,10 +88,17 @@ export function clearFeedbackContext(): void {
 }
 
 function toneForMetric(key: FeedbackMetricKey, delta: number): FeedbackTone {
-  // Every tracked metric reads "up = good" except none here invert; large drops
-  // in wellbeing stats lean warn.
+  if (key === "horny") return delta > 0 ? "warn" : delta < 0 ? "good" : "neutral";
   if (delta > 0) return "good";
-  if (key === "energy" || key === "mood" || key === "comfort") return "warn";
+  if (
+    key === "energy" ||
+    key === "comfort" ||
+    key === "hunger" ||
+    key === "bladder" ||
+    key === "hygiene"
+  ) {
+    return "warn";
+  }
   return "bad";
 }
 
@@ -97,8 +110,11 @@ const initialMetrics = (): Metrics => ({
   peakViewers: 0,
   hype: 20,
   energy: 100,
-  mood: 70,
   comfort: 90,
+  hunger: 100,
+  bladder: 100,
+  hygiene: 100,
+  horny: 0,
   day: 1,
 });
 
@@ -142,6 +158,7 @@ const initialSettings = (): Settings => ({
   presencePrompt: "",
   scenePrompt: "",
   consoleLevel: "debug",
+  devMode: false,
 });
 
 export interface ActionMenu {
@@ -169,8 +186,8 @@ export interface StoreState {
   pendingEvent: GameEvent | null;
   actionMenu: ActionMenu | null;
   resolving: boolean;
-  /** Active mini-game, or null. */
-  playing: PlayingState | null;
+  /** Active activity sub-state (game, performance, custom), or null. */
+  activity: ActivityState | null;
   /** Character zone position. */
   zone: ZoneId;
   /** Generated room background (data URL), or null for the SVG default. */
@@ -192,7 +209,7 @@ export interface StoreState {
   imageBusy: string | null;
 
   // transient UI
-  gamePickerOpen: boolean;
+  activityPickerOpen: boolean;
   /** Character id whose detail/DM panel is open. */
   openCharId: string | null;
   /** Persistent 1:1 DM history, keyed by character id. */
@@ -210,6 +227,8 @@ export interface StoreState {
 
   eventLog: string[];
   ownedUpgrades: string[];
+  /** Purchased activity/game ids from the shop library. */
+  ownedActivities: string[];
   promptOverrides: Partial<Record<PromptId, string>>;
   toast: string | null;
   /** Persisted experience/mastery XP per skill domain (personal progression). */
@@ -254,7 +273,7 @@ export interface StoreState {
   setPendingEvent: (e: GameEvent | null) => void;
   setActionMenu: (m: ActionMenu | null) => void;
   setResolving: (b: boolean) => void;
-  setPlaying: (p: PlayingState | null) => void;
+  setActivity: (p: ActivityState | null) => void;
   setZone: (z: ZoneId) => void;
   setRoomImage: (url: string | null) => void;
   setGeneratingRoom: (b: boolean) => void;
@@ -272,7 +291,7 @@ export interface StoreState {
   patchCharacter: (id: string, patch: Partial<CharacterSheet>) => void;
   setRoster: (r: Roster) => void;
 
-  setGamePickerOpen: (b: boolean) => void;
+  setActivityPickerOpen: (b: boolean) => void;
   openCharacter: (id: string | null) => void;
   pushDm: (charId: string, line: DmLine) => void;
   /** Replace the text of the most recent line in a thread (for streaming). */
@@ -293,6 +312,7 @@ export interface StoreState {
   setPromptOverride: (id: PromptId, body: string | null) => void;
   logEvent: (line: string) => void;
   addUpgrade: (id: string) => void;
+  addOwnedActivity: (id: string) => void;
   setToast: (t: string | null) => void;
   /** Add XP to one or more mastery domains. */
   addMasteryXp: (delta: Partial<MasteryState>) => void;
@@ -372,7 +392,7 @@ export const useStore = create<StoreState>()(
       pendingEvent: null,
       actionMenu: null,
       resolving: false,
-      playing: null,
+      activity: null,
       zone: SPAWN_ZONE,
       roomImage: null,
       generatingRoom: false,
@@ -384,7 +404,7 @@ export const useStore = create<StoreState>()(
       lastImageId: null,
       imageBusy: null,
 
-      gamePickerOpen: false,
+      activityPickerOpen: false,
       openCharId: null,
       dmThreads: {},
       unreadDms: {},
@@ -397,6 +417,7 @@ export const useStore = create<StoreState>()(
 
       eventLog: [],
       ownedUpgrades: [],
+      ownedActivities: [],
       promptOverrides: {},
       toast: null,
       mastery: initialMastery(),
@@ -421,8 +442,11 @@ export const useStore = create<StoreState>()(
           m.cash = Math.round(m.cash * 100) / 100;
           m.hype = clamp(m.hype, 0, 100);
           m.energy = clamp(m.energy, 0, 100);
-          m.mood = clamp(m.mood, 0, 100);
           m.comfort = clamp(m.comfort, 0, 100);
+          m.hunger = clamp(m.hunger, 0, 100);
+          m.bladder = clamp(m.bladder, 0, 100);
+          m.hygiene = clamp(m.hygiene, 0, 100);
+          m.horny = clamp(m.horny, 0, 100);
           m.followers = Math.max(0, Math.round(m.followers));
           m.subscribers = Math.max(0, Math.round(m.subscribers));
           m.currentViewers = Math.max(0, Math.round(m.currentViewers));
@@ -481,7 +505,7 @@ export const useStore = create<StoreState>()(
       setPendingEvent: (pendingEvent) => set({ pendingEvent }),
       setActionMenu: (actionMenu) => set({ actionMenu }),
       setResolving: (resolving) => set({ resolving }),
-      setPlaying: (playing) => set({ playing }),
+      setActivity: (activity) => set({ activity }),
       setZone: (zone) => set({ zone }),
       setRoomImage: (roomImage) => {
         set({ roomImage });
@@ -563,7 +587,7 @@ export const useStore = create<StoreState>()(
         }),
       setRoster: (roster) => set({ roster }),
 
-      setGamePickerOpen: (gamePickerOpen) => set({ gamePickerOpen }),
+      setActivityPickerOpen: (activityPickerOpen) => set({ activityPickerOpen }),
       openCharacter: (openCharId) => set({ openCharId }),
       pushDm: (charId, line) =>
         set((s) => ({
@@ -608,6 +632,8 @@ export const useStore = create<StoreState>()(
       logEvent: (line) => set((s) => ({ eventLog: [line, ...s.eventLog].slice(0, 50) })),
       addUpgrade: (id) =>
         set((s) => (s.ownedUpgrades.includes(id) ? s : { ownedUpgrades: [...s.ownedUpgrades, id] })),
+      addOwnedActivity: (id) =>
+        set((s) => (s.ownedActivities.includes(id) ? s : { ownedActivities: [...s.ownedActivities, id] })),
       setToast: (toast) => set({ toast }),
       addMasteryXp: (delta) =>
         set((s) => {
@@ -701,24 +727,38 @@ export const useStore = create<StoreState>()(
         const p = (persisted ?? {}) as Partial<StoreState>;
         const story = Array.isArray(p.story) ? dedupeStoryEntries(p.story) : current.story;
         const roster = p.roster ? normalizeRoster(p.roster) : current.roster;
+        const rawMetrics = (p.metrics ?? {}) as Partial<Metrics> & { mood?: number };
+        const { mood: _legacyMood, ...restMetrics } = rawMetrics;
+        const metrics: Metrics = { ...initialMetrics(), ...restMetrics };
+        if (rawMetrics.comfort === undefined && _legacyMood !== undefined) {
+          metrics.comfort = Math.min(100, metrics.comfort + _legacyMood * 0.15);
+        }
         return {
           ...current,
           ...p,
+          metrics,
           settings: { ...current.settings, ...(p.settings ?? {}) },
           mastery: normalizeMastery(p.mastery),
           contentNovelty: p.contentNovelty ?? {},
           story,
           roster,
+          ownedActivities: p.ownedActivities ?? [],
+          activity: p.session?.isLive ? (p.activity ?? null) : null,
         };
       },
       partialize: (s) => ({
         metrics: s.metrics,
         // The live session (isLive flag + round/earnings/peak totals) must
-        // survive a reload — boot calls controller.resumeLive() to rebuild the
-        // transient audience/presence/ambient loop around it.
+        // survive a reload. The audience snapshot (segment populations +
+        // satisfaction) is persisted alongside the roster's online flags so a
+        // reload restores the exact room rather than re-rolling who's watching.
         session: s.session,
+        // Active activity segment survives reload while live (paired with session).
+        activity: s.session.isLive ? s.activity : null,
+        audience: s.audience,
         settings: s.settings,
         ownedUpgrades: s.ownedUpgrades,
+        ownedActivities: s.ownedActivities,
         promptOverrides: s.promptOverrides,
         mastery: s.mastery,
         contentNovelty: s.contentNovelty,
@@ -742,8 +782,8 @@ export const useStore = create<StoreState>()(
         character: s.character,
         presenceImages: s.presenceImages,
         lastImageId: s.lastImageId,
-        // Persist the roster so relationships/memories survive — but strip
-        // transient online flags on rehydrate (handled at boot).
+        // Persist the roster verbatim — relationships, memories AND the live
+        // online flags — so a reload restores exactly who was in the room.
         roster: s.roster,
       }),
       onRehydrateStorage: () => (state) => {
@@ -783,8 +823,11 @@ const FEEDBACK_LABEL: Record<FeedbackMetricKey, string> = {
   subscribers: "Subs",
   hype: "Hype",
   energy: "Energy",
-  mood: "Mood",
   comfort: "Comfort",
+  hunger: "Hunger",
+  bladder: "Bladder",
+  hygiene: "Hygiene",
+  horny: "Horny",
 };
 
 /** Turn a metric bubble into a structured activity-log entry. */

@@ -66,6 +66,11 @@ export function steeringForTier(settings: Settings): string {
  * The escalation CEILING per tier (higher = more boundary-pushing content and
  * archetypes available). This caps how far things can go; it never forces them.
  */
+/** Uncapped content tier — horny resource and relief actions are active. */
+export function isNoLimits(tier: ContentTier): boolean {
+  return tier === "unhinged" || tier === "custom";
+}
+
 export function tierIntensity(tier: ContentTier): number {
   switch (tier) {
     case "wholesome":

@@ -785,8 +785,19 @@ function DevTab({ controller }: { controller: GameController }) {
     return b.affinity - a.affinity;
   });
 
+  const devMode = useStore((s) => s.settings.devMode);
+  const set = useStore((s) => s.setSettings);
+
   return (
     <div className="dev">
+      <label className="dev__toggle">
+        <input
+          type="checkbox"
+          checked={devMode}
+          onChange={(e) => set({ devMode: e.target.checked })}
+        />
+        Show backend / derived numbers in Stats panel
+      </label>
       <p className="hint">
         Testing cheats. These fire the real game systems directly — no DM grind required.
         {isLive && <> Some actions (like Visit) need you offline.</>}

@@ -22,7 +22,7 @@ export interface DmDirectorContext {
   settings: Settings;
   character: CharacterSheet;
   history: DmLine[];
-  metrics: Pick<Metrics, "cash" | "comfort" | "mood" | "day">;
+  metrics: Pick<Metrics, "cash" | "comfort" | "day">;
   streamMemory?: string;
 }
 
@@ -34,7 +34,8 @@ export async function directDm(adapter: LlmAdapter, ctx: DmDirectorContext): Pro
       "Read the DM exchange and return JSON effects that are justified by what was said.",
       "Effects should be modest and sparse; emit none when nothing actionable happened.",
       "Do not invent impossible events or huge money swings.",
-      "Field rules per effect type: tip→amount; gift→item; image→subject; request→ask; reveal→name; affinity/threat→delta; relationship→relationship; meetup→hint (a short summary of the plan to come over, e.g. 'on their way to your apartment'). Always include the type's required field.",
+      "Field rules per effect type: tip→amount; gift→item; image→subject; request→ask; reveal→name; affinity/threat→delta; relationship→relationship; meetup→hint (short summary of the visit plan). Always include the type's required field.",
+      "If the viewer shares their real name in the thread (theirs, not the streamer's), emit a `reveal` with that exact name so the player learns it. Only when they actually offer it — never force it.",
       "When the viewer is heading to or arriving at the streamer's home, emit a SINGLE `meetup` effect (not one per message).",
       steeringForTier(ctx.settings),
     ].join("\n"),

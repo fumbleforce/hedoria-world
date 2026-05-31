@@ -3,7 +3,7 @@ import { completeJsonWithRepair } from "../llm/adapter";
 import { diag } from "../diag/log";
 import { ACTION_TAGS, type ActionTag, type ActionVerdict, type PlayerAction } from "./actions";
 import { SEGMENT_IDS, type SegmentId } from "./segments";
-import { fillPrompt } from "./prompts";
+import { fillPrompt, promptSections, activityLockBlock, type ActivityPromptContext } from "./prompts";
 import type { Settings } from "./types";
 import { steeringForTier } from "./content";
 import { extractJson } from "../llm/json";
@@ -26,6 +26,8 @@ export interface EvalContext {
   vibe?: string;
   /** Rolling summary of the stream so far, for callbacks and continuity. */
   streamMemory?: string;
+  /** Active locked activity segment — actions must stay in-context. */
+  activity?: ActivityPromptContext;
 }
 
 /**
@@ -50,26 +52,62 @@ export async function evaluateAction(
       messages: [
         {
           role: "user" as const,
-          content: [
-            `STREAM STATUS: ${ctx.isLive ? "LIVE (broadcasting on webcam right now)" : "OFFLINE (not broadcasting — she is just at home)"}.`,
-            `HER LOCATION: ${ctx.zoneLabel}.`,
-            ctx.isLive ? `Audience right now: ${ctx.audienceSummary}` : "",
-            ctx.isLive && ctx.streamMemory?.trim() ? `Stream so far: ${ctx.streamMemory.trim()}` : "",
-            ctx.isLive && ctx.vibe ? `Her current vibe: ${ctx.vibe}.` : "",
-            ctx.isLive && ctx.recentChat?.length
-              ? `Live chat in the last moment:\n${ctx.recentChat.join("\n")}`
-              : "",
-            ctx.recentNarration?.length
-              ? `YOUR LAST STAGE DIRECTIONS (oldest first) — do NOT echo these openings, gestures, or phrasings:\n${ctx.recentNarration.map((t) => `- ${t}`).join("\n")}`
-              : "",
-            `She does this (${action.source}): ${action.text}`,
-            action.hint ? `Hint: ${action.hint}` : "",
-            ctx.isLive
-              ? "Classify how the live audience reacts. Ground the narration in THIS specific moment (her vibe, the chat above) so it reads fresh. Open differently from your last stage directions and lead with a concrete ACTION, not her expression. Do NOT describe her eyes (sparkling/glinting), a smile/grin/smirk on her lips, or her leaning into the camera unless it is genuinely the single best detail — and never repeat that kind of face-beat two lines running. Reach for what her hands, voice, a prop, or her movement is doing instead."
-              : "She is OFFLINE — set every segment appeal to 0 / omit appeal, since no one is watching. Just judge plausibility and narrate.",
-          ]
-            .filter(Boolean)
-            .join("\n"),
+          content: promptSections([
+            {
+              heading: "Stream status",
+              body: ctx.isLive
+                ? "LIVE — broadcasting on webcam right now."
+                : "OFFLINE — not broadcasting; she is just at home.",
+            },
+            { heading: "Location", body: ctx.zoneLabel },
+            {
+              heading: "Active activity (locked — do not transition)",
+              body: ctx.activity ? activityLockBlock(ctx.activity) : undefined,
+            },
+            {
+              heading: "Audience",
+              body: ctx.isLive ? ctx.audienceSummary : undefined,
+            },
+            {
+              heading: "Stream memory",
+              body: ctx.isLive && ctx.streamMemory?.trim() ? ctx.streamMemory.trim() : undefined,
+            },
+            {
+              heading: "Current vibe",
+              body: ctx.isLive && ctx.vibe ? ctx.vibe : undefined,
+            },
+            {
+              heading: "Recent chat",
+              body:
+                ctx.isLive && ctx.recentChat?.length
+                  ? ctx.recentChat.join("\n")
+                  : undefined,
+            },
+            {
+              heading: "Your last stage directions (do not echo)",
+              body: ctx.recentNarration?.length
+                ? ctx.recentNarration.map((t) => `- ${t}`).join("\n")
+                : undefined,
+            },
+            {
+              heading: "Player action",
+              body: [
+                `Source: ${action.source}`,
+                action.text,
+                action.hint ? `Hint: ${action.hint}` : "",
+              ]
+                .filter(Boolean)
+                .join("\n"),
+            },
+            {
+              heading: "Instructions",
+              body: ctx.isLive
+                ? ctx.activity
+                  ? "Classify audience reaction. Stage direction must show her doing this action INSIDE the locked activity segment — never transitioning out. Ground in THIS moment; open differently from last directions; lead with a concrete action, not her expression."
+                  : "Classify how the live audience reacts. Ground narration in THIS moment so it reads fresh. Open differently from last stage directions; lead with a concrete ACTION, not her expression."
+                : "She is OFFLINE — set every segment appeal to 0 / omit appeal. Judge plausibility and narrate only.",
+            },
+          ]),
         },
       ],
       jsonMode: true,
@@ -163,7 +201,7 @@ function verdictSchema(): Record<string, unknown> {
       },
       pressure: {
         type: "object",
-        properties: { hype: dir, energy: dir, mood: dir, comfort: dir },
+        properties: { hype: dir, energy: dir, comfort: dir },
       },
       narration: { type: "string" },
       setsBoundary: { type: "boolean" },
@@ -189,7 +227,7 @@ function reconcileVerdicts(a: ActionVerdict, b: ActionVerdict): ActionVerdict {
     if (rounded !== 0) appeal[id] = clamp(rounded, -3, 3);
   }
   const pressure: ActionVerdict["pressure"] = {};
-  for (const k of ["hype", "energy", "mood", "comfort"] as const) {
+  for (const k of ["hype", "energy", "comfort"] as const) {
     pressure[k] = a.pressure[k] === b.pressure[k] ? a.pressure[k] : "none";
   }
   return {
@@ -210,7 +248,7 @@ function sanitizePressure(raw: unknown): ActionVerdict["pressure"] {
   const out: ActionVerdict["pressure"] = {};
   if (!raw || typeof raw !== "object") return out;
   const r = raw as Record<string, unknown>;
-  for (const k of ["hype", "energy", "mood", "comfort"] as const) {
+  for (const k of ["hype", "energy", "comfort"] as const) {
     const v = r[k];
     if (v === "up" || v === "down" || v === "none") out[k] = v;
   }
@@ -239,7 +277,7 @@ const RULES: Rule[] = [
     match: /\b(joke|laugh|funny|pun|meme|bit|silly|goof)\b/i,
     tags: ["funny", "energetic"],
     appeal: { hype: 2, trolls: 1, cozy: 1 },
-    pressure: { hype: "up", energy: "down", mood: "up" },
+    pressure: { hype: "up", energy: "down", comfort: "up" },
     narration: "You crack a joke and your own laugh sells it — chat lights up.",
   },
   {
@@ -263,14 +301,14 @@ const RULES: Rule[] = [
     tags: ["personal", "vulnerable", "kind"],
     intensity: 2,
     appeal: { lonely: 3, whales: 1, stalkers: 2, trolls: -1 },
-    pressure: { mood: "down", comfort: "down" },
+    pressure: { comfort: "down" },
     narration: "You go quiet and share something real. The chat slows, listening.",
   },
   {
     match: /\b(thank|shout ?out|appreciate|grateful|acknowledge|read.*name)\b/i,
     tags: ["grateful", "personal", "kind"],
     appeal: { whales: 3, lonely: 2, simps: 1 },
-    pressure: { mood: "up" },
+    pressure: { comfort: "up" },
     narration: "You give a heartfelt shout-out by name. Someone feels seen.",
   },
   {
@@ -278,7 +316,7 @@ const RULES: Rule[] = [
     tags: ["boundary-setting", "bold"],
     setsBoundary: true,
     appeal: { stalkers: -3, simps: -1, cozy: 1, hype: 1 },
-    pressure: { comfort: "up", mood: "up" },
+    pressure: { comfort: "up" },
     narration: "You set a firm boundary, calm and clear. It lands.",
   },
   {
@@ -293,7 +331,7 @@ const RULES: Rule[] = [
     tags: ["edgy", "reactive", "drama", "chaotic"],
     intensity: 3,
     appeal: { trolls: 3, hype: 1, cozy: -3 },
-    pressure: { hype: "up", mood: "down", comfort: "down" },
+    pressure: { hype: "up", comfort: "down" },
     narration: "You take the bait and fire back. Chat erupts into chaos.",
   },
   {

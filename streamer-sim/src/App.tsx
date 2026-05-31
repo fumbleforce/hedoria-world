@@ -12,7 +12,7 @@ import { StatsPanel } from "./ui/StatsPanel";
 import { ActionBar } from "./ui/ActionBar";
 import { ActionMenuModal } from "./ui/ActionMenuModal";
 import { CharacterModal } from "./ui/CharacterModal";
-import { GamePicker } from "./ui/GamePicker";
+import { ActivityPicker } from "./ui/ActivityPicker";
 import { ShopPanel } from "./ui/ShopPanel";
 import { InventoryPanel } from "./ui/InventoryPanel";
 import { SettingsPanel } from "./ui/SettingsPanel";
@@ -66,7 +66,7 @@ export function App() {
 
       <ActionMenuModal controller={controller} />
       <CharacterModal controller={controller} />
-      <GamePicker controller={controller} />
+      <ActivityPicker controller={controller} />
       <ShopPanel controller={controller} />
       <InventoryPanel />
       <SettingsPanel controller={controller} />

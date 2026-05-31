@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { useStore } from "../state/store";
 import type { GameController } from "../game/controller";
 import { tierIntensity } from "../game/content";
-import { GAME_BY_ID } from "../game/games";
 import { NICHES, NICHE_IDS, type NicheId } from "../game/niches";
 
 /** Concrete live actions, each a clear thing with an obvious outcome. */
@@ -27,13 +26,13 @@ const LIVE_ACTIONS: QuickAction[] = [
 
 /**
  * Persistent bottom bar: a freeform action box, Continue, an Actions dropdown of
- * concrete options, the game picker, and (always) Settings.
+ * concrete options, the activity picker, and (always) Settings.
  */
 export function ActionBar({ controller }: { controller: GameController }) {
   const isLive = useStore((s) => s.session.isLive);
   const resolving = useStore((s) => s.resolving);
   const tier = useStore((s) => s.settings.contentTier);
-  const playing = useStore((s) => s.playing);
+  const activity = useStore((s) => s.activity);
   const visitor = useStore((s) => s.visitor);
   const eventScene = useStore((s) => s.eventScene);
   const guestName = useStore((s) =>
@@ -45,7 +44,6 @@ export function ActionBar({ controller }: { controller: GameController }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const intensity = tierIntensity(tier);
-  const game = playing ? GAME_BY_ID[playing.gameId] : null;
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
@@ -80,6 +78,11 @@ export function ActionBar({ controller }: { controller: GameController }) {
           ⚡ <b>In the moment — {eventScene.title}</b>
           {eventScene.stakes ? <> · Stakes: <em>{eventScene.stakes}</em></> : null}
           {" "}Type what you do, or hit <b>Continue</b> to let it unfold.
+        </div>
+      )}
+      {activity && isLive && !visitor && !eventScene && (
+        <div className="actionbar__meeting">
+          🎬 <b>Activity — {activity.label}</b> Normal beats still work; chat and narration follow this segment.
         </div>
       )}
       <form className="actionbar__form" onSubmit={(e) => { e.preventDefault(); send(); }}>
@@ -143,12 +146,12 @@ export function ActionBar({ controller }: { controller: GameController }) {
               )}
             </div>
 
-            {game ? (
-              <span className="actionbar__playing">🎮 {game.name}
-                <button className="chiplink" onClick={() => controller.stopGame()}>stop</button>
+            {activity ? (
+              <span className="actionbar__playing">🎬 {activity.label}
+                <button className="chiplink" onClick={() => controller.stopActivity()}>stop</button>
               </span>
             ) : (
-              <button className="btn" disabled={resolving} onClick={() => useStore.getState().setGamePickerOpen(true)}>🎮 Game</button>
+              <button className="btn" disabled={resolving} onClick={() => useStore.getState().setActivityPickerOpen(true)}>🎬 Activity</button>
             )}
             <button className="btn" onClick={() => useStore.getState().setGoalsOpen(true)} title="Goals">🎯</button>
             <button className="btn" onClick={() => useStore.getState().setInventoryOpen(true)} title="Inventory">🎒</button>

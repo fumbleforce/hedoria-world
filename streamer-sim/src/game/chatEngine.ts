@@ -10,6 +10,8 @@ import { SEGMENTS, SEGMENT_IDS, type AudienceState } from "./segments";
 import { extractJson } from "../llm/json";
 import { BALANCE } from "./balance";
 import { chance, clamp, pick, randInt, uid } from "../rng/rng";
+import { promptSections, activityLockBlock } from "./prompts";
+import type { ActivityCategory } from "./types";
 
 export interface ChatContext {
   settings: Settings;
@@ -25,6 +27,10 @@ export interface ChatContext {
   streamMemory?: string;
   /** Each online regular's own recent lines, to keep their voice consistent. */
   characterVoices?: Array<{ handle: string; lines: string[] }>;
+  /** Observable body-state cues for chat (never includes private bladder). */
+  visibleCues?: string[];
+  /** Active stream activity — steers backseat/scream/vote chat. */
+  activity?: { label: string; narrationHint: string; chatHint: string; category?: ActivityCategory };
   count: number;
 }
 
@@ -81,13 +87,41 @@ export async function generateChatBurst(
       "chat",
     );
     if (parsed && parsed.length > 0) return parsed;
-    diag.warn("chat", "LLM chat empty/unparseable after repair; using mock burst");
+    diag.warn("chat", "LLM chat empty/unparseable after repair; using neutral filler");
   } catch (err) {
-    diag.warn("chat", "LLM chat failed; using mock burst", {
+    diag.warn("chat", "LLM chat failed; using neutral filler", {
       error: err instanceof Error ? err.message : String(err),
     });
   }
-  return mockBurst(ctx);
+  // In LLM mode we must NOT emit canned archetype/persona dialogue — those read
+  // as scripted and (worse) get fed back as "voice" and parroted. On a genuine
+  // model failure, fall back to innocuous neutral filler only.
+  return fallbackBurst(ctx);
+}
+
+/** Ultra-generic, non-characterful filler for LLM-mode failures. Never scripted dialogue. */
+const NEUTRAL_FILLER: readonly string[] = [
+  "lol", "real", "W", "fr", "o/", "ngl yeah", "this is nice", "hi chat",
+  "back again", "good vibes", "true", "haha", "oh nice",
+];
+
+function fallbackBurst(ctx: ChatContext): ChatMessage[] {
+  const onlineChars = ctx.online.map((id) => ctx.roster[id]).filter(Boolean);
+  const n = clamp(Math.round(ctx.count * 0.5), 1, 4);
+  const out: ChatMessage[] = [];
+  for (let i = 0; i < n; i += 1) {
+    const who = onlineChars.length && chance(0.6) ? pick(onlineChars) : null;
+    out.push({
+      id: uid("msg"),
+      user: who ? who.handle : anonHandle(),
+      text: pick(NEUTRAL_FILLER),
+      kind: "normal",
+      characterId: who?.id,
+      scripted: true,
+      ts: Date.now(),
+    });
+  }
+  return out;
 }
 
 export function audienceSummary(a: AudienceState): string {
@@ -106,32 +140,56 @@ function buildRequest(ctx: ChatContext) {
     .map((c) => `${c.handle} (${ARCHETYPE_BY_ID[c.archetypeId]?.label}, affinity ${Math.round(c.affinity)})`)
     .join("; ");
   const dynamics = describeDynamics(onlineChars);
-  const memory = ctx.streamMemory?.trim()
-    ? `Stream so far (callbacks/running jokes welcome): ${ctx.streamMemory.trim()}`
-    : "";
   const voices = ctx.characterVoices?.length
-    ? "Keep each regular's voice consistent with how they've talked tonight:\n" +
-      ctx.characterVoices
+    ? ctx.characterVoices
         .filter((v) => v.lines.length)
         .map((v) => `- ${v.handle}: ${v.lines.slice(-3).map((l) => `"${l}"`).join(" ")}`)
         .join("\n")
     : "";
-  const recent = ctx.recentChat?.length
-    ? `Already on screen (these are DONE — never repost or re-word any of them; move the conversation forward instead):\n${ctx.recentChat.slice(-6).join("\n")}`
-    : "";
-  const user = [
-    `Audience mix: ${audienceSummary(ctx.audience)}`,
-    named ? `Named regulars currently watching (use some of these handles): ${named}` : "",
-    dynamics,
-    memory,
-    voices,
-    `Vibe — viewers: ${Math.round(ctx.metrics.currentViewers)}, hype: ${Math.round(ctx.metrics.hype)}/100.`,
-    recent,
-    `>>> ${ctx.settings.streamerName} just did this, REACT SPECIFICALLY TO IT: ${ctx.actionContext}`,
-    `Produce about ${ctx.count} short messages reacting directly to that. Prefer the named regulars for some lines. Occasionally let two regulars talk to EACH OTHER (a troll baiting a simp, a mod clapping back, two regulars shipping or bantering) by @-mentioning a handle, not just reacting to the streamer.`,
-  ]
-    .filter(Boolean)
-    .join("\n");
+  const user = promptSections([
+    { heading: "Audience mix", body: audienceSummary(ctx.audience) },
+    {
+      heading: "Named regulars online",
+      body: named ? named : undefined,
+    },
+    { heading: "Chat dynamics", body: dynamics || undefined },
+    {
+      heading: "Stream memory",
+      body: ctx.streamMemory?.trim() || undefined,
+    },
+    {
+      heading: "Character voices (stay consistent)",
+      body: voices || undefined,
+    },
+    {
+      heading: "Room vibe",
+      body: `Viewers: ${Math.round(ctx.metrics.currentViewers)}, hype: ${Math.round(ctx.metrics.hype)}/100.`,
+    },
+    {
+      heading: "Visible cues",
+      body: ctx.visibleCues?.length ? ctx.visibleCues.join("; ") : undefined,
+    },
+    {
+      heading: "Recent chat (do not repeat)",
+      body: ctx.recentChat?.length
+        ? ctx.recentChat.slice(-6).join("\n")
+        : undefined,
+    },
+    {
+      heading: "Active activity (locked — chat stays in segment)",
+      body: ctx.activity
+        ? activityLockBlock(ctx.activity)
+        : undefined,
+    },
+    {
+      heading: "React to this",
+      body: `${ctx.settings.streamerName} just did/said: ${ctx.actionContext}`,
+    },
+    {
+      heading: "Output",
+      body: `Produce about ${ctx.count} short messages reacting directly to the above. Prefer named regulars. Occasionally let two regulars @-mention each other (troll baiting simp, mod clapback, shipping).`,
+    },
+  ]);
   return {
     system: ctx.systemPrompt,
     messages: [{ role: "user" as const, content: user }],
@@ -215,13 +273,43 @@ function parseChat(text: string, roster: Roster): ChatMessage[] {
 
 // --------------------------------------------------------------- local mock
 
+function activityMockLine(category?: ActivityCategory): string | null {
+  const pools: Partial<Record<ActivityCategory, string[]>> = {
+    game: [
+      "go left go left!!",
+      "CLIP THAT",
+      "backseat gaming at its finest",
+      "you missed the shot lol",
+    ],
+    performance: ["this is so good", "more!!", "goosebumps", "don't stop"],
+    creative: ["love the colors", "show the progress", "that's fire"],
+    chill: ["vibes", "so cozy", "this is my comfort stream"],
+    intimate: ["👀", "you're so bold", "keep going"],
+  };
+  const lines = category ? pools[category] : undefined;
+  return lines ? pick(lines) : pick(["this segment hits", "chat is locked in", "W stream"]);
+}
+
 export function mockBurst(ctx: ChatContext): ChatMessage[] {
   const intensity = tierIntensity(ctx.settings.contentTier);
   const n = Math.max(1, ctx.count + randInt(-1, 1));
   const out: ChatMessage[] = [];
   const onlineChars = ctx.online.map((id) => ctx.roster[id]).filter(Boolean);
+  const activityLine = ctx.activity ? activityMockLine(ctx.activity.category) : null;
 
   for (let i = 0; i < n; i += 1) {
+    if (activityLine && i === 0 && chance(0.55)) {
+      out.push({
+        id: uid("msg"),
+        user: onlineChars.length ? pick(onlineChars).handle : anonHandle(),
+        text: activityLine,
+        kind: ctx.activity?.category === "game" ? "hype" : "normal",
+        characterId: onlineChars.length ? pick(onlineChars).id : undefined,
+        scripted: true,
+        ts: Date.now(),
+      });
+      continue;
+    }
     // ~65% of lines come from a named online character when we have them.
     if (onlineChars.length && chance(0.65)) {
       out.push(fromCharacter(pick(onlineChars), intensity));
@@ -238,18 +326,64 @@ export function mockBurst(ctx: ChatContext): ChatMessage[] {
   return out;
 }
 
+/** Twitch-style follow/sub notification line for passive live growth. */
+export function growthPing(
+  roster: Roster,
+  onlineIds: string[],
+  kind: "follow" | "sub",
+): ChatMessage {
+  const online = onlineIds.map((id) => roster[id]).filter(Boolean);
+  if (online.length && chance(0.45)) {
+    const c = pick(online);
+    if (kind === "follow") {
+      return {
+        id: uid("msg"),
+        user: c.handle,
+        text: "followed!",
+        kind: "follow",
+        characterId: c.id,
+        scripted: true,
+        ts: Date.now(),
+      };
+    }
+    const amount = 5;
+    const text = pick(LINES.sub) || "just subscribed!";
+    return {
+      id: uid("msg"),
+      user: c.handle,
+      text,
+      kind: "sub",
+      amount,
+      characterId: c.id,
+      scripted: true,
+      ts: Date.now(),
+    };
+  }
+  if (kind === "follow") return anonLine(1, "follow");
+  const amount = 5;
+  return {
+    id: uid("msg"),
+    user: anonHandle(),
+    text: pick(LINES.sub) || "just subscribed!",
+    kind: "sub",
+    amount,
+    scripted: true,
+    ts: Date.now(),
+  };
+}
+
 function fromCharacter(c: CharacterSheet, intensity: number): ChatMessage {
   const arch = ARCHETYPE_BY_ID[c.archetypeId];
   let kind: ChatMessageKind = "normal";
   let text = arch ? pick(arch.lines) : "hi";
-  if (c.traits.speechTic && chance(0.35)) {
-    text = `${text} ${c.traits.speechTic}`;
+  if (c.personality.speechTic && chance(0.35)) {
+    text = `${text} ${c.personality.speechTic}`;
   }
-  if (c.traits.fixation && c.threat >= 1 && chance(0.25)) {
+  if (c.personality.fixation && c.threat >= 1 && chance(0.25)) {
     text = pick([
-      `still thinking about ${c.traits.fixation} btw`,
-      `you ever notice ${c.traits.fixation}?`,
-      `just saying — ${c.traits.fixation}`,
+      `still thinking about ${c.personality.fixation} btw`,
+      `you ever notice ${c.personality.fixation}?`,
+      `just saying — ${c.personality.fixation}`,
     ]);
   }
   let amount: number | undefined;
@@ -267,7 +401,7 @@ function fromCharacter(c: CharacterSheet, intensity: number): ChatMessage {
     amount = seg === "whales" ? pick([50, 75, 100, 150]) : pick([3, 5, 10, 20]);
     text = `tipped $${amount} — ${text}`;
   }
-  return { id: uid("msg"), user: c.handle, text, kind, amount, characterId: c.id, ts: Date.now() };
+  return { id: uid("msg"), user: c.handle, text, kind, amount, characterId: c.id, scripted: true, ts: Date.now() };
 }
 
 /** One online regular talking AT another — bait, clapback, or shipping. */
@@ -283,7 +417,7 @@ function crossTalk(chars: CharacterSheet[]): ChatMessage | null {
   else if (a.isMod) { text = `@${b.handle} knock it off 😤`; kind = "mod"; }
   else if (segA === "simps") { text = `@${b.handle} stop ratioing me 😭`; kind = "flirty"; }
   else text = pick([`@${b.handle} fr fr`, `@${b.handle} we're always here huh`, `lol @${b.handle} called it`]);
-  return { id: uid("msg"), user: a.handle, text, kind, characterId: a.id, ts: Date.now() };
+  return { id: uid("msg"), user: a.handle, text, kind, characterId: a.id, scripted: true, ts: Date.now() };
 }
 
 function anonLine(intensity: number, force?: ChatMessageKind): ChatMessage {
@@ -292,7 +426,7 @@ function anonLine(intensity: number, force?: ChatMessageKind): ChatMessage {
   let amount: number | undefined;
   if (kind === "follow") text = "followed";
   if (kind === "creepy" && intensity < 2) text = pick(LINES.flirty);
-  return { id: uid("msg"), user: anonHandle(), text, kind, amount, ts: Date.now() };
+  return { id: uid("msg"), user: anonHandle(), text, kind, amount, scripted: true, ts: Date.now() };
 }
 
 function anonHandle(): string {

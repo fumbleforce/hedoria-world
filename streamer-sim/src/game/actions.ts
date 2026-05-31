@@ -39,7 +39,6 @@ export interface ActionVerdict {
   pressure: {
     hype?: StatPressure;
     energy?: StatPressure;
-    mood?: StatPressure;
     comfort?: StatPressure;
   };
   /** Second-person DM narration of what happens. */

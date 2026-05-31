@@ -55,12 +55,10 @@ async function runBoot(): Promise<BootResult> {
   diag.configure({ consoleLevel: store.settings.consoleLevel });
   diag.info("boot", "starting");
 
-  // Persisted roster keeps relationships/memories, but nobody is "online" across
-  // a reload — reset presence so the next stream rebuilds the room.
-  const cleared = Object.fromEntries(
-    Object.entries(normalizeRoster(store.roster)).map(([id, c]) => [id, { ...c, online: false }]),
-  );
-  store.setRoster(cleared);
+  // Normalize the persisted roster (back-fill fields for older saves) WITHOUT
+  // touching presence: the online flags are part of the saved state, so a reload
+  // restores exactly who was in the room rather than re-rolling the cast.
+  store.setRoster(normalizeRoster(store.roster));
 
   // Rehydrate the (large) room image from IndexedDB, not localStorage.
   await migrateLegacyRoomImage(slot.id);
