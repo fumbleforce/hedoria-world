@@ -95,10 +95,11 @@ Only the **`chat`** kind gets the fast model. Defaults:
 Layered defenses so a malformed model reply never stalls the game:
 
 1. **Native schema** — Gemini `responseSchema` / OpenRouter `json_schema` (evaluator
-   `verdictSchema()`, event `EVENT_OUTCOME_SCHEMA`, DM director `EFFECT_SCHEMA`, visit
-   `VISIT_OUTCOME_SCHEMA`). Chat bursts use `jsonMode` only (no schema).
+   `verdictSchema()`, chat `chatSchema()`, event `EVENT_OUTCOME_SCHEMA`, DM director
+   `EFFECT_SCHEMA`, visit `VISIT_OUTCOME_SCHEMA`).
 2. **`extractJson`** — tries direct parse, then strips ```` ```json ```` fences, then
-   scans for the first balanced `{...}`/`[...]`.
+   scans for the first balanced `{...}`/`[...]`, then repairs unescaped `"` inside
+   string values (common when chat text quotes a phrase).
 3. **`completeJsonWithRepair`** — first call; if the caller's `parse` returns null,
    **one** repair retry that echoes the bad output and says "reply again with ONLY the
    JSON value." Then gives up (caller falls back to local).

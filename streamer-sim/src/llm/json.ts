@@ -27,6 +27,19 @@ export function extractJson<T = unknown>(text: string): T | null {
     const parsed = tryParse<T>(block);
     if (parsed !== undefined) return parsed;
   }
+
+  // 4. Models often put unescaped " inside string values (e.g. chat quoting a phrase).
+  //    Escape inner quotes and retry before giving up.
+  const repaired = repairUnescapedQuotes(unfenced);
+  if (repaired !== unfenced) {
+    const fromRepair = tryParse<T>(repaired);
+    if (fromRepair !== undefined) return fromRepair;
+    const repairedBlock = findBalanced(repaired);
+    if (repairedBlock) {
+      const parsed = tryParse<T>(repairedBlock);
+      if (parsed !== undefined) return parsed;
+    }
+  }
   return null;
 }
 
@@ -36,6 +49,63 @@ function tryParse<T>(s: string): T | undefined {
   } catch {
     return undefined;
   }
+}
+
+/** True when `"` at `i` closes a JSON string (next token is structural). */
+function isClosingStringQuote(s: string, i: number): boolean {
+  for (let j = i + 1; j < s.length; j += 1) {
+    const c = s[j];
+    if (c === " " || c === "\t" || c === "\n" || c === "\r") continue;
+    return c === ":" || c === "," || c === "}" || c === "]";
+  }
+  return true;
+}
+
+/**
+ * Escape `"` that appear inside JSON string values but were not backslash-escaped
+ * by the model. Common when chat text quotes a phrase: `"lol "little moment" yeah"`.
+ */
+function repairUnescapedQuotes(s: string): string {
+  const start = s.search(/[{[]/);
+  if (start < 0) return s;
+
+  let out = s.slice(0, start);
+  let inStr = false;
+  let esc = false;
+
+  for (let i = start; i < s.length; i += 1) {
+    const ch = s[i];
+    if (esc) {
+      out += ch;
+      esc = false;
+      continue;
+    }
+    if (inStr) {
+      if (ch === "\\") {
+        out += ch;
+        esc = true;
+        continue;
+      }
+      if (ch === '"') {
+        if (isClosingStringQuote(s, i)) {
+          inStr = false;
+          out += ch;
+        } else {
+          out += '\\"';
+        }
+        continue;
+      }
+      out += ch;
+      continue;
+    }
+    if (ch === '"') {
+      inStr = true;
+      out += ch;
+      continue;
+    }
+    out += ch;
+  }
+  return out;
 }
 
 function findBalanced(s: string): string | null {

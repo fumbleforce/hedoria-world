@@ -155,6 +155,7 @@ export const PROMPTS: Record<PromptId, PromptDef> = {
       "",
       "Respond with ONLY JSON:",
       '{"messages":[{"user":"handle","text":"...","kind":"normal","amount":0}]}',
+      "In text fields, escape double quotes as \\\" or use single quotes (e.g. lol \\\"little moment\\\" — not lol \"little moment\").",
       "kind ∈ normal, hype, question, troll, flirty, creepy, donation, follow, sub, raid, mod.",
       "amount (USD) only for donation/sub.",
     ].join("\n"),

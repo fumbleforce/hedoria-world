@@ -94,7 +94,40 @@ function buildRequest(ctx: ChatContext) {
   ]
     .filter(Boolean)
     .join("\n");
-  return { system: ctx.systemPrompt, messages: [{ role: "user" as const, content: user }], jsonMode: true };
+  return {
+    system: ctx.systemPrompt,
+    messages: [{ role: "user" as const, content: user }],
+    jsonMode: true,
+    jsonSchema: chatSchema(),
+  };
+}
+
+function chatSchema(): Record<string, unknown> {
+  return {
+    type: "object",
+    properties: {
+      messages: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            user: { type: "string" },
+            text: { type: "string" },
+            kind: {
+              type: "string",
+              enum: [
+                "normal", "hype", "question", "troll", "flirty", "creepy",
+                "donation", "follow", "sub", "raid", "mod",
+              ],
+            },
+            amount: { type: "number" },
+          },
+          required: ["user", "text", "kind"],
+        },
+      },
+    },
+    required: ["messages"],
+  };
 }
 
 /**
