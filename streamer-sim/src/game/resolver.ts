@@ -130,7 +130,7 @@ export function resolveAction(input: ResolveInput): ResolveResult {
       const base = verdict.appeal[id] ?? inferAppeal(def.likes, def.dislikes, verdict.tags);
       // Layer in the passive baseline appeal from gear/décor/niche/production
       // quality so investment literally shapes how content lands per segment.
-      const appeal = clamp(base + (input.baselineAppeal?.[id] ?? 0), -3, 3);
+      const appeal = clamp(base + (input.baselineAppeal?.[id] ?? 0), -5, 5);
 
       // Audience-fit accumulators: positive payoff only materializes against the
       // segments actually present that liked the action.

@@ -40,7 +40,6 @@ export function MetricsHud() {
         <Stat label="Cash" metric="cash" value={`$${m.cash.toFixed(0)}`} accent={m.cash < 0 ? "#ff6b6b" : "#8ce99a"} />
         <Stat label="Followers" metric="followers" value={m.followers.toLocaleString()} />
         <Stat label="Subs" metric="subscribers" value={m.subscribers.toLocaleString()} />
-        <Stat label="Viewers" value={session.isLive ? Math.round(m.currentViewers).toLocaleString() : "—"} live={session.isLive} />
       </div>
 
       <div className="hud__meters">

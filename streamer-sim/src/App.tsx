@@ -53,7 +53,7 @@ export function App() {
         </div>
 
         <div className="stage__center">
-          <VisualizationPanel />
+          <VisualizationPanel controller={controller} />
           <NarratorPanel controller={controller} />
         </div>
 
@@ -69,7 +69,7 @@ export function App() {
       <CharacterModal controller={controller} />
       <ActivityPicker controller={controller} />
       <ShopPanel controller={controller} />
-      <InventoryPanel />
+      <InventoryPanel controller={controller} />
       <SettingsPanel controller={controller} />
       <EventModal controller={controller} />
       <GoalsPanel />

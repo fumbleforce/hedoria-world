@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "../state/store";
+import { hasCharacterLook } from "../game/characterVisual";
 import type { GameController } from "../game/controller";
 import type { StoryEntry } from "../game/types";
 import { MentionText } from "./MentionText";
@@ -11,7 +12,7 @@ export function NarratorPanel({ controller }: { controller: GameController }) {
   const imageCache = useStore((s) => s.imageCache);
   const imageBusy = useStore((s) => s.imageBusy);
   const hasStory = useStore((s) => s.story.length > 0);
-  const hasCharacter = useStore((s) => !!s.character.description.trim());
+  const hasCharacter = useStore((s) => hasCharacterLook(s.character));
   const canGen = controller.canGenerateImages;
   const ref = useRef<HTMLDivElement>(null);
   const [lightbox, setLightbox] = useState<{ src: string; cap: string } | null>(null);

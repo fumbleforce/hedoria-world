@@ -158,7 +158,7 @@ export const DEFAULT_ROOM_PROMPT = [
 
 export const DEFAULT_PORTRAIT_PROMPT = [
   "Character portrait of {{name}}, a {{gender}} video-game streamer.",
-  "Appearance: {{description}}.",
+  "Face: {{faceDescription}}.",
   "Head-and-shoulders framing, looking at camera, friendly expression,",
   "simple soft-gradient background, no text, no watermark, no UI.",
   "{{style}}",
@@ -167,7 +167,7 @@ export const DEFAULT_PORTRAIT_PROMPT = [
 
 export const DEFAULT_BODY_PROMPT = [
   "Full-body character reference sheet of {{name}}, a {{gender}} video-game streamer.",
-  "Appearance: {{description}}.",
+  "Body: {{bodyDescription}}.",
   "{{match}}",
   "Standing in a neutral A-pose / T-pose, facing forward, full body visible head to toe,",
   "plain flat light-grey studio background, even lighting, no shadows on the floor,",
@@ -178,7 +178,8 @@ export const DEFAULT_BODY_PROMPT = [
 export const DEFAULT_PRESENCE_PROMPT = [
   `Show this exact character, {{name}}, at the "{{zone}}" of her studio apartment.`,
   "The spot: {{zoneDesc}}",
-  "Keep her appearance consistent with the reference image ({{description}}).",
+  "Face: {{faceDescription}}. Body: {{bodyDescription}}.",
+  "Keep her appearance consistent with the reference image.",
   "Natural pose appropriate for that spot, full scene, warm cozy night lighting,",
   "no text, no watermark, no UI. Square composition, slight high angle like a life-sim.",
   "{{style}}",
@@ -188,7 +189,8 @@ export const DEFAULT_SCENE_PROMPT = [
   "A candid illustrated scene of {{name}}.",
   "Setting: {{position}}.",
   "Depict this moment: {{narrative}}",
-  "Keep {{name}}'s appearance consistent with the reference image: {{description}}.",
+  "Face: {{faceDescription}}. Body: {{bodyDescription}}.",
+  "Keep {{name}}'s appearance consistent with the reference image.",
   "Focus on body language, expression, and what is physically happening — natural, in-the-moment framing.",
   "No text, no watermark, no UI. Square composition.",
   "{{style}}",

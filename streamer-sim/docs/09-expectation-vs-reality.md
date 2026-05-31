@@ -220,8 +220,9 @@ These are design gaps more than bugs (and most are tracked in
 3. **Arcs are shallow.** 4 chains (sponsorship, viral, stalker-legal, relationship),
    day-boundary-only, two of them ≤2 stages; the engine is data-driven so more are
    cheap. *(A8, IMPROVEMENTS §3)*
-4. **Cameras/set design unbuilt.** Going live from any zone, camera placement/quality,
-   multiple angles — all still backlog. *(IMPROVEMENTS §11)*
+4. ~~**Cameras/set design unbuilt.**~~ **Implemented (§11):** zone-gated go-live, placeable
+   cameras + portable cam, multi-angle switcher, cam footage gen, item inventory, item
+   wardrobe with stackable vibes, NPC gifts → real items. *(was IMPROVEMENTS §11)*
 5. **No audio, onboarding, or responsive layout.** *(IMPROVEMENTS §6–8)*
 6. **Content is code, not data.** Archetypes/events/games/upgrades are hardcoded;
    moddability/content packs are aspirational. *(IMPROVEMENTS §9)*

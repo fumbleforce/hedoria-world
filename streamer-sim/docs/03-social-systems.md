@@ -288,7 +288,7 @@ keyword fallback covers the mock backend). `applyDmEffects` then makes each one 
 | Effect | What it does |
 |--------|--------------|
 | `tip {amount}` | routed through the shared **`recordTip`** path (same money pipeline as live-chat donations); posts a 💸 gift line. Clamped ≤120. |
-| `gift {item}` | small mood/comfort bump + a 🎁 gift line. |
+| `gift {item}` | comfort bump + 🎁 DM line + **adds a real item** to `store.inventory` (clothing-like names become equippable `ClothingItem`s). |
 | `image {subject}` | generates a candid "photo" via the image backend, stores it, posts an inline image line. |
 | `reveal {name}` | sets `displayName` (only if still unknown) + marks `known`. |
 | `request {ask}` | creates a structured **`ViewerRequest`** (`viewerRequests[]`), posts a linked system DM line (`requestId`), appends memory, toast. Promised reward locked at creation: default **+3 bond** (`BALANCE.affinity.sources.request`) or **cash** when the viewer named a tip (`rewardType`/`rewardAmount` from the director). Affinity/cash pays out only on fulfillment (see below). |

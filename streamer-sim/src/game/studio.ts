@@ -106,9 +106,7 @@ export const ZONE_MENUS: Record<ZoneId, { allowFreeform: boolean; options: Actio
       { id: "bathroom", label: "🚽 Use the bathroom", prompt: "__bathroom__", liveOnly: false },
       { id: "shower", label: "🚿 Take a shower", prompt: "__shower__", liveOnly: false },
       { id: "freshen", label: "🧴 Freshen up (quick)", prompt: "__freshen__", liveOnly: false },
-      { id: "change-cozy", label: "🧶 Change into a cozy fit", prompt: "__outfit_cozy__", liveOnly: false },
-      { id: "change-cute", label: "✨ Change into a cute fit", prompt: "__outfit_cute__", liveOnly: false },
-      { id: "change-bold", label: "🔥 Change into a bold fit", prompt: "__outfit_bold__", liveOnly: false },
+      { id: "wardrobe", label: "👗 Change clothes", prompt: "__wardrobe__", liveOnly: false },
     ],
   },
   door: {

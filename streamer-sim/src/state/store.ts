@@ -22,10 +22,17 @@ import type {
 } from "../game/types";
 import { uid } from "../rng/rng";
 import { SPAWN_ZONE, type ZoneId } from "../game/studio";
+import { starterDeskCamera, migrateLegacyCamUpgrades, type PlacedCamera } from "../game/cameras";
+import type { Item } from "../game/items";
+import type { ClothingSlot } from "../game/wardrobe";
+import { starterClothingForOutfit, isLegacyStarterWardrobe } from "../game/wardrobe";
+
+const STARTER_WARDROBE = starterClothingForOutfit("casual");
 import { saveRoomImage } from "../persist/imageStore";
 import { getActiveSlotId, updateActiveMeta } from "../persist/saves";
 import { applyTheme } from "../ui/themes";
 import { initialAudience, type AudienceState } from "../game/segments";
+import { defaultCharacterVisual, normalizeCharacterVisual } from "../game/characterVisual";
 import type { CharacterSheet, Roster } from "../game/characters";
 import { normalizeCharacter, normalizeRoster } from "../game/characters";
 import { initialMastery, normalizeMastery, type MasteryState } from "../game/mastery";
@@ -192,6 +199,14 @@ export interface StoreState {
   activity: ActivityState | null;
   /** Character zone position. */
   zone: ZoneId;
+  /** Owned cameras — placed in zones, unplaced in bag, or portable. */
+  cameras: PlacedCamera[];
+  /** Which camera angle is currently live (on-screen). */
+  activeCameraId: string | null;
+  /** Generic item inventory (gifts, props, clothing). */
+  inventory: Item[];
+  /** Equipped clothing slots → item id. */
+  equippedClothing: Partial<Record<ClothingSlot, string>>;
   /** Generated room background (data URL), or null for the SVG default. */
   roomImage: string | null;
   /** True while a room image is being generated. */
@@ -207,6 +222,8 @@ export interface StoreState {
   stylePreviews: Record<string, string>;
   /** Most recently generated/seen image id — shown center-stage. */
   lastImageId: string | null;
+  /** Latest live cam-footage image id — the "what viewers see" stream feed. */
+  streamFootageId: string | null;
   /** Label of the image job currently running (null = idle). */
   imageBusy: string | null;
 
@@ -283,6 +300,13 @@ export interface StoreState {
   setResolving: (b: boolean) => void;
   setActivity: (p: ActivityState | null) => void;
   setZone: (z: ZoneId) => void;
+  addCamera: (cam: PlacedCamera) => void;
+  removeCamera: (id: string) => void;
+  placeCamera: (id: string, zone: ZoneId) => void;
+  setActiveCamera: (id: string | null) => void;
+  addItem: (item: Item) => void;
+  removeItem: (id: string) => void;
+  equipClothing: (slot: ClothingSlot, itemId: string | null) => void;
   setRoomImage: (url: string | null) => void;
   setGeneratingRoom: (b: boolean) => void;
 
@@ -293,6 +317,7 @@ export interface StoreState {
   uncacheImage: (id: string) => void;
   setStylePreview: (presetId: string, dataUrl: string) => void;
   setLastImage: (id: string | null) => void;
+  setStreamFootage: (id: string | null) => void;
   setImageBusy: (label: string | null) => void;
 
   upsertCharacter: (c: CharacterSheet) => void;
@@ -436,14 +461,19 @@ export const useStore = create<StoreState>()(
       resolving: false,
       activity: null,
       zone: SPAWN_ZONE,
+      cameras: [starterDeskCamera()],
+      activeCameraId: starterDeskCamera().id,
+      inventory: [...STARTER_WARDROBE.items],
+      equippedClothing: { ...STARTER_WARDROBE.equipped },
       roomImage: null,
       generatingRoom: false,
 
-      character: { description: "", portraitId: null, bodyId: null },
+      character: defaultCharacterVisual(),
       presenceImages: {},
       imageCache: {},
       stylePreviews: {},
       lastImageId: null,
+      streamFootageId: null,
       imageBusy: null,
 
       activityPickerOpen: false,
@@ -552,6 +582,36 @@ export const useStore = create<StoreState>()(
       setResolving: (resolving) => set({ resolving }),
       setActivity: (activity) => set({ activity }),
       setZone: (zone) => set({ zone }),
+      addCamera: (cam) => set((s) => ({ cameras: [...s.cameras, cam] })),
+      removeCamera: (id) =>
+        set((s) => ({
+          cameras: s.cameras.filter((c) => c.id !== id),
+          activeCameraId: s.activeCameraId === id ? null : s.activeCameraId,
+        })),
+      placeCamera: (id, zone) =>
+        set((s) => ({
+          cameras: s.cameras.map((c) => {
+            if (c.id === id) return { ...c, zone, label: c.label || `${zone} Cam` };
+            if (c.zone === zone && !c.portable) return { ...c, zone: null };
+            return c;
+          }),
+        })),
+      setActiveCamera: (activeCameraId) => set({ activeCameraId }),
+      addItem: (item) => set((s) => ({ inventory: [...s.inventory, item] })),
+      removeItem: (id) =>
+        set((s) => ({
+          inventory: s.inventory.filter((i) => i.id !== id),
+          equippedClothing: Object.fromEntries(
+            Object.entries(s.equippedClothing).filter(([, v]) => v !== id),
+          ) as Partial<Record<ClothingSlot, string>>,
+        })),
+      equipClothing: (slot, itemId) =>
+        set((s) => {
+          const next = { ...s.equippedClothing };
+          if (itemId) next[slot] = itemId;
+          else delete next[slot];
+          return { equippedClothing: next };
+        }),
       setRoomImage: (roomImage) => {
         set({ roomImage });
         void saveRoomImage(getActiveSlotId(), roomImage); // large blob → IndexedDB, not localStorage
@@ -583,9 +643,11 @@ export const useStore = create<StoreState>()(
             patch.imageCache = next;
           }
           if (s.lastImageId === id) patch.lastImageId = null;
+          if (s.streamFootageId === id) patch.streamFootageId = null;
           return patch;
         }),
       setLastImage: (lastImageId) => set({ lastImageId }),
+      setStreamFootage: (streamFootageId) => set({ streamFootageId }),
       setImageBusy: (imageBusy) => set({ imageBusy }),
 
       upsertCharacter: (c) => set((s) => ({ roster: { ...s.roster, [c.id]: normalizeCharacter(c) } })),
@@ -786,16 +848,37 @@ export const useStore = create<StoreState>()(
         if (rawMetrics.comfort === undefined && _legacyMood !== undefined) {
           metrics.comfort = Math.min(100, metrics.comfort + _legacyMood * 0.15);
         }
+        const settings = { ...current.settings, ...(p.settings ?? {}) };
+        const camMigration = migrateLegacyCamUpgrades(p.cameras, p.ownedUpgrades ?? []);
+        // Give a real starter set when the save has no clothing at all, or only
+        // the obsolete single "full outfit" placeholder (legacy migration).
+        const savedInventory = p.inventory ?? [];
+        const needsWardrobeMigrate =
+          savedInventory.length === 0 || isLegacyStarterWardrobe(savedInventory);
+        const wardrobeStarter = needsWardrobeMigrate
+          ? starterClothingForOutfit(settings.outfit ?? "casual")
+          : null;
+        // Strip any obsolete "full outfit" starter placeholder, keep real items/gifts.
+        const keptInventory = wardrobeStarter
+          ? savedInventory.filter(
+              (i) => !((i as { slot?: string }).slot === "full" && / Starter$/.test(i.name)),
+            )
+          : savedInventory;
         return {
           ...current,
           ...p,
           metrics,
-          settings: { ...current.settings, ...(p.settings ?? {}) },
+          settings,
           mastery: normalizeMastery(p.mastery),
           contentNovelty: p.contentNovelty ?? {},
           story,
           roster,
           ownedActivities: p.ownedActivities ?? [],
+          cameras: camMigration.cameras,
+          activeCameraId: p.activeCameraId ?? camMigration.activeCameraId,
+          inventory: wardrobeStarter ? [...keptInventory, ...wardrobeStarter.items] : savedInventory,
+          equippedClothing: wardrobeStarter ? wardrobeStarter.equipped : (p.equippedClothing ?? {}),
+          character: normalizeCharacterVisual(p.character),
           activity: p.session?.isLive ? (p.activity ?? null) : null,
           viewerRequests: migrateDmRequests(p.viewerRequests, p.dmThreads, metrics.day),
         };
@@ -833,10 +916,15 @@ export const useStore = create<StoreState>()(
         story: s.story,
         clock: s.clock,
         zone: s.zone,
+        cameras: s.cameras,
+        activeCameraId: s.activeCameraId,
+        inventory: s.inventory,
+        equippedClothing: s.equippedClothing,
         // Only the small ids persist here; the large blobs live in IndexedDB.
         character: s.character,
         presenceImages: s.presenceImages,
         lastImageId: s.lastImageId,
+        streamFootageId: s.streamFootageId,
         // Persist the roster verbatim — relationships, memories AND the live
         // online flags — so a reload restores exactly who was in the room.
         roster: s.roster,

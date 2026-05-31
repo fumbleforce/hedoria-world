@@ -76,11 +76,15 @@ export function starterDeskCamera(): PlacedCamera {
   };
 }
 
-/** Cameras covering a zone for go-live (portable covers all zones). */
+/**
+ * Camera covering a zone for go-live. A fixed camera placed in the zone wins
+ * (best quality); a portable cam is only the fallback where no fixed cam exists,
+ * so owning a portable never shadows your good rigs.
+ */
 export function cameraForZone(cameras: readonly PlacedCamera[], zone: ZoneId): PlacedCamera | null {
-  const portable = cameras.find((c) => c.portable);
-  if (portable) return portable;
-  return cameras.find((c) => c.zone === zone) ?? null;
+  const fixed = cameras.find((c) => c.zone === zone && !c.portable);
+  if (fixed) return fixed;
+  return cameras.find((c) => c.portable) ?? null;
 }
 
 export function activeCamera(

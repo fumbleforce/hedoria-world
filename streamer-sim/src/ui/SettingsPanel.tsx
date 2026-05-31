@@ -269,7 +269,8 @@ function PromptEditor({
     <details className="collapsible">
       <summary>{label}{overridden ? " ✏️" : ""}</summary>
       <p className="hint">
-        Placeholders like <code>{"{{name}}"}</code>, <code>{"{{description}}"}</code>,{" "}
+        Placeholders like <code>{"{{name}}"}</code>, <code>{"{{faceDescription}}"}</code>,{" "}
+        <code>{"{{bodyDescription}}"}</code>, <code>{"{{description}}"}</code> (combined),{" "}
         <code>{"{{upgrades}}"}</code> fill at runtime. Edit freely; Reset restores the preset default.
       </p>
       <textarea
@@ -324,7 +325,8 @@ function CharacterTab({ controller }: { controller: GameController }) {
   const set = useStore((s) => s.setSettings);
   const busy = useStore((s) => s.imageBusy);
   const name = settings.streamerName;
-  const [desc, setDesc] = useState(character.description);
+  const [faceDesc, setFaceDesc] = useState(character.faceDescription);
+  const [bodyDesc, setBodyDesc] = useState(character.bodyDescription);
   const portrait = useStoredImage(character.portraitId);
   const body = useStoredImage(character.bodyId);
   const canGen = controller.canGenerateImages;
@@ -373,12 +375,22 @@ function CharacterTab({ controller }: { controller: GameController }) {
       <hr className="rule" />
 
       <label className="field">
-        <span>Describe how {name} looks</span>
+        <span>Face — eyes, makeup, expression</span>
         <textarea
-          rows={4}
-          value={desc}
-          placeholder="e.g. early-20s, shoulder-length pink hair, freckles, oversized cozy hoodie, soft makeup, warm smile…"
-          onChange={(e) => setDesc(e.target.value)}
+          rows={3}
+          value={faceDesc}
+          placeholder="e.g. warm brown eyes, light freckles, soft natural makeup, warm smile…"
+          onChange={(e) => setFaceDesc(e.target.value)}
+        />
+      </label>
+
+      <label className="field">
+        <span>Body — hair, build, silhouette</span>
+        <textarea
+          rows={3}
+          value={bodyDesc}
+          placeholder="e.g. early 20s, shoulder-length pink hair, petite build, cute energy…"
+          onChange={(e) => setBodyDesc(e.target.value)}
         />
       </label>
 
@@ -390,8 +402,8 @@ function CharacterTab({ controller }: { controller: GameController }) {
       <div className="charcre__actions">
         <button
           className={`btn btn--primary ${busy ? "is-loading" : ""}`}
-          disabled={!!busy || !canGen || !desc.trim()}
-          onClick={() => void controller.generateCharacter(desc, true)}
+          disabled={!!busy || !canGen || (!faceDesc.trim() && !bodyDesc.trim())}
+          onClick={() => void controller.generateCharacter(faceDesc, bodyDesc, true)}
           title="Generate a fresh portrait + body template"
         >
           {busy ? busy + "…" : portrait || body ? "Regenerate portrait + body" : "Generate portrait + body"}
@@ -750,7 +762,8 @@ function PromptsTab({ controller }: { controller: GameController }) {
 
       <p className="hint">
         Shared across every generated image. Placeholders like <code>{"{{style}}"}</code>,{" "}
-        <code>{"{{name}}"}</code>, <code>{"{{description}}"}</code>, <code>{"{{zone}}"}</code>,{" "}
+        <code>{"{{name}}"}</code>, <code>{"{{faceDescription}}"}</code>, <code>{"{{bodyDescription}}"}</code>,{" "}
+        <code>{"{{description}}"}</code>, <code>{"{{zone}}"}</code>,{" "}
         <code>{"{{narrative}}"}</code>, <code>{"{{upgrades}}"}</code> fill at runtime per image.
         Expand any prompt below to tweak it — overrides stack on the preset above.
       </p>

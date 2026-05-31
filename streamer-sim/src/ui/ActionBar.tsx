@@ -31,6 +31,7 @@ const LIVE_ACTIONS: QuickAction[] = [
 export function ActionBar({ controller }: { controller: GameController }) {
   const isLive = useStore((s) => s.session.isLive);
   const resolving = useStore((s) => s.resolving);
+  const offCamera = isLive && !controller.isOnCamera();
   const tier = useStore((s) => s.settings.contentTier);
   const activity = useStore((s) => s.activity);
   const visitor = useStore((s) => s.visitor);
@@ -83,6 +84,11 @@ export function ActionBar({ controller }: { controller: GameController }) {
       {activity && isLive && !visitor && !eventScene && (
         <div className="actionbar__meeting">
           🎬 <b>Activity — {activity.label}</b> Normal beats still work; chat and narration follow this segment.
+        </div>
+      )}
+      {offCamera && !visitor && !eventScene && (
+        <div className="actionbar__meeting">
+          🎥 <b>Off camera</b> — chat can't see you here. Actions won't get a live reaction.
         </div>
       )}
       <form className="actionbar__form" onSubmit={(e) => { e.preventDefault(); send(); }}>

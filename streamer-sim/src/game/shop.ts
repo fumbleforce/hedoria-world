@@ -121,6 +121,8 @@ export function multipliersFor(ownedIds: readonly string[]): Multipliers {
   };
   for (const up of UPGRADES) {
     if (!ownedIds.includes(up.id)) continue;
+    // Legacy camera upgrades migrated to the placeable camera system — skip their stats.
+    if (LEGACY_CAM_UPGRADE_IDS.has(up.id)) continue;
     if (up.effects.viewerMult) m.viewer *= up.effects.viewerMult;
     if (up.effects.hypeMult) m.hype *= up.effects.hypeMult;
     if (up.effects.incomeMult) m.income *= up.effects.incomeMult;

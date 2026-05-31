@@ -32,6 +32,7 @@ import {
 } from "../persist/imageStore";
 import { diag } from "../diag/log";
 import { useStore, type ActionMenu, setFeedbackContext, clearFeedbackContext } from "../state/store";
+import { combinedLook, hasCharacterLook, imagePromptVars } from "./characterVisual";
 import type { ChatMessage, ContentTier, DmLine, EventChoice, GameEvent, Metrics, PendingEventSeed, ViewerRequest } from "./types";
 import { judgeRequestFulfillment } from "./requestJudge";
 import type { PlayerAction, ActionOption, ActionVerdict } from "./actions";
@@ -104,7 +105,34 @@ import { extractMentions } from "./mentions";
 import { BALANCE, type AffinitySource } from "./balance";
 import { masteryXpForAction, masteryLevel } from "./mastery";
 import { NICHES, nicheBaselineAppeal, nicheSpawnBias, type NicheId } from "./niches";
-import { outfitAppeal } from "./outfits";
+import {
+  activeCameraMults,
+  angleProductionBump,
+  cameraForZone,
+  CAMERA_SHOP,
+  CAMERA_TIERS,
+  isPlayerOnActiveCamera,
+  onScreenZone,
+  placedAngles,
+  unplacedCameras,
+  type PlacedCamera,
+} from "./cameras";
+import {
+  CLOTHING_SHOP_BY_ID,
+  clothingFromShop,
+  isClothingItem,
+  makeClothingItem,
+  makeItem,
+  type Item,
+  type ItemCategory,
+} from "./items";
+import {
+  CLOTHING_SLOTS,
+  clothingSlotLabel,
+  describeEquippedLook,
+  wardrobeAppeal,
+  type ClothingSlot,
+} from "./wardrobe";
 import type { SegmentId } from "./segments";
 import {
   WAKE_TIME,
@@ -331,25 +359,26 @@ export class GameController {
   }
 
   /** Generate the player character's portrait and reusable T-pose body. */
-  async generateCharacter(description: string, force = false): Promise<void> {
+  async generateCharacter(faceDescription: string, bodyDescription: string, force = false): Promise<void> {
     const s = this.s;
-    const desc = description.trim();
-    if (!desc) {
-      s.setToast("Describe how your streamer looks first.");
+    const face = faceDescription.trim();
+    const bodyDesc = bodyDescription.trim();
+    if (!face && !bodyDesc) {
+      s.setToast("Describe your streamer's face and body first.");
       return;
     }
-    s.setCharacter({ description: desc });
+    s.setCharacter({ faceDescription: face, bodyDescription: bodyDesc });
     const name = s.settings.streamerName;
-    const vars = {
-      name,
-      description: desc,
-      style: this.imageStyle(),
-      gender: (s.settings.gender ?? "").trim(),
-    };
+    const gender = (s.settings.gender ?? "").trim();
+    const style = this.imageStyle();
+    const char = s.character;
 
     const portrait = await this.genImage({
       kind: "portrait",
-      prompt: fillImagePrompt(effectiveImagePrompt(s.settings, "portraitPrompt"), vars),
+      prompt: fillImagePrompt(
+        effectiveImagePrompt(s.settings, "portraitPrompt"),
+        imagePromptVars(char, { name, style, gender }, "portrait"),
+      ),
       label: `${name} — portrait`,
       busyLabel: "Generating portrait",
       force,
@@ -360,10 +389,15 @@ export class GameController {
     // just-generated portrait as a reference image.
     const body = await this.genImage({
       kind: "body",
-      prompt: fillImagePrompt(effectiveImagePrompt(s.settings, "bodyPrompt"), {
-        ...vars,
-        ...(portrait ? { match: "Match the face, hair, and outfit of the reference portrait exactly." } : {}),
-      }),
+      prompt: fillImagePrompt(
+        effectiveImagePrompt(s.settings, "bodyPrompt"),
+        imagePromptVars(char, {
+          name,
+          style,
+          gender,
+          ...(portrait ? { match: "Match the face, hair, and outfit of the reference portrait exactly." } : {}),
+        }, "body"),
+      ),
       label: `${name} — body (template)`,
       refs: portrait ? [portrait.dataUrl] : undefined,
       sourceImageId: portrait?.id,
@@ -395,8 +429,7 @@ export class GameController {
   /** Generate (or fetch cached) the character placed in a given zone. */
   async generatePresence(zoneId: ZoneId, force = false): Promise<void> {
     const s = this.s;
-    const desc = s.character.description.trim();
-    if (!desc) {
+    if (!hasCharacterLook(s.character)) {
       s.setToast("Create your character's look first (🎭 Character).");
       return;
     }
@@ -405,13 +438,15 @@ export class GameController {
     const ref = await this.bodyRef();
     const rec = await this.genImage({
       kind: "presence",
-      prompt: fillImagePrompt(effectiveImagePrompt(s.settings, "presencePrompt"), {
-        name: s.settings.streamerName,
-        description: desc,
-        zone: zone.label,
-        zoneDesc: zone.description,
-        style: this.imageStyle(),
-      }),
+      prompt: fillImagePrompt(
+        effectiveImagePrompt(s.settings, "presencePrompt"),
+        imagePromptVars(s.character, {
+          name: s.settings.streamerName,
+          zone: zone.label,
+          zoneDesc: zone.description,
+          style: this.imageStyle(),
+        }, "full"),
+      ),
       label: `${s.settings.streamerName} — ${zone.label}`,
       refs: ref ? [ref.url] : undefined,
       sourceImageId: ref?.id,
@@ -425,8 +460,7 @@ export class GameController {
   /** Generate an image of the current narrative beat and drop it in the feed. */
   async generateScene(force = false): Promise<void> {
     const s = this.s;
-    const desc = s.character.description.trim();
-    if (!desc) {
+    if (!hasCharacterLook(s.character)) {
       s.setToast("Create your character's look first (🎭 Character).");
       return;
     }
@@ -444,13 +478,15 @@ export class GameController {
       : "her studio";
     const refs: string[] = ref ? [ref.url] : [];
     const name = s.settings.streamerName;
-    let prompt = fillImagePrompt(effectiveImagePrompt(s.settings, "scenePrompt"), {
-      name,
-      description: desc,
-      position: positionLabel,
-      narrative,
-      style: this.imageStyle(),
-    });
+    let prompt = fillImagePrompt(
+      effectiveImagePrompt(s.settings, "scenePrompt"),
+      imagePromptVars(s.character, {
+        name,
+        position: positionLabel,
+        narrative,
+        style: this.imageStyle(),
+      }, "full"),
+    );
     // If a guest is physically present (an in-person visit), put them in the frame.
     // Prefer their full-body T-pose reference (generated on demand) so their whole
     // likeness carries over; fall back to the portrait, then a text description.
@@ -508,7 +544,8 @@ export class GameController {
     const s = this.s;
     if (!this.imageBackend || s.imageBusy) return;
     if (rec.kind === "portrait" || rec.kind === "body") {
-      await this.generateCharacter(s.character.description || rec.prompt, true);
+      const c = s.character;
+      await this.generateCharacter(c.faceDescription, c.bodyDescription, true);
       return;
     }
     if (rec.kind === "presence" && rec.meta?.zone) {
@@ -728,7 +765,20 @@ export class GameController {
     return useStore.getState();
   }
   private mults() {
-    return multipliersFor(this.s.ownedUpgrades);
+    const base = multipliersFor(this.s.ownedUpgrades);
+    const cam = activeCameraMults(this.s.cameras, this.s.activeCameraId);
+    const angleBump = angleProductionBump(placedAngles(this.s.cameras).length);
+    return {
+      ...base,
+      viewer: base.viewer * cam.viewerMult * angleBump.viewerMult,
+      hype: base.hype * cam.hypeMult * angleBump.hypeMult,
+      productionQuality: base.productionQuality + cam.quality,
+    };
+  }
+
+  /** Whether the streamer's current zone is visible on the active camera angle. */
+  isOnCamera(): boolean {
+    return isPlayerOnActiveCamera(this.s.cameras, this.s.activeCameraId, this.s.zone);
   }
 
   // ----------------------------------------------------------- niche / novelty
@@ -754,7 +804,7 @@ export class GameController {
     const add = (seg: SegmentId, v: number) => { out[seg] = (out[seg] ?? 0) + v; };
     for (const [seg, v] of Object.entries(mult.segmentAppeal) as [SegmentId, number][]) add(seg, v);
     for (const [seg, v] of Object.entries(nicheBaselineAppeal(this.s.settings.niche)) as [SegmentId, number][]) add(seg, v);
-    for (const [seg, v] of Object.entries(outfitAppeal(this.s.settings.outfit)) as [SegmentId, number][]) add(seg, v);
+    for (const [seg, v] of Object.entries(wardrobeAppeal(this.s.equippedClothing, this.s.inventory)) as [SegmentId, number][]) add(seg, v);
     const global = mult.productionQuality * BALANCE.gear.productionQualityToAppeal;
     if (global) for (const seg of SEGMENT_IDS) add(seg, global);
     return out;
@@ -975,7 +1025,13 @@ export class GameController {
       s.setToast("Too exhausted to stream — sleep or eat first.");
       return;
     }
+    const cam = cameraForZone(s.cameras, s.zone);
+    if (!cam) {
+      s.setToast("No camera here — set up at the desk (or grab a portable cam).");
+      return;
+    }
     diag.group("round", "GO LIVE", () => {
+      s.setActiveCamera(cam.id);
       s.clearChat();
       s.resetSession();
       s.setRoster(clearPresence(s.roster));
@@ -992,6 +1048,8 @@ export class GameController {
     s.logEvent(`Day ${s.metrics.day}: went live.`);
     this.applySeasonalBeat();
     this.dm("The 'LIVE' dot blinks red. Regulars filter in, saying hi as the numbers tick up.");
+    // Open the live "Twitch view" with a fresh shot from the active camera.
+    this.refreshStreamFootage(s.zone);
     // A due arc beat (sponsor deliverable, viral wave, …) opens the night.
     if (this.maybeArcEvent()) return;
     this.startAmbient("the stream just went live");
@@ -1072,6 +1130,7 @@ export class GameController {
     const s = this.s;
     const cues = physicalCues(s.metrics, s.settings.contentTier);
     const act = s.activity;
+    const onScreenId = onScreenZone(s.cameras, s.activeCameraId, s.zone);
     return {
       settings: s.settings,
       metrics: s.metrics,
@@ -1084,6 +1143,10 @@ export class GameController {
       streamMemory: this.streamMemory,
       characterVoices: this.characterVoices(),
       visibleCues: cues.public,
+      onScreenZoneLabel: ZONES[onScreenId]?.label ?? "the studio",
+      playerZoneLabel: ZONES[s.zone]?.label ?? "the studio",
+      playerOnCamera: this.isOnCamera(),
+      equippedLook: describeEquippedLook(s.equippedClothing, s.inventory),
       activity: act
         ? { label: act.label, narrationHint: act.narrationHint, chatHint: act.chatHint, category: act.category }
         : undefined,
@@ -1216,10 +1279,20 @@ export class GameController {
       case "__order_food__": return this.orderFood();
       case "__door__": void this.answerDoor(); return;
       case "__open_shop__": this.s.setShopOpen(true); return;
-      case "__outfit_cozy__": this.s.setSettings({ outfit: "cozy" }); return this.coded("You change into something soft and comfy. The cozy crowd melts.", { comfort: 7 }, "🧶 Cozy fit (cozy crowd ♥)", 10);
-      case "__outfit_cute__": this.s.setSettings({ outfit: "cute" }); return this.coded("You pick a cute, photogenic fit. Hype picks up.", { comfort: 3, hype: 4 }, "✨ Cute fit (hype ♥)", 10);
-      case "__outfit_bold__": this.s.setSettings({ outfit: "bold" }); return this.coded("You go for something bold and eye-catching. Simps take notice.", { hype: 6, comfort: -3 }, "🔥 Bold fit (simps/whales ♥)", 10);
+      case "__wardrobe__": return this.openWardrobeMenu();
       default:
+        if (opt.prompt.startsWith("__place_cam__:")) {
+          const camId = opt.prompt.slice("__place_cam__:".length);
+          return this.placeCameraAtZone(camId);
+        }
+        if (opt.prompt.startsWith("__equip__:")) {
+          const itemId = opt.prompt.slice("__equip__:".length);
+          return void this.equipClothingItem(itemId);
+        }
+        if (opt.prompt.startsWith("__unequip__:")) {
+          const slot = opt.prompt.slice("__unequip__:".length) as ClothingSlot;
+          return void this.unequipClothingSlot(slot);
+        }
         void this.submitAction({ text: opt.prompt, source: "menu" });
     }
   }
@@ -1253,17 +1326,19 @@ export class GameController {
         // it and it develops. It is NOT an idle "nothing happens" filler.
         const continuation = await this.narrateContinuation();
         this.dm(continuation);
-        const continueCount = chatBurstCount(
-          s.metrics.hype,
-          totalViewers(s.audience),
-          "continue",
-        );
-        const msgs = await generateChatBurst(
-          this.llm,
-          this.chatCtx(`the scene continues — ${continuation}`, continueCount),
-        );
-        this.s.pushChat(msgs);
-        this.applyChatEffects(msgs);
+        if (this.isOnCamera()) {
+          const continueCount = chatBurstCount(
+            s.metrics.hype,
+            totalViewers(s.audience),
+            "continue",
+          );
+          const msgs = await generateChatBurst(
+            this.llm,
+            this.chatCtx(`the scene continues — ${continuation}`, continueCount),
+          );
+          this.s.pushChat(msgs);
+          this.applyChatEffects(msgs);
+        }
         if (s.activity && s.session.isLive) {
           await this.narrateActivityBeat();
           if (s.activity) {
@@ -1412,13 +1487,14 @@ export class GameController {
           }
         }
 
+        const onCam = s.session.isLive && this.isOnCamera();
         const result = resolveAction({
           verdict,
           metrics: s.metrics,
           audience: s.audience,
           mult: this.mults(),
           contentTier: s.settings.contentTier,
-          isLive: s.session.isLive,
+          isLive: onCam,
           mastery: s.mastery,
           baselineAppeal: this.baselineAppeal(),
           novelty: this.currentNovelty(),
@@ -1432,6 +1508,12 @@ export class GameController {
             peak: Math.max(s.session.peak, totalViewers(result.audience)),
           });
 
+          if (!onCam) {
+            this.dm(`${verdict.narration} (Off camera — the stream can't see this.)`);
+            if (result.summary) this.outcome(result.summary);
+            this.earnMasteryXp(verdict);
+            this.drainNovelty();
+          } else {
           // Lead the beat with her ACTUAL spoken words (the real joke, answer,
           // flirt) so the performance reads first. Only then the stage direction
           // and the chat reacting to what she actually said — otherwise the feed
@@ -1473,6 +1555,7 @@ export class GameController {
           this.distributeActionAffinity(action, verdict);
           this.earnMasteryXp(verdict);
           this.drainNovelty();
+          }
 
           if (s.activity) {
             await this.narrateActivityBeat();
@@ -2184,6 +2267,15 @@ export class GameController {
     const s = this.s;
     s.setZone(zoneId);
     diag.debug("world", "move to zone", { zone: zoneId });
+    // While live, the broadcast follows you to a fixed camera in the new zone.
+    // Stepping into a camera-less zone leaves you off-camera (the active angle
+    // stays put), which is the intended "duck out of view" tension.
+    if (s.session.isLive) {
+      const fixed = s.cameras.find((c) => c.zone === zoneId && !c.portable);
+      if (fixed && s.activeCameraId !== fixed.id) s.setActiveCamera(fixed.id);
+      // Refresh the live feed from the new angle (no-op if off-camera/busy).
+      this.refreshStreamFootage(zoneId);
+    }
     // Returning to a place that has a cached position visualization makes it the
     // current center-stage image again.
     const presenceId = s.presenceImages[zoneId];
@@ -2204,6 +2296,16 @@ export class GameController {
     let options = menu.options.filter((o) => o.liveOnly === undefined || o.liveOnly === live);
     if (!isNoLimits(this.s.settings.contentTier)) {
       options = options.filter((o) => o.prompt !== "__relieve__");
+    }
+    const bagged = unplacedCameras(this.s.cameras);
+    if (bagged.length && zoneId !== "door") {
+      for (const cam of bagged.slice(0, 4)) {
+        options.unshift({
+          id: `place-${cam.id}`,
+          label: `📷 Place ${cam.label} here`,
+          prompt: `__place_cam__:${cam.id}`,
+        });
+      }
     }
     if (options.length === 0) {
       this.s.setToast(live ? "Nothing to do there mid-stream." : "End the stream to use that.");
@@ -2859,8 +2961,7 @@ export class GameController {
   private async generateEventImage(opening: string): Promise<void> {
     if (!this.canGenerateImages) return;
     const s = this.s;
-    const desc = s.character.description.trim();
-    if (!desc || !opening.trim()) return;
+    if (!combinedLook(s.character).trim() || !opening.trim()) return;
     try {
       const ref = await this.bodyRef();
       const zone = ZONES[s.zone];
@@ -2869,13 +2970,15 @@ export class GameController {
         : "her studio";
       const rec = await this.genImage({
         kind: "scene",
-        prompt: fillImagePrompt(effectiveImagePrompt(s.settings, "scenePrompt"), {
-          name: s.settings.streamerName,
-          description: desc,
-          position: positionLabel,
-          narrative: opening.slice(0, 360),
-          style: this.imageStyle(),
-        }),
+        prompt: fillImagePrompt(
+          effectiveImagePrompt(s.settings, "scenePrompt"),
+          imagePromptVars(s.character, {
+            name: s.settings.streamerName,
+            position: positionLabel,
+            narrative: opening.slice(0, 360),
+            style: this.imageStyle(),
+          }, "full"),
+        ),
         label: s.eventScene?.title ?? "Event scene",
         refs: ref ? [ref.url] : undefined,
         sourceImageId: ref?.id,
@@ -2989,10 +3092,25 @@ export class GameController {
           break;
         }
         case "grantItem": {
+          const item = this.grantItemToInventory(e.name, e.note ? "gift" : "misc", e.note);
           setFeedbackContext(e.note ?? e.name, "good");
           s.patchMetrics({ comfort: s.metrics.comfort + 3 });
           clearFeedbackContext();
-          s.logEvent(`Received: ${e.name}.`);
+          s.logEvent(`Received: ${item.name}.`);
+          break;
+        }
+        case "gift": {
+          const item = this.grantItemToInventory(e.item, e.category ?? "gift", e.note);
+          setFeedbackContext(e.note ?? e.item, "good");
+          s.patchMetrics({ comfort: s.metrics.comfort + 3 });
+          clearFeedbackContext();
+          if (e.charRef && s.roster[e.charRef]) {
+            const c = s.roster[e.charRef];
+            s.pushDm(e.charRef, { role: "them", kind: "gift", text: `sent a gift: ${item.name}` });
+            s.logEvent(`DM: ${c.displayName || c.handle} sent a gift (${item.name}).`);
+          } else {
+            s.logEvent(`Received gift: ${item.name}.`);
+          }
           break;
         }
         case "masteryXp":
@@ -4036,13 +4154,15 @@ export class GameController {
           s.pushDm(charId, { role: "them", kind: "gift", amount: e.amount, text: `sent $${e.amount}${e.note ? ` — ${e.note}` : ""}` });
           s.logEvent(`DM: ${c.displayName || c.handle} tipped $${e.amount}.`);
           break;
-        case "gift":
+        case "gift": {
+          const item = this.grantItemToInventory(e.item, "gift", e.note);
           s.patchMetrics({ comfort: s.metrics.comfort + 3 });
-          s.pushDm(charId, { role: "them", kind: "gift", text: `sent a gift: ${e.item}` });
-          s.logEvent(`DM: ${c.displayName || c.handle} sent a gift (${e.item}).`);
+          s.pushDm(charId, { role: "them", kind: "gift", text: `sent a gift: ${item.name}` });
+          s.logEvent(`DM: ${c.displayName || c.handle} sent a gift (${item.name}).`);
           // A gift is genuine reciprocal investment — strong, cap-exempt.
           this.bumpAffinity(charId, BALANCE.affinity.sources.gift, "gift");
           break;
+        }
         case "image":
           if (!this.imageBackend) break;
           try {
@@ -4194,6 +4314,273 @@ export class GameController {
     s.logEvent(`Bought ${def.name} (−$${def.cost}).`);
     diag.info("economy", "bought activity", { id, cost: def.cost });
     s.setToast(`Unlocked ${def.name}!`);
+  }
+
+  buyCamera(shopId: string): void {
+    const s = this.s;
+    const item = CAMERA_SHOP.find((c) => c.id === shopId);
+    if (!item) return;
+    if (item.portable && s.cameras.some((c) => c.portable)) {
+      return s.setToast("You already own a portable cam.");
+    }
+    if (s.metrics.cash < item.cost) return s.setToast("Not enough cash for that yet.");
+    s.patchMetrics({ cash: s.metrics.cash - item.cost });
+    const cam: PlacedCamera = {
+      id: uid("cam"),
+      tier: item.tier,
+      label: item.portable ? "Portable Cam" : `${CAMERA_TIERS[item.tier].label} Cam`,
+      zone: null,
+      portable: item.portable,
+    };
+    s.addCamera(cam);
+    s.logEvent(`Bought ${item.name} (−$${item.cost}).`);
+    s.setToast(
+      item.portable
+        ? "Portable cam ready — go live from anywhere (lower quality)."
+        : `${item.name} in your bag — place it from any zone menu.`,
+    );
+  }
+
+  buyClothing(shopId: string): void {
+    const s = this.s;
+    const entry = CLOTHING_SHOP_BY_ID[shopId];
+    if (!entry) return;
+    if (s.metrics.cash < entry.cost) return s.setToast("Not enough cash for that yet.");
+    s.patchMetrics({ cash: s.metrics.cash - entry.cost });
+    const piece = clothingFromShop(entry);
+    s.addItem(piece);
+    s.logEvent(`Bought ${entry.name} (−$${entry.cost}).`);
+    s.setToast(`Bought ${entry.name}! Check inventory to equip.`);
+  }
+
+  placeCameraAtZone(camId: string): void {
+    const s = this.s;
+    const cam = s.cameras.find((c) => c.id === camId);
+    if (!cam || cam.portable) return;
+    s.placeCamera(camId, s.zone);
+    s.setToast(`${cam.label} placed at ${ZONES[s.zone]?.label ?? s.zone}.`);
+    s.logEvent(`Placed ${cam.label} at ${ZONES[s.zone]?.label ?? s.zone}.`);
+  }
+
+  switchCamera(camId: string): void {
+    const s = this.s;
+    const cam = s.cameras.find((c) => c.id === camId);
+    if (!cam) return;
+    s.setActiveCamera(camId);
+    if (cam.zone && !cam.portable) s.setZone(cam.zone);
+    s.setToast(`On-screen: ${cam.label}.`);
+    this.refreshStreamFootage();
+  }
+
+  openWardrobeMenu(): void {
+    const s = this.s;
+    const clothing = s.inventory.filter(isClothingItem);
+    if (!clothing.length) {
+      s.setToast("No clothing in inventory — hit the shop for new pieces.");
+      return;
+    }
+    const options: ActionOption[] = [];
+    for (const item of clothing) {
+      const equipped = Object.values(s.equippedClothing).includes(item.id);
+      options.push({
+        id: `equip-${item.id}`,
+        label: equipped ? `✓ Wearing: ${item.name}` : `👗 Put on ${item.name}`,
+        prompt: equipped ? `__unequip__:${item.slot}` : `__equip__:${item.id}`,
+      });
+    }
+    for (const slot of CLOTHING_SLOTS) {
+      if (s.equippedClothing[slot]) {
+        const item = s.inventory.find((i) => i.id === s.equippedClothing[slot]);
+        options.push({
+          id: `off-${slot}`,
+          label: `⬇ Take off ${item?.name ?? clothingSlotLabel(slot)}`,
+          prompt: `__unequip__:${slot}`,
+        });
+      }
+    }
+    s.setActionMenu({
+      title: "Wardrobe",
+      subtitle: describeEquippedLook(s.equippedClothing, s.inventory),
+      options,
+      allowFreeform: false,
+    });
+  }
+
+  async equipClothingItem(itemId: string): Promise<void> {
+    const s = this.s;
+    const item = s.inventory.find((i) => i.id === itemId);
+    if (!item || !isClothingItem(item)) return;
+    if (item.slot === "full") {
+      for (const slot of CLOTHING_SLOTS) s.equipClothing(slot, null);
+    } else if (s.equippedClothing.full) {
+      s.equipClothing("full", null);
+    }
+    s.equipClothing(item.slot, itemId);
+    const line = s.session.isLive
+      ? `You change into ${item.name}. Chat can see the new look.`
+      : `You put on ${item.name}.`;
+    if (s.session.isLive) {
+      this.dm(line);
+    } else {
+      s.logEvent(line);
+    }
+    s.setToast(`Wearing ${item.name}.`);
+  }
+
+  async unequipClothingSlot(slot: ClothingSlot): Promise<void> {
+    const s = this.s;
+    const itemId = s.equippedClothing[slot];
+    if (!itemId) return;
+    const item = s.inventory.find((i) => i.id === itemId);
+    s.equipClothing(slot, null);
+    const line = s.session.isLive
+      ? `You slip out of ${item?.name ?? "that piece"}.`
+      : `Took off ${item?.name ?? clothingSlotLabel(slot)}.`;
+    if (s.session.isLive) {
+      this.dm(line);
+    } else {
+      s.logEvent(line);
+    }
+    s.setToast(`Removed ${item?.name ?? clothingSlotLabel(slot)}.`);
+  }
+
+  grantItemToInventory(name: string, category: ItemCategory = "misc", note?: string): Item {
+    const s = this.s;
+    const lower = name.toLowerCase();
+    const clothingHints = [
+      "shirt", "tee", "blouse", "top", "tank", "sweater", "hoodie", "corset",
+      "dress", "outfit", "gown",
+      "skirt", "jean", "pant", "short", "legging", "jogger",
+      "underwear", "lingerie", "bra", "panties", "panty", "briefs", "thong", "boxers",
+      "sock", "heel", "shoe", "boot", "sneaker",
+      "bow", "hat", "cap", "clip", "headband",
+      "jacket", "coat", "cardigan",
+    ];
+    if (category === "clothing" || clothingHints.some((h) => lower.includes(h))) {
+      const has = (...words: string[]) => words.some((w) => lower.includes(w));
+      const slot: ClothingSlot =
+        has("underwear", "lingerie", "bra", "panties", "panty", "briefs", "thong", "boxers") ? "underwear"
+        : has("sock", "heel", "shoe", "boot", "sneaker") ? "feet"
+        : has("skirt", "jean", "pant", "short", "legging", "jogger") ? "bottom"
+        : has("bow", "hat", "cap", "clip", "headband") ? "head"
+        : has("jacket", "coat", "cardigan") ? "outer"
+        : has("dress", "outfit", "gown") ? "full"
+        : "top";
+      const vibes = lower.includes("cozy") ? { cozy: 1 }
+        : lower.includes("cute") ? { cute: 1 }
+        : lower.includes("bold") || lower.includes("sexy") ? { bold: 1 }
+        : { casual: 0.5 };
+      const item = makeClothingItem({
+        name: name.slice(0, 60),
+        description: note?.slice(0, 120) ?? `A ${name}.`,
+        slot,
+        vibes,
+        generated: true,
+      });
+      s.addItem(item);
+      return item;
+    }
+    const item = makeItem({
+      name: name.slice(0, 60),
+      description: note?.slice(0, 120) ?? `Received: ${name}.`,
+      category,
+      generated: true,
+    });
+    s.addItem(item);
+    return item;
+  }
+
+  async generateItem(seed: string, category: ItemCategory = "misc"): Promise<Item> {
+    if (this.llm.isMock) {
+      return this.grantItemToInventory(seed, category);
+    }
+    try {
+      const res = await this.llm.complete({
+        system: "Return JSON only: { \"name\": string, \"description\": string } for a streamer-life item.",
+        messages: [{ role: "user", content: `Invent an item for: ${seed}` }],
+        jsonMode: true,
+      });
+      const parsed = extractJson<{ name?: string; description?: string }>(res.text);
+      const name = parsed?.name?.slice(0, 60) ?? seed;
+      const desc = parsed?.description?.slice(0, 160) ?? `A ${seed}.`;
+      if (category === "clothing") {
+        const item = makeClothingItem({
+          name,
+          description: desc,
+          slot: "accessory",
+          vibes: { casual: 0.5 },
+          generated: true,
+        });
+        this.s.addItem(item);
+        return item;
+      }
+      const item = makeItem({ name, description: desc, category, generated: true });
+      this.s.addItem(item);
+      return item;
+    } catch {
+      return this.grantItemToInventory(seed, category);
+    }
+  }
+
+  /** Generate stream-cam footage from a zone using the active camera tier. */
+  async generateCamFootage(targetZone?: ZoneId, force = false): Promise<void> {
+    const s = this.s;
+    if (!this.imageBackend || s.imageBusy) return;
+    const zoneId = targetZone ?? onScreenZone(s.cameras, s.activeCameraId, s.zone);
+    if ((zoneId === "bathroom" || zoneId === "bed") && !isNoLimits(s.settings.contentTier)) {
+      s.setToast("That angle needs a higher content tier.");
+      return;
+    }
+    if (!hasCharacterLook(s.character)) {
+      s.setToast("Create your character's look first (🎭 Character).");
+      return;
+    }
+    const zone = ZONES[zoneId];
+    const cam = s.cameras.find((c) => c.id === s.activeCameraId) ?? cameraForZone(s.cameras, zoneId);
+    const tierLabel = cam ? CAMERA_TIERS[cam.tier].label : "Webcam";
+    const ref = await this.bodyRef();
+    const positionLabel = zone
+      ? `${zone.label} — ${zone.description.replace(/[.\s]+$/, "")} (${tierLabel} angle)`
+      : "her studio";
+    const look = describeEquippedLook(s.equippedClothing, s.inventory);
+    const refs: string[] = ref ? [ref.url] : [];
+    const promptVars = imagePromptVars(s.character, {
+      name: s.settings.streamerName,
+      position: positionLabel,
+      narrative: `Live stream cam shot from the ${tierLabel} at ${zone?.label ?? "the studio"}.`,
+      style: this.imageStyle(),
+    }, "full");
+    promptVars.description = `${promptVars.description}. Wearing: ${look}.`;
+    let prompt = fillImagePrompt(effectiveImagePrompt(s.settings, "scenePrompt"), promptVars);
+    if (s.roomImage) {
+      refs.push(s.roomImage);
+      prompt += " Use the provided room reference for layout and style.";
+    }
+    const rec = await this.genImage({
+      kind: "scene",
+      prompt,
+      label: `${zone?.label ?? "Studio"} · ${tierLabel}`,
+      refs: refs.length ? refs : undefined,
+      sourceImageId: ref?.id,
+      busyLabel: "Generating cam footage",
+      force,
+      meta: { zone: zoneId, cameraTier: cam?.tier ?? "webcam" },
+    });
+    if (rec) {
+      s.setStreamFootage(rec.id);
+      s.pushStory({ kind: "image", text: rec.label, imageId: rec.id });
+    }
+  }
+
+  /**
+   * Fire-and-forget cam-footage refresh for the live Twitch-style view. Skips
+   * silently when offline, busy, lacking an image backend, or off-camera.
+   */
+  refreshStreamFootage(targetZone?: ZoneId): void {
+    const s = this.s;
+    if (!s.session.isLive || !this.imageBackend || s.imageBusy) return;
+    if (!this.canGenerateImages || !this.isOnCamera()) return;
+    void this.generateCamFootage(targetZone);
   }
 }
 

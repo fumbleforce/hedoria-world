@@ -216,6 +216,10 @@ their `messageCount`. Tips route through `recordTip`/`bumpAffinity`.
 | Cute outfit | — | comfort +3, hype +4 | 10 |
 | Bold outfit | — | hype +6, comfort −3 | 10 |
 
+> **Legacy:** preset outfit tokens (`__outfit_*__`) were replaced by the **item wardrobe**
+> (bathroom → 👗 Change clothes). Appeal now comes from equipped clothing items with
+> stackable vibe tags (see **Cameras & wardrobe** below).
+
 ## The resolver, in detail (`resolver.ts`)
 
 ### Personal stat costs (code-owned, hybrid)
@@ -298,7 +302,7 @@ the full evaluate→resolve pipeline. **Token** prompts bypass the evaluator:
 
 | Token | Effect |
 |-------|--------|
-| `__toggle_live__` | Go live / end stream |
+| `__toggle_live__` | Go live / end stream (requires a **camera in current zone**) |
 | `__sleep__` | Sleep (day +1, rent, reset) |
 | `__game_picker__` | Open mini-game picker |
 | `__cook__` | energy +15, comfort +4, hunger +40, 15 min |
@@ -365,8 +369,8 @@ Custom activities use neutral `pleases` and LLM-built hints from the typed text.
 |---------|------|--------|
 | usb-mic | $120 | viewer ×1.1, hype ×1.05 |
 | ring-light | $90 | hype ×1.1 |
-| 1080p-cam | $260 | viewer ×1.25, **productionQuality +1** |
-| dslr-cam | $700 | viewer ×1.35, **productionQuality +2** |
+| 1080p-cam | $260 | *(migrated to placeable camera system — buy **1080p Webcam Kit** in Cameras shop)* |
+| dslr-cam | $700 | *(migrated — buy **DSLR + Capture Card** in Cameras shop)* |
 | studio-lighting | $320 | hype ×1.08, **productionQuality +1** |
 | green-screen | $150 | income ×1.15 |
 | lava-lamp | $110 | **segmentAppeal {cozy+2, lonely+1}** |
@@ -390,10 +394,28 @@ grows → more recurring income):
 > anonymous floor by it, so camera/gear upgrades finally grow the audience. (Closes a
 > [09](./09-expectation-vs-reality.md) mismatch.)
 
-### Wardrobe outfits (`outfits.ts`)
-The worn outfit (`settings.outfit`, set by the change-outfit actions) applies a passive
-**baseline-appeal** nudge while live: cozy → cozy/lonely, cute → hype/simps,
-bold → simps/whales (cozy −). A cheaper, faster lever than gear for shaping appeal.
+### Wardrobe (`items.ts`, `wardrobe.ts`)
+Clothing is **item-based**: pieces live in `store.inventory`, equip into
+`store.equippedClothing` slots (head/top/bottom/feet/outer/accessory/full), and stack
+**vibe tags** (casual/cozy/cute/bold) into segment appeal via `wardrobeAppeal()` with
+diminishing returns. Shop → **Clothing** tab; bathroom → **Change clothes**. Baseline
+appeal clamp in the resolver is **±5** (raised from ±3 so stacking matters).
+
+### Cameras & streaming zones (`cameras.ts`)
+- New saves start with a **Desk Cam** (webcam tier) at the streaming desk only.
+- **Go live** requires `cameraForZone(cameras, zone)` — couch/kitchen/etc. need a placed
+  cam or a **Portable Streaming Cam** ($180, lower quality, any zone).
+- Purchased kits land **unplaced** in inventory; place via zone menu **📷 Place … here**.
+- **Active camera** (`activeCameraId`) sets the on-screen angle; StudioRoom cam switcher
+  while live. Multi-angle production bump: +4% viewers per extra placed zone (cap +12%).
+- **Active camera quality** feeds `productionQuality` (replaces global 1080p/dslr gear
+  multipliers; legacy owned upgrades migrate to unplaced cams on load).
+- **Off-camera:** live actions in a zone without the active angle skip chat/audience
+  payoff (`isLive` false in resolver for that beat); ActionBar shows 🎥 Off camera.
+
+### Legacy outfit presets (`outfits.ts`)
+`settings.outfit` remains on saves for migration; appeal uses equipped clothing. Vibe→segment
+table still lives in `OUTFITS`.
 
 ## Mastery — personal progression (`mastery.ts`, `BALANCE.mastery`)
 Live actions earn XP in skill **domains** keyed off the verdict's *tags* (uniform,

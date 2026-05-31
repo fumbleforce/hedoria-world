@@ -28,9 +28,19 @@ fixed 1:1.
 | `generateCharacter()` | portrait + body | Body is generated from the portrait (image-to-image) so the face/outfit match. Changing the character clears presence renders. |
 | `generatePresence(zone)` | presence | The character placed in a specific zone; uses the body as a reference. |
 | `generateScene()` | scene | A "stream cam" moment; pushed into the narrator feed. References: the streamer's body T-pose (likeness) + the **room art** (`roomImage`, for apartment layout/style) + — during an in-person **visit** — the guest's own full-body T-pose. The guest body is generated on demand by `ensureCharacterBody()` (using their portrait as a likeness reference when one exists), stored under a `cbody:<id>` KV key, and reused thereafter; it falls back to the portrait, then a text description. The prompt names each reference. |
+| `generateCamFootage(zone?)` | scene | Live **cam shot** from the active camera tier + zone (StudioRoom **📹 Cam shot**). Includes equipped look in the prompt. Bathroom/bed angles require no-limits content tier. The result id is stored as `streamFootageId` and becomes the live **Stream view** feed. `meta: { zone, cameraTier }`. |
 | `generatePortrait(charId)` | (KV only) | A **viewer** avatar (hardcoded semi-real style); stored in a global KV key, not the gallery. |
 | `generateStylePreview(presetId)` | preview (logged only) | A fixed common subject per style preset, for the Settings comparison grid; stored in a global KV key. |
 | `regenerateImage(rec)` | varies | New id, same prompt/cache key. |
+
+**Stream view.** While live, the center **Visualization** window becomes a Twitch-style
+video player (`render/StreamView.tsx`): the latest `streamFootageId` image fills a 16:9
+frame with a LIVE badge, uptime, viewer count, and a title bar (name · niche · hype ·
+camera). The studio map (left) and stream chat (right `ChatPanel`) stay in place, so the
+three together read as a broadcast layout. `generateCamFootage` is auto-refreshed on
+go-live, camera switch, and zone moves (via `controller.refreshStreamFootage`, which
+no-ops when off-camera, busy, or without an image backend). Stepping off-camera dims the
+feed with an overlay; clicking the feed enlarges it in the lightbox.
 
 Presence/scene reuse the body T-pose as a reference image for consistency; scenes also
 attach the room art (and, during a visit, the guest's own generated T-pose body) as
@@ -93,7 +103,8 @@ moves the avatar (CSS transform glide) and opens the zone menu.
   `DefaultRoom` SVG with furniture at each zone.
 - **Avatar:** the zone's presence image if generated, else the character portrait,
   else an emoji dot; ringed with `--accent` (live) or `--offline`.
-- **Bar:** a hint line and a "📸 Visualize here / Redo here" button when image
+- **Bar:** a hint line, **cam switcher** buttons while live (one per placed/portable
+  camera), **📸 Visualize here / Redo here**, and **📹 Cam shot** (live) when image
   generation is available and a character exists.
 
 > The default presence/room prompts say "her studio apartment" regardless of

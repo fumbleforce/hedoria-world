@@ -51,6 +51,7 @@ Persist name is `limelight-save-v3` by default but is **retargeted at boot** to
 
 **Persisted:**
 `metrics`, `session`, `activity` (while live), `audience`, `settings`, `ownedUpgrades`, `ownedActivities`, `promptOverrides`,
+`cameras`, `activeCameraId`, `inventory`, `equippedClothing`,
 `eventLog`, `recentEvents`, `arcs`, `completedGoals`, `roomImage`, `dmThreads`, `chat`,
 `story`, `clock`, `zone`, `character` (ids only), `presenceImages` (ids), `lastImageId`,
 `roster` (verbatim, **including** online flags), `pendingVisits`, `viewerRequests`, and the active

@@ -29,6 +29,14 @@ export interface ChatContext {
   characterVoices?: Array<{ handle: string; lines: string[] }>;
   /** Observable body-state cues for chat (never includes private bladder). */
   visibleCues?: string[];
+  /** Which zone the active camera shows (on-screen). */
+  onScreenZoneLabel?: string;
+  /** Where the streamer is physically standing. */
+  playerZoneLabel?: string;
+  /** Whether the streamer is visible on the active camera angle. */
+  playerOnCamera?: boolean;
+  /** Short description of what she's wearing. */
+  equippedLook?: string;
   /** Active stream activity — steers backseat/scream/vote chat. */
   activity?: { label: string; narrationHint: string; chatHint: string; category?: ActivityCategory };
   count: number;
@@ -160,6 +168,12 @@ function buildRequest(ctx: ChatContext) {
     {
       heading: "Character voices (stay consistent)",
       body: voices || undefined,
+    },
+    {
+      heading: "Stream setup",
+      body: ctx.onScreenZoneLabel
+        ? `On-screen camera shows: ${ctx.onScreenZoneLabel}. Streamer is at: ${ctx.playerZoneLabel ?? ctx.onScreenZoneLabel}${ctx.playerOnCamera === false ? " (OFF CAMERA — chat can't see her right now)" : ""}.${ctx.equippedLook ? ` Wearing: ${ctx.equippedLook}.` : ""}`
+        : undefined,
     },
     {
       heading: "Room vibe",

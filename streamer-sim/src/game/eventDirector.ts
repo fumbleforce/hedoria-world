@@ -31,6 +31,7 @@ export type EventEffect =
   | { type: "incomingDm"; charRef?: string; message?: string; note?: string }
   | { type: "grantUpgrade"; upgradeId: string; note?: string }
   | { type: "grantItem"; name: string; note?: string }
+  | { type: "gift"; item: string; charRef?: string; category?: "clothing" | "gift" | "prop" | "misc"; note?: string }
   | { type: "masteryXp"; domain: MasteryDomain; amount: number; note?: string }
   | { type: "raid"; size?: number; note?: string }
   | { type: "meetup"; charRef: string; hint: string; days?: number; note?: string }
@@ -329,6 +330,16 @@ export function parseEventEffects(text: string, ctx?: Pick<EventDirectorContext,
       out.push({ type, upgradeId: o.upgradeId, note });
     } else if (type === "grantItem" && typeof o.name === "string") {
       out.push({ type, name: o.name.slice(0, 60), note });
+    } else if (type === "gift" && typeof o.item === "string") {
+      if (charRef && roster.size && !roster.has(charRef)) continue;
+      const category = typeof o.category === "string" ? o.category : undefined;
+      out.push({
+        type,
+        item: o.item.slice(0, 60),
+        charRef,
+        category: category as EventEffect & { type: "gift" } extends { category?: infer C } ? C : never,
+        note,
+      });
     } else if (type === "masteryXp" && typeof o.domain === "string" && BALANCE.mastery.domains.includes(o.domain as MasteryDomain)) {
       const amount = clampNumber(o.amount, E.masteryXpMin, E.masteryXpMax);
       if (amount !== null) out.push({ type, domain: o.domain as MasteryDomain, amount, note });
@@ -431,6 +442,7 @@ const EFFECT_ITEM_SCHEMA: Record<string, unknown> = {
         "incomingDm",
         "grantUpgrade",
         "grantItem",
+        "gift",
         "masteryXp",
         "raid",
         "meetup",
@@ -443,6 +455,8 @@ const EFFECT_ITEM_SCHEMA: Record<string, unknown> = {
     amount: { type: "number" },
     charRef: { type: "string" },
     name: { type: "string" },
+    item: { type: "string" },
+    category: { type: "string", enum: ["clothing", "gift", "prop", "misc"] },
     relationship: { type: "string", enum: [...REL_VALUES] },
     upgradeId: { type: "string" },
     domain: { type: "string", enum: ["showmanship", "composure"] },

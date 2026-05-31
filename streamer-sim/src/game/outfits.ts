@@ -9,6 +9,8 @@
 import type { SegmentId } from "./segments";
 
 export type OutfitId = "casual" | "cozy" | "cute" | "bold";
+/** Vibe tag on clothing items — maps to segment appeal via OUTFITS. */
+export type VibeId = OutfitId;
 
 export interface OutfitDef {
   id: OutfitId;

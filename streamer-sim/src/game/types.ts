@@ -123,8 +123,10 @@ export interface StoryEntry {
 
 /** The player character's visual identity for image generation. */
 export interface CharacterVisual {
-  /** Free-form description of how the streamer looks. */
-  description: string;
+  /** Face / head — eyes, makeup, expression cues for portraits. */
+  faceDescription: string;
+  /** Body / build / hair / silhouette for full-body and scene renders. */
+  bodyDescription: string;
   /** StoredImage id of the head-and-shoulders portrait. */
   portraitId: string | null;
   /** StoredImage id of the full-body T-pose template. */

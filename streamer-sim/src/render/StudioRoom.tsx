@@ -3,6 +3,7 @@ import { useStore } from "../state/store";
 import { useStoredImage } from "../persist/useStoredImage";
 import { loadPortrait } from "../persist/imageStore";
 import type { GameController } from "../game/controller";
+import { hasCharacterLook } from "../game/characterVisual";
 import { ZONE_LIST, ZONES, GRID, type ZoneId } from "../game/studio";
 
 /**
@@ -53,7 +54,9 @@ export function StudioRoom({ controller }: { controller: GameController }) {
   const portraitUrl = useStoredImage(portraitId);
   const avatarUrl = presenceUrl ?? portraitUrl;
   const imageBusy = useStore((s) => s.imageBusy);
-  const hasCharacter = useStore((s) => !!s.character.bodyId || !!s.character.description.trim());
+  const cameras = useStore((s) => s.cameras);
+  const activeCameraId = useStore((s) => s.activeCameraId);
+  const hasCharacter = useStore((s) => hasCharacterLook(s.character));
   const canGenImages = controller.canGenerateImages;
   const [px, py] = center(ZONES[zone].cell);
 
@@ -176,7 +179,23 @@ export function StudioRoom({ controller }: { controller: GameController }) {
         <div className={`studio__hint ${generating ? "is-loading" : ""}`}>
           {generating ? "🖼 generating room art…" : activity ? `🎬 ${activity.label} · click a spot to act` : "Click a spot to go there and act"}
         </div>
+        {isLive && cameras.filter((c) => c.zone || c.portable).length > 0 && (
+          <div className="studio__cams">
+            {cameras.filter((c) => c.zone || c.portable).map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                className={`btn btn--mini ${activeCameraId === c.id ? "btn--primary" : ""}`}
+                onClick={() => controller.switchCamera(c.id)}
+                title={c.portable ? "Portable cam" : `Placed at ${c.zone}`}
+              >
+                📷 {c.label}
+              </button>
+            ))}
+          </div>
+        )}
         {canGenImages && hasCharacter && (
+          <>
           <button
             className={`btn btn--mini ${imageBusy ? "is-loading" : ""}`}
             disabled={!!imageBusy}
@@ -185,6 +204,17 @@ export function StudioRoom({ controller }: { controller: GameController }) {
           >
             {imageBusy ? imageBusy + "…" : presenceUrl ? "📸 Redo here" : "📸 Visualize here"}
           </button>
+          {isLive && (
+            <button
+              className={`btn btn--mini ${imageBusy ? "is-loading" : ""}`}
+              disabled={!!imageBusy}
+              onClick={() => void controller.generateCamFootage(zone)}
+              title="Generate live cam footage from this angle"
+            >
+              📹 Cam shot
+            </button>
+          )}
+          </>
         )}
       </div>
     </div>

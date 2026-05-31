@@ -105,7 +105,7 @@ body {
 .stage {
   flex: 1; min-height: 0;
   display: grid;
-  grid-template-columns: minmax(260px, 0.95fr) minmax(0, 1.15fr) minmax(280px, 340px);
+  grid-template-columns: minmax(200px, 0.55fr) minmax(0, 1.9fr) minmax(200px, 0.55fr);
   gap: 18px; padding: 18px 22px;
   max-width: 1340px; width: 100%; margin: 0 auto;
 }
@@ -119,6 +119,58 @@ body {
   width: 100%; max-width: 560px; height: auto; border-radius: 16px;
   display: block;
 }
+
+/* ---------------------------------------------------- live "Twitch" view */
+.streamview { width: 100%; }
+.viz--live .viz__body, .viz--live { min-height: 0; }
+.streamview__feed > img { cursor: zoom-in; }
+.streamview__feed {
+  position: relative; width: 100%; aspect-ratio: 16 / 9;
+  border-radius: 16px; overflow: hidden; background: #0a0810;
+  border: 1px solid var(--line); box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+}
+.streamview__feed > img {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; transition: opacity 0.3s;
+}
+.streamview__feed > img.is-loading { opacity: 0.55; }
+.streamview__noimg {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 12px; padding: 18px;
+  text-align: center; color: var(--fg-2); font-size: 0.85em;
+  background: repeating-linear-gradient(45deg, #15111f, #15111f 12px, #181320 12px, #181320 24px);
+}
+.streamview__offcam {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 6px; text-align: center;
+  background: rgba(10,8,16,0.72); backdrop-filter: blur(3px); color: #fff;
+  font-weight: 700; z-index: 3;
+}
+.streamview__offcam small { font-weight: 400; color: var(--fg-2); max-width: 70%; }
+.streamview__top {
+  position: absolute; top: 10px; left: 10px; right: 10px; z-index: 2;
+  display: flex; align-items: center; gap: 8px; pointer-events: none;
+}
+.streamview__live {
+  background: #e0245e; color: #fff; font-weight: 800; font-size: 0.72em;
+  letter-spacing: 0.5px; padding: 3px 8px; border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+}
+.streamview__uptime {
+  background: rgba(12,10,18,0.7); color: #fff; font-size: 0.72em;
+  padding: 3px 8px; border-radius: 6px; font-variant-numeric: tabular-nums;
+}
+.streamview__viewers {
+  margin-left: auto; background: rgba(12,10,18,0.7); color: #fff;
+  font-size: 0.74em; font-weight: 700; padding: 3px 9px; border-radius: 6px;
+}
+.streamview__bottom {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; padding: 26px 12px 10px;
+  background: linear-gradient(to top, rgba(8,6,12,0.92), rgba(8,6,12,0));
+  pointer-events: none;
+}
+.streamview__title { color: #fff; font-weight: 800; font-size: 0.95em; line-height: 1.2; }
+.streamview__sub { color: #d7d0e6; font-size: 0.78em; margin-top: 2px; }
 .studio__label {
   fill: #d7d0e6; font-size: 13px; font-weight: 600;
   font-family: "Inter", system-ui, sans-serif; pointer-events: none;
@@ -439,6 +491,9 @@ input:focus, textarea:focus, select:focus { outline: 1px solid var(--accent-2); 
 .shop__item--owned { opacity: 0.55; }
 .shop__name { font-weight: 700; }
 .shop__desc { font-size: 0.82em; color: var(--fg-2); flex: 1; }
+.shop__stats { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0; }
+.shop__stat { font-size: 0.72em; padding: 2px 7px; border-radius: 999px; background: #ffffff12; border: 1px solid var(--line); color: var(--fg-1); white-space: nowrap; }
+.shop__stat--vibe { background: color-mix(in srgb, var(--accent) 22%, transparent); border-color: color-mix(in srgb, var(--accent) 45%, transparent); text-transform: capitalize; }
 .modal__cash { margin-left: auto; font-weight: 700; color: var(--good); }
 .modal__count { margin-left: auto; font-size: 0.85em; color: var(--fg-2); }
 
