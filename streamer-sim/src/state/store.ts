@@ -26,10 +26,11 @@ import { getActiveSlotId, updateActiveMeta } from "../persist/saves";
 import { applyTheme } from "../ui/themes";
 import { initialAudience, type AudienceState } from "../game/segments";
 import type { CharacterSheet, Roster } from "../game/characters";
+import { normalizeCharacter, normalizeRoster } from "../game/characters";
 import { initialMastery, normalizeMastery, type MasteryState } from "../game/mastery";
 import type { PromptId } from "../game/prompts";
 import type { ActionOption } from "../game/actions";
-import { STREAM_START } from "../game/time";
+import { WAKE_TIME } from "../game/time";
 import type { LlmCallStat } from "../llm/types";
 
 const MAX_CHAT = 140;
@@ -105,6 +106,7 @@ const initialSession = (): StreamSession => ({
   isLive: false,
   round: 0,
   seconds: 0,
+  streamStartClock: 0,
   earnings: 0,
   newFollowers: 0,
   peak: 0,
@@ -225,6 +227,8 @@ export interface StoreState {
   completedGoals: string[];
   /** Whether the goals panel is open. */
   goalsOpen: boolean;
+  /** Whether the calendar modal is open. */
+  calendarOpen: boolean;
   /** DM-triggered IRL visits waiting to fire at the door. */
   pendingVisits: PendingVisit[];
   /** Active in-person guest scene, if one is currently playing out. */
@@ -302,6 +306,7 @@ export interface StoreState {
   pushEventRecord: (rec: EventRecord) => void;
   completeGoal: (id: string) => void;
   setGoalsOpen: (b: boolean) => void;
+  setCalendarOpen: (b: boolean) => void;
   addPendingVisit: (visit: PendingVisit) => void;
   clearPendingVisit: (charId: string) => void;
   startVisitor: (scene: VisitorScene) => void;
@@ -361,7 +366,7 @@ export const useStore = create<StoreState>()(
       settings: initialSettings(),
       audience: initialAudience(),
       roster: {},
-      clock: STREAM_START,
+      clock: WAKE_TIME,
       chat: [],
       story: [],
       pendingEvent: null,
@@ -402,6 +407,7 @@ export const useStore = create<StoreState>()(
       recentEvents: [],
       completedGoals: [],
       goalsOpen: false,
+      calendarOpen: false,
       pendingVisits: [],
       visitor: null,
       eventScene: null,
@@ -513,12 +519,12 @@ export const useStore = create<StoreState>()(
       setLastImage: (lastImageId) => set({ lastImageId }),
       setImageBusy: (imageBusy) => set({ imageBusy }),
 
-      upsertCharacter: (c) => set((s) => ({ roster: { ...s.roster, [c.id]: c } })),
+      upsertCharacter: (c) => set((s) => ({ roster: { ...s.roster, [c.id]: normalizeCharacter(c) } })),
       patchCharacter: (id, patch) =>
         set((s) => {
           const cur = s.roster[id];
           if (!cur) return s;
-          const updated = { ...cur, ...patch };
+          const updated = normalizeCharacter({ ...cur, ...patch });
           const out: Partial<StoreState> = { roster: { ...s.roster, [id]: updated } };
           // Auto-capture affinity changes as a character-channel bubble.
           if (typeof patch.affinity === "number") {
@@ -652,6 +658,7 @@ export const useStore = create<StoreState>()(
       completeGoal: (id) =>
         set((s) => (s.completedGoals.includes(id) ? s : { completedGoals: [...s.completedGoals, id] })),
       setGoalsOpen: (goalsOpen) => set({ goalsOpen }),
+      setCalendarOpen: (calendarOpen) => set({ calendarOpen }),
       addPendingVisit: (visit) =>
         set((s) => {
           const next = [...s.pendingVisits.filter((v) => v.charId !== visit.charId), visit];
@@ -693,6 +700,7 @@ export const useStore = create<StoreState>()(
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<StoreState>;
         const story = Array.isArray(p.story) ? dedupeStoryEntries(p.story) : current.story;
+        const roster = p.roster ? normalizeRoster(p.roster) : current.roster;
         return {
           ...current,
           ...p,
@@ -700,6 +708,7 @@ export const useStore = create<StoreState>()(
           mastery: normalizeMastery(p.mastery),
           contentNovelty: p.contentNovelty ?? {},
           story,
+          roster,
         };
       },
       partialize: (s) => ({

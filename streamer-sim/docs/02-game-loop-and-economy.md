@@ -54,9 +54,9 @@ same income/affinity/mastery hooks as the rest of the game (`recordTip`,
 
 ### Session (transient, NOT persisted)
 Per-stream tallies in `StreamSession`: `round` (turn counter), `seconds`
-(`clock - STREAM_START`, i.e. minutes elapsed despite the name), `earnings` (cash
-this stream), `newFollowers` (followers+subs this stream), `peak` (peak concurrent
-**this stream**). Reset on every `goLive`; lost on reload.
+(minutes elapsed since `streamStartClock`), `streamStartClock` (in-world clock when
+this stream went live), `earnings`, `newFollowers`, `peak`. Reset on every `goLive`;
+`streamStartClock` is set to the current clock at go-live (not forced to evening).
 
 > Note the two peak metrics: `session.peak` (per stream) vs `metrics.peakViewers`
 > (lifetime). Goals read the lifetime one.
@@ -65,57 +65,47 @@ this stream), `newFollowers` (followers+subs this stream), `peak` (peak concurre
 
 | Constant | Value |
 |----------|-------|
-| `STREAM_START` | 1200 min = **8:00 pm** |
-| `NIGHT_END` | 1560 min = **2:00 am** |
-| Stream window | 360 min (**6 hours**) |
+| `WAKE_TIME` | 540 min = **9:00 am** (new save + after sleep) |
+| `STREAM_START` | 1200 min = **8:00 pm** (legacy pacing helper only) |
+| `NIGHT_END` | 1560 min = **2:00 am** — auto end stream if still live |
 
-**Time cost per action** (`TIME_COST`): trivial 1, light 3, medium 8, heavy 18,
-continue 6 (minutes).
+Time **always advances** on every action (live or offline). Going live does **not**
+reset the clock — you can stream in the morning, afternoon, or evening.
 
-**Intensity → time weight** (`weightForIntensity`): intensity ≥4 → heavy (18); ≥3 →
-medium (8); ≥2 → light (3); else trivial (1). Coded token actions pass explicit
-minutes instead.
+**Time cost per action** (`TIME_COST`): trivial 10, light 15, medium 30, heavy 45,
+continue 15 (minutes). A night runs ~6h, so this keeps it to roughly a dozen beats.
+Event scenes are the exception — they advance only `BALANCE.events.beatMinutes`
+(2 min) per beat so a charged moment can breathe.
 
 **Live time drift** — every `advanceTime(minutes)` while live:
 ```
 energy -= minutes × 0.12
 hype   -= minutes × 0.10
 round  += 1
+seconds = clock − streamStartClock
 ```
-Example: an 8-minute (medium) action costs −0.96 energy and −0.8 hype.
 
-> `nightProgress(clock)` exists in `time.ts` but is **not used** for event gating;
-> events are state-driven via the Event Director (see [04](./04-events-arcs-goals.md)).
+### Viewer watch windows (`characters.ts` + `presence.ts`)
+
+Each named viewer has `watchStart` / `watchEnd` (minutes since midnight, may wrap).
+**Affinity extends the window** up to `BALANCE.watch.affinityExtendMax` (90 min each
+side at 100 bond). Return/spawn/leave odds in `advancePresence` respect the extended
+window — day streams skew cozy/daytime archetypes; evenings skew hype/simp crowds.
+New spawns use `rollArchetypeForTime(intensity, clock)`.
 
 ## Going live, ending, sleeping
 
 **`goLive`** — requires `energy ≥ 10` and not already live. Clears chat, resets the
-session, clears all `online` flags, sets `audience = initialAudience()`, clock to
-8:00 pm, `isLive = true`. Then applies a **seasonal beat** if today is an occasion,
-raises a **due arc event** if one is pending (skipping ambient chat), else starts
-ambient chat. Starting a stream does **not** spend energy (only the time drift does).
+session, clears all `online` flags, sets `audience = initialAudience()`, records
+`streamStartClock = clock` (current time), `isLive = true`. Does **not** jump to
+8:00 pm.
 
-**`endStream`** — triggered manually, or when `energy ≤ 0`, or `clock ≥ 2:00 am`.
-Sets `isLive = false`, `currentViewers = 0`, clears presence, shows a session
-summary. **Does not advance the day or charge rent.**
+**`endStream`** — triggered manually, or when `energy ≤ 0`, or `clock ≥ NIGHT_END`
+(~2:00 am on the extended clock). Sets `isLive = false`, clears presence. **Does not
+advance the day.**
 
-**`sleep`** (must be offline) — the day/rent step:
-```
-day    += 1
-energy  = min(100, energy + 70)   // partial restore (was hard reset to 100)
-mood   += 3 + mult.moodPerDay     // was +8
-hype    = max(15, hype × 0.6)
-comfort+= 2                       // was +6
-cash   -= rent
-```
-cash   -= utilityBill   // BALANCE.economy.utilityAmount ($18) every 7 days
-clock   = 8:00 pm
-```
-Then, in order: **recurring sub income** (on the 30-day cadence),
-**novelty recovery** (rest freshens repeated content), and **affinity decay**
-(neglected bonds cool — see [03](./03-social-systems.md)). The money debit is
-surfaced as an explicit "rent & utilities" feedback bubble. Warns if cash goes
-negative. (No bankruptcy/eviction loss exists yet.)
+**`sleep`** (must be offline) — the day/rent step; sets `clock = WAKE_TIME` (9:00 am)
+on the new day.
 
 ### Recurring sub income (`payRecurringSubs`)
 On a `BALANCE.subs.cadenceDays` (30) boundary, pays

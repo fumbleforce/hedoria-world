@@ -11,7 +11,7 @@ import type { CharacterSheet, RelationshipLevel } from "./characters";
 import { relationshipLevel } from "./characters";
 import { ARCHETYPE_BY_ID } from "./archetypes";
 import { ev, choice } from "./events";
-import { pick, clamp } from "../rng/rng";
+import { pick, clamp, randInt } from "../rng/rng";
 import { BALANCE, type AffinitySource } from "./balance";
 
 // --------------------------------------------------------------- affinity ledger
@@ -167,16 +167,32 @@ const LEVEL_ORDER: RelationshipLevel[] = [
   "confidant",
 ];
 
-/** Gender-neutral first names revealed at the "regular" milestone. */
-const DISPLAY_NAMES = [
-  "Mara", "Sam", "Alex", "June", "Casey", "Nico", "Robin", "Quinn", "Eli",
-  "Sky", "Wren", "Ash", "Devon", "Remy", "Iris", "Theo", "Noa", "Kai",
+/** Gendered first-name pools revealed at the "regular" milestone. */
+export const FEMALE_NAMES = [
+  "Mara", "June", "Robin", "Quinn", "Iris", "Noa", "Sky", "Wren", "Remy", "Lena",
+  "Zoe", "Mia", "Eva", "Nora", "Lily", "Ruby", "Jade", "Cleo", "Tess", "Vera",
+  "Hana", "Sage", "Faye", "Elle", "Rosa", "Nina", "Ada", "Bea", "Cora", "Dana",
+];
+export const MALE_NAMES = [
+  "Nico", "Eli", "Theo", "Kai", "Devon", "Casey", "Ash", "Sam", "Alex", "Marc",
+  "Leo", "Max", "Ian", "Owen", "Cole", "Dean", "Finn", "Gabe", "Hugo", "Jude",
+  "Knox", "Luke", "Miles", "Noah", "Reed", "Sean", "Troy", "Wade", "Zane", "Blake",
+];
+export const NEUTRAL_NAMES = [
+  "Sam", "Alex", "Casey", "Robin", "Quinn", "Remy", "Ash", "Sky", "Noa", "Devon",
+  "Rory", "Sage", "River", "Phoenix", "Rowan", "Emery", "Arlo", "Blair", "Drew", "Jules",
 ];
 
-/** A stable-ish name for a character (deterministic enough within a session). */
-function revealName(c: CharacterSheet): string {
+/** A unique first name for a character, respecting gender and roster. */
+export function revealName(c: CharacterSheet, taken: Set<string> = new Set()): string {
   if (c.displayName) return c.displayName;
-  return pick(DISPLAY_NAMES);
+  const pool =
+    c.gender === "female" ? FEMALE_NAMES
+    : c.gender === "male" ? MALE_NAMES
+    : NEUTRAL_NAMES;
+  const available = pool.filter((n) => !taken.has(n.toLowerCase()));
+  if (available.length) return pick(available);
+  return `${pick(pool)}${randInt(2, 9)}`;
 }
 
 /**
@@ -187,6 +203,7 @@ export function checkMilestones(
   c: CharacterSheet,
   prevAffinity: number,
   _day: number,
+  takenNames?: Set<string>,
 ): MilestoneOutcome[] {
   const before = LEVEL_ORDER.indexOf(relationshipLevel(prevAffinity));
   const after = LEVEL_ORDER.indexOf(relationshipLevel(c.affinity));
@@ -199,7 +216,7 @@ export function checkMilestones(
   for (let lvl = before + 1; lvl <= after; lvl += 1) {
     const level = LEVEL_ORDER[lvl];
     if (c.milestones.includes(level)) continue;
-    const beat = milestoneFor(c, level, seg);
+    const beat = milestoneFor(c, level, seg, takenNames);
     if (beat) out.push(beat);
   }
   return out;
@@ -209,6 +226,7 @@ function milestoneFor(
   c: CharacterSheet,
   level: RelationshipLevel,
   seg: string | undefined,
+  takenNames?: Set<string>,
 ): MilestoneOutcome | null {
   const name = c.displayName || c.handle;
   switch (level) {
@@ -225,7 +243,7 @@ function milestoneFor(
 
     case "regular": {
       // Name reveal — the relationship gets a face.
-      const display = revealName(c);
+      const display = revealName(c, takenNames);
       return {
         id: "regular",
         kind: "inline",

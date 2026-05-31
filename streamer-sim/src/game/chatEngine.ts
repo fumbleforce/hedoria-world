@@ -8,7 +8,8 @@ import { ARCHETYPE_BY_ID } from "./archetypes";
 import type { CharacterSheet, Roster } from "./characters";
 import { SEGMENTS, SEGMENT_IDS, type AudienceState } from "./segments";
 import { extractJson } from "../llm/json";
-import { chance, pick, randInt, uid } from "../rng/rng";
+import { BALANCE } from "./balance";
+import { chance, clamp, pick, randInt, uid } from "../rng/rng";
 
 export interface ChatContext {
   settings: Settings;
@@ -25,6 +26,43 @@ export interface ChatContext {
   /** Each online regular's own recent lines, to keep their voice consistent. */
   characterVoices?: Array<{ handle: string; lines: string[] }>;
   count: number;
+}
+
+export type ChatVolumeMode = "action" | "continue" | "ambient";
+
+/** Code-owned burst size from hype (+ optional viewer nudge). */
+export function chatBurstCount(
+  hype: number,
+  viewers: number,
+  mode: ChatVolumeMode = "action",
+): number {
+  const c = BALANCE.chat;
+  const h = clamp(hype, 0, 100) / 100;
+  const base = Math.pow(h, c.actionHypeExp) * c.actionHypeScale + viewers / c.actionViewerDiv;
+  const action = clamp(Math.round(base), c.actionMin, c.actionMax);
+  if (mode === "continue") {
+    return clamp(Math.round(action * c.continueMult), c.continueMin, c.continueMax);
+  }
+  if (mode === "ambient") {
+    return clamp(Math.round(action * c.ambientTickMult), 1, c.ambientTickMax);
+  }
+  return action;
+}
+
+export function chatAmbientPlan(hype: number, viewers: number): {
+  ticks: number;
+  gapMs: number;
+  perTick: number;
+} {
+  const c = BALANCE.chat;
+  if (hype < c.ambientMinHype) {
+    return { ticks: 0, gapMs: c.ambientGapMaxMs, perTick: 1 };
+  }
+  const h = clamp(hype, 0, 100) / 100;
+  const ticks = clamp(Math.round(h * c.ambientTicksAt100), c.ambientMinTicks, c.ambientMaxTicks);
+  const gapMs = Math.round(c.ambientGapMaxMs - h * (c.ambientGapMaxMs - c.ambientGapMinMs));
+  const perTick = chatBurstCount(hype, viewers, "ambient");
+  return { ticks, gapMs, perTick };
 }
 
 export async function generateChatBurst(
@@ -179,7 +217,7 @@ function parseChat(text: string, roster: Roster): ChatMessage[] {
 
 export function mockBurst(ctx: ChatContext): ChatMessage[] {
   const intensity = tierIntensity(ctx.settings.contentTier);
-  const n = Math.max(2, ctx.count + randInt(-1, 1));
+  const n = Math.max(1, ctx.count + randInt(-1, 1));
   const out: ChatMessage[] = [];
   const onlineChars = ctx.online.map((id) => ctx.roster[id]).filter(Boolean);
 
@@ -204,6 +242,16 @@ function fromCharacter(c: CharacterSheet, intensity: number): ChatMessage {
   const arch = ARCHETYPE_BY_ID[c.archetypeId];
   let kind: ChatMessageKind = "normal";
   let text = arch ? pick(arch.lines) : "hi";
+  if (c.traits.speechTic && chance(0.35)) {
+    text = `${text} ${c.traits.speechTic}`;
+  }
+  if (c.traits.fixation && c.threat >= 1 && chance(0.25)) {
+    text = pick([
+      `still thinking about ${c.traits.fixation} btw`,
+      `you ever notice ${c.traits.fixation}?`,
+      `just saying — ${c.traits.fixation}`,
+    ]);
+  }
   let amount: number | undefined;
 
   const seg = arch?.segment;

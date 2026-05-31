@@ -204,13 +204,15 @@ export function fillImagePrompt(template: string, vars: Record<string, string>):
 
 export async function generatePortrait(
   backend: ImageBackend,
-  vars: { handle: string; archetypeLabel: string; vibe: string },
+  vars: { handle: string; archetypeLabel: string; vibe: string; gender?: string },
 ): Promise<string> {
+  const genderLabel = vars.gender === "female" ? "woman" : vars.gender === "male" ? "man" : "person";
   const prompt = [
     `A small square profile avatar for a livestream viewer named "${vars.handle}".`,
     `Stylized semi-realistic game art, warm purple-and-pink lighting to match the app,`,
     `head-and-shoulders, friendly readable icon at small sizes.`,
     `Personality: ${vars.archetypeLabel} — ${vars.vibe}.`,
+    `Present as a ${genderLabel}.`,
     `Tasteful and non-explicit. No text, no watermark, no UI. Plain soft background.`,
   ].join(" ");
   diag.info("world", "generating portrait", { backend: backend.id, handle: vars.handle });
@@ -226,11 +228,12 @@ export async function generatePortrait(
  */
 export async function generateCharacterBody(
   backend: ImageBackend,
-  vars: { name: string; archetypeLabel: string; vibe: string; appearance?: string; style: string },
+  vars: { name: string; archetypeLabel: string; vibe: string; appearance?: string; style: string; gender?: string },
   portraitRef?: string,
 ): Promise<string> {
+  const genderLabel = vars.gender === "female" ? "woman" : vars.gender === "male" ? "man" : "person";
   const prompt = [
-    `Full-body character reference sheet of "${vars.name}", a livestream viewer.`,
+    `Full-body character reference sheet of "${vars.name}", a livestream viewer (${genderLabel}).`,
     vars.appearance ? `Appearance: ${vars.appearance}.` : `Personality/look: ${vars.archetypeLabel} — ${vars.vibe}.`,
     portraitRef ? "Match the face, hair, and outfit of the reference portrait exactly." : "",
     "Standing in a neutral A-pose / T-pose, facing forward, full body visible head to toe,",

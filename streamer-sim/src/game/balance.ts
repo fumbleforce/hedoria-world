@@ -33,6 +33,14 @@ export type AffinitySource =
   | "event";
 
 export const BALANCE = {
+  watch: {
+    /** Max minutes affinity adds to each side of a viewer's watch window (at 100 bond). */
+    affinityExtendMax: 90,
+    /** Return probability multiplier when outside the extended window. */
+    outsideWindowMult: 0.12,
+    /** Leave probability boost when outside their window. */
+    outsideLeaveBoost: 0.14,
+  },
   affinity: {
     /** gainScale = clamp(1 - affinity/pivot, floor, 1) — higher tiers climb slower. */
     diminishingPivot: 115,
@@ -197,7 +205,7 @@ export const BALANCE = {
     beatFollowersMax: 40,
     beatCashMax: 200,
     /** In-world minutes that elapse per scene beat — far slower than a normal
-     * turn (TIME_COST.continue ≈ 6) so an event can breathe. */
+     * turn (TIME_COST.continue = 15) so an event can breathe. */
     beatMinutes: 2,
   },
 
@@ -211,6 +219,31 @@ export const BALANCE = {
     efficiencyPerLevel: 0.04,
     /** A cost never drops below this fraction (never free). */
     efficiencyFloor: 0.5,
+  },
+
+  /** Live chat volume — hype is the main engagement driver; viewers add a nudge. */
+  chat: {
+    actionMin: 1,
+    actionMax: 12,
+    /** Burst ≈ (hype/100)^exp × scale + viewers/div (then clamped). */
+    actionHypeExp: 1.5,
+    actionHypeScale: 9,
+    actionViewerDiv: 20,
+    /** Continue burst = action burst × mult (clamped separately). */
+    continueMult: 0.5,
+    continueMin: 1,
+    continueMax: 7,
+    /** Ambient filler between beats — off when hype is below this. */
+    ambientMinHype: 12,
+    ambientMinTicks: 0,
+    ambientMaxTicks: 8,
+    ambientTicksAt100: 7,
+    /** Ms between ambient ticks — fast when hyped, sluggish when flat. */
+    ambientGapMinMs: 450,
+    ambientGapMaxMs: 1600,
+    /** Per ambient tick ≈ action burst × this (clamped 1..3). */
+    ambientTickMult: 0.35,
+    ambientTickMax: 3,
   },
 } as const;
 

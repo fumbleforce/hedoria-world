@@ -53,6 +53,7 @@ export function CharacterGallery({ controller }: { controller: GameController })
                     style={{ width: `${seg.satisfaction}%`, background: id === "stalkers" ? "#ff6b6b" : satColor(seg.satisfaction) }}
                   />
                 </span>
+                <span className="segrow__sat">{Math.round(seg.satisfaction)}</span>
               </div>
             );
           })

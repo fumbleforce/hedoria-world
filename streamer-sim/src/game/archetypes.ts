@@ -20,6 +20,12 @@ export interface Archetype {
   lines: string[];
   /** Minimum content intensity for this archetype to appear. */
   minIntensity: number;
+  /** Optional speech patterns for LLM/mock voice. */
+  speechTics?: string[];
+  /** Behaviours to lean into in prompts. */
+  behaviors?: string[];
+  /** How quickly this type escalates (stalkers/trolls). */
+  escalationTendency?: "low" | "medium" | "high";
 }
 
 export const ARCHETYPES: Archetype[] = [
@@ -92,6 +98,9 @@ export const ARCHETYPES: Archetype[] = [
     nameParts: ["king", "boss", "vip", "patron", "mr"],
     lines: ["here's a little something", "treat yourself", "you've earned it", "say my name and it's doubled"],
     minIntensity: 0,
+    speechTics: ["—", "cheers", "enjoy"],
+    behaviors: ["tips big for name drops", "expects VIP treatment not pity", "compares themselves favorably to other viewers"],
+    escalationTendency: "low",
   },
   {
     id: "troll", label: "Troll", segment: "trolls",
@@ -99,6 +108,9 @@ export const ARCHETYPES: Archetype[] = [
     nameParts: ["troll", "ratio", "mid", "salty", "hater"],
     lines: ["mid", "ratio", "this is kinda boring", "L take", "do something interesting"],
     minIntensity: 0,
+    speechTics: ["lol", "L", "ratio"],
+    behaviors: ["baits for reactions", "targets easy marks in chat", "backs off if mods clamp down"],
+    escalationTendency: "medium",
   },
   {
     id: "edgelord", label: "Edgelord", segment: "trolls",
@@ -106,6 +118,9 @@ export const ARCHETYPES: Archetype[] = [
     nameParts: ["edge", "chaos", "anon", "void", "doomer"],
     lines: ["say something controversial", "do a dare", "bet you won't", "spice it up coward"],
     minIntensity: 1,
+    speechTics: ["bet you won't", "coward", "do it"],
+    behaviors: ["pushes content boundaries", "dares the streamer publicly", "feeds on shock value"],
+    escalationTendency: "high",
   },
   {
     id: "memer", label: "Memer", segment: "hype",
@@ -155,6 +170,9 @@ export const ARCHETYPES: Archetype[] = [
     nameParts: ["watcher", "shadow", "midnight", "thelast", "nameless"],
     lines: ["do you ever stream alone late?", "i saw what you wore yesterday", "you can't ignore me forever", "do that again. for me."],
     minIntensity: 2,
+    speechTics: ["...", "hey", "just saying"],
+    behaviors: ["references things you never said on stream", "asks overly specific personal questions", "treats small kindness as invitation"],
+    escalationTendency: "medium",
   },
   {
     id: "stalker", label: "Stalker", segment: "stalkers",
@@ -162,6 +180,9 @@ export const ARCHETYPES: Archetype[] = [
     nameParts: ["always", "closer", "outside", "yourshadow", "no404"],
     lines: ["nice neighborhood 👀", "i'll bring it to you in person", "i know your schedule", "we're meant to be"],
     minIntensity: 2,
+    speechTics: ["👀", "we both know", "don't lie"],
+    behaviors: ["claims knowledge of your real-world location or schedule", "frames obsession as destiny", "ignores direct boundaries"],
+    escalationTendency: "high",
   },
 ];
 

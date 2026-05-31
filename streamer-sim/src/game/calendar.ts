@@ -127,3 +127,102 @@ export function occasionForDay(day: number, opts?: { birthday?: string }): Occas
 
   return null;
 }
+
+/** UTC calendar year for an in-world day number. */
+export function inWorldYear(day: number): number {
+  return new Date(EPOCH + (Math.max(1, day) - 1) * MS_PER_DAY).getUTCFullYear();
+}
+
+/** Map a UTC calendar date back to an in-world day number (Day 1 = epoch). */
+export function gameDayForUtcDate(year: number, month: number, dayOfMonth: number): number {
+  return Math.floor((Date.UTC(year, month - 1, dayOfMonth) - EPOCH) / MS_PER_DAY) + 1;
+}
+
+export function daysInMonth(year: number, month: number): number {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+export function monthLabel(year: number, month: number): string {
+  return new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+export function formatOccasionBonus(bonus: Occasion["bonus"]): string {
+  const parts: string[] = [];
+  if (bonus.hype) parts.push(`+${bonus.hype} hype`);
+  if (bonus.mood) parts.push(`+${bonus.mood} mood`);
+  if (bonus.cashTips) parts.push(`+$${bonus.cashTips} tips`);
+  return parts.length ? parts.join(" · ") : "No mechanical bonus";
+}
+
+/** Fixed calendar-date holidays (milestones are day-number based — see `occasionForDay`). */
+export const FIXED_HOLIDAYS = [
+  { month: 2, day: 14, label: "💕 Valentine's Day" },
+  { month: 10, day: 31, label: "🎃 Halloween" },
+  { month: 12, day: 25, label: "🎄 Christmas" },
+  { month: 12, day: 31, label: "🎆 New Year's Eve" },
+] as const;
+
+export interface CalendarCell {
+  dayOfMonth: number;
+  gameDay: number | null;
+  occasion: Occasion | null;
+  isToday: boolean;
+  isPast: boolean;
+  isBeforeStart: boolean;
+}
+
+/** Build a Sun-starting month grid for the calendar modal. */
+export function monthGrid(
+  year: number,
+  month: number,
+  currentGameDay: number,
+  opts?: { birthday?: string },
+): CalendarCell[] {
+  const dim = daysInMonth(year, month);
+  const firstDow = new Date(Date.UTC(year, month - 1, 1)).getUTCDay();
+  const cells: CalendarCell[] = [];
+
+  for (let i = 0; i < firstDow; i += 1) {
+    cells.push({
+      dayOfMonth: 0,
+      gameDay: null,
+      occasion: null,
+      isToday: false,
+      isPast: false,
+      isBeforeStart: false,
+    });
+  }
+
+  for (let dom = 1; dom <= dim; dom += 1) {
+    const gameDay = gameDayForUtcDate(year, month, dom);
+    const isBeforeStart = gameDay < 1;
+    cells.push({
+      dayOfMonth: dom,
+      gameDay: isBeforeStart ? null : gameDay,
+      occasion: isBeforeStart ? null : occasionForDay(gameDay, opts),
+      isToday: gameDay === currentGameDay,
+      isPast: !isBeforeStart && gameDay < currentGameDay,
+      isBeforeStart,
+    });
+  }
+
+  return cells;
+}
+
+export function shiftMonth(year: number, month: number, delta: number): { year: number; month: number } {
+  let m = month + delta;
+  let y = year;
+  while (m < 1) {
+    m += 12;
+    y -= 1;
+  }
+  while (m > 12) {
+    m -= 12;
+    y += 1;
+  }
+  return { year: y, month: m };
+}

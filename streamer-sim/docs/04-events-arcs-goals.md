@@ -248,6 +248,11 @@ event resolution, and after sleep) applies the reward once when met.
 tips to the session, posts a story line + toast. **There is no interactive themed
 event** — seasons are a passive tailwind today.
 
+**Calendar UI** (`CalendarPanel.tsx`): click the date/time in the HUD to open a
+month grid. Special days are marked (dot + highlight); the panel lists that month's
+occasions with bonuses, a legend of fixed holidays + recurring milestones, and a
+detail pane when you select a day. Month navigation is view-only.
+
 ## Freeform event resolution
 
 When `allowFreeform` is true, `EventModal` shows a text box. `resolveEventFreeform`:

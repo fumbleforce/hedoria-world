@@ -3,7 +3,7 @@ import { useStore } from "../state/store";
 import type { GameController } from "../game/controller";
 import type { DmLine } from "../game/types";
 import { ARCHETYPE_BY_ID } from "../game/archetypes";
-import { avatarFor, relationshipLevel } from "../game/characters";
+import { avatarFor, relationshipLevel, revealedSheet, type CharacterSheet, type RevealedSheet } from "../game/characters";
 import { loadPortrait } from "../persist/imageStore";
 import { useStoredImage } from "../persist/useStoredImage";
 import { FloatingFeedback } from "./FeedbackBubbles";
@@ -12,6 +12,8 @@ import { formatClock } from "../game/time";
 // Stable reference so the zustand selector doesn't return a fresh [] each render
 // (which would trip "getSnapshot should be cached" and infinite-loop).
 const EMPTY: DmLine[] = [];
+
+const IS_DEV = import.meta.env.DEV;
 
 /** Character sheet + 1:1 direct-message panel. */
 export function CharacterModal({ controller }: { controller: GameController }) {
@@ -53,6 +55,7 @@ export function CharacterModal({ controller }: { controller: GameController }) {
   if (!c) return null;
   const arch = ARCHETYPE_BY_ID[c.archetypeId];
   const portraitBusy = portraitBusyId === id;
+  const revealed = revealedSheet(c);
 
   const close = () => useStore.getState().openCharacter(null);
 
@@ -65,7 +68,10 @@ export function CharacterModal({ controller }: { controller: GameController }) {
             <FloatingFeedback channel="character" feedbackKey={c.id} />
           </span>
           <div className="char__id">
-            <h2>{c.displayName ? `${c.displayName} ` : ""}<span className="char__handle-sub">{c.handle}</span></h2>
+            <h2>
+              {revealed.displayName ? `${revealed.displayName} ` : ""}
+              <span className="char__handle-sub">{c.handle}</span>
+            </h2>
             <span className="char__rel">
               {relationshipLevel(c.affinity)} · {arch?.label}
               {c.online ? " · online" : ` · last seen ${formatClock(c.lastSeenClock)}`}
@@ -86,18 +92,9 @@ export function CharacterModal({ controller }: { controller: GameController }) {
           </div>
         )}
 
-        <div className="char__sheet">
-          {c.backstory && <Row label="Backstory" value={c.backstory} />}
-          {c.quirks && <Row label="Quirk" value={c.quirks} />}
-          <Row label="Vibe" value={c.vibe} />
-          <Row label="Wants" value={c.wants} />
-          <Row label="Messages" value={String(c.messageCount)} />
-          <Row label="Tipped" value={`$${c.tipped.toFixed(0)}`} />
-          <Row label="Affinity" value={`${Math.round(c.affinity)}/100`} />
-          {c.attendanceStreak >= 2 && <Row label="Attendance" value={`${c.attendanceStreak} streams running (${c.streamsAttended} total)`} />}
-          {c.threat >= 1 && <Row label="⚠ Threat" value={threatLabel(c.threat)} danger />}
-          {c.memory && <Row label="You remember" value={c.memory} />}
-        </div>
+        <PlayerSheet revealed={revealed} c={c} />
+
+        {IS_DEV && <DevXray c={c} archLabel={arch?.label} />}
 
         <div className="dm">
           <div className="dm__head">Direct message</div>
@@ -132,6 +129,80 @@ export function CharacterModal({ controller }: { controller: GameController }) {
     </div>
   );
 }
+
+function PlayerSheet({ revealed, c }: { revealed: RevealedSheet; c: CharacterSheet }) {
+  const history = c.interactionLog.slice(-12).reverse();
+
+  return (
+    <div className="char__sheet">
+      <Row label="Name" value={revealed.displayName ?? LOCKED} locked={!revealed.displayName} />
+      <Row label="Age" value={revealed.age != null ? String(revealed.age) : LOCKED} locked={revealed.age == null} />
+      <Row label="Occupation" value={revealed.occupation ?? LOCKED} locked={!revealed.occupation} />
+      {revealed.backstoryLayers.length > 0
+        ? revealed.backstoryLayers.map((layer) => (
+          <Row key={layer.id} label="Backstory" value={layer.text} />
+        ))
+        : <Row label="Backstory" value={LOCKED} locked />}
+      <Row label="Quirk" value={revealed.quirks ?? LOCKED} locked={!revealed.quirks} />
+      <Row label="Vibe" value={revealed.vibe ?? LOCKED} locked={!revealed.vibe} />
+      <Row label="Wants" value={revealed.motiveSurface ?? LOCKED} locked={!revealed.motiveSurface} />
+      <Row label="Messages" value={revealed.messages != null ? String(revealed.messages) : LOCKED} locked={revealed.messages == null} />
+      <Row label="Tipped" value={revealed.tipped != null ? `$${revealed.tipped.toFixed(0)}` : LOCKED} locked={revealed.tipped == null} />
+      <Row label="Affinity" value={revealed.affinity != null ? `${Math.round(revealed.affinity)}/100` : LOCKED} locked={revealed.affinity == null} />
+      {revealed.attendance && <Row label="Attendance" value={revealed.attendance} />}
+      {revealed.threat != null && <Row label="⚠ Threat" value={threatLabel(revealed.threat)} danger />}
+      <Row label="You remember" value={revealed.memory ?? LOCKED} locked={!revealed.memory} />
+      {history.length > 0 && (
+        <div className="char__history">
+          <span className="char__label">History</span>
+          <ul className="char__history-list">
+            {history.map((e, i) => (
+              <li key={i}><span className="char__history-kind">{e.kind}</span> {e.text}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DevXray({ c, archLabel }: { c: CharacterSheet; archLabel?: string }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="char__xray">
+      <button
+        type="button"
+        className="char__xray-toggle"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span>DEV · X-RAY</span>
+        <span className="char__xray-chevron">{open ? "▾" : "▸"}</span>
+      </button>
+      {open && (
+        <div className="char__xray-body">
+          <Row label="Gender" value={c.gender} />
+          <Row label="Age" value={String(c.age)} />
+          <Row label="Occupation" value={c.occupation} />
+          <Row label="Archetype" value={archLabel ?? c.archetypeId} />
+          <Row label="Trait" value={`${c.traits.trait} (${c.traits.intensity})`} />
+          {c.traits.fixation && <Row label="Fixation" value={c.traits.fixation} />}
+          <Row label="Need" value={c.motive.need} />
+          <Row label="Fear" value={c.motive.fear} />
+          <Row label="Boundary" value={c.motive.boundary} />
+          <Row label="Threat (raw)" value={String(c.threat)} danger={c.threat >= 2} />
+          {c.backstoryLayers.map((layer) => (
+            <Row key={layer.id} label={`Bio [${layer.trigger}]`} value={layer.text} />
+          ))}
+          {c.backstoryLayers.length === 0 && c.backstory && <Row label="Bio (legacy)" value={c.backstory} />}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const LOCKED = "??? — get to know them";
 
 function DmMessage({ line, handle }: { line: DmLine; handle: string }) {
   const imageUrl = useStoredImage(line.imageId);
@@ -172,11 +243,11 @@ function threatLabel(threat: number): string {
   return "level 1 — watch this one";
 }
 
-function Row({ label, value, danger }: { label: string; value: string; danger?: boolean }) {
+function Row({ label, value, danger, locked }: { label: string; value: string; danger?: boolean; locked?: boolean }) {
   return (
     <div className="char__row">
       <span className="char__label">{label}</span>
-      <span className={`char__value ${danger ? "char__value--danger" : ""}`}>{value}</span>
+      <span className={`char__value ${danger ? "char__value--danger" : ""} ${locked ? "char__value--locked" : ""}`}>{value}</span>
     </div>
   );
 }

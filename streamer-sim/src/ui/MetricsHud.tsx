@@ -7,12 +7,14 @@ import { masteryProgress } from "../game/mastery";
 import { BALANCE } from "../game/balance";
 
 function Bar({ label, value, color, metric }: { label: string; value: number; color: string; metric: string }) {
+  const rounded = Math.round(value);
   return (
-    <div className="meter" title={`${label}: ${Math.round(value)}/100`}>
+    <div className="meter" title={`${label}: ${rounded}/100`}>
       <span className="meter__label">{label}</span>
       <span className="meter__track">
         <span className="meter__fill" style={{ width: `${value}%`, background: color }} />
       </span>
+      <span className="meter__value">{rounded}</span>
       <FloatingFeedback channel="metric" feedbackKey={metric} />
     </div>
   );
@@ -31,7 +33,16 @@ export function MetricsHud() {
       <div className="hud__brand">
         <span className="hud__logo">◉ Limelight</span>
         <span className="hud__name">
-          {name} · {slotName} · Day {m.day} ({dateForDay(m.day).label}) · {session.isLive ? `🔴 ${formatClock(clock)}` : "offline"}
+          {name} · {slotName} ·{" "}
+          <button
+            type="button"
+            className="hud__datetime"
+            onClick={() => useStore.getState().setCalendarOpen(true)}
+            title="Open calendar"
+          >
+            Day {m.day} ({dateForDay(m.day).label}) ·{" "}
+            {session.isLive ? `🔴 ${formatClock(clock)}` : `🕙 ${formatClock(clock)} · offline`}
+          </button>
         </span>
       </div>
 

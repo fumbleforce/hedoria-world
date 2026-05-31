@@ -34,7 +34,7 @@ import { diag } from "../diag/log";
 import { useStore, type ActionMenu, setFeedbackContext, clearFeedbackContext } from "../state/store";
 import type { ChatMessage, ContentTier, DmLine, EventChoice, GameEvent, Metrics, PendingEventSeed } from "./types";
 import type { PlayerAction, ActionOption, ActionVerdict } from "./actions";
-import { generateChatBurst, audienceSummary } from "./chatEngine";
+import { generateChatBurst, audienceSummary, chatBurstCount, chatAmbientPlan } from "./chatEngine";
 import { evaluateAction } from "./evaluator";
 import { resolveAction, totalViewers } from "./resolver";
 import { occasionForDay } from "./calendar";
@@ -63,8 +63,15 @@ import {
 import {
   relationshipLevel,
   seedCharacter,
-  rollArchetype,
+  rollArchetypeForTime,
+  rosterHandles,
+  appendInteraction,
+  hasBackstoryLayer,
+  syncBackstoryString,
+  characterVoiceBlock,
+  pronouns,
   type CharacterSheet,
+  type BackstoryLayer,
 } from "./characters";
 import {
   advanceStalkerArc,
@@ -81,17 +88,17 @@ import { NICHES, nicheBaselineAppeal, nicheSpawnBias, type NicheId } from "./nic
 import { outfitAppeal } from "./outfits";
 import type { SegmentId } from "./segments";
 import {
-  STREAM_START,
-  NIGHT_END,
+  WAKE_TIME,
   TIME_COST,
   weightForIntensity,
   formatClock,
+  clockAfterSleep,
+  streamTooLate,
+  streamElapsed,
   type TimeWeight,
 } from "./time";
 import { clamp, pick, uid } from "../rng/rng";
 
-const AMBIENT_GAP_MS = 850;
-const AMBIENT_MAX = 3;
 /** Days after an in-person visit before the same viewer can arrange another. */
 const VISIT_COOLDOWN_DAYS = 3;
 
@@ -561,6 +568,7 @@ export class GameController {
         handle: c.handle,
         archetypeLabel: ARCHETYPE_BY_ID[c.archetypeId]?.label ?? "viewer",
         vibe: c.backstory || c.vibe,
+        gender: c.gender,
       });
       await savePortrait(charId, url);
       s.patchCharacter(charId, { hasPortrait: true });
@@ -604,6 +612,7 @@ export class GameController {
           archetypeLabel: ARCHETYPE_BY_ID[c.archetypeId]?.label ?? "viewer",
           vibe: c.backstory || c.vibe,
           style: this.imageStyle(),
+          gender: c.gender,
         },
         portraitRef,
       );
@@ -916,6 +925,8 @@ export class GameController {
     const outcome = advanceStalkerArc(target, s.metrics.day, fed);
     if (!outcome) return false;
     s.patchCharacter(target.id, outcome.patch);
+    this.recordInteraction(target.id, "threat", `Escalated to threat ${outcome.patch.threat}`);
+    void this.enrichBackstory(target.id, `threat-${outcome.patch.threat}`);
     this.sysStory(outcome.story);
     if (outcome.chat) {
       s.pushChat([{ id: uid("msg"), user: target.handle, text: outcome.chat, kind: "creepy", characterId: target.id, ts: Date.now() }]);
@@ -961,15 +972,14 @@ export class GameController {
       s.resetSession();
       s.setRoster(clearPresence(s.roster));
       s.setAudience(initialAudience());
-      s.setClock(STREAM_START);
-      s.setSession({ isLive: true, round: 1 });
+      s.setSession({ isLive: true, round: 1, streamStartClock: s.clock });
       s.setPlaying(null);
     });
     this.lastNotifiedViewers = 0;
     this.streamMemory = "";
     this.beatsSinceSummary = 0;
     this.presenceTick();
-    this.sysStory(`Day ${s.metrics.day} — you go live at ${formatClock(STREAM_START)}.`);
+    this.sysStory(`Day ${s.metrics.day} — you go live at ${formatClock(s.clock)}.`);
     s.logEvent(`Day ${s.metrics.day}: went live.`);
     this.applySeasonalBeat();
     this.dm("The 'LIVE' dot blinks red. Regulars filter in, saying hi as the numbers tick up.");
@@ -980,22 +990,27 @@ export class GameController {
 
   /**
    * Re-establish a live session that survived a reload. `session` is persisted,
-   * but the transient parts of being live (online presence flags, the audience
-   * snapshot, the ambient-chat loop, viewer count) are not — so after boot we
-   * rebuild them around the restored session instead of dropping the player
-   * offline. No-op when the saved session was already offline.
+   * but the transient presence flags / audience snapshot / viewer count are not,
+   * so after boot we silently rebuild them around the restored session instead
+   * of dropping the player offline. Loading is a no-op in-fiction: no chat lines
+   * are fabricated and the ambient loop is NOT kicked here — it resumes on the
+   * player's next action. No-op when the saved session was already offline.
    */
   resumeLive(): void {
     const s = this.s;
     if (!s.session.isLive) return;
+    if (!s.session.streamStartClock) {
+      s.setSession({ streamStartClock: Math.max(WAKE_TIME, s.clock - (s.session.seconds || 0)) });
+    }
     this.lastNotifiedViewers = Math.round(s.metrics.currentViewers);
     this.streamMemory = "";
     this.beatsSinceSummary = 0;
     // Rebuild who's "in the room" (online flags + per-segment audience) from the
-    // persisted roster, then resume the ambient chatter. Suppress arrival
-    // announcements: these people were already here before the reload.
+    // persisted roster — silently. Loading an existing state must not fabricate
+    // anything: no "joined" lines, no fresh ambient chat. The persisted chat
+    // history is restored as-is, and the ambient loop resumes on the player's
+    // next action (resolve/event), so the stream picks up where it left off.
     this.presenceTick(false);
-    this.startAmbient("the stream picks back up after a blip");
     diag.info("round", "resumed live session after reload", { round: s.session.round });
   }
 
@@ -1025,20 +1040,22 @@ export class GameController {
   private startAmbient(context: string): void {
     this.stopAmbient();
     if (!this.s.session.isLive) return;
+    const plan = chatAmbientPlan(this.s.metrics.hype, totalViewers(this.s.audience));
+    if (plan.ticks <= 0) return;
     let pushed = 0;
     const step = async () => {
       if (!this.s.session.isLive || this.s.resolving || this.s.pendingEvent) return;
-      const msgs = await generateChatBurst(this.llm, this.chatCtx(context, 1));
+      const msgs = await generateChatBurst(this.llm, this.chatCtx(context, plan.perTick));
       if (!this.s.session.isLive || this.s.resolving) return;
       if (msgs.length) {
-        this.s.pushChat([msgs[0]]);
-        this.applyChatEffects([msgs[0]]);
+        this.s.pushChat(msgs.slice(0, plan.perTick));
+        this.applyChatEffects(msgs.slice(0, plan.perTick));
         this.syncViewers();
       }
       pushed += 1;
-      if (pushed < AMBIENT_MAX) this.ambientTimer = setTimeout(() => void step(), AMBIENT_GAP_MS);
+      if (pushed < plan.ticks) this.ambientTimer = setTimeout(() => void step(), plan.gapMs);
     };
-    this.ambientTimer = setTimeout(() => void step(), AMBIENT_GAP_MS);
+    this.ambientTimer = setTimeout(() => void step(), plan.gapMs);
   }
   private stopAmbient(): void {
     if (this.ambientTimer) clearTimeout(this.ambientTimer);
@@ -1206,7 +1223,15 @@ export class GameController {
         // it and it develops. It is NOT an idle "nothing happens" filler.
         const continuation = await this.narrateContinuation();
         this.dm(continuation);
-        const msgs = await generateChatBurst(this.llm, this.chatCtx(`the scene continues — ${continuation}`, 4));
+        const continueCount = chatBurstCount(
+          s.metrics.hype,
+          totalViewers(s.audience),
+          "continue",
+        );
+        const msgs = await generateChatBurst(
+          this.llm,
+          this.chatCtx(`the scene continues — ${continuation}`, continueCount),
+        );
         this.s.pushChat(msgs);
         this.applyChatEffects(msgs);
         this.advanceTime(TIME_COST.continue);
@@ -1370,7 +1395,7 @@ export class GameController {
           }
           if (result.summary) this.outcome(result.summary);
 
-          const count = clamp(Math.round(totalViewers(result.audience) / 6) + 2, 3, 8);
+          const count = chatBurstCount(s.metrics.hype, totalViewers(result.audience), "action");
           // React to her ACTUAL words when we have them, else fall back to prose.
           const reactTo = say
             ? `${s.settings.streamerName} just said on stream: "${say}"`
@@ -1463,7 +1488,10 @@ export class GameController {
         energy: s.metrics.energy - minutes * 0.12,
         hype: s.metrics.hype - minutes * 0.1,
       });
-      s.setSession({ round: s.session.round + 1, seconds: s.clock - STREAM_START });
+      s.setSession({
+        round: s.session.round + 1,
+        seconds: streamElapsed(s.clock, s.session.streamStartClock ?? s.clock),
+      });
     }
     diag.info("round", `clock ${formatClock(this.s.clock)}`, {
       round: this.s.session.round,
@@ -1477,7 +1505,7 @@ export class GameController {
     const s = this.s;
     this.beatsSinceLastEvent += 1;
     if (s.metrics.energy <= 0) return this.endStream("ran out of energy");
-    if (s.clock >= NIGHT_END) return this.endStream("it got late");
+    if (streamTooLate(s.clock)) return this.endStream("it got late");
 
     this.presenceTick();
     void this.refreshStreamMemory();
@@ -1662,7 +1690,8 @@ export class GameController {
       }
       if (o.spawnFriend) this.spawnReferredFriend(charId);
       if (o.followerDelta) followerDelta += o.followerDelta;
-      // Milestone modal events retired — director reads milestone signals instead.
+      this.recordInteraction(charId, "milestone", `Reached ${o.id}`);
+      void this.enrichBackstory(charId, o.id);
     }
     if (followerDelta) s.patchMetrics({ followers: s.metrics.followers + followerDelta });
   }
@@ -1673,8 +1702,8 @@ export class GameController {
     const referrer = s.roster[referrerId];
     if (!referrer) return;
     if (Object.values(s.roster).filter((c) => c.online).length >= 16) return;
-    const arch = rollArchetype(this.intensity());
-    const friend = seedCharacter(arch, s.clock);
+    const arch = rollArchetypeForTime(this.intensity(), s.clock);
+    const friend = seedCharacter(arch, s.clock, rosterHandles(s.roster));
     friend.referredBy = referrerId;
     // Arrives a touch warmer thanks to the friend who vouched for the channel.
     friend.affinity = clamp(friend.affinity + BALANCE.affinity.sources.referral, 0, 100);
@@ -1707,7 +1736,7 @@ export class GameController {
     clearFeedbackContext();
     const updated = this.s.roster[charId];
     if (updated) {
-      const outcomes = checkMilestones(updated, prevAffinity, s.metrics.day);
+      const outcomes = checkMilestones(updated, prevAffinity, s.metrics.day, this.rosterTakenNames());
       if (outcomes.length) this.applyMilestones(charId, outcomes);
     }
     return applied;
@@ -1760,6 +1789,7 @@ export class GameController {
       tipped: c.tipped + amount,
       lastSeenClock: s.clock,
     });
+    this.recordInteraction(charId, "tip", `Tipped $${amount}`);
   }
 
   /**
@@ -1971,7 +2001,7 @@ export class GameController {
     setFeedbackContext(utilityDue ? "rent & utilities" : "rent", "bad");
     s.patchMetrics({ cash: s.metrics.cash - rent - utilityDue });
     clearFeedbackContext();
-    s.setClock(STREAM_START);
+    s.setClock(clockAfterSleep(s.clock));
 
     // Recurring subscriber income (Phase 4): predictable monthly payout, the
     // main early-game escape hatch, paid through the income path.
@@ -2142,9 +2172,10 @@ export class GameController {
     const req = {
       system: [
         `You are ${c.handle}, a viewer privately DMing the streamer ${this.s.settings.streamerName} out of the blue. You are NOT the streamer — you are the fan.`,
-        `You are a ${arch?.label}: ${arch?.blurb}`,
-        `You want: ${c.wants}. Your relationship with her: ${relationshipLevel(c.affinity)}.`,
+        characterVoiceBlock(c),
+        `Your relationship with her: ${relationshipLevel(c.affinity)}.`,
         c.memory ? `What you remember about your past chats with her: ${c.memory}` : "",
+        this.recentInteractionContext(c),
         steeringForTier(this.s.settings),
         flavor ? `Open the conversation with ${flavor}.` : "Open the conversation.",
         `ONE short message that STARTS the conversation, lowercase, casual, like a real DM. No quotes, no stage directions.`,
@@ -2713,8 +2744,8 @@ export class GameController {
   private spawnEventViewer(archetypeHint?: string): void {
     const s = this.s;
     if (Object.values(s.roster).filter((c) => c.online).length >= BALANCE.events.onlineCap) return;
-    const arch = rollArchetype(this.intensity());
-    const c = seedCharacter(arch, s.clock);
+    const arch = rollArchetypeForTime(this.intensity(), s.clock);
+    const c = seedCharacter(arch, s.clock, rosterHandles(s.roster));
     if (archetypeHint) {
       const note = archetypeHint.slice(0, 60);
       c.memory = note;
@@ -2978,6 +3009,7 @@ export class GameController {
       // Milestones were already checked inside bumpAffinity above.
       const memory = await this.condenseMemory(updated, "you met in person at your apartment", endReason);
       s.patchCharacter(charId, { memory });
+      this.recordInteraction(charId, "visit", `Met in person — ${endReason.slice(0, 80)}`);
     }
     s.endVisitor();
     s.clearPendingVisit(charId);
@@ -3047,7 +3079,8 @@ export class GameController {
         {
           role: "user" as const,
           content: [
-            `Visitor: ${name} — a ${ARCHETYPE_BY_ID[c.archetypeId]?.label ?? "viewer"} (${c.relationship}, affinity ${Math.round(c.affinity)}, threat ${c.threat}). They want: ${c.wants}.`,
+            characterVoiceBlock(c),
+            `Relationship: ${c.relationship}, affinity ${Math.round(c.affinity)}, threat ${c.threat}.`,
             c.memory ? `What they remember: ${c.memory}` : "",
             `Transcript so far:\n${transcript.slice(-1400)}`,
             passive ? "The streamer waits silently this beat — narrate what the VISITOR does next on their own." : `The streamer now: "${text}"`,
@@ -3076,8 +3109,109 @@ export class GameController {
     this.s.patchCharacter(id, { known: true });
     this.s.clearDmUnread(id);
     diag.info("world", "open character", { handle: c.handle });
-    // Lazily flesh them out the first time you really look at them.
-    if (!c.backstory) void this.generateBackstory(id);
+    // Seed layer on first open — deeper layers unlock via milestones/threat.
+    if (!c.backstoryLayers.length) void this.enrichBackstory(id, "seed");
+  }
+
+  /** Display names already taken in the roster (for unique reveals). */
+  private rosterTakenNames(): Set<string> {
+    return new Set(
+      Object.values(this.s.roster)
+        .map((c) => c.displayName.trim().toLowerCase())
+        .filter(Boolean),
+    );
+  }
+
+  /** Append a capped per-character interaction log entry. */
+  private recordInteraction(charId: string, kind: string, text: string): void {
+    const s = this.s;
+    const c = s.roster[charId];
+    if (!c) return;
+    s.patchCharacter(charId, {
+      interactionLog: appendInteraction(c.interactionLog, {
+        day: s.metrics.day,
+        kind,
+        text: text.slice(0, 200),
+      }),
+    });
+  }
+
+  /** Recent log lines for LLM continuity. */
+  private recentInteractionContext(c: CharacterSheet): string {
+    const recent = c.interactionLog.slice(-6);
+    if (!recent.length) return "";
+    return `Recent history with the streamer:\n${recent.map((e) => `- [${e.kind}] ${e.text}`).join("\n")}`;
+  }
+
+  /**
+   * Append a backstory layer for a trigger (affinity milestone, threat step, or
+   * first open). Idempotent per trigger id.
+   */
+  private async enrichBackstory(id: string, trigger: string): Promise<void> {
+    const c = this.s.roster[id];
+    if (!c || hasBackstoryLayer(c, trigger)) return;
+    const arch = ARCHETYPE_BY_ID[c.archetypeId];
+    const p = pronouns(c.gender);
+    const prior = c.backstoryLayers.map((l) => l.text).join(" ");
+
+    const mockText = trigger.startsWith("threat-")
+      ? `${c.handle} is becoming fixated on ${c.traits.fixation ?? "getting closer"}. The obsession is no longer subtle.`
+      : trigger === "seed"
+        ? `${arch?.blurb ?? "A viewer."} ${p.subj} wants ${c.motive.surface}.`
+        : `${p.subj.charAt(0).toUpperCase()}${p.subj.slice(1)} has opened up more — ${c.motive.need}.`;
+
+    if (this.llm.isMock) {
+      const layer: BackstoryLayer = { id: uid("layer"), trigger, text: mockText.slice(0, 400) };
+      const layers = [...c.backstoryLayers, layer];
+      this.s.patchCharacter(id, {
+        backstoryLayers: layers,
+        backstory: syncBackstoryString(layers),
+        quirks: c.quirks || (arch ? pick(arch.lines) : ""),
+      });
+      return;
+    }
+
+    try {
+      const taken = [...this.rosterTakenNames()].join(", ") || "none";
+      const res = await this.llm.complete(
+        {
+          system: this.resolvePrompt("narrator"),
+          messages: [
+            {
+              role: "user",
+              content: [
+                `Write ONE new backstory fragment for viewer ${c.handle} (${arch?.label}, ${c.gender}).`,
+                `Trigger: ${trigger}. Prior layers: ${prior || "(none)"}.`,
+                `Personality: ${characterVoiceBlock(c)}`,
+                c.memory ? `Memory: ${c.memory}` : "",
+                trigger.startsWith("threat-")
+                  ? "Reveal something darker or more specific about their fixation. Escalate, don't contradict prior layers."
+                  : "Add a human, specific detail that deepens who they are. Stay consistent with prior layers.",
+                `Return JSON: {"text": "2-3 sentences third person"}. Do NOT invent a display name.`,
+                `Names already used in roster (avoid): ${taken}.`,
+              ].filter(Boolean).join("\n"),
+            },
+          ],
+          jsonMode: true,
+        },
+        { kind: "story" },
+      );
+      const json = extractJson<{ text?: string }>(res.text);
+      const text = (json?.text ?? mockText).slice(0, 400);
+      const layer: BackstoryLayer = { id: uid("layer"), trigger, text };
+      const layers = [...c.backstoryLayers, layer];
+      this.s.patchCharacter(id, {
+        backstoryLayers: layers,
+        backstory: syncBackstoryString(layers),
+      });
+    } catch {
+      const layer: BackstoryLayer = { id: uid("layer"), trigger, text: mockText.slice(0, 400) };
+      const layers = [...c.backstoryLayers, layer];
+      this.s.patchCharacter(id, {
+        backstoryLayers: layers,
+        backstory: syncBackstoryString(layers),
+      });
+    }
   }
 
   // -------------------------------------------------------------- dev tools
@@ -3134,8 +3268,8 @@ export class GameController {
   /** Dev: spawn a fresh random viewer straight into the roster. */
   devSpawnViewer(): void {
     const s = this.s;
-    const arch = rollArchetype(this.intensity());
-    const v = seedCharacter(arch, s.clock);
+    const arch = rollArchetypeForTime(this.intensity(), s.clock);
+    const v = seedCharacter(arch, s.clock, rosterHandles(s.roster));
     v.known = true;
     v.online = s.session.isLive;
     s.upsertCharacter(v);
@@ -3145,46 +3279,7 @@ export class GameController {
 
   /** Generate a richer bio + quirks (and a name, if still unknown) on demand. */
   private async generateBackstory(id: string): Promise<void> {
-    const c = this.s.roster[id];
-    if (!c || c.backstory) return;
-    const arch = ARCHETYPE_BY_ID[c.archetypeId];
-    if (this.llm.isMock) {
-      // Offline fallback: expand the archetype seed into a usable bio.
-      this.s.patchCharacter(id, {
-        backstory: `${arch?.blurb ?? "A viewer"} They want ${c.wants}.`,
-        quirks: arch ? pick(arch.lines) : "",
-      });
-      return;
-    }
-    try {
-      const res = await this.llm.complete(
-        {
-          system: this.resolvePrompt("narrator"),
-          messages: [
-            {
-              role: "user",
-              content: [
-                `Invent a short, grounded backstory for a livestream viewer named ${c.handle} (archetype: ${arch?.label} — ${arch?.blurb}).`,
-                `Return JSON: {"backstory": "2-3 sentences, third person", "quirks": "one short phrase", "name": "a plausible first name"}.`,
-                `Keep it human and specific, not melodramatic.`,
-              ].join("\n"),
-            },
-          ],
-          jsonMode: true,
-        },
-        { kind: "story" },
-      );
-      const json = extractJson<{ backstory?: string; quirks?: string; name?: string }>(res.text);
-      if (json) {
-        this.s.patchCharacter(id, {
-          backstory: (json.backstory ?? "").slice(0, 400) || `${arch?.blurb ?? ""}`,
-          quirks: (json.quirks ?? "").slice(0, 120),
-          ...(c.displayName ? {} : json.name ? { displayName: String(json.name).slice(0, 24) } : {}),
-        });
-      }
-    } catch {
-      this.s.patchCharacter(id, { backstory: arch?.blurb ?? "A regular viewer." });
-    }
+    await this.enrichBackstory(id, "seed");
   }
 
   async sendDm(text: string): Promise<void> {
@@ -3206,6 +3301,7 @@ export class GameController {
       // exchange of the in-world day is the real bump; same-day follow-ups are
       // tokens, so sending five messages in one sitting ≈ one meaningful beat.
       const memory = await this.condenseMemory(c, t, reply);
+      this.recordInteraction(id, "dm", `You: "${t.slice(0, 60)}" → ${c.handle}: "${reply.slice(0, 60)}"`);
       const day = s.metrics.day;
       const firstToday = c.lastDmAffinityDay !== day;
       this.bumpAffinity(
@@ -3248,9 +3344,10 @@ export class GameController {
     return {
       system: [
         `You are ${c.handle}, a viewer privately DMing the streamer ${this.s.settings.streamerName}. You are NOT the streamer — you are the fan.`,
-        `You are a ${arch?.label}: ${arch?.blurb}`,
-        `You want: ${c.wants}. Your relationship with her: ${relationshipLevel(c.affinity)}.`,
+        characterVoiceBlock(c),
+        `Your relationship with her: ${relationshipLevel(c.affinity)}.`,
         c.memory ? `What you remember about your past chats with her: ${c.memory}` : "",
+        this.recentInteractionContext(c),
         steeringForTier(this.s.settings),
         `Reply to her LAST message directly and relevantly, staying in character.`,
         `If she asks you a question, actually answer it. ONE short message, lowercase, casual, like a real DM. No quotes, no stage directions.`,
@@ -3309,18 +3406,26 @@ export class GameController {
   }
 
   private async condenseMemory(c: CharacterSheet, mine: string, theirs: string): Promise<string> {
+    const logSnippet = c.interactionLog.slice(-8).map((e) => e.text).join("; ");
     if (this.llm.isMock) {
       const note = `chatted about "${mine.slice(0, 40)}"`;
-      return c.memory ? `${c.memory}; ${note}`.slice(-180) : note;
+      const base = logSnippet ? `${logSnippet}; ${note}` : note;
+      return base.slice(-180);
     }
     try {
       const res = await this.llm.complete(
         {
-          system: "Condense this relationship into ONE short memory line (<=160 chars) the viewer would remember. Merge with prior memory; keep the most important bits.",
+          system: "Condense this relationship into ONE short memory line (<=160 chars) the viewer would remember. Merge with prior memory and recent history; keep the most important bits.",
           messages: [
             {
               role: "user",
-              content: `Prior memory: ${c.memory || "(none)"}\nStreamer said: ${mine}\n${c.handle} replied: ${theirs}\nNew condensed memory:`,
+              content: [
+                `Prior memory: ${c.memory || "(none)"}`,
+                logSnippet ? `Recent history: ${logSnippet}` : "",
+                `Streamer said: ${mine}`,
+                `${c.handle} replied: ${theirs}`,
+                `New condensed memory:`,
+              ].filter(Boolean).join("\n"),
             },
           ],
         },

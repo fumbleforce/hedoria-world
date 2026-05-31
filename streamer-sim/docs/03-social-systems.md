@@ -142,15 +142,17 @@ action context to react to.
 text to 200; validates kinds; links a message to a roster id by case-insensitive
 handle match.
 
-**Mock burst** (`mockBurst`): `max(2, count + randInt(−1,1))` messages; ~65% from a
+**Mock burst** (`mockBurst`): `max(1, count + randInt(−1,1))` messages; ~65% from a
 random online named char; +20% chance of a cross-talk line if ≥2 online; +5% forced
 follow. `fromCharacter` picks a kind by segment (stalkers→creepy at intensity ≥2,
 simps 30% flirty, trolls 50% troll, hype 50% hype, mods 40% mod; whales/donators 25%
 tip of $50–150 / $3–20).
 
-**Chat volume** (controller): after an action,
-`count = clamp(round(viewers/6) + 2, 3, 8)`; Continue → 4; ambient → 1 per tick, up
-to 3 ticks, 850 ms apart, paused during `resolving`/`pendingEvent`.
+**Chat volume** (controller + `chatEngine.ts`): burst size is hype-driven via
+`chatBurstCount(hype, viewers, mode)` using `BALANCE.chat` — low hype yields
+1–2 messages, high hype up to 12. Viewers add a small nudge on top. Continue
+uses `continueMult`; ambient uses `chatAmbientPlan` (0 ticks below hype 12,
+up to 8 ticks at full hype, faster gap when hyped, 1–3 messages per tick).
 
 ## Relationships & milestones (`relationships.ts`)
 

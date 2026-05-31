@@ -18,6 +18,7 @@ import { InventoryPanel } from "./ui/InventoryPanel";
 import { SettingsPanel } from "./ui/SettingsPanel";
 import { EventModal } from "./ui/EventModal";
 import { GoalsPanel } from "./ui/GoalsPanel";
+import { CalendarPanel } from "./ui/CalendarPanel";
 
 export function App() {
   const [services, setServices] = useState<BootResult | null>(null);
@@ -71,6 +72,7 @@ export function App() {
       <SettingsPanel controller={controller} />
       <EventModal controller={controller} />
       <GoalsPanel />
+      <CalendarPanel />
 
       {toast && <div className="toast">{toast}</div>}
       <div className="backendChip">{llm.isMock ? "offline engine" : useStore.getState().settings.textBackend}</div>

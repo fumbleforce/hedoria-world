@@ -1,15 +1,16 @@
 /**
  * Presence: who is watching right now. Named characters drift online/offline
- * over the night and new ones arrive, seeded from archetypes. The economic
- * segment populations (segments.ts) are derived from how many characters of each
- * segment are currently online, so the spine math and the named cast stay in
- * sync.
+ * over the day and new ones arrive, seeded from archetypes. Each viewer has a
+ * regular watch window (extended by affinity) so day streams draw a different
+ * crowd than evening ones.
  */
 
 import { ARCHETYPE_BY_ID } from "./archetypes";
 import {
-  rollArchetype,
+  rollArchetypeForTime,
   seedCharacter,
+  rosterHandles,
+  isWatchingNow,
   type CharacterSheet,
   type Roster,
 } from "./characters";
@@ -41,17 +42,17 @@ export function advancePresence(
   const next: Roster = { ...roster };
   const arrivals: string[] = [];
   const departures: string[] = [];
+  const cfg = BALANCE.watch;
 
   const onlineNow = Object.values(next).filter((c) => c.online);
 
-  // Departures: some online folks wander off (lower affinity = likelier to go).
-  // A strongly dissatisfied segment empties faster — pushing content the room
-  // dislikes (e.g. spicy at a cozy crowd) visibly thins it out.
+  // Departures: wander off — faster when outside their watch window or unhappy.
   for (const c of onlineNow) {
     const seg = ARCHETYPE_BY_ID[c.archetypeId]?.segment ?? "cozy";
     const sat = audience[seg]?.satisfaction ?? 55;
     const dislikeBoost = (Math.max(0, 55 - sat) / 55) * BALANCE.readiness.leaveOnDislikeBoost;
-    const leaveP = 0.08 + (1 - c.affinity / 100) * 0.07 + dislikeBoost;
+    let leaveP = 0.08 + (1 - c.affinity / 100) * 0.07 + dislikeBoost;
+    if (!isWatchingNow(c, clock)) leaveP += cfg.outsideLeaveBoost;
     if (chance(leaveP)) {
       next[c.id] = { ...c, online: false, lastSeenClock: clock };
       departures.push(c.id);
@@ -60,11 +61,13 @@ export function advancePresence(
 
   let onlineCount = Object.values(next).filter((c) => c.online).length;
 
-  // Returnees: known offline characters drift back in.
+  // Returnees: known offline characters drift back in during their watch window.
   const offline = Object.values(next).filter((c) => !c.online);
   for (const c of offline) {
     if (onlineCount >= targetNamed) break;
-    const returnP = 0.05 + (c.affinity / 100) * 0.12;
+    const inWindow = isWatchingNow(c, clock);
+    let returnP = 0.05 + (c.affinity / 100) * 0.12;
+    if (!inWindow) returnP *= cfg.outsideWindowMult;
     if (chance(returnP)) {
       next[c.id] = { ...c, online: true, lastSeenClock: clock };
       arrivals.push(c.id);
@@ -77,10 +80,13 @@ export function advancePresence(
   while (onlineCount < targetNamed && guard < 6) {
     guard += 1;
     if (!chance(0.6 + reputation * 0.1)) break;
-    const arch = rollArchetype(intensity, /* weightStalkers */ chance(0.08 + intensity * 0.03));
-    const c = seedCharacter(arch, clock);
-    next[c.id] = c;
-    arrivals.push(c.id);
+    const arch = rollArchetypeForTime(intensity, clock, chance(0.08 + intensity * 0.03));
+    const taken = rosterHandles(next);
+    const fresh = seedCharacter(arch, clock, taken);
+    // Brand-new viewers only join if they're "usually up" now (affinity N/A yet).
+    if (!isWatchingNow(fresh, clock) && !chance(0.25)) break;
+    next[fresh.id] = fresh;
+    arrivals.push(fresh.id);
     onlineCount += 1;
   }
 

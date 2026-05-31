@@ -189,7 +189,10 @@ export interface StreamSession {
   isLive: boolean;
   /** Turn counter for the current stream. */
   round: number;
+  /** Minutes elapsed this stream (derived from clock − streamStartClock). */
   seconds: number;
+  /** In-world clock when this stream went live (minutes since midnight). */
+  streamStartClock: number;
   earnings: number;
   newFollowers: number;
   peak: number;
