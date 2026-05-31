@@ -14,10 +14,15 @@ export function CharacterGallery({ controller }: { controller: GameController })
   const roster = useStore((s) => s.roster);
   const audience = useStore((s) => s.audience);
   const isLive = useStore((s) => s.session.isLive);
+  const unreadDms = useStore((s) => s.unreadDms);
 
   const chars = Object.values(roster)
-    .filter((c) => c.messageCount > 0 || c.known || c.online)
+    .filter((c) => c.messageCount > 0 || c.known || c.online || unreadDms[c.id])
     .sort((a, b) => {
+      // Unread DMs float to the top so a new message is impossible to miss.
+      const ua = unreadDms[a.id] ? 1 : 0;
+      const ub = unreadDms[b.id] ? 1 : 0;
+      if (ua !== ub) return ub - ua;
       if (a.online !== b.online) return a.online ? -1 : 1;
       return b.affinity - a.affinity;
     });
@@ -59,11 +64,17 @@ export function CharacterGallery({ controller }: { controller: GameController })
           <p className="rail__empty">As people chat, they'll show up here. Get to know them.</p>
         ) : (
           chars.map((c) => (
-            <button key={c.id} className={`card ${c.online ? "card--online" : ""}`} onClick={() => controller.openCharacter(c.id)}>
+            <button key={c.id} className={`card ${c.online ? "card--online" : ""} ${unreadDms[c.id] ? "card--unread" : ""}`} onClick={() => controller.openCharacter(c.id)}>
               <CardAvatar c={c} />
               <span className="card__body">
                 <span className="card__handle">
                   {c.displayName || c.handle}
+                  {c.displayName && <span className="card__handle-sub">@{c.handle}</span>}
+                  {unreadDms[c.id] > 0 && (
+                    <span className="card__unread" title={`${unreadDms[c.id]} new DM${unreadDms[c.id] > 1 ? "s" : ""}`}>
+                      📨 {unreadDms[c.id]}
+                    </span>
+                  )}
                   {c.attendanceStreak >= 3 && <span className="card__streak" title={`${c.attendanceStreak} streams running`}>🔥{c.attendanceStreak}</span>}
                   {c.online && <span className="card__dot" title="online" />}
                 </span>

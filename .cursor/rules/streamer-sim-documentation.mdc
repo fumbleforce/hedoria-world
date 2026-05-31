@@ -1,0 +1,45 @@
+---
+description: Require docs updates for large Limelight (streamer-sim) changes
+globs: streamer-sim/**
+alwaysApply: false
+---
+
+# Limelight — Documentation on Large Changes
+
+When working in `streamer-sim/`, treat `docs/` as part of the deliverable for non-trivial work.
+
+## Read first
+
+- Start from [`streamer-sim/docs/README.md`](streamer-sim/docs/README.md) for the doc map and architecture.
+- Docs describe **current implementation** (real numbers from source), not aspirational design.
+- [`streamer-sim/IMPROVEMENTS.md`](streamer-sim/IMPROVEMENTS.md) is backlog only — never substitute it for implementation docs.
+
+## When docs are required
+
+Update docs in the **same change** when the work is **large**, meaning any of:
+
+- New game system, mechanic, or player-facing feature
+- Formula, economy, resolver, or segment/presence math changes
+- LLM stack changes (providers, adapter, prompts, routing, evaluator contract)
+- Persistence or save-format changes
+- New UI panel, modal, or major workflow change
+- Refactor or feature touching **3+ files** in one subsystem (`game/`, `llm/`, `state/`, `ui/`, `persist/`)
+
+Small fixes (typo, single-line bug, CSS tweak, rename with no behavior change) do not need doc updates unless they fix a documented mismatch.
+
+## What to update
+
+1. **Primary doc** — edit the best-fit numbered doc (`docs/01-overview.md` … `docs/09-expectation-vs-reality.md`) with what the code actually does: formulas, thresholds, file map, flow.
+2. **Index** — if you add a new doc or rename scope, update `docs/README.md`.
+3. **Expectation vs reality** — if you fix UI text, comments, or behavior that contradicted docs (or docs that lied about code), update `docs/09-expectation-vs-reality.md`.
+4. **Overview / file map** — if you add modules or move orchestration, update `docs/01-overview.md`.
+
+## Definition of done
+
+A large change is **not complete** until the relevant `docs/` files are updated. Include doc edits in the same commit/PR as the code unless the user explicitly defers documentation.
+
+## Style
+
+- Prefer updating existing sections over new sprawling files.
+- Quote real constants and file paths from source; avoid vague “handles X” prose.
+- Keep the golden rule visible where relevant: **LLM proposes flavor/classification; code owns numbers** (`resolver.ts`, `controller.ts`).

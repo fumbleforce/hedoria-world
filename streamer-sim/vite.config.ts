@@ -136,6 +136,10 @@ function diagLogEndpoint(): Plugin {
 }
 
 const OPENROUTER_UPSTREAM = "https://openrouter.ai/api/v1/chat/completions";
+// NOTE: /models defaults to output_modalities=text, which hides pure image
+// generators (Seedream, Flux…). Ask for both so image-only models show up.
+const OPENROUTER_MODELS_UPSTREAM =
+  "https://openrouter.ai/api/v1/models?output_modalities=text,image";
 
 function openRouterProxyEndpoint(): Plugin {
   return {
@@ -153,6 +157,36 @@ function openRouterProxyEndpoint(): Plugin {
           res.setHeader("Content-Type", "application/json");
           res.setHeader("Cache-Control", "no-store");
           res.end(JSON.stringify({ ok: apiKey.length > 0 }));
+          return;
+        }
+
+        if (req.method === "GET" && route === "/__openrouter/models") {
+          const reqId = (req.headers["x-request-id"] as string | undefined) ?? "or-models";
+          const startedAt = Date.now();
+          try {
+            const upstream = await fetch(OPENROUTER_MODELS_UPSTREAM, {
+              headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
+            });
+            const text = await upstream.text();
+            res.statusCode = upstream.status;
+            res.setHeader(
+              "Content-Type",
+              upstream.headers.get("content-type") ?? "application/json",
+            );
+            res.setHeader("Cache-Control", "no-store");
+            res.end(text);
+            // eslint-disable-next-line no-console
+            console.log(
+              `[openrouter] ${reqId} ← ${upstream.status} models (${text.length}B, ${Date.now() - startedAt}ms)`,
+            );
+          } catch (error) {
+            const msg = error instanceof Error ? error.message : String(error);
+            // eslint-disable-next-line no-console
+            console.error(`[openrouter] ${reqId} ✖ models failed: ${msg}`);
+            res.statusCode = 502;
+            res.setHeader("Content-Type", "application/json");
+            res.end(JSON.stringify({ ok: false, error: msg }));
+          }
           return;
         }
 

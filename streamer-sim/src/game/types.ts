@@ -101,6 +101,8 @@ export interface StoryEntry {
   text: string;
   /** For kind === "image": the StoredImage id to render inline. */
   imageId?: string;
+  /** Set when the player has manually edited this line's text. */
+  edited?: boolean;
 }
 
 /** The player character's visual identity for image generation. */
@@ -166,6 +168,20 @@ export interface GameEvent {
   allowFreeform?: boolean;
   /** Placeholder/hint shown in the freeform box. */
   freeformHint?: string;
+  /**
+   * When set, this "event" is not shown as a modal interrupt at all — it is
+   * delivered as a real incoming DM into the sender's thread (plus a
+   * notification). The string seeds, in plain language, what prompted the
+   * message so the sender's opener can be written in-voice. The player then
+   * replies in the DM panel, where the DM director owns any consequences.
+   */
+  deliverAsDm?: string;
+  /**
+   * When set, this "event" is not a modal — it's a passive donation. The amount
+   * lands through the shared tip pipeline, a 💸 line shows in chat, and a toast
+   * "dings". The player can follow up with the existing "Thank a supporter" action.
+   */
+  deliverAsTip?: number;
   /** When this event belongs to a multi-step arc, its id. */
   arcId?: string;
   /** When resolving this event should advance/finish an arc. */
@@ -175,7 +191,7 @@ export interface GameEvent {
 }
 
 /** Kinds of multi-step story chains that span turns/days. */
-export type ArcKind = "sponsorship" | "viral" | "stalker-legal";
+export type ArcKind = "sponsorship" | "viral" | "stalker-legal" | "relationship";
 
 /** A live multi-step chain: spawns follow-up events on later days. */
 export interface StoryArc {
@@ -214,6 +230,30 @@ export interface PlayingState {
 export interface DmLine {
   role: "me" | "them";
   text: string;
+  kind?: "text" | "image" | "gift" | "system";
+  imageId?: string;
+  amount?: number;
+}
+
+export interface PendingVisit {
+  charId: string;
+  hint: string;
+  day: number;
+}
+
+export interface VisitorSceneLine {
+  role: "me" | "them" | "narrator" | "system";
+  text: string;
+}
+
+export interface VisitorScene {
+  charId: string;
+  beats: number;
+  transcript: string;
+  relationshipScore: number;
+  threatDelta: number;
+  suggestedRelationship: "none" | "romantic" | "sexual" | "dominant" | "submissive" | "married";
+  lines: VisitorSceneLine[];
 }
 
 export type UpgradeCategory = "gear" | "furniture" | "apartment";

@@ -12,6 +12,8 @@ import type {
   CharacterVisual,
   StoryArc,
   EventRecord,
+  PendingVisit,
+  VisitorScene,
 } from "../game/types";
 import { SPAWN_ZONE, type ZoneId } from "../game/studio";
 import { saveRoomImage } from "../persist/imageStore";
@@ -22,6 +24,7 @@ import type { CharacterSheet, Roster } from "../game/characters";
 import type { PromptId } from "../game/prompts";
 import type { ActionOption } from "../game/actions";
 import { STREAM_START } from "../game/time";
+import type { LlmCallStat } from "../llm/types";
 
 const MAX_CHAT = 140;
 const MAX_STORY = 200;
@@ -85,7 +88,7 @@ export interface ActionMenu {
 }
 
 /** Tabs in the unified Settings modal. */
-export type SettingsTab = "general" | "prompts" | "room" | "character" | "gallery" | "saves" | "llm";
+export type SettingsTab = "general" | "prompts" | "room" | "character" | "gallery" | "saves" | "llm" | "dev";
 
 export interface StoreState {
   booted: boolean;
@@ -117,6 +120,8 @@ export interface StoreState {
   presenceImages: Partial<Record<ZoneId, string>>;
   /** In-memory cache of image id -> data URL, hydrated from IndexedDB. */
   imageCache: Record<string, string>;
+  /** In-memory style-preset preview thumbnails (presetId -> data URL). */
+  stylePreviews: Record<string, string>;
   /** Most recently generated/seen image id — shown center-stage. */
   lastImageId: string | null;
   /** Label of the image job currently running (null = idle). */
@@ -128,6 +133,8 @@ export interface StoreState {
   openCharId: string | null;
   /** Persistent 1:1 DM history, keyed by character id. */
   dmThreads: Record<string, DmLine[]>;
+  /** Count of unseen inbound DM lines per character id (cleared when opened). */
+  unreadDms: Record<string, number>;
   dmBusy: boolean;
   /** Character id whose portrait is currently being generated, or null. */
   portraitBusyId: string | null;
@@ -149,6 +156,12 @@ export interface StoreState {
   completedGoals: string[];
   /** Whether the goals panel is open. */
   goalsOpen: boolean;
+  /** DM-triggered IRL visits waiting to fire at the door. */
+  pendingVisits: PendingVisit[];
+  /** Active in-person guest scene, if one is currently playing out. */
+  visitor: VisitorScene | null;
+  /** In-memory LLM call telemetry for Settings → LLM (session-only, not saved). */
+  llmStats: LlmCallStat[];
 
   setBooted: (b: boolean) => void;
   patchMetrics: (patch: Partial<Metrics>) => void;
@@ -159,6 +172,8 @@ export interface StoreState {
   pushChat: (msgs: ChatMessage[]) => void;
   clearChat: () => void;
   pushStory: (entry: Omit<StoryEntry, "id" | "ts">) => void;
+  editStory: (id: string, text: string) => void;
+  deleteStory: (id: string) => void;
   setPendingEvent: (e: GameEvent | null) => void;
   setActionMenu: (m: ActionMenu | null) => void;
   setResolving: (b: boolean) => void;
@@ -172,6 +187,7 @@ export interface StoreState {
   clearPresenceImages: () => void;
   cacheImage: (id: string, dataUrl: string) => void;
   uncacheImage: (id: string) => void;
+  setStylePreview: (presetId: string, dataUrl: string) => void;
   setLastImage: (id: string | null) => void;
   setImageBusy: (label: string | null) => void;
 
@@ -184,6 +200,10 @@ export interface StoreState {
   pushDm: (charId: string, line: DmLine) => void;
   /** Replace the text of the most recent line in a thread (for streaming). */
   updateLastDm: (charId: string, text: string) => void;
+  /** Flag a thread as having a new unseen inbound message. */
+  markDmUnread: (charId: string) => void;
+  /** Clear the unseen flag for a thread (called when the panel is opened). */
+  clearDmUnread: (charId: string) => void;
   setDmBusy: (b: boolean) => void;
   setPortraitBusy: (id: string | null) => void;
   setShopOpen: (b: boolean) => void;
@@ -203,12 +223,49 @@ export interface StoreState {
   removeArc: (id: string) => void;
   completeGoal: (id: string) => void;
   setGoalsOpen: (b: boolean) => void;
+  addPendingVisit: (visit: PendingVisit) => void;
+  clearPendingVisit: (charId: string) => void;
+  startVisitor: (scene: VisitorScene) => void;
+  pushVisitorLine: (line: VisitorScene["lines"][number]) => void;
+  patchVisitor: (patch: Partial<VisitorScene>) => void;
+  endVisitor: () => void;
 }
 
 const MAX_EVENT_MEMORY = 14;
 
 let storySeq = 0;
-const nextStoryId = () => `st-${(storySeq += 1)}`;
+
+function parseStorySeq(id: string): number {
+  const n = Number.parseInt(id.replace(/^st-/, ""), 10);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function maxStorySeqFromEntries(story: StoryEntry[]): number {
+  return story.reduce((max, e) => Math.max(max, parseStorySeq(e.id)), 0);
+}
+
+/** Keep the module counter in sync with persisted / in-memory story ids. */
+function syncStorySeq(story: StoryEntry[]): void {
+  const max = maxStorySeqFromEntries(story);
+  if (max > storySeq) storySeq = max;
+}
+
+/** Next id always clears the highest existing st-N (survives HMR and rehydrate races). */
+function nextStoryIdFromStory(story: StoryEntry[]): string {
+  const next = Math.max(storySeq, maxStorySeqFromEntries(story)) + 1;
+  storySeq = next;
+  return `st-${next}`;
+}
+
+/** Drop duplicate ids from older saves or a reset storySeq counter. */
+function dedupeStoryEntries(story: StoryEntry[]): StoryEntry[] {
+  const seen = new Set<string>();
+  return story.filter((e) => {
+    if (seen.has(e.id)) return false;
+    seen.add(e.id);
+    return true;
+  });
+}
 
 export const useStore = create<StoreState>()(
   persist(
@@ -233,12 +290,14 @@ export const useStore = create<StoreState>()(
       character: { description: "", portraitId: null, bodyId: null },
       presenceImages: {},
       imageCache: {},
+      stylePreviews: {},
       lastImageId: null,
       imageBusy: null,
 
       gamePickerOpen: false,
       openCharId: null,
       dmThreads: {},
+      unreadDms: {},
       dmBusy: false,
       portraitBusyId: null,
       shopOpen: false,
@@ -254,6 +313,9 @@ export const useStore = create<StoreState>()(
       arcs: [],
       completedGoals: [],
       goalsOpen: false,
+      pendingVisits: [],
+      visitor: null,
+      llmStats: [],
 
       setBooted: (booted) => set({ booted }),
       patchMetrics: (patch) =>
@@ -277,12 +339,19 @@ export const useStore = create<StoreState>()(
       resetSession: () => set({ session: initialSession() }),
       pushChat: (msgs) =>
         set((s) => {
-          // Drop consecutive duplicates (same user + text) — overlapping ambient
-          // bursts and the go-live burst can otherwise echo the same greeting.
+          // Drop near-duplicates (same user + text) seen anywhere in the recent
+          // window, not just the immediately preceding line — the chat model
+          // tends to re-echo earlier reactions a beat or two later, so a simple
+          // consecutive check misses "here we go" bouncing back after one line.
           const next = [...s.chat];
+          const DEDUP_WINDOW = 16;
+          const seen = new Set<string>(
+            next.slice(-DEDUP_WINDOW).map((m) => `${m.user}\u0000${m.text}`),
+          );
           for (const m of msgs) {
-            const last = next[next.length - 1];
-            if (last && last.user === m.user && last.text === m.text && m.kind !== "system") continue;
+            const key = `${m.user}\u0000${m.text}`;
+            if (m.kind !== "system" && seen.has(key)) continue;
+            if (m.kind !== "system") seen.add(key);
             next.push(m);
           }
           return { chat: next.length > MAX_CHAT ? next.slice(next.length - MAX_CHAT) : next };
@@ -290,9 +359,16 @@ export const useStore = create<StoreState>()(
       clearChat: () => set({ chat: [] }),
       pushStory: (entry) =>
         set((s) => {
-          const next = [...s.story, { id: nextStoryId(), ts: Date.now(), ...entry }];
+          const base = dedupeStoryEntries(s.story);
+          const id = nextStoryIdFromStory(base);
+          const next = [...base, { id, ts: Date.now(), ...entry }];
           return { story: next.length > MAX_STORY ? next.slice(next.length - MAX_STORY) : next };
         }),
+      editStory: (id, text) =>
+        set((s) => ({
+          story: s.story.map((e) => (e.id === id ? { ...e, text, edited: true } : e)),
+        })),
+      deleteStory: (id) => set((s) => ({ story: s.story.filter((e) => e.id !== id) })),
       setPendingEvent: (pendingEvent) => set({ pendingEvent }),
       setActionMenu: (actionMenu) => set({ actionMenu }),
       setResolving: (resolving) => set({ resolving }),
@@ -318,6 +394,8 @@ export const useStore = create<StoreState>()(
         }),
       clearPresenceImages: () => set({ presenceImages: {} }),
       cacheImage: (id, dataUrl) => set((s) => ({ imageCache: { ...s.imageCache, [id]: dataUrl } })),
+      setStylePreview: (presetId, dataUrl) =>
+        set((s) => ({ stylePreviews: { ...s.stylePreviews, [presetId]: dataUrl } })),
       uncacheImage: (id) =>
         set((s) => {
           const patch: Partial<StoreState> = {};
@@ -355,6 +433,15 @@ export const useStore = create<StoreState>()(
           next[next.length - 1] = { ...next[next.length - 1], text };
           return { dmThreads: { ...s.dmThreads, [charId]: next } };
         }),
+      markDmUnread: (charId) =>
+        set((s) => ({ unreadDms: { ...s.unreadDms, [charId]: (s.unreadDms[charId] ?? 0) + 1 } })),
+      clearDmUnread: (charId) =>
+        set((s) => {
+          if (!(charId in s.unreadDms)) return s;
+          const next = { ...s.unreadDms };
+          delete next[charId];
+          return { unreadDms: next };
+        }),
       setDmBusy: (dmBusy) => set({ dmBusy }),
       setPortraitBusy: (portraitBusyId) => set({ portraitBusyId }),
       setShopOpen: (shopOpen) => set({ shopOpen }),
@@ -388,6 +475,23 @@ export const useStore = create<StoreState>()(
       completeGoal: (id) =>
         set((s) => (s.completedGoals.includes(id) ? s : { completedGoals: [...s.completedGoals, id] })),
       setGoalsOpen: (goalsOpen) => set({ goalsOpen }),
+      addPendingVisit: (visit) =>
+        set((s) => {
+          const next = [...s.pendingVisits.filter((v) => v.charId !== visit.charId), visit];
+          return { pendingVisits: next };
+        }),
+      clearPendingVisit: (charId) =>
+        set((s) => ({ pendingVisits: s.pendingVisits.filter((v) => v.charId !== charId) })),
+      startVisitor: (visitor) => set({ visitor }),
+      pushVisitorLine: (line) =>
+        set((s) =>
+          s.visitor
+            ? { visitor: { ...s.visitor, lines: [...s.visitor.lines, line] } }
+            : s,
+        ),
+      patchVisitor: (patch) =>
+        set((s) => (s.visitor ? { visitor: { ...s.visitor, ...patch } } : s)),
+      endVisitor: () => set({ visitor: null }),
     }),
     {
       name: "limelight-save-v3",
@@ -397,14 +501,20 @@ export const useStore = create<StoreState>()(
       // wholesale and new fields come back `undefined`).
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<StoreState>;
+        const story = Array.isArray(p.story) ? dedupeStoryEntries(p.story) : current.story;
         return {
           ...current,
           ...p,
           settings: { ...current.settings, ...(p.settings ?? {}) },
+          story,
         };
       },
       partialize: (s) => ({
         metrics: s.metrics,
+        // The live session (isLive flag + round/earnings/peak totals) must
+        // survive a reload — boot calls controller.resumeLive() to rebuild the
+        // transient audience/presence/ambient loop around it.
+        session: s.session,
         settings: s.settings,
         ownedUpgrades: s.ownedUpgrades,
         promptOverrides: s.promptOverrides,
@@ -412,8 +522,17 @@ export const useStore = create<StoreState>()(
         recentEvents: s.recentEvents,
         arcs: s.arcs,
         completedGoals: s.completedGoals,
+        pendingVisits: s.pendingVisits,
+        visitor: s.visitor,
         roomImage: s.roomImage,
         dmThreads: s.dmThreads,
+        unreadDms: s.unreadDms,
+        // Visible logs: the stream chat and the story/narrator feed (with the
+        // player's actions and their outcomes) must survive a reload.
+        chat: s.chat,
+        story: s.story,
+        clock: s.clock,
+        zone: s.zone,
         // Only the small ids persist here; the large blobs live in IndexedDB.
         character: s.character,
         presenceImages: s.presenceImages,
@@ -424,6 +543,7 @@ export const useStore = create<StoreState>()(
       }),
       onRehydrateStorage: () => (state) => {
         if (state?.settings?.theme) applyTheme(state.settings.theme);
+        if (state?.story?.length) syncStorySeq(state.story);
       },
     },
   ),

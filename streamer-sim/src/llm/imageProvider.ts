@@ -7,6 +7,11 @@
 
 import { useStore } from "../state/store";
 import { diag } from "../diag/log";
+import {
+  imageRequestModalitiesFallbacks,
+  isOpenRouterModalityError,
+  loadOpenRouterCatalog,
+} from "./openRouterCatalog";
 
 const PROXY = "/__openrouter/chat";
 
@@ -62,8 +67,31 @@ class GeminiImageBackend implements ImageBackend {
 
 class OpenRouterImageBackend implements ImageBackend {
   readonly id = "openrouter-image";
+
   async generate(prompt: string, refs: string[] = []): Promise<string> {
     const model = useStore.getState().settings.openRouterImageModel || "google/gemini-2.5-flash-image";
+    await loadOpenRouterCatalog();
+    const tries = imageRequestModalitiesFallbacks(model);
+    let lastErr = "OpenRouter image: request failed";
+    for (const modalities of tries) {
+      try {
+        return await this.request(model, prompt, refs, modalities);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        lastErr = msg;
+        if (!isOpenRouterModalityError(msg)) throw err;
+        diag.warn("world", "openrouter image modality retry", { model, modalities, error: msg });
+      }
+    }
+    throw new Error(lastErr);
+  }
+
+  private async request(
+    model: string,
+    prompt: string,
+    refs: string[],
+    modalities: ("image" | "text")[],
+  ): Promise<string> {
     const content: Array<Record<string, unknown>> = [{ type: "text", text: prompt }];
     for (const ref of refs) content.push({ type: "image_url", image_url: { url: ref } });
     const res = await fetch(PROXY, {
@@ -72,20 +100,25 @@ class OpenRouterImageBackend implements ImageBackend {
       body: JSON.stringify({
         model,
         messages: [{ role: "user", content: refs.length ? content : prompt }],
-        modalities: ["image", "text"],
+        modalities,
         image_config: { aspect_ratio: "1:1" },
       }),
     });
     const raw = await res.text();
-    if (!res.ok) throw new Error(`OpenRouter image HTTP ${res.status}: ${raw.slice(0, 160)}`);
+    if (!res.ok) throw new Error(`OpenRouter image HTTP ${res.status}: ${raw.slice(0, 200)}`);
     const json = JSON.parse(raw) as {
-      choices?: Array<{ message?: { images?: Array<{ image_url?: { url?: string } }> } }>;
+      choices?: Array<{ message?: { images?: Array<{ image_url?: { url?: string }; imageUrl?: { url?: string } }> } }>;
       error?: { message?: string };
     };
     if (json.error?.message) throw new Error(`OpenRouter image: ${json.error.message}`);
-    const url = json.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    const images = json.choices?.[0]?.message?.images ?? [];
+    const hit = images.find((im) => {
+      const u = im.image_url?.url ?? im.imageUrl?.url;
+      return typeof u === "string" && u.length > 0;
+    });
+    const url = hit?.image_url?.url ?? hit?.imageUrl?.url;
     if (!url) throw new Error("OpenRouter image: no image in response");
-    return url; // already a data: URL
+    return url;
   }
 }
 
@@ -152,12 +185,12 @@ export const DEFAULT_PRESENCE_PROMPT = [
 ].join(" ");
 
 export const DEFAULT_SCENE_PROMPT = [
-  "Illustrate this moment of {{name}}'s livestream.",
-  "Where she is right now: {{position}}.",
-  "What is happening: {{narrative}}",
-  "Keep her appearance consistent with the reference image ({{description}}).",
-  "Dynamic, expressive, in-the-moment framing that reflects what's happening,",
-  "cozy stream-room setting, no text, no watermark, no UI. Square composition.",
+  "A candid illustrated scene of {{name}}.",
+  "Setting: {{position}}.",
+  "Depict this moment: {{narrative}}",
+  "Keep {{name}}'s appearance consistent with the reference image: {{description}}.",
+  "Focus on body language, expression, and what is physically happening — natural, in-the-moment framing.",
+  "No text, no watermark, no UI. Square composition.",
   "{{style}}",
 ].join(" ");
 
@@ -183,5 +216,30 @@ export async function generatePortrait(
   diag.info("world", "generating portrait", { backend: backend.id, handle: vars.handle });
   const url = await backend.generate(prompt);
   diag.info("world", "portrait generated", { bytes: url.length });
+  return url;
+}
+
+/**
+ * Generate a full-body T-pose reference for a named character, mirroring the
+ * player's body sheet. When a portrait exists it's passed as a reference so the
+ * face/outfit carry over; otherwise the look is invented from archetype + vibe.
+ */
+export async function generateCharacterBody(
+  backend: ImageBackend,
+  vars: { name: string; archetypeLabel: string; vibe: string; appearance?: string; style: string },
+  portraitRef?: string,
+): Promise<string> {
+  const prompt = [
+    `Full-body character reference sheet of "${vars.name}", a livestream viewer.`,
+    vars.appearance ? `Appearance: ${vars.appearance}.` : `Personality/look: ${vars.archetypeLabel} — ${vars.vibe}.`,
+    portraitRef ? "Match the face, hair, and outfit of the reference portrait exactly." : "",
+    "Standing in a neutral A-pose / T-pose, facing forward, full body visible head to toe,",
+    "plain flat light-grey studio background, even lighting, no text, no watermark, no UI.",
+    "A clean character turnaround reference.",
+    vars.style,
+  ].filter(Boolean).join(" ");
+  diag.info("world", "generating character body", { backend: backend.id, name: vars.name });
+  const url = await backend.generate(prompt, portraitRef ? [portraitRef] : undefined);
+  diag.info("world", "character body generated", { bytes: url.length });
   return url;
 }

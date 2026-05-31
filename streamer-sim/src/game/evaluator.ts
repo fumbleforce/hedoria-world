@@ -20,6 +20,8 @@ export interface EvalContext {
   zoneLabel: string;
   /** Last few live chat lines, for fresh per-beat grounding (keeps prose varied). */
   recentChat?: string[];
+  /** The narration lines we just wrote, so the model can avoid repeating itself. */
+  recentNarration?: string[];
   /** Her current stat vibe (changes every beat), so narration doesn't repeat. */
   vibe?: string;
   /** Rolling summary of the stream so far, for callbacks and continuity. */
@@ -57,10 +59,13 @@ export async function evaluateAction(
             ctx.isLive && ctx.recentChat?.length
               ? `Live chat in the last moment:\n${ctx.recentChat.join("\n")}`
               : "",
+            ctx.recentNarration?.length
+              ? `YOUR LAST STAGE DIRECTIONS (oldest first) — do NOT echo these openings, gestures, or phrasings:\n${ctx.recentNarration.map((t) => `- ${t}`).join("\n")}`
+              : "",
             `She does this (${action.source}): ${action.text}`,
             action.hint ? `Hint: ${action.hint}` : "",
             ctx.isLive
-              ? "Classify how the live audience reacts. Ground the narration in THIS specific moment (her vibe, the chat above) so it reads fresh — never reuse stock phrasing."
+              ? "Classify how the live audience reacts. Ground the narration in THIS specific moment (her vibe, the chat above) so it reads fresh. Open differently from your last stage directions and lead with a concrete ACTION, not her expression. Do NOT describe her eyes (sparkling/glinting), a smile/grin/smirk on her lips, or her leaning into the camera unless it is genuinely the single best detail — and never repeat that kind of face-beat two lines running. Reach for what her hands, voice, a prop, or her movement is doing instead."
               : "She is OFFLINE — set every segment appeal to 0 / omit appeal, since no one is watching. Just judge plausibility and narrate.",
           ]
             .filter(Boolean)

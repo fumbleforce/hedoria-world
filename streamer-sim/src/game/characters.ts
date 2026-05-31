@@ -36,6 +36,8 @@ export interface CharacterSheet {
   wants: string;
   /** 0-100 relationship score; level derived from it. */
   affinity: number;
+  /** Explicit relationship label used for in-person progression. */
+  relationship: RelationshipType;
   /** Condensed running memory of your interactions (one or two lines). */
   memory: string;
   /** Lifetime tips in dollars. */
@@ -56,6 +58,8 @@ export interface CharacterSheet {
   milestones: string[];
   /** Day the stalker threat last advanced; -1 = never. Paces the arc to ≤1/day. */
   escalationDay: number;
+  /** metrics.day of the last in-person visit; -1 = never. Gates repeat meetups. */
+  lastVisitDay: number;
   /** Distinct stream-days this viewer has shown up for. */
   streamsAttended: number;
   /** metrics.day of the last stream they appeared in (0 = never). */
@@ -68,6 +72,8 @@ export interface CharacterSheet {
   quirks: string;
   /** A portrait blob exists for this character in IndexedDB. */
   hasPortrait: boolean;
+  /** A full-body T-pose reference blob exists for this character in IndexedDB. */
+  hasBody: boolean;
   /** Id of the regular whose word-of-mouth "brought" them, if any. */
   referredBy?: string;
 }
@@ -102,6 +108,7 @@ export function seedCharacter(arch: Archetype, clock: number): CharacterSheet {
     vibe: arch.blurb,
     wants: wantsForArchetype(arch),
     affinity: randInt(2, 12),
+    relationship: "none",
     memory: "",
     tipped: 0,
     messageCount: 0,
@@ -113,12 +120,14 @@ export function seedCharacter(arch: Archetype, clock: number): CharacterSheet {
     lastSeenClock: clock,
     milestones: [],
     escalationDay: -1,
+    lastVisitDay: -1,
     streamsAttended: 0,
     lastStreamDay: 0,
     attendanceStreak: 0,
     backstory: "",
     quirks: "",
     hasPortrait: false,
+    hasBody: false,
   };
 }
 
@@ -131,13 +140,16 @@ export function normalizeCharacter(c: CharacterSheet): CharacterSheet {
   return {
     ...c,
     milestones: c.milestones ?? [],
+    relationship: c.relationship ?? "none",
     escalationDay: c.escalationDay ?? -1,
+    lastVisitDay: c.lastVisitDay ?? -1,
     streamsAttended: c.streamsAttended ?? 0,
     lastStreamDay: c.lastStreamDay ?? 0,
     attendanceStreak: c.attendanceStreak ?? 0,
     backstory: c.backstory ?? "",
     quirks: c.quirks ?? "",
     hasPortrait: c.hasPortrait ?? false,
+    hasBody: c.hasBody ?? false,
   };
 }
 

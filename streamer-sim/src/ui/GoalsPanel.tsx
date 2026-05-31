@@ -6,11 +6,13 @@ const ARC_LABEL: Record<ArcKind, string> = {
   sponsorship: "📦 Sponsorship deal",
   viral: "🎬 Viral clip",
   "stalker-legal": "👮 The report",
+  relationship: "💌 Something real",
 };
 const ARC_BLURB: Record<ArcKind, string> = {
   sponsorship: "A sponsor expects deliverables — there's money and reputation on the line.",
   viral: "A clip is spreading. A follower wave is coming… and maybe a backlash.",
   "stalker-legal": "Your report is working its way through. Closure is pending.",
+  relationship: "A viewer you let in is becoming something more. Where does it go?",
 };
 
 /** Soft-objectives modal: progress bars toward each milestone, with payoffs. */

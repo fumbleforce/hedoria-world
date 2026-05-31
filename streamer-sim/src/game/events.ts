@@ -52,10 +52,11 @@ export const EVENT_TRIGGERS: EventTrigger[] = [
     build: (c, who) => {
       const amt = pick([20, 30, 50, 75, 100]);
       const name = who?.handle ?? "a viewer";
-      return ev("💸 A big tip lands", `${name} dropped $${amt} with a request.`, "good", [
-        choice(`Read it out (+$${amt})`, `You read ${name}'s message aloud and thank them by name.`, { cash: amt, hype: 6 }),
-        choice("Thank them quietly", `You smile and give a soft thanks.`, { cash: amt, hype: 2, comfort: 2 }),
-      ], who);
+      // A donation has its own in-game answer: the "🙏 Thank a supporter" action.
+      // So this lands as a passive 💸 ding (money + chat line) instead of a modal.
+      const e = ev("💸 A big tip lands", `${name} dropped $${amt}.`, "good", [], who);
+      e.deliverAsTip = amt;
+      return e;
     },
   },
   {
@@ -106,18 +107,24 @@ export const EVENT_TRIGGERS: EventTrigger[] = [
     bindsCharacter: true,
     build: (c, who) => {
       const name = who?.handle ?? "someone";
-      const threat = who?.threat ?? 0;
-      if (threat >= 1 && c.intensity >= 1) {
-        return ev("✉️ A DM that's too specific", `${name} messages you something that knows a little too much about your day.`, "creepy", [
-          choice("Block and report", "Blocked. Safer, if a little rattled.", { comfort: 8, mood: -2 }),
-          choice("Set a hard boundary", "You reply firmly. They go quiet — for now.", { comfort: 3 }),
-          choice("Engage (risky)", "You answer. It only encourages them.", { comfort: -10, hype: 4 }),
-        ], who);
-      }
-      return ev("✉️ A direct message", `${name} sends you a heartfelt DM.`, "neutral", [
-        choice("Reply kindly", "You send a warm reply; their day is made.", { mood: 3 }),
-        choice("Leave it for now", "You'll get to it later.", {}),
-      ], who);
+      const creepy = (who?.threat ?? 0) >= 1 && c.intensity >= 1;
+      // A DM has an in-game answer: an actual reply. So instead of a modal with
+      // canned choices, this lands as a real message in the sender's DM thread
+      // and notifies the player. `deliverAsDm` seeds the opener's intent; the
+      // existing DM director turns whatever the player replies into consequences.
+      const e = ev(
+        creepy ? "✉️ A DM that's too specific" : "✉️ A direct message",
+        creepy
+          ? `${name} messages you something that knows a little too much about your day.`
+          : `${name} sends you a heartfelt DM.`,
+        creepy ? "creepy" : "neutral",
+        [],
+        who,
+      );
+      e.deliverAsDm = creepy
+        ? "an unsettling, overly-specific out-of-the-blue message that hints you've been watching her day a little too closely"
+        : "a warm, heartfelt out-of-the-blue message";
+      return e;
     },
   },
   // ---- Stalker arc resolution (threat maxed) --------------------------------

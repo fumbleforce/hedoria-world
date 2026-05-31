@@ -18,11 +18,13 @@ export class DelegatingTextProvider implements LlmProvider {
 
   private pick(): LlmProvider {
     const backend = useStore.getState().settings.textBackend;
+    // An explicit "mock" choice is honored so the offline engine can be tested
+    // even when real keys are present. Other choices fall back to whatever is
+    // actually available rather than silently doing nothing.
+    if (backend === "mock") return this.mock;
     if (backend === "gemini" && this.gemini) return this.gemini;
     if (backend === "openrouter" && this.openRouter) return this.openRouter;
-    if (this.gemini) return this.gemini;
-    if (this.openRouter) return this.openRouter;
-    return this.mock;
+    return this.gemini ?? this.openRouter ?? this.mock;
   }
 
   get id(): string {

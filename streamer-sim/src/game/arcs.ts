@@ -105,6 +105,46 @@ const ARC_DEFS: Record<ArcKind, { title: string; stages: ArcStage[] }> = {
     ],
   },
 
+  // ---- In-person visit went well → a real relationship forms --------------
+  relationship: {
+    title: "Something real",
+    stages: [
+      {
+        dayDelay: 1,
+        build: (arc) => {
+          const who = str(arc.data?.handle, "they");
+          return ev(
+            "💌 The morning after",
+            `${who} texts you, still glowing from the visit — they want to know if it meant as much to you as it did to them.`,
+            "good",
+            [
+              choice("Tell them it did", `You're honest about how you feel. Something real is taking shape between you and ${who}.`, { mood: 9, comfort: 4 }),
+              choice("Keep it casual", `You keep things light. ${who} takes the hint, a little deflated but understanding.`, { mood: 2 }),
+              choice("Pull back", `You get cold feet and put distance between you. It stings for both of you.`, { mood: -4, comfort: 4 }),
+            ],
+            undefined,
+          );
+        },
+      },
+      {
+        dayDelay: 2,
+        build: (arc) => {
+          const who = str(arc.data?.handle, "they");
+          return ev(
+            "🍷 A second visit",
+            `${who} wants to come over again — properly this time. They offer to bring dinner.`,
+            "good",
+            [
+              choice("Make a night of it", `You let ${who} in for a real evening together. It's easy, warm, the kind of normal you'd forgotten you wanted.`, { mood: 12, comfort: 8, energy: -6 }),
+              choice("Slow it down", `You tell ${who} you need to take things slower. They respect it, and oddly, you feel closer for it.`, { mood: 4, comfort: 6 }),
+            ],
+            undefined,
+          );
+        },
+      },
+    ],
+  },
+
   // ---- Stalker reported → legal follow-up + closure -----------------------
   "stalker-legal": {
     title: "The report",

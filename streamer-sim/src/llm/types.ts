@@ -2,6 +2,26 @@
 
 export type LlmCallKind = "chat" | "story" | "other";
 
+/** Last call telemetry for one kind — powers the Settings → LLM tab. */
+export interface LlmCallStat {
+  kind: LlmCallKind;
+  model: string;
+  durationMs: number;
+  /** Rough token estimate (~4 chars/token) for the prompt and the response. */
+  promptTokens: number;
+  responseTokens: number;
+  promptChars: number;
+  responseChars: number;
+  /** Truncated raw request + response, for prompt debugging in-app. */
+  rawPrompt: string;
+  rawResponse: string;
+  ok: boolean;
+  error?: string;
+  at: number;
+  /** Total calls of this kind this session. */
+  count: number;
+}
+
 export interface LlmCallOptions {
   kind?: LlmCallKind;
 }
@@ -21,6 +41,11 @@ export interface LlmRequest {
    * routing (a cheap/fast model for `chat`, a stronger one for `story`/`other`).
    */
   kind?: LlmCallKind;
+  /**
+   * Upper bound on output tokens. When omitted, providers apply a generous
+   * default so replies don't get clipped mid-sentence by a provider-side cap.
+   */
+  maxTokens?: number;
 }
 
 export interface LlmResponse {

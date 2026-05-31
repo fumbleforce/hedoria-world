@@ -1,0 +1,40 @@
+---
+description: All significant game events/actions/triggers must be written to the in-game event log
+globs: streamer-sim/src/game/**/*.ts
+alwaysApply: false
+---
+
+# Event logging
+
+Every **significant** state-changing moment must be recorded to the in-game event
+log via `store.logEvent(line)` (the rolling `eventLog`, capped at 50). This is the
+player-facing audit trail — if something meaningful happens and it isn't logged, it
+"didn't happen" as far as the player can tell.
+
+## What counts as significant (log it)
+
+- Lifecycle: going live, ending a stream, sleeping into a new day, seasonal beats.
+- Events & arcs: an event resolving, an **arc starting/advancing/finishing**.
+- Relationships: milestones (name reveal, friend, confidant), **stalker threat
+  escalation**, referred-friend spawns, relationship-type changes.
+- DM director effects: tips/gifts/images received, **meetups scheduled**, requests,
+  reveals — each effect that changes state.
+- Visits: a visitor being let in (scene start) and the scene resolving.
+- Economy: upgrade purchases, notable cash swings.
+
+Trivial/ambient churn (per-message chat, per-beat presence drift, transient toasts)
+does **not** need a log line.
+
+## How
+
+```ts
+// ✅ Log alongside the state change + a toast, in plain past-tense player language.
+s.addPendingVisit({ charId, hint, day });
+s.logEvent(`${name} said they're coming over (day ${day}).`);
+s.setToast(`${name} is coming over.`);
+```
+
+- Keep lines short, human, and self-contained (include the who/what).
+- `logEvent` is for the player log; `diag.*` is separate developer telemetry — a
+  significant moment usually wants **both**, but `logEvent` is the one that must not
+  be skipped.

@@ -5,8 +5,15 @@ import {
   type ImageBackend,
   fillImagePrompt,
   generatePortrait,
+  generateCharacterBody,
 } from "../llm/imageProvider";
-import { effectiveImagePrompt } from "../llm/imagePresets";
+import {
+  effectiveImagePrompt,
+  getImagePreset,
+  IMAGE_STYLE_PRESETS,
+  type ImagePromptSet,
+  type ImageStylePresetId,
+} from "../llm/imagePresets";
 import {
   type StoredImage,
   type ImageKind,
@@ -16,10 +23,16 @@ import {
   deleteImage as deleteStoredImage,
   imageCacheKey,
   savePortrait,
+  loadPortrait,
+  saveCharacterBody,
+  loadCharacterBody,
+  stylePreviewKey,
+  saveStylePreview,
+  loadStylePreview,
 } from "../persist/imageStore";
 import { diag } from "../diag/log";
 import { useStore, type ActionMenu } from "../state/store";
-import type { ChatMessage, DmLine, EventChoice, GameEvent, Metrics } from "./types";
+import type { ChatMessage, ContentTier, DmLine, EventChoice, GameEvent, Metrics } from "./types";
 import type { PlayerAction, ActionOption, ActionVerdict } from "./actions";
 import { generateChatBurst, audienceSummary } from "./chatEngine";
 import { evaluateAction } from "./evaluator";
@@ -28,6 +41,7 @@ import { rollEvent, type EventContext } from "./events";
 import { startArc, arcEventDue, advanceArc } from "./arcs";
 import { occasionForDay } from "./calendar";
 import { newlyCompletedGoals } from "./goals";
+import { directDm, type DmEffect } from "./dmDirector";
 import { multipliersFor, UPGRADES } from "./shop";
 import { fillPrompt, PROMPTS, type PromptId } from "./prompts";
 import { steeringForTier } from "./content";
@@ -64,6 +78,8 @@ import { clamp, pick, uid } from "../rng/rng";
 
 const AMBIENT_GAP_MS = 850;
 const AMBIENT_MAX = 3;
+/** Days after an in-person visit before the same viewer can arrange another. */
+const VISIT_COOLDOWN_DAYS = 3;
 
 /**
  * Turn-based controller on an in-world clock. The player takes one action (or
@@ -159,7 +175,7 @@ export class GameController {
    * raw LLM sink (logs/llm-prompts.jsonl + logs/llm-debug.log). Image calls
    * bypass the text adapter, so without this they were never written to file.
    */
-  private async runImage(kind: ImageKind, prompt: string, refs: string[]): Promise<string> {
+  private async runImage(kind: ImageKind | "preview", prompt: string, refs: string[]): Promise<string> {
     if (!this.imageBackend) throw new Error("no image backend configured");
     const model = this.imageBackend.id;
     const startedAt = performance.now();
@@ -372,18 +388,46 @@ export class GameController {
     }
     const ref = await this.bodyRef();
     const zone = ZONES[s.zone];
-    const positionLabel = zone ? `${zone.label} — ${zone.description}` : "her studio";
+    // Trim the trailing period off the zone blurb so the template's own period
+    // doesn't produce a stray ".." in the prompt.
+    const positionLabel = zone
+      ? `${zone.label} — ${zone.description.replace(/[.\s]+$/, "")}`
+      : "her studio";
+    const refs: string[] = ref ? [ref.url] : [];
+    const name = s.settings.streamerName;
+    let prompt = fillImagePrompt(effectiveImagePrompt(s.settings, "scenePrompt"), {
+      name,
+      description: desc,
+      position: positionLabel,
+      narrative,
+      style: this.imageStyle(),
+    });
+    // If a guest is physically present (an in-person visit), put them in the frame.
+    // Prefer their full-body T-pose reference (generated on demand) so their whole
+    // likeness carries over; fall back to the portrait, then a text description.
+    const guest = s.visitor ? s.roster[s.visitor.charId] : undefined;
+    if (guest) {
+      const guestName = guest.displayName || guest.handle;
+      const guestUrl =
+        (await this.ensureCharacterBody(guest.id)) ??
+        (guest.hasPortrait ? await loadPortrait(guest.id) : null);
+      if (guestUrl) {
+        refs.push(guestUrl);
+        prompt += ` Also in frame: ${guestName} — use the provided reference image for their likeness (face, hair, outfit, build). Show ${guestName} and ${name} together, interacting naturally.`;
+      } else {
+        prompt += ` Also in frame: ${guestName}, ${guest.vibe || "a viewer who came over to visit"}. Show them and ${name} together, interacting naturally.`;
+      }
+    }
+    // The room art keeps the apartment's layout/look consistent across renders.
+    if (s.roomImage) {
+      refs.push(s.roomImage);
+      prompt += ` Use the provided room reference image for the apartment — same layout, furniture, and style.`;
+    }
     const rec = await this.genImage({
       kind: "scene",
-      prompt: fillImagePrompt(effectiveImagePrompt(s.settings, "scenePrompt"), {
-        name: s.settings.streamerName,
-        description: desc,
-        position: positionLabel,
-        narrative,
-        style: this.imageStyle(),
-      }),
+      prompt,
       label: narrative.slice(0, 60),
-      refs: ref ? [ref.url] : undefined,
+      refs: refs.length ? refs : undefined,
       sourceImageId: ref?.id,
       busyLabel: "Visualizing the scene",
       force,
@@ -393,13 +437,21 @@ export class GameController {
     }
   }
 
-  /** Recent narration to seed a scene image (newest dm/outcome lines). */
+  /**
+   * Recent narration distilled into a short, *visual* prompt for a scene image:
+   * we drop spoken dialogue and parenthetical meta-notes (e.g. "(you hang back…)")
+   * since an image only cares about what's physically happening, then keep the
+   * most recent sentences.
+   */
   private recentNarrative(): string {
     const lines = this.s.story
       .filter((e) => e.kind === "dm" || e.kind === "outcome" || e.kind === "action")
-      .slice(-4)
+      .slice(-3)
       .map((e) => e.text);
-    return lines.join(" ").slice(-500).trim();
+    const joined = lines.join(" ");
+    // If a beat was almost entirely dialogue, stripping quotes can empty it out —
+    // fall back to the lightly-tidied raw text so there's still something to draw.
+    return visualizeNarrative(joined) || joined.replace(/\s{2,}/g, " ").trim().slice(-360);
   }
 
   /** Force a fresh render for an existing stored image (same cache key). */
@@ -502,6 +554,122 @@ export class GameController {
       s.setToast(`Portrait failed: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       s.setPortraitBusy(null);
+    }
+  }
+
+  /**
+   * Ensure a named character has a full-body T-pose reference, generating one on
+   * demand (using their portrait as a likeness reference when available). Returns
+   * the body data URL, or null if it can't be produced. Idempotent and safe to
+   * fire-and-forget; subsequent callers reuse the stored body.
+   */
+  private async ensureCharacterBody(charId: string): Promise<string | null> {
+    const s = this.s;
+    const c = s.roster[charId];
+    if (!c) return null;
+    if (c.hasBody) {
+      const existing = await loadCharacterBody(charId);
+      if (existing) return existing;
+    }
+    if (!this.imageBackend) return null;
+    // Another portrait/body render is in flight — skip for now; the next call
+    // (or the next visualization) will pick it up once the lock frees.
+    if (s.portraitBusyId) return c.hasPortrait ? await loadPortrait(charId) : null;
+    s.setPortraitBusy(charId);
+    s.setToast(`Sketching ${c.displayName || c.handle}…`);
+    try {
+      const portraitRef = c.hasPortrait ? (await loadPortrait(charId)) ?? undefined : undefined;
+      const url = await generateCharacterBody(
+        this.imageBackend,
+        {
+          name: c.displayName || c.handle,
+          archetypeLabel: ARCHETYPE_BY_ID[c.archetypeId]?.label ?? "viewer",
+          vibe: c.backstory || c.vibe,
+          style: this.imageStyle(),
+        },
+        portraitRef,
+      );
+      await saveCharacterBody(charId, url);
+      s.patchCharacter(charId, { hasBody: true });
+      return url;
+    } catch (err) {
+      diag.warn("world", "character body gen failed", {
+        charId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return null;
+    } finally {
+      s.setPortraitBusy(null);
+    }
+  }
+
+  // ------------------------------------------------------ style-preset previews
+
+  /**
+   * A fixed common subject so every style preview differs ONLY by art style,
+   * making the presets directly comparable at a glance.
+   */
+  private previewPrompt(preset: ImagePromptSet): string {
+    return [
+      "Upper-body character art of a friendly young woman video-game streamer with headphones,",
+      "sitting at a glowing streaming desk with dual monitors and a webcam in a cozy studio apartment.",
+      "Looking toward the camera with a warm expression.",
+      "No text, no watermark, no UI. Square composition.",
+      preset.imageStyle,
+    ].join(" ");
+  }
+
+  /** Generate (or fetch cached) a preview thumbnail for one art-style preset. */
+  async generateStylePreview(presetId: ImageStylePresetId, force = false): Promise<void> {
+    const s = this.s;
+    if (!this.imageBackend) {
+      s.setToast("Set a Gemini or OpenRouter key to generate style previews.");
+      return;
+    }
+    const preset = getImagePreset(presetId);
+    const key = stylePreviewKey(preset.id, preset.imageStyle);
+    if (!force) {
+      const existing = await loadStylePreview(key);
+      if (existing) {
+        s.setStylePreview(preset.id, existing);
+        return;
+      }
+    }
+    if (s.imageBusy) {
+      s.setToast("An image is already generating…");
+      return;
+    }
+    s.setImageBusy(`Preview: ${preset.label}`);
+    try {
+      const url = await this.runImage("preview", this.previewPrompt(preset), []);
+      await saveStylePreview(key, url);
+      s.setStylePreview(preset.id, url);
+    } catch (err) {
+      diag.error("world", "style preview failed", {
+        preset: preset.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      s.setToast(`Preview failed: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      s.setImageBusy(null);
+    }
+  }
+
+  /** Generate previews for every preset (sequential; skips ones already cached). */
+  async generateAllStylePreviews(force = false): Promise<void> {
+    for (const p of IMAGE_STYLE_PRESETS) {
+      await this.generateStylePreview(p.id, force);
+    }
+    this.s.setToast("Style previews ready.");
+  }
+
+  /** Load any already-generated previews into memory for the Settings UI. */
+  async hydrateStylePreviews(): Promise<void> {
+    const s = this.s;
+    for (const p of IMAGE_STYLE_PRESETS) {
+      if (s.stylePreviews[p.id]) continue;
+      const url = await loadStylePreview(stylePreviewKey(p.id, p.imageStyle));
+      if (url) s.setStylePreview(p.id, url);
     }
   }
 
@@ -648,6 +816,7 @@ export class GameController {
       s.pushChat([{ id: uid("msg"), user: target.handle, text: outcome.chat, kind: "creepy", characterId: target.id, ts: Date.now() }]);
     }
     s.setToast(`⚠ ${target.displayName || target.handle} is escalating.`);
+    s.logEvent(`⚠ ${target.displayName || target.handle} escalated to threat ${outcome.patch.threat}.`);
     diag.info("event", "stalker escalated", { handle: target.handle, threat: outcome.patch.threat });
     // At max threat, force the confrontation rather than waiting for the roll.
     if (outcome.patch.threat === 3) {
@@ -680,6 +849,7 @@ export class GameController {
   goLive(): void {
     const s = this.s;
     if (s.session.isLive) return;
+    if (s.visitor) return s.setToast("You've got company over — see them out first.");
     if (s.metrics.energy < 10) {
       s.setToast("Too exhausted to stream — sleep or eat first.");
       return;
@@ -698,11 +868,32 @@ export class GameController {
     this.beatsSinceSummary = 0;
     this.presenceTick();
     this.sysStory(`Day ${s.metrics.day} — you go live at ${formatClock(STREAM_START)}.`);
+    s.logEvent(`Day ${s.metrics.day}: went live.`);
     this.applySeasonalBeat();
     this.dm("The 'LIVE' dot blinks red. Regulars filter in, saying hi as the numbers tick up.");
     // A due arc beat (sponsor deliverable, viral wave, …) opens the night.
     if (this.maybeArcEvent()) return;
     this.startAmbient("the stream just went live");
+  }
+
+  /**
+   * Re-establish a live session that survived a reload. `session` is persisted,
+   * but the transient parts of being live (online presence flags, the audience
+   * snapshot, the ambient-chat loop, viewer count) are not — so after boot we
+   * rebuild them around the restored session instead of dropping the player
+   * offline. No-op when the saved session was already offline.
+   */
+  resumeLive(): void {
+    const s = this.s;
+    if (!s.session.isLive) return;
+    this.lastNotifiedViewers = Math.round(s.metrics.currentViewers);
+    this.streamMemory = "";
+    this.beatsSinceSummary = 0;
+    // Rebuild who's "in the room" (online flags + per-segment audience) from the
+    // persisted roster, then resume the ambient chatter.
+    this.presenceTick();
+    this.startAmbient("the stream picks back up after a blip");
+    diag.info("round", "resumed live session after reload", { round: s.session.round });
   }
 
   endStream(reason?: string): void {
@@ -787,7 +978,12 @@ export class GameController {
     for (const m of this.s.chat) {
       if (!m.characterId || !online.has(m.characterId) || m.kind === "system") continue;
       const arr = byChar.get(m.characterId) ?? [];
-      arr.push(m.text);
+      // De-dupe per character: feeding a repeated line back as a "voice"
+      // exemplar (e.g. "here we go" x3) reinforces it and the chat model just
+      // echoes it again — a self-perpetuating repetition loop.
+      const seen = new Set(arr.map((l) => l.toLowerCase()));
+      const key = m.text.toLowerCase();
+      if (!seen.has(key)) arr.push(m.text);
       byChar.set(m.characterId, arr);
     }
     const out: Array<{ handle: string; lines: string[] }> = [];
@@ -889,6 +1085,8 @@ export class GameController {
   async continueStory(): Promise<void> {
     const s = this.s;
     if (s.resolving) return;
+    // During an in-person visit, Continue lets the guest take the lead.
+    if (s.visitor) return this.visitContinue();
     if (!s.session.isLive) {
       // Offline continue = potter around; maybe a knock/package/DM.
       this.advanceTime(TIME_COST.continue);
@@ -981,9 +1179,24 @@ export class GameController {
       .trim();
   }
 
+  /**
+   * The last few narration (stage-direction) lines, so the evaluator can SEE
+   * what it just wrote and deliberately avoid repeating the same openings,
+   * gestures, and phrasings beat after beat.
+   */
+  private recentNarrationLines(n = 4): string[] {
+    return this.s.story
+      .filter((e) => e.kind === "dm")
+      .slice(-n)
+      .map((e) => e.text.trim())
+      .filter(Boolean);
+  }
+
   async submitAction(action: PlayerAction): Promise<void> {
     const s = this.s;
     if (s.resolving) return;
+    // While a visitor is present, every action is a beat in the in-person scene.
+    if (s.visitor) return this.visitBeat(action.text);
     this.stopAmbient();
     s.setResolving(true);
 
@@ -998,6 +1211,7 @@ export class GameController {
           isLive: s.session.isLive,
           zoneLabel: ZONES[s.zone]?.label ?? "the studio",
           recentChat: this.recentChatLines(),
+          recentNarration: this.recentNarrationLines(),
           vibe: this.vibeSummary(),
           streamMemory: this.streamMemory,
         });
@@ -1204,10 +1418,61 @@ export class GameController {
     diag.info("event", "seasonal beat", { id: occ.id, day: s.metrics.day });
   }
 
+  /** Raise one scheduled DM meetup as an offline doorstep event, when due. */
+  private consumeDueVisit(): GameEvent | null {
+    const s = this.s;
+    // Visits are an offline, at-home beat — never interrupt a live stream.
+    if (s.session.isLive) return null;
+    const due = s.pendingVisits.find((v) => v.day <= s.metrics.day);
+    if (!due) return null;
+    const c = s.roster[due.charId];
+    if (!c) {
+      s.clearPendingVisit(due.charId);
+      return null;
+    }
+    s.clearPendingVisit(due.charId);
+    // Stamp the cooldown the moment they show up at the door — whether or not you
+    // let them in — so a stale "coming over" line in the DM history can't re-arrange
+    // another visit on your very next message.
+    s.patchCharacter(due.charId, { lastVisitDay: s.metrics.day });
+    diag.info("world", "visit doorstep raised", { handle: c.handle, day: s.metrics.day });
+    return this.buildVisitDoorEvent(c, due.hint);
+  }
+
+  private buildVisitDoorEvent(c: CharacterSheet, hint: string): GameEvent {
+    const warm = c.threat <= 0 && c.affinity >= 45;
+    const title = warm ? "🚪 A viewer arrives" : "🚪 Someone you know is at the door";
+    const seed = warm
+      ? `${c.displayName || c.handle} actually showed up after your DMs. They look nervous-excited in the hallway.`
+      : `${c.displayName || c.handle} is outside your apartment door after your DMs. ${hint}`;
+    return {
+      id: uid("evt"),
+      triggerId: "dm-visit-door",
+      title,
+      description: seed,
+      narrationSeed: seed,
+      tone: c.threat >= 1 ? "creepy" : "neutral",
+      characterId: c.id,
+      allowFreeform: true,
+      freeformHint: "…or respond in your own words",
+      choices: [
+        { label: "Let them in", resolution: "You crack the door and let them step inside.", effects: { comfort: warm ? 2 : -2 } },
+        { label: "Don't answer", resolution: "You stay quiet and wait them out behind the locked door.", effects: { comfort: c.threat >= 1 ? 4 : -1 } },
+        { label: "Tell them to leave", resolution: "You keep the chain on and set a firm boundary through the door.", effects: { comfort: 3 } },
+      ],
+      stakes: "This is an in-person boundary moment. Reward caution and clear boundaries; let risky choices carry downside.",
+    };
+  }
+
   /** Raise the first due arc-stage event, if any. Returns true if one fired. */
   private maybeArcEvent(): boolean {
     const s = this.s;
     if (s.pendingEvent) return false;
+    const visit = this.consumeDueVisit();
+    if (visit) {
+      void this.raiseEvent(visit);
+      return true;
+    }
     for (const arc of s.arcs) {
       const event = arcEventDue(arc, s.metrics.day);
       if (event) {
@@ -1227,12 +1492,15 @@ export class GameController {
       const offer = 50 + Math.round(s.metrics.followers / 4);
       s.addArc(startArc("sponsorship", { day, data: { brand: pick(BRANDS), offer } }));
       this.sysStory("You sign on with the sponsor — they'll expect a real segment in a day or two.");
+      s.logEvent("Arc started: sponsorship deal.");
     } else if (event.triggerId === "viral-clip" && label.includes("lean")) {
       s.addArc(startArc("viral", { day, data: { topic: "your clip" } }));
       this.sysStory("You ride the clip. Word is spreading fast — this could snowball over the next day.");
+      s.logEvent("Arc started: viral clip.");
     } else if (event.triggerId === "stalker-confront" && /block|report/.test(label)) {
       const c = event.characterId ? s.roster[event.characterId] : undefined;
       s.addArc(startArc("stalker-legal", { day, characterId: event.characterId, data: { handle: c?.displayName || c?.handle || "them" } }));
+      s.logEvent(`Arc started: legal follow-up on ${c?.displayName || c?.handle || "them"}.`);
     }
   }
 
@@ -1288,6 +1556,7 @@ export class GameController {
     this.s.setPlaying({ gameId, roundsPlayed: 0 });
     this.dm(`You boot up ${g.name} ${g.emoji} and get settled. Chat reacts to the loading screen.`);
     this.outcome(`🎮 Now playing: ${g.name}`);
+    this.s.logEvent(`Started playing ${g.name}.`);
     diag.info("action", "start game", { gameId });
     if (this.s.session.isLive) this.afterBeat(`just started playing ${g.name}`);
   }
@@ -1295,7 +1564,10 @@ export class GameController {
   stopGame(): void {
     const g = this.s.playing ? GAME_BY_ID[this.s.playing.gameId] : null;
     this.s.setPlaying(null);
-    if (g) this.dm(`You wrap up ${g.name} and stretch. "Okay chat, what's next?"`);
+    if (g) {
+      this.dm(`You wrap up ${g.name} and stretch. "Okay chat, what's next?"`);
+      this.s.logEvent(`Stopped playing ${g.name}.`);
+    }
   }
 
   // ----------------------------------------------------------- chat effects
@@ -1320,6 +1592,8 @@ export class GameController {
         milestones: [...cur.milestones, o.id],
       });
       if (o.story) this.sysStory(o.story);
+      const who = s.roster[charId]?.displayName || s.roster[charId]?.handle || "a viewer";
+      s.logEvent(`Milestone: ${who} → ${o.id}.`);
       if (o.chat) {
         const c = s.roster[charId];
         if (c) s.pushChat([{ id: uid("msg"), user: c.handle, text: o.chat, kind: "normal", characterId: charId, ts: Date.now() }]);
@@ -1348,64 +1622,93 @@ export class GameController {
     s.upsertCharacter(friend);
     const who = referrer.displayName || referrer.handle;
     this.sysStory(`${who} brought a friend — ${friend.handle} just showed up because of them.`);
+    s.logEvent(`${who} referred a friend: ${friend.handle}.`);
+  }
+
+  /**
+   * Unified tip pipeline shared by live chat donations/subs and DM tips:
+   * multipliers, session earnings (only while live), per-character tipped total,
+   * affinity growth, and milestone checks all happen in one place.
+   */
+  private recordTip(charId: string | undefined, amount: number, opts?: { hype?: number; affinityDelta?: number }): void {
+    if (amount <= 0) return;
+    const s = this.s;
+    const cashDelta = amount * this.mults().income;
+    const metricsPatch: Partial<Metrics> = { cash: s.metrics.cash + cashDelta };
+    if (opts?.hype) metricsPatch.hype = s.metrics.hype + opts.hype;
+    s.patchMetrics(metricsPatch);
+    if (s.session.isLive) s.setSession({ earnings: s.session.earnings + cashDelta });
+    if (!charId) return;
+    const c = s.roster[charId];
+    if (!c) return;
+    const prevAffinity = c.affinity;
+    s.patchCharacter(charId, {
+      tipped: c.tipped + amount,
+      affinity: clamp(c.affinity + (opts?.affinityDelta ?? 0.6), 0, 100),
+      lastSeenClock: s.clock,
+    });
+    const updated = this.s.roster[charId];
+    if (!updated) return;
+    const outcomes = checkMilestones(updated, prevAffinity, s.metrics.day);
+    if (outcomes.length) this.applyMilestones(charId, outcomes);
   }
 
   private applyChatEffects(msgs: ChatMessage[]): void {
     const s = this.s;
-    const mult = this.mults();
-    let cash = 0, followers = 0, subscribers = 0, hype = 0, mood = 0, comfort = 0;
-    const roster = { ...s.roster };
-    let rosterChanged = false;
-    // Track affinity before this burst so we can fire milestones after.
-    const prevAffinity = new Map<string, number>();
+    let followers = 0, subscribers = 0, hype = 0, mood = 0, comfort = 0;
 
     for (const msg of msgs) {
+      const isTip = msg.kind === "donation" || msg.kind === "sub";
       switch (msg.kind) {
-        case "donation": cash += (msg.amount ?? 0) * mult.income; hype += 1; break;
-        case "sub": subscribers += 1; cash += (msg.amount ?? 5) * mult.income; hype += 2; break;
+        case "donation":
+          // recordTip owns the money + tipped + affinity + milestone path so a
+          // chat tip and a DM tip behave identically.
+          this.recordTip(msg.characterId, msg.amount ?? 0, { hype: 1 });
+          break;
+        case "sub":
+          subscribers += 1;
+          this.recordTip(msg.characterId, msg.amount ?? 5, { hype: 2 });
+          break;
         case "follow": followers += 1; break;
         case "raid": followers += 5; hype += 4; break;
         case "troll": mood -= 0.6; break;
         case "creepy": comfort -= 1; break;
         default: break;
       }
-      // Attribute to a named character: grow relationship, log tips.
-      if (msg.characterId && roster[msg.characterId]) {
-        const c = roster[msg.characterId];
-        if (!prevAffinity.has(c.id)) prevAffinity.set(c.id, c.affinity);
-        roster[msg.characterId] = {
-          ...c,
-          messageCount: c.messageCount + 1,
-          affinity: clamp(c.affinity + 0.6, 0, 100),
-          tipped: c.tipped + (msg.amount ?? 0),
+      // Attribute the line to a named character. Tip kinds already had their
+      // affinity/tipped/lastSeen bumped (and milestones checked) by recordTip
+      // above, so here we only ever add messageCount for them; non-tip lines
+      // also grant the small attribution-affinity and can cross a milestone.
+      // We read fresh store state (not a stale snapshot) so recordTip's writes
+      // are preserved instead of being clobbered.
+      const cur = msg.characterId ? this.s.roster[msg.characterId] : undefined;
+      if (msg.characterId && cur) {
+        const prevAffinity = cur.affinity;
+        s.patchCharacter(msg.characterId, {
+          messageCount: cur.messageCount + 1,
           lastSeenClock: s.clock,
-        };
-        rosterChanged = true;
+          ...(isTip ? {} : { affinity: clamp(cur.affinity + 0.6, 0, 100) }),
+        });
+        if (!isTip) {
+          const upd = this.s.roster[msg.characterId];
+          if (upd) {
+            const outcomes = checkMilestones(upd, prevAffinity, s.metrics.day);
+            if (outcomes.length) this.applyMilestones(msg.characterId, outcomes);
+          }
+        }
       }
     }
-    if (rosterChanged) s.setRoster(roster);
-    // Fire any milestones the affinity bumps just unlocked.
-    let eventRaised = false;
-    for (const [id, prev] of prevAffinity) {
-      const c = this.s.roster[id];
-      if (!c) continue;
-      const outcomes = checkMilestones(c, prev, s.metrics.day);
-      if (outcomes.length) eventRaised = this.applyMilestones(id, outcomes) || eventRaised;
-    }
-    void eventRaised;
-    if (cash || followers || subscribers || hype || mood || comfort) {
+    if (followers || subscribers || hype || mood || comfort) {
       const m = s.metrics;
       s.patchMetrics({
-        cash: m.cash + cash,
         followers: m.followers + followers,
         subscribers: m.subscribers + subscribers,
         hype: m.hype + hype,
         mood: m.mood + mood,
         comfort: m.comfort + comfort,
       });
-      if (cash > 0 || followers > 0) {
+      if (followers > 0 || subscribers > 0) {
         s.setSession({
-          earnings: s.session.earnings + cash,
           newFollowers: s.session.newFollowers + followers + subscribers,
         });
       }
@@ -1455,6 +1758,7 @@ export class GameController {
   sleep(): void {
     const s = this.s;
     if (s.session.isLive) return s.setToast("End the stream before bed.");
+    if (s.visitor) return s.setToast("You can't sleep — someone's over right now.");
     const mult = this.mults();
     const rent = mult.rentPerDay;
     const m = s.metrics;
@@ -1468,6 +1772,7 @@ export class GameController {
     });
     s.setClock(STREAM_START);
     this.sysStory(`You sleep. Day ${m.day + 1} begins. Rent: -$${rent.toFixed(0)}.`);
+    s.logEvent(`Day ${m.day + 1} begins. Rent: -$${rent.toFixed(0)}.`);
     diag.info("economy", "sleep / rent", { day: m.day + 1, rent });
     s.setToast(
       m.cash - rent < 0
@@ -1475,7 +1780,7 @@ export class GameController {
         : `Day ${m.day + 1}. Rent: -$${rent.toFixed(0)}.`,
     );
     this.checkGoals();
-    // A new day may bring a due arc beat (sponsor deliverable, police follow-up).
+    // A new day may bring a due visit or arc beat.
     this.maybeArcEvent();
   }
 
@@ -1488,12 +1793,22 @@ export class GameController {
   private answerDoor(): void {
     const s = this.s;
     if (s.session.isLive) return s.setToast("Not while you're live!");
+    const visit = this.consumeDueVisit();
+    if (visit) {
+      void this.raiseEvent(visit);
+      return;
+    }
     const ev = rollEvent(this.eventCtx(), { offlineOnly: true }) ?? null;
     if (ev) void this.raiseEvent(ev);
     else this.coded("You open the door. Empty hallway — must've been the wind.", { comfort: -1 }, "🚪 No one there", 5);
   }
 
   private async maybeOfflineEvent(): Promise<void> {
+    const visit = this.consumeDueVisit();
+    if (visit) {
+      await this.raiseEvent(visit);
+      return;
+    }
     const ev = rollEvent(this.eventCtx(), { offlineOnly: true });
     if (ev && Math.random() < 0.4) {
       await this.raiseEvent(ev);
@@ -1510,10 +1825,112 @@ export class GameController {
 
   /** Rewrite the event's mechanical seed into bespoke prose, then show it. */
   private async raiseEvent(ev: GameEvent): Promise<void> {
+    // Events that have a real in-game answer (a DM you can just reply to, or a
+    // donation you can thank with the existing action) skip the modal entirely and
+    // arrive passively — in the DM thread or as a 💸 ding — with a notification.
+    if (ev.deliverAsDm) {
+      await this.deliverIncomingDm(ev);
+      return;
+    }
+    if (ev.deliverAsTip) {
+      this.deliverIncomingTip(ev);
+      return;
+    }
     this.stopAmbient();
     const narrated = await this.narrateEvent(ev);
     this.s.setPendingEvent({ ...ev, description: narrated });
     diag.info("event", "event raised", { id: ev.id, title: ev.title, characterId: ev.characterId });
+  }
+
+  /**
+   * Deliver a `deliverAsDm` event as a real incoming DM: an opener written in the
+   * sender's voice lands in their thread, the thread is flagged unread, and a
+   * lightweight notification fires — no modal, no canned choices. The player can
+   * then reply in the DM panel where the DM director owns the consequences. We
+   * still record it as an event so cooldowns treat the trigger as recently fired.
+   */
+  private async deliverIncomingDm(ev: GameEvent): Promise<void> {
+    const s = this.s;
+    const charId = ev.characterId ?? this.pickDmSender();
+    if (!charId) return;
+    const c = s.roster[charId];
+    if (!c) return;
+    const opener = await this.composeIncomingDm(c, ev.deliverAsDm ?? "");
+    s.pushDm(charId, { role: "them", text: opener });
+    if (s.openCharId !== charId) s.markDmUnread(charId);
+    const label = c.displayName || c.handle;
+    if (s.session.isLive) this.notify(`📨 New DM from ${label}`);
+    s.setToast(`📨 New DM from ${label}`);
+    s.logEvent(`📨 DM from ${label}: "${opener.slice(0, 60)}"`);
+    s.pushEventRecord({
+      triggerId: ev.triggerId ?? "dm",
+      title: ev.title,
+      day: s.metrics.day,
+      choice: "dm",
+      resolution: `DM from ${label}`,
+    });
+    diag.info("world", "incoming dm", { handle: c.handle, triggerId: ev.triggerId });
+  }
+
+  /**
+   * Deliver a `deliverAsTip` event as a passive donation: the money lands through
+   * the shared `recordTip` pipeline (same as a chat/DM tip), a 💸 line shows in
+   * chat, and a toast "dings" — no modal. The player can then follow up with the
+   * existing "🙏 Thank a supporter" action. Recorded for cooldowns like any event.
+   */
+  private deliverIncomingTip(ev: GameEvent): void {
+    const s = this.s;
+    const amount = ev.deliverAsTip ?? 0;
+    if (amount <= 0) return;
+    const charId = ev.characterId;
+    const c = charId ? s.roster[charId] : undefined;
+    const name = c?.displayName || c?.handle || "a viewer";
+    this.recordTip(charId, amount, { hype: 1, affinityDelta: 0.9 });
+    s.pushChat([
+      { id: uid("tip"), user: c?.handle ?? "a_viewer", text: `donated $${amount}! 💸`, kind: "donation", amount, characterId: charId, ts: Date.now() },
+    ]);
+    s.setToast(`💸 $${amount} tip from ${name}!`);
+    s.logEvent(`💸 ${name} tipped $${amount}.`);
+    s.pushEventRecord({
+      triggerId: ev.triggerId ?? "tip-spike",
+      title: ev.title,
+      day: s.metrics.day,
+      choice: "tip",
+      resolution: `$${amount} from ${name}`,
+    });
+    diag.info("world", "incoming tip", { handle: c?.handle, amount });
+  }
+
+  /** Fallback DM sender when no character was bound: a known regular, else anyone. */
+  private pickDmSender(): string | null {
+    const all = Object.values(this.s.roster);
+    const known = all.filter((c) => c.known);
+    const pool = known.length ? known : all;
+    return pool.length ? pick(pool).id : null;
+  }
+
+  /** Write the sender's unsolicited opening line, in their voice. */
+  private async composeIncomingDm(c: CharacterSheet, flavor: string): Promise<string> {
+    const arch = ARCHETYPE_BY_ID[c.archetypeId];
+    if (this.llm.isMock) return arch ? pick(arch.lines) : "hey, you around?";
+    const req = {
+      system: [
+        `You are ${c.handle}, a viewer privately DMing the streamer ${this.s.settings.streamerName} out of the blue. You are NOT the streamer — you are the fan.`,
+        `You are a ${arch?.label}: ${arch?.blurb}`,
+        `You want: ${c.wants}. Your relationship with her: ${relationshipLevel(c.affinity)}.`,
+        c.memory ? `What you remember about your past chats with her: ${c.memory}` : "",
+        steeringForTier(this.s.settings),
+        flavor ? `Open the conversation with ${flavor}.` : "Open the conversation.",
+        `ONE short message that STARTS the conversation, lowercase, casual, like a real DM. No quotes, no stage directions.`,
+      ].filter(Boolean).join("\n"),
+      messages: [{ role: "user" as const, content: "(start the DM)" }],
+    };
+    try {
+      const res = await this.llm.complete(req, { kind: "chat" });
+      return res.text.trim().slice(0, 280) || (arch ? pick(arch.lines) : "hey");
+    } catch {
+      return arch ? pick(arch.lines) : "hey";
+    }
   }
 
   private async narrateEvent(ev: GameEvent): Promise<string> {
@@ -1596,10 +2013,17 @@ export class GameController {
     }
     this.dm(choice.resolution);
     s.logEvent(`${event.title} → ${choice.resolution}`);
+    const isDoorstep = event.triggerId === "dm-visit-door";
+    const letIn = /let them in/i.test(choice.label);
+    const charId = event.characterId;
     s.setPendingEvent(null);
     diag.info("event", "event resolved", { id: event.id, choice: choice.label });
     s.setToast(choice.resolution);
     this.finishEvent(event, choice.label, choice.resolution);
+    if (isDoorstep && letIn && charId) {
+      this.startVisitorScene(charId, "You let them in.");
+      return;
+    }
     // Some choices cut the night short (e.g. bailing on a power cut).
     if (s.session.isLive && event.triggerId === "power-cut" && /call it early/i.test(choice.label)) {
       this.endStream("power cut");
@@ -1634,6 +2058,10 @@ export class GameController {
       s.setPendingEvent(null);
       diag.info("event", "event resolved (freeform)", { id: event.id, effects: outcome.effects });
       this.finishEvent(event, "freeform", outcome.resolution);
+      if (event.triggerId === "dm-visit-door" && event.characterId && /let.*in|come in|inside|open the door|invite/i.test(t)) {
+        this.startVisitorScene(event.characterId, outcome.resolution);
+        return;
+      }
       if (s.session.isLive) this.startAmbient("after handling that your way");
     } finally {
       s.setResolving(false);
@@ -1685,6 +2113,200 @@ export class GameController {
     }
   }
 
+  private startVisitorScene(charId: string, intro: string): void {
+    const s = this.s;
+    const c = s.roster[charId];
+    if (!c) return;
+    s.startVisitor({
+      charId,
+      beats: 0,
+      transcript: `Start: ${intro}`,
+      relationshipScore: 0,
+      threatDelta: 0,
+      suggestedRelationship: c.relationship,
+      lines: [{ role: "system", text: intro }],
+    });
+    s.setZone("couch");
+    s.logEvent(`You let ${c.displayName || c.handle} into your apartment.`);
+    s.setToast(`${c.displayName || c.handle} is inside now.`);
+    this.sysStory(`🏠 ${c.displayName || c.handle} steps inside. It's just the two of you now — the stream is off and the room is quiet.`);
+    diag.info("world", "visit scene started", { handle: c.handle });
+    // Warm up a full-body T-pose reference in the background so it's ready the
+    // moment the player decides to visualize the scene.
+    void this.ensureCharacterBody(charId);
+  }
+
+  /** Player-initiated graceful end to a visit (so they're never stuck). */
+  async endVisit(): Promise<void> {
+    const s = this.s;
+    if (!s.visitor || s.resolving) return;
+    await this.resolveVisit(s.visitor.charId, "You wind things down and walk them to the door.");
+  }
+
+  /** A player-typed beat in an active visit. */
+  async visitBeat(text: string): Promise<void> {
+    const t = text.trim();
+    if (!t) return;
+    await this.runVisitBeat(t);
+  }
+
+  /** "Continue" during a visit: the player hangs back and the guest takes the lead. */
+  async visitContinue(): Promise<void> {
+    await this.runVisitBeat(null);
+  }
+
+  /**
+   * One beat of an in-person visit. `playerText` is what the streamer says/does;
+   * pass `null` to let the moment play out (the guest acts on their own).
+   */
+  private async runVisitBeat(playerText: string | null): Promise<void> {
+    const s = this.s;
+    const scene = s.visitor;
+    if (!scene || s.resolving) return;
+    const c = s.roster[scene.charId];
+    if (!c) return;
+    s.setResolving(true);
+    try {
+      if (playerText) {
+        s.pushVisitorLine({ role: "me", text: playerText });
+        this.s.pushStory({ kind: "action", text: `(You: ${playerText})` });
+      } else {
+        this.s.pushStory({ kind: "action", text: `(You hang back and let ${c.displayName || c.handle} take the lead…)` });
+      }
+      const cue = playerText ?? "(The streamer stays quiet and just watches — show what the visitor does next on their own initiative.)";
+      const outcome = await this.judgeVisitBeat(c, scene.transcript, cue, scene.beats, playerText === null);
+      s.pushVisitorLine({ role: "narrator", text: outcome.narration });
+      this.dm(outcome.narration);
+      const patch: Partial<Metrics> = {};
+      for (const [k, v] of Object.entries(outcome.effects) as Array<[keyof Metrics, number]>) {
+        patch[k] = (s.metrics[k] as number) + v;
+      }
+      s.patchMetrics(patch);
+      const transcriptLine = playerText ? `You: ${playerText}` : "You: (waited and watched)";
+      s.patchVisitor({
+        beats: scene.beats + 1,
+        transcript: `${scene.transcript}\n${transcriptLine}\nOutcome: ${outcome.narration}`,
+        relationshipScore: scene.relationshipScore + relationshipSignalScore({ type: "relationship", relationship: outcome.relationshipSignal }),
+        threatDelta: scene.threatDelta + outcome.threatDelta,
+        suggestedRelationship: outcome.relationshipSignal === "none" ? scene.suggestedRelationship : outcome.relationshipSignal,
+      });
+      // Visits never auto-end — the player decides when to wrap up via
+      // "See them out" (endVisit). No judge-driven end, no hard cap.
+    } finally {
+      s.setResolving(false);
+    }
+  }
+
+  private async resolveVisit(charId: string, endReason: string): Promise<void> {
+    const s = this.s;
+    const scene = s.visitor;
+    const c = s.roster[charId];
+    if (!scene || !c) {
+      s.endVisitor();
+      return;
+    }
+    let nextRel = c.relationship;
+    if (scene.suggestedRelationship !== "none" && this.allowRelationship(scene.suggestedRelationship, c.affinity, s.settings.contentTier)) {
+      nextRel = scene.suggestedRelationship;
+    }
+    const prevAffinity = c.affinity;
+    s.patchCharacter(charId, {
+      relationship: nextRel,
+      affinity: clamp(c.affinity + scene.relationshipScore, 0, 100),
+      threat: clamp(c.threat + scene.threatDelta, 0, 3),
+      lastSeenClock: s.clock,
+      lastVisitDay: s.metrics.day,
+    });
+    const updated = this.s.roster[charId];
+    if (updated) {
+      const memory = await this.condenseMemory(updated, "you met in person at your apartment", endReason);
+      s.patchCharacter(charId, { memory });
+      const outcomes = checkMilestones(updated, prevAffinity, s.metrics.day);
+      if (outcomes.length) this.applyMilestones(charId, outcomes);
+    }
+    s.endVisitor();
+    s.clearPendingVisit(charId);
+    this.dm(endReason);
+    s.logEvent(`Visit with ${c.displayName || c.handle} ended${nextRel !== "none" ? ` (${nextRel})` : ""}.`);
+    s.setToast("The visit ends.");
+    diag.info("world", "visit resolved", { handle: c.displayName || c.handle, relationship: nextRel, threatDelta: scene.threatDelta });
+    // Emergent follow-up: a warm visit can blossom into a relationship arc; a
+    // visit that crossed a line leaves the raised threat for the stalker systems.
+    this.maybeStartVisitArc(charId);
+  }
+
+  /** Seed a budding-relationship arc when an in-person visit ended warm. */
+  private maybeStartVisitArc(charId: string): void {
+    const s = this.s;
+    const c = s.roster[charId];
+    if (!c) return;
+    if (s.arcs.some((a) => a.kind === "relationship" && a.characterId === charId)) return;
+    if (c.threat >= 2) return; // danger path is handled by threat / stalker systems
+    if (c.relationship !== "none" || c.affinity >= 60) {
+      s.addArc(startArc("relationship", { day: s.metrics.day, characterId: charId, data: { handle: c.displayName || c.handle } }));
+      this.sysStory(`Something shifted with ${c.displayName || c.handle} tonight — this might be going somewhere.`);
+      s.logEvent(`Arc started: something real with ${c.displayName || c.handle}.`);
+    }
+  }
+
+  private async judgeVisitBeat(
+    c: CharacterSheet,
+    transcript: string,
+    text: string,
+    beats: number,
+    passive = false,
+  ): Promise<{
+    narration: string;
+    effects: Partial<Metrics>;
+    relationshipSignal: CharacterSheet["relationship"];
+    threatDelta: number;
+  }> {
+    const name = c.displayName || c.handle;
+    const fallback = {
+      narration: passive
+        ? `${name} shifts on the couch, then breaks the silence. "So… this is wild, huh? I keep thinking I'm gonna wake up." They glance around your place, taking it in.`
+        : `You handle the moment carefully, feeling the room out. ${name} watches you, waiting to see where this goes.`,
+      effects: { mood: 1 } as Partial<Metrics>,
+      relationshipSignal: "none" as CharacterSheet["relationship"],
+      threatDelta: 0,
+    };
+    if (this.llm.isMock) return fallback;
+    const req = {
+      system: [
+        this.resolvePrompt("narrator"),
+        "You are narrating one beat of an in-person apartment visit between the streamer (the player) and a viewer who came over.",
+        "Write the `narration` as a vivid, immersive beat of 3-5 sentences. It MUST include the visitor's actual spoken dialogue in quotation marks (what they SAY out loud, in their voice), not just a summary of their mood. Show body language, tone, and what they physically do, woven together with their lines.",
+        passive
+          ? "The streamer is hanging back this beat — DO NOT invent words or actions for the streamer. The VISITOR drives the moment: have them speak and act on their own initiative (ask a question, make a move, react to the silence)."
+          : "React to what the streamer just said/did, then have the visitor respond in dialogue and action.",
+        "Then judge consequences: `effects` (modest stat deltas), `relationshipSignal` (only when the dynamic clearly shifts), `threatDelta` (raise if the visitor crosses a line / the player is unsafe; lower if reassured).",
+        "The visit keeps going until the PLAYER chooses to end it — never wrap it up, conclude it, or have the visitor leave on your own. Always continue the moment and leave it open.",
+        "Stay in the established content tier. Keep effects realistic; most beats are small.",
+      ].join("\n"),
+      messages: [
+        {
+          role: "user" as const,
+          content: [
+            `Visitor: ${name} — a ${ARCHETYPE_BY_ID[c.archetypeId]?.label ?? "viewer"} (${c.relationship}, affinity ${Math.round(c.affinity)}, threat ${c.threat}). They want: ${c.wants}.`,
+            c.memory ? `What they remember: ${c.memory}` : "",
+            `Transcript so far:\n${transcript.slice(-1400)}`,
+            passive ? "The streamer waits silently this beat — narrate what the VISITOR does next on their own." : `The streamer now: "${text}"`,
+            `Beat number: ${beats + 1}.`,
+            "Narrate this beat (with the visitor's spoken dialogue) and judge it.",
+          ].filter(Boolean).join("\n"),
+        },
+      ],
+      jsonMode: true,
+      jsonSchema: VISIT_OUTCOME_SCHEMA,
+    };
+    try {
+      const parsed = await completeJsonWithRepair(this.llm, req, parseVisitOutcome, "story");
+      return parsed ?? fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
   // ----------------------------------------------------------- direct chat (DMs)
 
   openCharacter(id: string): void {
@@ -1692,9 +2314,73 @@ export class GameController {
     if (!c) return;
     this.s.openCharacter(id);
     this.s.patchCharacter(id, { known: true });
+    this.s.clearDmUnread(id);
     diag.info("world", "open character", { handle: c.handle });
     // Lazily flesh them out the first time you really look at them.
     if (!c.backstory) void this.generateBackstory(id);
+  }
+
+  // -------------------------------------------------------------- dev tools
+  // Cheats for testing systems without grinding the game — wired up to the
+  // Settings → Dev tab. Each routes through the normal pipelines so behaviour
+  // matches the real thing.
+
+  /** Dev: drop a viewer on your doorstep right now, skipping the DM/meetup flow. */
+  devStartVisit(charId: string): void {
+    const s = this.s;
+    const c = s.roster[charId];
+    if (!c) return;
+    if (s.visitor) { s.setToast("A visit is already in progress."); return; }
+    if (s.session.isLive) { s.setToast("Go offline first to host a visit."); return; }
+    s.patchCharacter(charId, { known: true, lastVisitDay: s.metrics.day });
+    s.clearPendingVisit(charId);
+    this.startVisitorScene(charId, `${c.displayName || c.handle} drops by your place.`);
+    s.logEvent(`[dev] Forced a visit from ${c.displayName || c.handle}.`);
+  }
+
+  /** Dev: simulate a tip from a viewer through the normal tip pipeline. */
+  devTip(charId: string, amount: number): void {
+    const s = this.s;
+    const c = s.roster[charId];
+    this.recordTip(charId, amount, { hype: 1, affinityDelta: 0.9 });
+    s.setToast(`${c?.displayName || c?.handle || "Someone"} tipped $${amount}.`);
+    s.logEvent(`[dev] ${c?.displayName || c?.handle || charId} tipped $${amount}.`);
+  }
+
+  /** Dev: nudge a character's affinity by `delta` (clamped 0-100). */
+  devAddAffinity(charId: string, delta: number): void {
+    const s = this.s;
+    const c = s.roster[charId];
+    if (!c) return;
+    s.patchCharacter(charId, { affinity: clamp(c.affinity + delta, 0, 100), known: true });
+  }
+
+  /** Dev: set a character's threat level (0-3). */
+  devSetThreat(charId: string, threat: number): void {
+    const s = this.s;
+    const c = s.roster[charId];
+    if (!c) return;
+    s.patchCharacter(charId, { threat: clamp(Math.round(threat), 0, 3) });
+  }
+
+  /** Dev: toggle a character online/offline. */
+  devToggleOnline(charId: string): void {
+    const s = this.s;
+    const c = s.roster[charId];
+    if (!c) return;
+    s.patchCharacter(charId, { online: !c.online, known: true });
+  }
+
+  /** Dev: spawn a fresh random viewer straight into the roster. */
+  devSpawnViewer(): void {
+    const s = this.s;
+    const arch = rollArchetype(this.intensity());
+    const v = seedCharacter(arch, s.clock);
+    v.known = true;
+    v.online = s.session.isLive;
+    s.upsertCharacter(v);
+    s.logEvent(`[dev] Spawned ${v.handle} (${arch.label}).`);
+    s.setToast(`Spawned ${v.handle}.`);
   }
 
   /** Generate a richer bio + quirks (and a name, if still unknown) on demand. */
@@ -1767,6 +2453,22 @@ export class GameController {
         const outcomes = checkMilestones(updated, prevAffinity, s.metrics.day);
         if (outcomes.length) this.applyMilestones(id, outcomes);
       }
+      const now = this.s.roster[id];
+      if (now) {
+        const effects = await directDm(this.llm, {
+          settings: this.s.settings,
+          character: now,
+          history: this.s.dmThreads[id] ?? [],
+          metrics: {
+            cash: this.s.metrics.cash,
+            comfort: this.s.metrics.comfort,
+            mood: this.s.metrics.mood,
+            day: this.s.metrics.day,
+          },
+          streamMemory: this.streamMemory,
+        });
+        await this.applyDmEffects(id, effects);
+      }
       diag.info("world", "dm exchange", { handle: c.handle, affinity: Math.round(affinity) });
     } finally {
       this.s.setDmBusy(false);
@@ -1818,16 +2520,16 @@ export class GameController {
           req,
           (delta) => {
             acc += delta;
-            this.s.updateLastDm(threadId, acc.slice(0, 280));
+            this.s.updateLastDm(threadId, acc);
           },
           { kind: "chat" },
         );
-        const final = (res.text.trim() || acc.trim()).slice(0, 280) || "…";
+        const final = (res.text.trim() || acc.trim()) || "…";
         this.s.updateLastDm(threadId, final);
         return final;
       } catch (err) {
         diag.warn("chat", "dm stream failed", { error: err instanceof Error ? err.message : String(err) });
-        const final = acc.trim().slice(0, 280) || (arch ? pick(arch.lines) : "…");
+        const final = acc.trim() || (arch ? pick(arch.lines) : "…");
         this.s.updateLastDm(threadId, final);
         return final;
       }
@@ -1835,7 +2537,7 @@ export class GameController {
 
     try {
       const res = await this.llm.complete(req, { kind: "chat" });
-      const reply = res.text.trim().slice(0, 280) || "…";
+      const reply = res.text.trim() || "…";
       this.s.pushDm(threadId, { role: "them", text: reply });
       return reply;
     } catch {
@@ -1869,6 +2571,136 @@ export class GameController {
     }
   }
 
+  private async applyDmEffects(charId: string, effects: DmEffect[]): Promise<void> {
+    const s = this.s;
+    const c = s.roster[charId];
+    if (!c) return;
+    diag.info("world", "dm effects", { handle: c.handle, effects: effects.map((e) => e.type) });
+    let relationshipScore = 0;
+    let relationship: CharacterSheet["relationship"] = c.relationship;
+    for (const e of effects) {
+      switch (e.type) {
+        case "tip":
+          this.recordTip(charId, e.amount, { affinityDelta: 0.9 });
+          s.pushDm(charId, { role: "them", kind: "gift", amount: e.amount, text: `sent $${e.amount}${e.note ? ` — ${e.note}` : ""}` });
+          s.logEvent(`DM: ${c.displayName || c.handle} tipped $${e.amount}.`);
+          break;
+        case "gift":
+          s.patchMetrics({ mood: s.metrics.mood + 2, comfort: s.metrics.comfort + 1 });
+          s.pushDm(charId, { role: "them", kind: "gift", text: `sent a gift: ${e.item}` });
+          s.logEvent(`DM: ${c.displayName || c.handle} sent a gift (${e.item}).`);
+          break;
+        case "image":
+          if (!this.imageBackend) break;
+          try {
+            const prompt = [
+              `Natural phone snapshot from ${c.handle}.`,
+              `Subject: ${e.subject}.`,
+              `Style: candid DM photo, no text overlay.`,
+              this.imageStyle(),
+            ].join(" ");
+            const url = await this.runImage("preview", prompt, []);
+            const rec = await putImage({
+              id: uid("img"),
+              cacheKey: imageCacheKey(["dm", c.id, e.subject, prompt]),
+              kind: "scene",
+              label: `${c.handle} DM image`,
+              prompt,
+              dataUrl: url,
+              characterName: s.settings.streamerName,
+              meta: { source: "dm", charId: c.id },
+              createdAt: Date.now(),
+            });
+            s.cacheImage(rec.id, rec.dataUrl);
+            s.pushDm(charId, { role: "them", kind: "image", imageId: rec.id, text: e.note || e.subject });
+            s.logEvent(`DM: ${c.displayName || c.handle} sent a photo (${e.subject}).`);
+          } catch {
+            // Non-fatal: DM still progresses if image generation fails.
+          }
+          break;
+        case "reveal":
+          if (!c.displayName) {
+            s.patchCharacter(charId, { displayName: e.name, known: true });
+            s.logEvent(`DM: ${c.handle} revealed their name — ${e.name}.`);
+          }
+          break;
+        case "request": {
+          s.pushDm(charId, { role: "them", kind: "system", text: `request: ${e.ask}` });
+          const cur = this.s.roster[charId];
+          if (cur) {
+            const note = `asked you to ${e.ask}`.slice(0, 90);
+            s.patchCharacter(charId, { memory: cur.memory ? `${cur.memory}; ${note}`.slice(-180) : note });
+          }
+          s.logEvent(`DM: ${c.displayName || c.handle} asked you to ${e.ask}.`);
+          break;
+        }
+        case "affinity": {
+          const cur = this.s.roster[charId];
+          if (!cur) break;
+          const prev = cur.affinity;
+          s.patchCharacter(charId, { affinity: clamp(cur.affinity + e.delta, 0, 100) });
+          const upd = this.s.roster[charId];
+          if (!upd) break;
+          const outcomes = checkMilestones(upd, prev, s.metrics.day);
+          if (outcomes.length) this.applyMilestones(charId, outcomes);
+          break;
+        }
+        case "threat": {
+          const cur = this.s.roster[charId];
+          if (!cur) break;
+          const nextThreat = clamp(cur.threat + e.delta, 0, 3);
+          s.patchCharacter(charId, { threat: nextThreat });
+          if (nextThreat !== cur.threat) s.logEvent(`DM: ${c.displayName || c.handle} threat → ${nextThreat}.`);
+          break;
+        }
+        case "relationship":
+          relationship = this.allowRelationship(e.relationship, c.affinity, s.settings.contentTier) ? e.relationship : relationship;
+          break;
+        case "meetup": {
+          // Guard against double-booking: one already queued, one already
+          // playing out, or a recent visit the director is re-detecting from the
+          // older DM history. Without this, every subsequent DM could re-arrange
+          // (and re-fire) a visit from the same person.
+          const cur = this.s.roster[charId];
+          const alreadyPending = s.pendingVisits.some((v) => v.charId === charId);
+          const sceneActive = s.visitor?.charId === charId;
+          const recentlyVisited = cur != null && cur.lastVisitDay >= 0 && s.metrics.day - cur.lastVisitDay < VISIT_COOLDOWN_DAYS;
+          if (alreadyPending || sceneActive || recentlyVisited) {
+            diag.info("world", "visit meetup skipped", { handle: c.handle, alreadyPending, sceneActive, recentlyVisited });
+            break;
+          }
+          s.addPendingVisit({ charId, hint: e.hint, day: s.metrics.day });
+          s.logEvent(`DM: ${c.displayName || c.handle} is coming over (day ${s.metrics.day}).`);
+          s.setToast(`${c.displayName || c.handle} said they're coming over.`);
+          diag.info("world", "visit scheduled", { handle: c.handle, day: s.metrics.day, hint: e.hint });
+          break;
+        }
+        case "none":
+          break;
+      }
+      relationshipScore += relationshipSignalScore(e);
+    }
+    if (relationship !== c.relationship) {
+      s.patchCharacter(charId, { relationship });
+      s.logEvent(`${c.displayName || c.handle} is now ${relationship} with you.`);
+    }
+    if (relationshipScore) {
+      const cur = this.s.roster[charId];
+      if (cur) s.patchCharacter(charId, { affinity: clamp(cur.affinity + relationshipScore, 0, 100) });
+    }
+  }
+
+  private allowRelationship(
+    rel: CharacterSheet["relationship"],
+    affinity: number,
+    tier: ContentTier,
+  ): boolean {
+    if (rel === "none") return true;
+    if (affinity < 45) return false;
+    if (rel === "romantic" || rel === "married") return true;
+    return tier === "risque" || tier === "unhinged" || tier === "custom";
+  }
+
   // ----------------------------------------------------------- shop
 
   buyUpgrade(id: string): void {
@@ -1878,6 +2710,7 @@ export class GameController {
     if (s.metrics.cash < up.cost) return s.setToast("Not enough cash for that yet.");
     s.patchMetrics({ cash: s.metrics.cash - up.cost });
     s.addUpgrade(id);
+    s.logEvent(`Bought ${up.name} (−$${up.cost}).`);
     diag.info("economy", "bought upgrade", { id, cost: up.cost });
     s.setToast(`Bought ${up.name}!`);
   }
@@ -1885,6 +2718,29 @@ export class GameController {
 
 function actionEcho(a: PlayerAction): string {
   return a.source === "freeform" ? `You: "${a.text}"` : `▸ ${a.text}`;
+}
+
+/**
+ * Distill narration into a short visual description for an image prompt: drop
+ * spoken dialogue (quoted) and parenthetical meta-notes, tidy punctuation, and
+ * keep the most recent sentences (an image only needs what's physically there).
+ */
+function visualizeNarrative(raw: string): string {
+  let t = raw
+    .replace(/\([^)]*\)/g, " ")              // meta notes: "(you hang back…)"
+    .replace(/[“"][^”"]*[”"]/g, " ")         // spoken dialogue in quotes
+    .replace(/\s+([,.;:!?])/g, "$1")          // no space before punctuation
+    .replace(/([,.;:!?])\1+/g, "$1")          // collapse "!!" / ".." runs
+    .replace(/\s{2,}/g, " ")
+    .replace(/^[\s,.;:!?–—-]+/, "")
+    .trim();
+  // Keep the tail (most recent beat), starting at a sentence boundary.
+  if (t.length > 360) {
+    const tail = t.slice(t.length - 360);
+    const dot = tail.indexOf(". ");
+    t = (dot >= 0 ? tail.slice(dot + 2) : tail).trim();
+  }
+  return t;
 }
 
 /** Strip wrapping quotes / asterisks / name prefixes from a spoken line. */
@@ -1923,6 +2779,28 @@ const EVENT_OUTCOME_SCHEMA: Record<string, unknown> = {
   required: ["resolution"],
 };
 
+const VISIT_OUTCOME_SCHEMA: Record<string, unknown> = {
+  type: "object",
+  properties: {
+    narration: { type: "string", description: "3-5 immersive sentences for this beat, INCLUDING the visitor's spoken dialogue in quotes." },
+    effects: {
+      type: "object",
+      properties: {
+        hype: { type: "number" },
+        energy: { type: "number" },
+        mood: { type: "number" },
+        comfort: { type: "number" },
+        followers: { type: "number" },
+        cash: { type: "number" },
+        subscribers: { type: "number" },
+      },
+    },
+    relationshipSignal: { type: "string", enum: ["none", "romantic", "sexual", "dominant", "submissive", "married"] },
+    threatDelta: { type: "number" },
+  },
+  required: ["narration", "relationshipSignal"],
+};
+
 /** Parse + sanitise the LLM's freeform-event verdict into safe metric deltas. */
 function parseEventOutcome(text: string): { resolution: string; effects: Partial<Metrics> } | null {
   const json = extractJson<Record<string, unknown>>(text);
@@ -1938,6 +2816,45 @@ function parseEventOutcome(text: string): { resolution: string; effects: Partial
   if (typeof raw.cash === "number") effects.cash = clamp(raw.cash, -300, 300);
   if (typeof raw.subscribers === "number") effects.subscribers = clamp(raw.subscribers, -10, 20);
   return { resolution: resolution.slice(0, 400), effects };
+}
+
+function parseVisitOutcome(text: string): {
+  narration: string;
+  effects: Partial<Metrics>;
+  relationshipSignal: CharacterSheet["relationship"];
+  threatDelta: number;
+} | null {
+  const json = extractJson<Record<string, unknown>>(text);
+  if (!json || typeof json !== "object") return null;
+  const narration = typeof json.narration === "string" ? json.narration.trim().slice(0, 800) : "";
+  if (!narration) return null;
+  const effects: Partial<Metrics> = {};
+  const raw = (json.effects && typeof json.effects === "object" ? json.effects : {}) as Record<string, unknown>;
+  for (const k of STAT_KEYS) {
+    if (typeof raw[k] === "number") effects[k] = clamp(raw[k] as number, -12, 12);
+  }
+  if (typeof raw.followers === "number") effects.followers = clamp(raw.followers, -20, 40);
+  if (typeof raw.cash === "number") effects.cash = clamp(raw.cash, -200, 200);
+  if (typeof raw.subscribers === "number") effects.subscribers = clamp(raw.subscribers, -8, 12);
+  const relationshipSignalRaw = typeof json.relationshipSignal === "string" ? json.relationshipSignal : "none";
+  const relationshipSignal: CharacterSheet["relationship"] =
+    ["none", "romantic", "sexual", "dominant", "submissive", "married"].includes(relationshipSignalRaw)
+      ? (relationshipSignalRaw as CharacterSheet["relationship"])
+      : "none";
+  const threatDelta = typeof json.threatDelta === "number" ? clamp(Math.round(json.threatDelta), -2, 2) : 0;
+  return { narration, effects, relationshipSignal, threatDelta };
+}
+
+function relationshipSignalScore(effect: Pick<DmEffect, "type"> & Partial<{ relationship: CharacterSheet["relationship"] }>): number {
+  if (effect.type !== "relationship") return 0;
+  switch (effect.relationship) {
+    case "romantic": return 4;
+    case "sexual": return 5;
+    case "dominant":
+    case "submissive": return 3;
+    case "married": return 6;
+    default: return 0;
+  }
 }
 
 /** Offline canned spoken lines so the feature still works without an API key. */

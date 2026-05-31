@@ -33,6 +33,11 @@ export function ActionBar({ controller }: { controller: GameController }) {
   const resolving = useStore((s) => s.resolving);
   const tier = useStore((s) => s.settings.contentTier);
   const playing = useStore((s) => s.playing);
+  const visitor = useStore((s) => s.visitor);
+  const guestName = useStore((s) =>
+    s.visitor ? (s.roster[s.visitor.charId]?.displayName || s.roster[s.visitor.charId]?.handle || "your guest") : "",
+  );
+  const canGen = controller.canGenerateImages;
   const [text, setText] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -62,24 +67,44 @@ export function ActionBar({ controller }: { controller: GameController }) {
 
   return (
     <footer className="actionbar">
+      {visitor && (
+        <div className="actionbar__meeting">
+          🏠 <b>In person — {guestName} is here.</b> Type what you say or do, or hit <b>Continue</b> to let them take the lead.
+        </div>
+      )}
       <form className="actionbar__form" onSubmit={(e) => { e.preventDefault(); send(); }}>
         <input
           className="actionbar__input"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder={isLive ? "What do you do? (type anything — e.g. tell a joke, react to a clip, lie on the couch…)" : "What do you do? (tidy up, scroll fan mail, change outfit…)"}
+          placeholder={
+            visitor
+              ? `What do you say or do? (${guestName} is right here with you…)`
+              : isLive
+                ? "What do you do? (type anything — e.g. tell a joke, react to a clip, lie on the couch…)"
+                : "What do you do? (tidy up, scroll fan mail, change outfit…)"
+          }
           disabled={resolving}
         />
         <button className={`btn btn--primary ${resolving ? "is-loading" : ""}`} type="submit" disabled={resolving || !text.trim()}>
-          {resolving ? "…" : "Act"}
+          {resolving ? "…" : visitor ? "Say / Do" : "Act"}
         </button>
-        <button className="btn" type="button" disabled={resolving} onClick={() => void controller.continueStory()} title="Let the moment ride — pass a little time">
+        <button className="btn" type="button" disabled={resolving} onClick={() => void controller.continueStory()} title={visitor ? "Hang back and let them take the lead" : "Let the moment ride — pass a little time"}>
           Continue ⏵
         </button>
       </form>
 
       <div className="actionbar__quick">
-        {isLive ? (
+        {visitor ? (
+          <>
+            {canGen && (
+              <button className="btn" disabled={resolving} onClick={() => void controller.generateScene()} title="Visualize this moment">📸 Visualize</button>
+            )}
+            <button className="btn" onClick={() => useStore.getState().openSettings("gallery")} title="Gallery">🖼</button>
+            <button className="btn" onClick={() => useStore.getState().openSettings()} title="Settings">⚙</button>
+            <button className="btn btn--danger" disabled={resolving} onClick={() => void controller.endVisit()} title="Wrap up the visit">🚪 See them out</button>
+          </>
+        ) : isLive ? (
           <>
             <div className="dropdown" ref={menuRef}>
               <button className="btn" disabled={resolving} onClick={() => setMenuOpen((o) => !o)}>

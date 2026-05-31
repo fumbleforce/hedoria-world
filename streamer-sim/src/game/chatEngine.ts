@@ -79,7 +79,7 @@ function buildRequest(ctx: ChatContext) {
         .join("\n")
     : "";
   const recent = ctx.recentChat?.length
-    ? `Recent chat (continue naturally, don't repeat):\n${ctx.recentChat.slice(-6).join("\n")}`
+    ? `Already on screen (these are DONE — never repost or re-word any of them; move the conversation forward instead):\n${ctx.recentChat.slice(-6).join("\n")}`
     : "";
   const user = [
     `Audience mix: ${audienceSummary(ctx.audience)}`,

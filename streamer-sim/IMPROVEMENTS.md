@@ -179,6 +179,46 @@ for you to pick from. Items marked ⭐ are the ones I'd reach for first.
 
 ---
 
+## 12. Follow-ups from completed work (§1, §3)
+
+Known limitations / judgment calls left behind after implementing the LLM
+harness (§1) and the events overhaul (§3). None are bugs; they're the seams
+worth revisiting.
+
+### From §1 — LLM harness
+- **Streaming only covers DMs** (M, LLM). Live chat is JSON-mode (a parsed array
+  of messages), so it isn't token-streamed; only 1:1 DMs type out progressively.
+  Streaming the narrator/story prose is the natural next target.
+- **OpenRouter streaming isn't wired** (S). The dev proxy forces `stream:false`,
+  so OpenRouter DMs fall back to a single chunk; only Gemini streams for real.
+  A streaming-capable proxy would close the gap.
+- **OpenRouter structured output is `strict:false`** (S). The evaluator's JSON
+  schema is sent with `strict:false` to avoid 400s on optional fields, so it's
+  best-effort there (Gemini gets a real `responseSchema`). Tightening the schema
+  to be strict-compatible (all-required + `additionalProperties:false`) would let
+  us flip it on.
+
+### From §3 — events & story
+- **Sponsorship "Push for more" gamble resolves at build time** (S). The random
+  payout is baked when the event renders, not when the player clicks. Move the
+  RNG into resolution so the gamble is honest.
+- **Seasonal occasions are passive** (M, LLM). Holidays/birthday/anniversary
+  apply a tip-and-hype tailwind plus a narrated line, but aren't interactive
+  themed events. A Halloween costume-choice event, NYE countdown, etc. would be
+  richer.
+- **Arc beats only fire at day boundaries** (M). Due arc stages surface at
+  go-live / sleep, never mid-stream. Matches "span days", but a long multi-day
+  stream won't see an arc beat until the next boundary.
+- **Only three arcs exist** (S each, LLM+code). The arc engine is data-driven, so
+  new chains are cheap: e.g. "collab invite → joint stream → fallout/friendship",
+  "burnout warning → forced break", "merch drop → fulfilment → reviews".
+- **`stalker-legal` arc events carry the stalker's `characterId`** (S). They pass
+  through `resolveEvent`'s stalker-threat block — harmless today (its choice
+  labels don't match the regexes), but a latent coupling to isolate if that block
+  grows.
+
+---
+
 ### Suggested first slice (if you want a recommendation)
 1. Economy balance pass (§4) — makes the core loop satisfying.
 2. Stalker escalation arc (§2) — the signature feature, ties characters+events together.

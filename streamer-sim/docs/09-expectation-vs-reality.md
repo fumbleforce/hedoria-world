@@ -1,0 +1,206 @@
+# 09 — Expectation vs Reality
+
+The concentrated list of places where the game's **stated intent** (UI text,
+comments, doc names, design backlog) doesn't match **what the code actually does** —
+plus dead code and the biggest mechanical gaps. This is the "where the seams are" doc.
+
+Severity legend: 🔴 affects gameplay/feel · 🟡 confusing/misleading · ⚪ cosmetic/hygiene.
+
+---
+
+## A. Mechanics that don't do what they look like
+
+### 🔴 A1 — Camera/viewer gear upgrades have no effect
+`shop.ts` computes `mult.viewer` (usb-mic ×1.1, 1080p-cam ×1.25, plant-wall ×1.05,
+loft ×1.3), but **nothing reads `mult.viewer`**. Viewer counts come purely from
+`presence.ts` (a function of followers + hype). So the entire "viewer multiplier"
+half of the shop is inert; only `mult.hype`, `mult.income`, `mult.moodPerDay`, and
+`mult.rentPerDay` actually do anything. *(`shop.ts`, `resolver.ts`, `presence.ts`)*
+
+### 🔴 A2 — Mini-game `hypePerRound` / `energyPerRound` are ignored
+Each mini-game defines per-round hype/energy numbers, but the only thing applied
+while playing is **+1 appeal to each `pleases` segment**. The named tuning is dead.
+*(`games.ts`, `controller.ts`)*
+
+### 🔴 A3 — Segments never shrink from being unhappy
+`segments.ts` comments that unhappy segments "shrink and leave," but the resolver only
+moves **satisfaction** — segment **population** is 100% presence-driven (followers +
+hype + random drift). You can't actually lose a crowd by displeasing them within a
+stream; they just tip/follow less. *(`resolver.ts`, `segments.ts`, `presence.ts`)*
+
+### 🔴 A4 — No recurring subscriber income
+`subscribers` is tracked and goal-rewarded, and subs grant a one-off cash bump in
+chat, but there is **no monthly/recurring sub payout**. *(known backlog item)*
+*(`controller.ts`, `goals.ts`)*
+
+### 🔴 A5 — Sponsorship "Push for more" gamble is decided at build time
+The renewal gamble's random payout (`renewal×2` or `0`) is rolled when the event is
+*rendered* (`Math.random()` in `arcs.ts`), not when you click. The outcome is locked
+before you choose. *(`arcs.ts`)*
+
+### 🟡 A6 — "Survive a month" goal has no solvency check
+The reward text says "without going broke," but the goal only checks `day ≥ 30`.
+*(`goals.ts`)*
+
+### 🟡 A7 — Seasonal occasions are passive
+Holidays/birthday/anniversary apply a hype/mood/tips tailwind + a narrated line at
+go-live, but there's **no interactive themed event** (no Halloween costume choice, no
+NYE countdown). *(`calendar.ts`, `controller.ts`)*
+
+### 🟡 A8 — Arc beats only fire at day boundaries
+Due arc stages surface at `goLive` / `sleep`, never mid-stream on the same day. A long
+multi-day-feeling single session won't see an arc beat until the next boundary.
+*(`controller.ts`)*
+
+### 🟡 A9 — Two unrelated "intensity" scales for the top tiers
+`tierIntensity(unhinged|custom)` = **4** (chat, stalker gate, local-eval cap), but
+`controller.intensity(unhinged|custom)` = **3** (presence spawn bias). They diverge at
+the top end. *(`content.ts`, `controller.ts`)*
+
+---
+
+## B. Social/relationship seams
+
+### 🟡 B1 — Two competing name-reveal systems
+A name can be revealed either by the **milestone** at affinity ≥35 (a random pick from
+an 18-name pool) or by **`generateBackstory`** when you first open a sheet (an LLM
+`name`). Whichever runs first wins; neither is deterministic per character, and the
+backstory path can pre-empt the milestone's flavor beat. *(`relationships.ts`,
+`controller.ts`)*
+
+### 🟡 B2 — Stalker arc isn't the documented chat→DM→door→IRL ladder
+It's a daily **threat counter** (1→2→3, ≤1 step/day, gated only by `comfort < 75`)
+plus *overlapping* random events: the `door-knock` event turns creepy at threat ≥1, and
+the `dm` event turns creepy the same way but now arrives as a **real DM** (no modal —
+see [04](./04-events-arcs-goals.md)). There's no strict ordered state machine, and "fed" is only
+the comfort threshold (not the oversharing/ignored-creepy-chat the comment describes).
+*(`relationships.ts`, `events.ts`)*
+
+### 🟡 B3 — Freeform event responses bypass special logic
+`resolveEventFreeform` applies LLM-judged metric deltas but **skips** stalker
+threat/sour-review handling, **arc starts** (arcs only start from matching discrete
+choice *labels*), and the power-cut early-end. So responding in your own words to a
+brand deal / viral clip / confrontation won't start the corresponding arc.
+*(`controller.ts`)* — `stalker-confront` correctly disables freeform for safety.
+
+### ✅ B4 — (resolved) The everyday `dm` event is now a real DM, not a modal
+It no longer has canned "Block and report / Reply kindly" choices: it's delivered into
+the sender's DM thread with a notification and answered conversationally, so the DM
+director (not a fixed `effects` payload) owns the fallout. The decisive block/report that
+starts `stalker-legal` still lives only on `stalker-confront`. *(`controller.ts`,
+`events.ts`, `dmDirector.ts`)*
+
+### 🔴 B5 — On-stream actions don't change affinity directly
+Affinity moves via chat messages (+0.6), DMs (+3), the **DM director** (tips/affinity/
+relationship effects), and **in-person visits** — but a great *on-stream moment*
+doesn't itself warm a specific named viewer except indirectly through the chat burst.
+*(`relationships.ts`, `controller.ts`, `dmDirector.ts`)*
+
+---
+
+## C. LLM stack mismatches
+
+### 🟡 C1 — "DMs use the strong model" is false when tiering is on
+Settings help text and the LLM-tab label say the fast model is for "chat bursts" and
+the main model handles "evaluator / narration / **DMs**." In reality **DM replies,
+performance spoken lines, and the stream-memory summary all use the `chat` kind**, so
+with `tieredModels` on they go to the **fast** model. *(`controller.ts`,
+`SettingsPanel.tsx`, `types.ts` comment)*
+
+### 🟡 C2 — Telemetry model name is wrong for fast-tier calls
+`stats` records `provider.id`, whose getter always reports the **main** model, even on
+a chat-kind call that actually used the fast model. The LLM tab also keeps only the
+**last** call per kind (chat/story/other), so distinct call types overwrite each
+other. *(`stats.ts`, `geminiProvider.ts`, `openRouterTextProvider.ts`)*
+
+### 🟡 C3 — Streaming only really works for Gemini DMs
+`streamReplies` only token-streams DM replies, and only on Gemini — the OpenRouter dev
+proxy forces `stream:false`, so OpenRouter DMs arrive as one chunk. Chat/narration are
+never streamed. *(`openRouterTextProvider.ts`, `providers.ts`, `controller.ts`)*
+
+### 🟡 C4 — OpenRouter structured output is best-effort
+The evaluator's JSON schema is sent to OpenRouter with `strict:false` (to dodge 400s),
+so it's advisory there; only Gemini gets a real enforced `responseSchema`.
+*(`openRouterTextProvider.ts`)*
+
+---
+
+## D. Presentation / persistence seams
+
+### 🟡 D1 — `roomImage` is stored in both places
+The comment says big blobs live only in IndexedDB, but `partialize` still persists the
+full `roomImage` data URL to localStorage too (risking the ~5 MB cap). IndexedDB is
+authoritative on boot. *(`store.ts`, `boot.ts`)*
+
+### 🟡 D2 — Inactive save slots show no portrait thumbnail
+`getImage` filters by the active slot, so a save card for a non-active slot can't load
+its `portraitId` thumbnail. *(`saves.ts`, `imageStore.ts`, `SettingsPanel.tsx`)*
+
+### ⚪ D3 — Viewer portraits & style previews are global across slots
+Keyed only by char id / preset id, so different worlds can share the same viewer
+avatar or preview. *(`imageProvider.ts`, `imageStore.ts`)*
+
+### ⚪ D4 — Image backend can't be chosen independently
+There's no separate image-provider setting; image routing follows `textBackend`.
+*(`imageProvider.ts`)*
+
+### ⚪ D5 — Default image prompts assume "her"
+Presence/room prompts say "her studio apartment" regardless of `settings.gender`.
+*(`imageProvider.ts`, `imagePresets.ts`)*
+
+### ⚪ D6 — `backendChip` can go stale
+It reads the backend once at render and doesn't subscribe, so changing the backend
+without a reload won't update it. *(`App.tsx`)*
+
+### ✅ D7 — Live state now survives a reload (fixed)
+`session` is persisted, and `boot.ts` calls `controller.resumeLive()` when
+`session.isLive` to rebuild the transient presence/audience/ambient-chat around it —
+so a mid-stream refresh stays live instead of dropping offline.
+*(`store.ts`, `boot.ts`, `controller.resumeLive`)*
+
+---
+
+## E. Dead / unused code
+
+| Symbol | File | Note |
+|--------|------|------|
+| `eventChance(base, intensity)` | `events.ts` | Exported, never called; live/offline rates are hardcoded (28% / 40%). |
+| `nightProgress(clock)` | `time.ts` | Never used for event gating. |
+| `mult.viewer` | `shop.ts` | Computed, never read (see A1). |
+| `hypePerRound` / `energyPerRound` | `games.ts` | Defined, never applied (see A2). |
+| `HANDLES`, `MOD_HANDLES` | `personas.ts` | Dead; anon handles are procedural. |
+| `deletePortrait(charId)` | `imageStore.ts` | Exported, never called. |
+| re-exports `steeringForTier`, `fillPrompt` | `evaluator.ts` | Unused re-exports. |
+| `__open_shop__` token | `studio.ts`/`controller.ts` | Handled, but not in any zone menu. |
+
+No `TODO`/`FIXME` markers exist in `src/`.
+
+---
+
+## F. Biggest "room for improvement" themes
+
+These are design gaps more than bugs (and most are tracked in
+[`../IMPROVEMENTS.md`](../IMPROVEMENTS.md)):
+
+1. **Economy is first-draft.** Rent/tip/follower curves aren't tuned into a real
+   difficulty arc; gear upgrades barely matter (A1); no recurring income (A4); no
+   win/lose/eviction. *(IMPROVEMENTS §4)*
+2. **Viewer gear & niches are flavor.** With `mult.viewer` unused and segment
+   population presence-only, equipment and content choices don't yet steer the audience
+   mechanically. *(A1, A3)*
+3. **Arcs are shallow.** 4 chains (sponsorship, viral, stalker-legal, relationship),
+   day-boundary-only, two of them ≤2 stages; the engine is data-driven so more are
+   cheap. *(A8, IMPROVEMENTS §3)*
+4. **Cameras/set design unbuilt.** Going live from any zone, camera placement/quality,
+   multiple angles — all still backlog. *(IMPROVEMENTS §11)*
+5. **No audio, onboarding, or responsive layout.** *(IMPROVEMENTS §6–8)*
+6. **Content is code, not data.** Archetypes/events/games/upgrades are hardcoded;
+   moddability/content packs are aspirational. *(IMPROVEMENTS §9)*
+
+---
+
+## How to keep this doc honest
+
+When you change a mechanic, update the relevant numbered doc (02–08) and, if you fix or
+introduce a mismatch, add/remove the entry here. The per-area docs cite the source
+files so a quick re-read confirms whether an entry still holds.

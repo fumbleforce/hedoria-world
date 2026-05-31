@@ -1,12 +1,30 @@
 import { LlmAdapter } from "./llm/adapter";
 import { resolveTextProvider } from "./llm/providers";
 import { resolveImageBackend } from "./llm/imageProvider";
+import { loadOpenRouterCatalog } from "./llm/openRouterCatalog";
 import { loadRoomImage, migrateLegacyRoomImage } from "./persist/imageStore";
 import { migrateLegacy, saveStorageKey, updateActiveMeta } from "./persist/saves";
 import { GameController } from "./game/controller";
 import { useStore } from "./state/store";
 import { normalizeCharacter } from "./game/characters";
+import type { TextBackend } from "./game/types";
 import { diag } from "./diag/log";
+
+/**
+ * Resolve the backend the game should actually use, given the persisted choice
+ * and which providers are configured. "mock" is treated as a stale default and
+ * upgrades to a real provider when one exists (Gemini preferred); an explicit
+ * gemini/openrouter that isn't available degrades to whatever is.
+ */
+function effectiveBackend(
+  current: TextBackend,
+  hasGemini: boolean,
+  hasOpenRouter: boolean,
+): TextBackend {
+  if (current === "gemini") return hasGemini ? "gemini" : hasOpenRouter ? "openrouter" : "mock";
+  if (current === "openrouter") return hasOpenRouter ? "openrouter" : hasGemini ? "gemini" : "mock";
+  return hasGemini ? "gemini" : hasOpenRouter ? "openrouter" : "mock";
+}
 
 export interface BootResult {
   controller: GameController;
@@ -26,6 +44,14 @@ async function runBoot(): Promise<BootResult> {
   await useStore.persist.rehydrate();
 
   const store = useStore.getState();
+  // Drop duplicate narrator ids from older saves (duplicate React keys in NarratorPanel).
+  const storyIds = new Set<string>();
+  const story = store.story.filter((e) => {
+    if (storyIds.has(e.id)) return false;
+    storyIds.add(e.id);
+    return true;
+  });
+  if (story.length !== store.story.length) useStore.setState({ story });
   diag.configure({ consoleLevel: store.settings.consoleLevel });
   diag.info("boot", "starting");
 
@@ -46,6 +72,18 @@ async function runBoot(): Promise<BootResult> {
 
   const geminiKey = (import.meta.env.VITE_GEMINI_API_KEY as string | undefined)?.trim() ?? "";
   const openRouterOk = await fetchOpenRouterStatus();
+  if (openRouterOk) void loadOpenRouterCatalog();
+
+  // Reconcile the persisted backend with what's actually available so the
+  // Settings dropdown and HUD chip stop lying. A stale/default "mock" upgrades
+  // to a real provider when one exists; an explicit choice that isn't available
+  // degrades gracefully instead of silently routing elsewhere.
+  const hasGemini = geminiKey.length > 0;
+  const effective = effectiveBackend(store.settings.textBackend, hasGemini, openRouterOk);
+  if (effective !== store.settings.textBackend) {
+    store.setSettings({ textBackend: effective });
+  }
+
   const provider = resolveTextProvider(geminiKey, openRouterOk);
   const llm = new LlmAdapter(provider);
   const imageBackend = resolveImageBackend(geminiKey, openRouterOk);
@@ -55,8 +93,14 @@ async function runBoot(): Promise<BootResult> {
   // studio overlay and character UI can render them immediately.
   void controller.hydrateImageCache();
 
+  // If the player was mid-stream when they reloaded, rebuild the transient live
+  // state (presence, audience, ambient chat) around the persisted session
+  // instead of silently dropping them offline.
+  if (useStore.getState().session.isLive) controller.resumeLive();
+
   diag.info("boot", "ready", {
     slot: slot.id,
+    backend: effective,
     provider: llm.id,
     mock: llm.isMock,
     image: imageBackend?.id ?? "none",

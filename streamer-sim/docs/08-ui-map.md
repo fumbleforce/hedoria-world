@@ -1,0 +1,77 @@
+# 08 — UI Map
+
+Files: `src/App.tsx`, `src/render/StudioRoom.tsx`, `src/ui/*`, `src/index.css`.
+
+## Layout (`App.tsx`)
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ MetricsHud  (full-width header)                          │
+├──────────────┬────────────────────┬─────────────────────┤
+│ stage__left  │ stage__center      │ stage__right        │
+│              │                    │                     │
+│ StudioRoom   │ VisualizationPanel │ ChatPanel           │
+│              │ NarratorPanel      │ CharacterGallery    │
+│              │                    │                     │
+├──────────────┴────────────────────┴─────────────────────┤
+│ ActionBar  (footer)                                      │
+└─────────────────────────────────────────────────────────┘
+
+Overlays (modals): ActionMenuModal · CharacterModal · GamePicker ·
+ShopPanel · SettingsPanel · EventModal · GoalsPanel
+Floating: toast (bottom) · backendChip (bottom-right)
+```
+
+The three columns use a grid `minmax(260px,0.95fr) | minmax(0,1.15fr) |
+minmax(280px,340px)`, capped at 1340px. Until `boot()` resolves, a
+`"◉ Limelight — booting…"` screen shows.
+
+> The layout is a fixed three-column desktop grid; there's no responsive/stacked
+> mobile mode yet (it's on the backlog).
+
+## Panels (persistent)
+
+| Component | File | Where | Shows / does |
+|-----------|------|-------|--------------|
+| **MetricsHud** | `ui/MetricsHud.tsx` | header | Brand, streamer name, active save name, day + in-world date, live clock; cash/followers/subs/viewers; hype/energy/mood/comfort bars. |
+| **StudioRoom** | `render/StudioRoom.tsx` | left | Interactive room (zone hotspots + avatar) and the "Visualize here" button. See [06](./06-images-and-presentation.md). |
+| **VisualizationPanel** | `ui/VisualizationPanel.tsx` | center top | The latest generated image (`lastImageId`); click → gallery. |
+| **NarratorPanel** | `ui/NarratorPanel.tsx` | center bottom | The story feed (dm / action / outcome / quote / image entries) and a "Visualize scene" button. |
+| **ChatPanel** | `ui/ChatPanel.tsx` | right top | Live chat log; clicking a known user's handle opens their CharacterModal. Streamer's spoken lines do **not** appear here (they go to the narrator). |
+| **CharacterGallery** | `ui/CharacterGallery.tsx` | right bottom | Audience-segment bars (when live) + the Regulars list. Each card shows the real name once known with the handle as a muted `@handle` secondary. Click → CharacterModal. |
+| **ActionBar** | `ui/ActionBar.tsx` | footer | Freeform input + Act + Continue. Live: Actions dropdown, Game, Goals, Character, Gallery, Settings, End. Offline: Go Live, Sleep, Shop, etc. **During a visit:** a "🏠 In person" banner, Say/Do + Continue (guest leads), 📸 Visualize, 🚪 See them out — Go Live/Sleep/Shop hidden. |
+
+## Modals (overlay)
+
+| Component | File | Opened by | Shows / does |
+|-----------|------|-----------|--------------|
+| **ActionMenuModal** | `ui/ActionMenuModal.tsx` | clicking a zone | The zone's contextual actions + a freeform box (when the zone allows it). |
+| **CharacterModal** | `ui/CharacterModal.tsx` | clicking a chatter/regular | The character sheet (name + handle, relationship, archetype, memory), the DM thread, and "generate portrait". DM lines render by `kind`: plain text, inline **image**, 💸/🎁 **gift**, or italic **system** (requests). |
+| **GamePicker** | `ui/GamePicker.tsx` | "Game" (live) | Pick a mini-game (`MINI_GAMES`). |
+| **ShopPanel** | `ui/ShopPanel.tsx` | "Shop" / shop button | Upgrades by category; buy with cash. |
+| **SettingsPanel** | `ui/SettingsPanel.tsx` | "Settings" / 🎭 / 🖼 | 7 tabs (see below). |
+| **EventModal** | `ui/EventModal.tsx` | a pending event | The event text + discrete choices, plus a freeform response box when `allowFreeform`. |
+| **GoalsPanel** | `ui/GoalsPanel.tsx` | "Goals" 🎯 | Soft goals with progress bars + active story arcs ("threads") with their next day. |
+
+> The DM **guest visit** has no modal — it plays out inline. The `StudioRoom` draws the
+> guest by the couch, the `ActionBar` shows a "🏠 In person" banner + meeting controls
+> (Say/Do, Continue, 📸 Visualize, 🚪 See them out) with Go Live/Sleep/Shop hidden, and
+> beats stream into the `NarratorPanel`. See [03](./03-social-systems.md)/[04](./04-events-arcs-goals.md).
+
+### SettingsPanel tabs
+| Tab | Contents |
+|-----|----------|
+| general | UI theme, content tier, custom steering, text/image models, tiered routing, self-consistency, stream DMs, log level, streamer birthday. |
+| prompts | Story prompt editor; the image **style preset grid with previews**; six collapsible image-prompt override editors. |
+| room | Room art preview; generate / regenerate / clear. |
+| character | Name, persona, gender, appearance description; portrait/body previews; generate. |
+| gallery | The full IndexedDB image library by kind; regenerate / set active / delete / lightbox. |
+| saves | Slot list; new / load / rename / delete (delete also purges that slot's images). |
+| llm | Session LLM telemetry (resets on reload). |
+
+## Floating bits
+
+- **toast** — transient status messages (bottom).
+- **backendChip** — bottom-right; shows `"offline engine"` when on Mock, else the
+  backend name. It reads the setting once at render, so it can go stale if you change
+  the backend without reloading.

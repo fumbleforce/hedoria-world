@@ -1,43 +1,18 @@
-import type { LlmCallKind } from "./types";
+import type { LlmCallKind, LlmCallStat } from "./types";
+import { useStore } from "../state/store";
+
+export type { LlmCallStat };
 
 /**
- * Lightweight, in-memory telemetry for the last LLM call of each kind, plus
- * rolling totals. Powers the Settings "LLM" tab (latency / approx token /
- * last-raw-response viewer) without touching the persisted game store. A tiny
- * pub/sub lets React re-render on each call.
+ * Rolling per-kind LLM telemetry for the Settings "LLM" tab. Stored in the
+ * zustand game store (not persisted) so the adapter and UI always share one
+ * singleton — a module-level Map can diverge under Vite HMR.
  */
-export interface LlmCallStat {
-  kind: LlmCallKind;
-  model: string;
-  durationMs: number;
-  /** Rough token estimate (~4 chars/token) for the prompt and the response. */
-  promptTokens: number;
-  responseTokens: number;
-  promptChars: number;
-  responseChars: number;
-  /** Truncated raw request + response, for prompt debugging in-app. */
-  rawPrompt: string;
-  rawResponse: string;
-  ok: boolean;
-  error?: string;
-  at: number;
-  /** Total calls of this kind this session. */
-  count: number;
-}
-
 const RAW_LIMIT = 8000;
-const stats = new Map<LlmCallKind, LlmCallStat>();
 const counts = new Map<LlmCallKind, number>();
-const listeners = new Set<() => void>();
-// Cached, stable snapshot for useSyncExternalStore (rebuilt only on change).
-let snapshot: LlmCallStat[] = [];
 
 function approxTokens(chars: number): number {
   return Math.max(0, Math.round(chars / 4));
-}
-
-function rebuildSnapshot(): void {
-  snapshot = [...stats.values()].sort((a, b) => b.at - a.at);
 }
 
 export function recordLlmCall(input: {
@@ -51,7 +26,7 @@ export function recordLlmCall(input: {
 }): void {
   const count = (counts.get(input.kind) ?? 0) + 1;
   counts.set(input.kind, count);
-  stats.set(input.kind, {
+  const stat: LlmCallStat = {
     kind: input.kind,
     model: input.model,
     durationMs: input.durationMs,
@@ -65,23 +40,26 @@ export function recordLlmCall(input: {
     error: input.error,
     at: Date.now(),
     count,
+  };
+  useStore.setState((s) => {
+    const byKind = new Map(s.llmStats.map((row) => [row.kind, row]));
+    byKind.set(stat.kind, stat);
+    return { llmStats: [...byKind.values()].sort((a, b) => b.at - a.at) };
   });
-  rebuildSnapshot();
-  for (const l of listeners) l();
 }
 
 export function getLlmStats(): LlmCallStat[] {
-  return snapshot;
+  return useStore.getState().llmStats;
 }
 
+/** @deprecated Prefer `useStore((s) => s.llmStats)` in React components. */
 export function subscribeLlmStats(fn: () => void): () => void {
-  listeners.add(fn);
-  return () => listeners.delete(fn);
+  return useStore.subscribe((state, prev) => {
+    if (state.llmStats !== prev.llmStats) fn();
+  });
 }
 
 export function clearLlmStats(): void {
-  stats.clear();
   counts.clear();
-  rebuildSnapshot();
-  for (const l of listeners) l();
+  useStore.setState({ llmStats: [] });
 }

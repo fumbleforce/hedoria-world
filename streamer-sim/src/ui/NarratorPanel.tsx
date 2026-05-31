@@ -1,6 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useStore } from "../state/store";
 import type { GameController } from "../game/controller";
+import type { StoryEntry } from "../game/types";
 
 /** The Dungeon Master sidebar: the unfolding story, in prose. */
 export function NarratorPanel({ controller }: { controller: GameController }) {
@@ -12,6 +13,7 @@ export function NarratorPanel({ controller }: { controller: GameController }) {
   const hasCharacter = useStore((s) => !!s.character.description.trim());
   const canGen = controller.canGenerateImages;
   const ref = useRef<HTMLDivElement>(null);
+  const [lightbox, setLightbox] = useState<{ src: string; cap: string } | null>(null);
 
   useEffect(() => {
     const el = ref.current;
@@ -40,31 +42,110 @@ export function NarratorPanel({ controller }: { controller: GameController }) {
             what you do.
           </p>
         )}
-        {story.map((e) =>
-          e.kind === "quote" ? (
-            <p key={e.id} className="story story--quote">
-              <span className="story__mic">🎙</span> {e.text}
-            </p>
-          ) : e.kind === "image" ? (
-            <figure key={e.id} className="story story--image">
-              {e.imageId && imageCache[e.imageId] ? (
-                <button
-                  className="story__imgbtn"
-                  onClick={() => useStore.getState().openSettings("gallery")}
-                >
-                  <img src={imageCache[e.imageId]} alt={e.text} />
-                </button>
-              ) : (
-                <div className="story__imgmissing">image saved to Gallery</div>
-              )}
-              <figcaption>{e.text}</figcaption>
-            </figure>
-          ) : (
-            <p key={e.id} className={`story story--${e.kind}`}>{e.text}</p>
-          ),
-        )}
+        {story.map((e) => (
+          <StoryLine key={e.id} entry={e} imageCache={imageCache} onZoom={setLightbox} />
+        ))}
         {resolving && <p className="story story--pending is-loading">…the narrator is writing…</p>}
       </div>
+      {lightbox && (
+        <div className="lightbox" onClick={() => setLightbox(null)}>
+          <img src={lightbox.src} alt={lightbox.cap} onClick={(e) => e.stopPropagation()} />
+          <div className="lightbox__cap">{lightbox.cap}</div>
+        </div>
+      )}
     </section>
+  );
+}
+
+/** A single narrator line with hover edit/delete controls; edits persist. */
+function StoryLine({
+  entry,
+  imageCache,
+  onZoom,
+}: {
+  entry: StoryEntry;
+  imageCache: Record<string, string>;
+  onZoom: (lb: { src: string; cap: string }) => void;
+}) {
+  const editStory = useStore((s) => s.editStory);
+  const deleteStory = useStore((s) => s.deleteStory);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(entry.text);
+
+  const save = () => {
+    const t = draft.trim();
+    if (t && t !== entry.text) editStory(entry.id, t);
+    setEditing(false);
+  };
+  const startEdit = () => {
+    setDraft(entry.text);
+    setEditing(true);
+  };
+
+  if (editing) {
+    return (
+      <div className={`story story--${entry.kind} story--editing`}>
+        <textarea
+          className="story__edit"
+          value={draft}
+          autoFocus
+          rows={Math.min(8, Math.max(2, Math.ceil(draft.length / 48)))}
+          onChange={(ev) => setDraft(ev.target.value)}
+          onKeyDown={(ev) => {
+            if (ev.key === "Enter" && (ev.metaKey || ev.ctrlKey)) save();
+            if (ev.key === "Escape") setEditing(false);
+          }}
+        />
+        <div className="story__editbar">
+          <button className="btn btn--mini btn--primary" onClick={save}>Save</button>
+          <button className="btn btn--mini" onClick={() => setEditing(false)}>Cancel</button>
+          <span className="story__edithint">⌘/Ctrl+Enter to save · Esc to cancel</span>
+        </div>
+      </div>
+    );
+  }
+
+  const tools = (
+    <span className="story__tools">
+      <button className="story__tool" title="Edit" onClick={startEdit}>✎</button>
+      <button className="story__tool story__tool--danger" title="Delete" onClick={() => deleteStory(entry.id)}>🗑</button>
+    </span>
+  );
+
+  if (entry.kind === "image") {
+    return (
+      <figure className="story story--image">
+        {tools}
+        {entry.imageId && imageCache[entry.imageId] ? (
+          <button
+            className="story__imgbtn"
+            onClick={() => onZoom({ src: imageCache[entry.imageId!], cap: entry.text })}
+          >
+            <img src={imageCache[entry.imageId]} alt={entry.text} />
+          </button>
+        ) : (
+          <div className="story__imgmissing">image saved to Gallery</div>
+        )}
+        <figcaption>{entry.text}{entry.edited && <span className="story__edited" title="edited"> ·edited</span>}</figcaption>
+      </figure>
+    );
+  }
+
+  if (entry.kind === "quote") {
+    return (
+      <p className="story story--quote">
+        {tools}
+        <span className="story__mic">🎙</span> {entry.text}
+        {entry.edited && <span className="story__edited" title="edited"> ·edited</span>}
+      </p>
+    );
+  }
+
+  return (
+    <p className={`story story--${entry.kind}`}>
+      {tools}
+      {entry.text}
+      {entry.edited && <span className="story__edited" title="edited"> ·edited</span>}
+    </p>
   );
 }

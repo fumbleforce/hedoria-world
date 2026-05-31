@@ -1,6 +1,6 @@
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import { useStore, type SettingsTab } from "../state/store";
-import { getLlmStats, subscribeLlmStats, clearLlmStats } from "../llm/stats";
+import { clearLlmStats } from "../llm/stats";
 import type { GameController } from "../game/controller";
 import type { ContentTier, LogLevel, TextBackend } from "../game/types";
 import { PROMPTS, PROMPT_IDS, type PromptId } from "../game/prompts";
@@ -12,7 +12,8 @@ import {
   type ImagePromptField,
 } from "../llm/imagePresets";
 import { useStoredImage } from "../persist/useStoredImage";
-import { deleteImagesForSlot, listImages, type ImageKind, type StoredImage } from "../persist/imageStore";
+import { deleteImagesForSlot, listImages, loadPortrait, type ImageKind, type StoredImage } from "../persist/imageStore";
+import { relationshipLevel } from "../game/characters";
 import {
   createAndActivateSlot,
   deleteSlot,
@@ -24,6 +25,7 @@ import {
 } from "../persist/saves";
 import { diag } from "../diag/log";
 import { THEMES } from "./themes";
+import { OpenRouterModelField } from "./OpenRouterModelField";
 
 const TIERS: Array<{ id: ContentTier; label: string; blurb: string }> = [
   { id: "wholesome", label: "Wholesome", blurb: "PG. No flirting, creeps are harmless." },
@@ -41,6 +43,7 @@ const TABS: Array<{ id: SettingsTab; label: string }> = [
   { id: "gallery", label: "Gallery" },
   { id: "saves", label: "Saves" },
   { id: "llm", label: "LLM" },
+  { id: "dev", label: "Dev" },
 ];
 
 export function SettingsPanel({ controller }: { controller: GameController }) {
@@ -64,12 +67,13 @@ export function SettingsPanel({ controller }: { controller: GameController }) {
           <button className="modal__close" onClick={() => useStore.getState().setSettingsOpen(false)}>✕</button>
         </div>
         {tab === "general" && <GeneralTab />}
-        {tab === "prompts" && <PromptsTab />}
+        {tab === "prompts" && <PromptsTab controller={controller} />}
         {tab === "room" && <RoomTab controller={controller} />}
         {tab === "character" && <CharacterTab controller={controller} />}
         {tab === "gallery" && <GalleryTab controller={controller} />}
         {tab === "saves" && <SavesTab />}
         {tab === "llm" && <LlmTab />}
+        {tab === "dev" && <DevTab controller={controller} />}
       </div>
     </div>
   );
@@ -147,10 +151,12 @@ function GeneralTab() {
           <span>Gemini model</span>
           <input value={settings.geminiModel} onChange={(e) => set({ geminiModel: e.target.value })} />
         </label>
-        <label className="field">
-          <span>OpenRouter model</span>
-          <input value={settings.openRouterModel} onChange={(e) => set({ openRouterModel: e.target.value })} />
-        </label>
+        <OpenRouterModelField
+          kind="text"
+          label="OpenRouter model"
+          value={settings.openRouterModel}
+          onChange={(openRouterModel) => set({ openRouterModel })}
+        />
       </div>
 
       <div className="field2">
@@ -158,10 +164,12 @@ function GeneralTab() {
           <span>Gemini image model</span>
           <input value={settings.geminiImageModel} onChange={(e) => set({ geminiImageModel: e.target.value })} />
         </label>
-        <label className="field">
-          <span>OpenRouter image model</span>
-          <input value={settings.openRouterImageModel} onChange={(e) => set({ openRouterImageModel: e.target.value })} />
-        </label>
+        <OpenRouterModelField
+          kind="image"
+          label="OpenRouter image model"
+          value={settings.openRouterImageModel}
+          onChange={(openRouterImageModel) => set({ openRouterImageModel })}
+        />
       </div>
 
       <hr className="rule" />
@@ -180,10 +188,12 @@ function GeneralTab() {
             <span>Gemini fast (chat) model</span>
             <input value={settings.geminiFastModel} onChange={(e) => set({ geminiFastModel: e.target.value })} />
           </label>
-          <label className="field">
-            <span>OpenRouter fast (chat) model</span>
-            <input value={settings.openRouterFastModel} onChange={(e) => set({ openRouterFastModel: e.target.value })} />
-          </label>
+          <OpenRouterModelField
+            kind="text"
+            label="OpenRouter fast (chat) model"
+            value={settings.openRouterFastModel}
+            onChange={(openRouterFastModel) => set({ openRouterFastModel })}
+          />
         </div>
       )}
 
@@ -566,7 +576,7 @@ const KIND_TITLE: Record<string, string> = {
 };
 
 function LlmTab() {
-  const stats = useSyncExternalStore(subscribeLlmStats, getLlmStats, getLlmStats);
+  const stats = useStore((s) => s.llmStats);
   const [selected, setSelected] = useState<string | null>(null);
   const active = stats.find((s) => s.kind === selected) ?? stats[0] ?? null;
 
@@ -616,17 +626,25 @@ function LlmTab() {
   );
 }
 
-function PromptsTab() {
+function PromptsTab({ controller }: { controller: GameController }) {
   const overrides = useStore((s) => s.promptOverrides);
   const setOverride = useStore((s) => s.setPromptOverride);
   const settings = useStore((s) => s.settings);
   const set = useStore((s) => s.setSettings);
+  const previews = useStore((s) => s.stylePreviews);
+  const imageBusy = useStore((s) => s.imageBusy);
   const [selected, setSelected] = useState<PromptId>(PROMPT_IDS[0]);
   const def = PROMPTS[selected];
   const value = overrides[selected] ?? def.base;
   const isOverridden = overrides[selected] !== undefined;
   const preset = getImagePreset(settings.imageStylePreset);
   const imageOverrides = hasImagePromptOverrides(settings);
+  const canGen = controller.canGenerateImages;
+  const missingPreviews = IMAGE_STYLE_PRESETS.some((p) => !previews[p.id]);
+
+  useEffect(() => {
+    void controller.hydrateStylePreviews();
+  }, [controller]);
 
   const resetAll = () => {
     for (const id of PROMPT_IDS) setOverride(id, null);
@@ -673,21 +691,60 @@ function PromptsTab() {
         {imageOverrides && (
           <p className="hint">Custom edits active on top of <b>{preset.label}</b>. Pick a preset to replace them.</p>
         )}
-        <div className="tierGrid">
-          {IMAGE_STYLE_PRESETS.map((p) => (
+        {canGen ? (
+          <div className="stylePreset__bar">
             <button
-              key={p.id}
-              className={`tier themeTier ${settings.imageStylePreset === p.id ? "tier--active" : ""}`}
-              onClick={() => applyPreset(p.id)}
+              className="btn btn--mini"
+              disabled={!!imageBusy}
+              onClick={() => void controller.generateAllStylePreviews(!missingPreviews)}
             >
-              <span
-                className="themeSwatch"
-                style={{ background: `linear-gradient(90deg, ${p.swatch[0]}, ${p.swatch[1]})` }}
-              />
-              <b>{p.label}</b>
-              <small>{p.blurb}</small>
+              {imageBusy ? `${imageBusy}…` : missingPreviews ? "🖼 Generate previews" : "↻ Regenerate all previews"}
             </button>
-          ))}
+            <span className="hint">Renders each style with the same subject so you can compare them.</span>
+          </div>
+        ) : (
+          <p className="hint">Add a Gemini or OpenRouter key to generate visual style previews.</p>
+        )}
+        <div className="stylePresetGrid">
+          {IMAGE_STYLE_PRESETS.map((p) => {
+            const active = settings.imageStylePreset === p.id;
+            const preview = previews[p.id];
+            return (
+              <div
+                key={p.id}
+                className={`stylePreset ${active ? "stylePreset--active" : ""}`}
+                onClick={() => applyPreset(p.id)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") applyPreset(p.id); }}
+              >
+                <div className="stylePreset__thumb">
+                  {preview ? (
+                    <img src={preview} alt={`${p.label} style preview`} />
+                  ) : (
+                    <span
+                      className="stylePreset__placeholder"
+                      style={{ background: `linear-gradient(135deg, ${p.swatch[0]}, ${p.swatch[1]})` }}
+                    >
+                      no preview
+                    </span>
+                  )}
+                  {canGen && (
+                    <button
+                      className="stylePreset__gen"
+                      disabled={!!imageBusy}
+                      title={preview ? "Regenerate this preview" : "Generate this preview"}
+                      onClick={(e) => { e.stopPropagation(); void controller.generateStylePreview(p.id, !!preview); }}
+                    >
+                      {preview ? "↻" : "👁"}
+                    </button>
+                  )}
+                </div>
+                <b>{p.label}</b>
+                <small>{p.blurb}</small>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -709,5 +766,83 @@ function PromptsTab() {
       <PromptEditor label="Presence (location)" value={settings.presencePrompt} fallback={presetFallback("presencePrompt")} onChange={(v) => set({ presencePrompt: v })} />
       <PromptEditor label="Scene" value={settings.scenePrompt} fallback={presetFallback("scenePrompt")} onChange={(v) => set({ scenePrompt: v })} />
     </div>
+  );
+}
+
+// --- Dev tools --------------------------------------------------------------
+
+/**
+ * Debugging cheats: list every known character and fire the systems (visit,
+ * tip, affinity, threat…) directly, so behaviour can be tested without grinding.
+ */
+function DevTab({ controller }: { controller: GameController }) {
+  const roster = useStore((s) => s.roster);
+  const visitor = useStore((s) => s.visitor);
+  const isLive = useStore((s) => s.session.isLive);
+
+  const chars = Object.values(roster).sort((a, b) => {
+    if (a.online !== b.online) return a.online ? -1 : 1;
+    return b.affinity - a.affinity;
+  });
+
+  return (
+    <div className="dev">
+      <p className="hint">
+        Testing cheats. These fire the real game systems directly — no DM grind required.
+        {isLive && <> Some actions (like Visit) need you offline.</>}
+      </p>
+      <div className="dev__actions">
+        <button className="btn" onClick={() => controller.devSpawnViewer()}>＋ Spawn random viewer</button>
+        <span className="dev__count">{chars.length} known</span>
+      </div>
+
+      {chars.length === 0 ? (
+        <p className="rail__empty">No characters yet. Spawn one above.</p>
+      ) : (
+        <div className="dev__list">
+          {chars.map((c) => {
+            const busyVisit = !!visitor || isLive;
+            return (
+              <div key={c.id} className="dev__row">
+                <DevAvatar id={c.id} hasPortrait={c.hasPortrait} fallback={c.handle.slice(0, 2).toUpperCase()} />
+                <div className="dev__who">
+                  <div className="dev__name">
+                    {c.displayName || c.handle}
+                    {c.online && <span className="card__dot" title="online" />}
+                  </div>
+                  <div className="dev__stats">
+                    {relationshipLevel(c.affinity)} · aff {Math.round(c.affinity)} · threat {c.threat}
+                    {c.relationship !== "none" && <> · {c.relationship}</>}
+                  </div>
+                </div>
+                <div className="dev__btns">
+                  <button className="btn btn--mini" disabled={busyVisit} title={busyVisit ? "Go offline & end any visit first" : "Start an in-person visit"} onClick={() => controller.devStartVisit(c.id)}>🏠 Visit</button>
+                  <button className="btn btn--mini" onClick={() => controller.devTip(c.id, 20)}>💸 Tip $20</button>
+                  <button className="btn btn--mini" onClick={() => controller.devAddAffinity(c.id, 10)}>＋10 aff</button>
+                  <button className="btn btn--mini" onClick={() => controller.devSetThreat(c.id, c.threat >= 3 ? 0 : c.threat + 1)} title="Cycle threat 0→3">⚠ {c.threat}</button>
+                  <button className="btn btn--mini" onClick={() => controller.devToggleOnline(c.id)}>{c.online ? "● On" : "○ Off"}</button>
+                  <button className="btn btn--mini" onClick={() => controller.openCharacter(c.id)}>Sheet</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DevAvatar({ id, hasPortrait, fallback }: { id: string; hasPortrait: boolean; fallback: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    if (hasPortrait) void loadPortrait(id).then((u) => { if (alive) setUrl(u); });
+    else setUrl(null);
+    return () => { alive = false; };
+  }, [id, hasPortrait]);
+  return (
+    <span className="dev__avatar">
+      {url ? <img src={url} alt={fallback} /> : <span>{fallback}</span>}
+    </span>
   );
 }

@@ -5,6 +5,7 @@ import type { DmLine } from "../game/types";
 import { ARCHETYPE_BY_ID } from "../game/archetypes";
 import { avatarFor, relationshipLevel } from "../game/characters";
 import { loadPortrait } from "../persist/imageStore";
+import { useStoredImage } from "../persist/useStoredImage";
 import { formatClock } from "../game/time";
 
 // Stable reference so the zustand selector doesn't return a fresh [] each render
@@ -101,9 +102,7 @@ export function CharacterModal({ controller }: { controller: GameController }) {
           <div className="dm__scroll" ref={scrollRef}>
             {convo.length === 0 && <p className="rail__empty">Say hi — see what they're like one-on-one.</p>}
             {convo.map((l, i) => (
-              <div key={i} className={`dm__line dm__line--${l.role}`}>
-                <b>{l.role === "me" ? "You" : c.handle}:</b> {l.text}
-              </div>
+              <DmMessage key={i} line={l} handle={c.handle} />
             ))}
             {busy && <div className="dm__line dm__line--them dm__pending is-loading">…typing…</div>}
           </div>
@@ -128,6 +127,39 @@ export function CharacterModal({ controller }: { controller: GameController }) {
           </form>
         </div>
       </div>
+    </div>
+  );
+}
+
+function DmMessage({ line, handle }: { line: DmLine; handle: string }) {
+  const imageUrl = useStoredImage(line.imageId);
+  const who = line.role === "me" ? "You" : handle;
+  if (line.kind === "image") {
+    return (
+      <div className={`dm__line dm__line--${line.role}`}>
+        <b>{who}:</b>{" "}
+        <span className="dm__kind dm__kind--image">{line.text || "sent an image"}</span>
+        {imageUrl ? <img className="dm__thumb" src={imageUrl} alt={line.text || "dm image"} /> : <span className="dm__imgmissing">image unavailable</span>}
+      </div>
+    );
+  }
+  if (line.kind === "gift") {
+    return (
+      <div className={`dm__line dm__line--${line.role}`}>
+        <b>{who}:</b> <span className="dm__kind dm__kind--gift">{line.amount ? `💸 $${line.amount}` : "🎁"} {line.text}</span>
+      </div>
+    );
+  }
+  if (line.kind === "system") {
+    return (
+      <div className={`dm__line dm__line--${line.role}`}>
+        <span className="dm__kind dm__kind--system">{line.text}</span>
+      </div>
+    );
+  }
+  return (
+    <div className={`dm__line dm__line--${line.role}`}>
+      <b>{who}:</b> {line.text}
     </div>
   );
 }

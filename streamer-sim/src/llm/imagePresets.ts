@@ -18,7 +18,12 @@ export type ImageStylePresetId =
   | "anime-cel"
   | "graphic-novel"
   | "semi-real"
-  | "retro-sim";
+  | "retro-sim"
+  | "pixel-art"
+  | "storybook"
+  | "synthwave"
+  | "claymation"
+  | "papercraft";
 
 export interface ImagePromptSet {
   id: ImageStylePresetId;
@@ -258,12 +263,282 @@ const RETRO_SIM: ImagePromptSet = {
   ].join(" "),
 };
 
+const PIXEL_ART: ImagePromptSet = {
+  id: "pixel-art",
+  label: "Pixel Art",
+  blurb: "Crisp 16-bit pixel art, retro cozy-game charm.",
+  swatch: ["#3bc9db", "#f783ac"],
+  imageStyle:
+    "Detailed 16-bit pixel art, crisp clean pixel clusters and dithering, limited retro palette, sharp hard edges with no blur or anti-aliasing, cozy SNES-era game sprite aesthetic.",
+  roomPrompt: [
+    "A top-down / high-angle pixel-art view of a small studio apartment for a retro video-game.",
+    "{{style}}",
+    "Warm cozy interior, tidy pixel tiling, readable chunky props. One room containing:",
+    "an unmade bed (top-left), a streaming desk with dual monitors, webcam, ring light",
+    "and RGB (top-right), a comfy couch with a rug (center), a small kitchenette with a",
+    "hot plate and kettle (bottom-left), a front door (bottom-center), and a tiny",
+    "bathroom nook (bottom-right). No people, no text, no UI. Square composition,",
+    "viewed slightly from above like a classic top-down RPG room. {{upgrades}}",
+  ].join(" "),
+  portraitPrompt: [
+    "Pixel-art character portrait of {{name}}, a {{gender}} video-game streamer.",
+    "Appearance: {{description}}.",
+    "Head-and-shoulders framing, looking at camera, friendly expression, readable chunky pixels,",
+    "simple flat background, no text, no watermark, no UI.",
+    "{{style}}",
+    "Square composition.",
+  ].join(" "),
+  bodyPrompt: [
+    "Full-body pixel-art character reference sheet of {{name}}, a {{gender}} video-game streamer.",
+    "Appearance: {{description}}.",
+    "{{match}}",
+    "Standing in a neutral A-pose / T-pose, facing forward, full body visible head to toe,",
+    "plain flat light-grey background, even lighting, no text, no watermark, no UI.",
+    "Clean pixel-art sprite turnaround reference.",
+    "{{style}}",
+  ].join(" "),
+  presencePrompt: [
+    `Show this exact character, {{name}}, at the "{{zone}}" of her studio apartment.`,
+    "The spot: {{zoneDesc}}",
+    "Keep her appearance consistent with the reference image ({{description}}).",
+    "Natural pixel-sprite pose, cozy top-down room lighting,",
+    "no text, no watermark, no UI. Square composition, slight high angle like a top-down RPG.",
+    "{{style}}",
+  ].join(" "),
+  scenePrompt: [
+    "Illustrate this moment of {{name}}'s livestream.",
+    "Where she is right now: {{position}}.",
+    "What is happening: {{narrative}}",
+    "Keep her appearance consistent with the reference image ({{description}}).",
+    "Expressive pixel-art scene, readable retro-game framing, cozy stream setup,",
+    "no text, no watermark, no UI. Square composition.",
+    "{{style}}",
+  ].join(" "),
+};
+
+const STORYBOOK: ImagePromptSet = {
+  id: "storybook",
+  label: "Storybook",
+  blurb: "Hand-painted gouache, soft whimsical Ghibli warmth.",
+  swatch: ["#ffd8a8", "#69db7c"],
+  imageStyle:
+    "Hand-painted storybook illustration, soft gouache and watercolor textures, visible painterly brushwork, warm whimsical golden-hour lighting, gentle Studio Ghibli inspired charm.",
+  roomPrompt: [
+    "A top-down / high-angle view of a small studio apartment for a cozy video-game.",
+    "{{style}}",
+    "Soft painterly afternoon light, lived-in warmth, gentle plants and clutter, dreamy readable layout. One room containing:",
+    "an unmade bed (top-left), a streaming desk with dual monitors, webcam, ring light",
+    "and RGB (top-right), a comfy couch with a rug (center), a small kitchenette with a",
+    "hot plate and kettle (bottom-left), a front door (bottom-center), and a tiny",
+    "bathroom nook (bottom-right). No people, no text, no UI. Square composition,",
+    "viewed slightly from above like a painted picture-book spread. {{upgrades}}",
+  ].join(" "),
+  portraitPrompt: [
+    "Hand-painted storybook portrait of {{name}}, a {{gender}} video-game streamer.",
+    "Appearance: {{description}}.",
+    "Head-and-shoulders framing, looking at camera, warm gentle expression,",
+    "soft painted gradient background, no text, no watermark, no UI.",
+    "{{style}}",
+    "Square composition.",
+  ].join(" "),
+  bodyPrompt: [
+    "Full-body hand-painted character reference sheet of {{name}}, a {{gender}} video-game streamer.",
+    "Appearance: {{description}}.",
+    "{{match}}",
+    "Standing in a neutral A-pose / T-pose, facing forward, full body visible head to toe,",
+    "plain soft cream painted background, even gentle lighting, no text, no watermark, no UI.",
+    "Painterly storybook character turnaround.",
+    "{{style}}",
+  ].join(" "),
+  presencePrompt: [
+    `Show this exact character, {{name}}, at the "{{zone}}" of her studio apartment.`,
+    "The spot: {{zoneDesc}}",
+    "Keep her appearance consistent with the reference image ({{description}}).",
+    "Natural gentle pose, warm painted interior light, dreamy storybook mood,",
+    "no text, no watermark, no UI. Square composition, slight high angle.",
+    "{{style}}",
+  ].join(" "),
+  scenePrompt: [
+    "Illustrate this moment of {{name}}'s livestream.",
+    "Where she is right now: {{position}}.",
+    "What is happening: {{narrative}}",
+    "Keep her appearance consistent with the reference image ({{description}}).",
+    "Painterly picture-book framing, warm expressive mood, cozy stream-room setting,",
+    "no text, no watermark, no UI. Square composition.",
+    "{{style}}",
+  ].join(" "),
+};
+
+const SYNTHWAVE: ImagePromptSet = {
+  id: "synthwave",
+  label: "Synthwave",
+  blurb: "80s neon retro-future — chrome, glow, sunset grid.",
+  swatch: ["#f72585", "#4361ee"],
+  imageStyle:
+    "1980s synthwave / outrun aesthetic, glowing neon magenta and cyan, chrome reflections, retro-futurist sunset gradients, subtle scanline glow and grid lines, bold and electric.",
+  roomPrompt: [
+    "A top-down / high-angle view of a small studio apartment for a retro-futurist video-game.",
+    "{{style}}",
+    "Neon-drenched night, magenta and cyan light strips, glowing grid floor accents, dark glossy surfaces. One room containing:",
+    "an unmade bed (top-left), a streaming desk with dual monitors, webcam, ring light",
+    "and RGB (top-right), a comfy couch with a rug (center), a small kitchenette with a",
+    "hot plate and kettle (bottom-left), a front door (bottom-center), and a tiny",
+    "bathroom nook (bottom-right). No people, no text, no UI. Square composition,",
+    "viewed slightly from above like a stylish life-sim. {{upgrades}}",
+  ].join(" "),
+  portraitPrompt: [
+    "Synthwave character portrait of {{name}}, a {{gender}} video-game streamer.",
+    "Appearance: {{description}}.",
+    "Head-and-shoulders framing, looking at camera, confident expression,",
+    "dark background with neon magenta-and-cyan rim glow, no text, no watermark, no UI.",
+    "{{style}}",
+    "Square composition.",
+  ].join(" "),
+  bodyPrompt: [
+    "Full-body synthwave character reference sheet of {{name}}, a {{gender}} video-game streamer.",
+    "Appearance: {{description}}.",
+    "{{match}}",
+    "Standing in a neutral A-pose / T-pose, facing forward, full body visible head to toe,",
+    "plain dark studio background with subtle neon glow, no text, no watermark, no UI.",
+    "Neon retro-futurist character turnaround.",
+    "{{style}}",
+  ].join(" "),
+  presencePrompt: [
+    `Show this exact character, {{name}}, at the "{{zone}}" of her studio apartment.`,
+    "The spot: {{zoneDesc}}",
+    "Keep her appearance consistent with the reference image ({{description}}).",
+    "Natural pose, neon-lit retro-futurist interior, glowing magenta-cyan accents,",
+    "no text, no watermark, no UI. Square composition, slight high angle.",
+    "{{style}}",
+  ].join(" "),
+  scenePrompt: [
+    "Illustrate this moment of {{name}}'s livestream.",
+    "Where she is right now: {{position}}.",
+    "What is happening: {{narrative}}",
+    "Keep her appearance consistent with the reference image ({{description}}).",
+    "Electric synthwave framing, dramatic neon glow, glossy retro-future stream setup,",
+    "no text, no watermark, no UI. Square composition.",
+    "{{style}}",
+  ].join(" "),
+};
+
+const CLAYMATION: ImagePromptSet = {
+  id: "claymation",
+  label: "Claymation",
+  blurb: "Tactile stop-motion clay, sculpted and handmade.",
+  swatch: ["#ff922b", "#a9e34b"],
+  imageStyle:
+    "Stop-motion claymation look, sculpted modeling-clay surfaces with visible fingerprints and tool marks, soft studio key light, tactile handmade miniature set, Aardman inspired.",
+  roomPrompt: [
+    "A top-down / high-angle view of a small studio apartment built as a claymation miniature set.",
+    "{{style}}",
+    "Soft diffused set lighting, chunky sculpted clay furniture, tactile handmade textures, readable layout. One room containing:",
+    "an unmade bed (top-left), a streaming desk with dual monitors, webcam, ring light",
+    "and RGB (top-right), a comfy couch with a rug (center), a small kitchenette with a",
+    "hot plate and kettle (bottom-left), a front door (bottom-center), and a tiny",
+    "bathroom nook (bottom-right). No people, no text, no UI. Square composition,",
+    "viewed slightly from above like a miniature diorama. {{upgrades}}",
+  ].join(" "),
+  portraitPrompt: [
+    "Claymation character portrait of {{name}}, a {{gender}} video-game streamer.",
+    "Appearance: {{description}}.",
+    "Head-and-shoulders framing, looking at camera, charming sculpted expression, visible clay texture,",
+    "soft seamless backdrop, no text, no watermark, no UI.",
+    "{{style}}",
+    "Square composition.",
+  ].join(" "),
+  bodyPrompt: [
+    "Full-body claymation character reference of {{name}}, a {{gender}} video-game streamer.",
+    "Appearance: {{description}}.",
+    "{{match}}",
+    "Standing in a neutral A-pose / T-pose, facing forward, full body visible head to toe,",
+    "plain light-grey seamless backdrop, soft even set lighting, no text, no watermark, no UI.",
+    "Sculpted clay character turnaround reference.",
+    "{{style}}",
+  ].join(" "),
+  presencePrompt: [
+    `Show this exact character, {{name}}, at the "{{zone}}" of her studio apartment.`,
+    "The spot: {{zoneDesc}}",
+    "Keep her appearance consistent with the reference image ({{description}}).",
+    "Natural sculpted pose, soft miniature-set lighting, tactile clay textures,",
+    "no text, no watermark, no UI. Square composition, slight high angle.",
+    "{{style}}",
+  ].join(" "),
+  scenePrompt: [
+    "Illustrate this moment of {{name}}'s livestream.",
+    "Where she is right now: {{position}}.",
+    "What is happening: {{narrative}}",
+    "Keep her appearance consistent with the reference image ({{description}}).",
+    "Charming stop-motion framing, expressive clay posing, handmade miniature stream set,",
+    "no text, no watermark, no UI. Square composition.",
+    "{{style}}",
+  ].join(" "),
+};
+
+const PAPERCRAFT: ImagePromptSet = {
+  id: "papercraft",
+  label: "Papercraft",
+  blurb: "Layered cut-paper diorama with soft depth shadows.",
+  swatch: ["#fab005", "#4dabf7"],
+  imageStyle:
+    "Layered cut-paper craft diorama, stacked construction-paper shapes, soft drop shadows between paper layers, handmade collage texture, clean charming and tactile.",
+  roomPrompt: [
+    "A top-down / high-angle view of a small studio apartment built from layered cut paper.",
+    "{{style}}",
+    "Soft even light casting gentle shadows between paper layers, bright crafty colors, readable flat-but-layered shapes. One room containing:",
+    "an unmade bed (top-left), a streaming desk with dual monitors, webcam, ring light",
+    "and RGB (top-right), a comfy couch with a rug (center), a small kitchenette with a",
+    "hot plate and kettle (bottom-left), a front door (bottom-center), and a tiny",
+    "bathroom nook (bottom-right). No people, no text, no UI. Square composition,",
+    "viewed slightly from above like a paper diorama. {{upgrades}}",
+  ].join(" "),
+  portraitPrompt: [
+    "Cut-paper papercraft portrait of {{name}}, a {{gender}} video-game streamer.",
+    "Appearance: {{description}}.",
+    "Head-and-shoulders framing, looking at camera, friendly expression, layered paper shapes with soft shadows,",
+    "simple layered-paper background, no text, no watermark, no UI.",
+    "{{style}}",
+    "Square composition.",
+  ].join(" "),
+  bodyPrompt: [
+    "Full-body cut-paper character reference of {{name}}, a {{gender}} video-game streamer.",
+    "Appearance: {{description}}.",
+    "{{match}}",
+    "Standing in a neutral A-pose / T-pose, facing forward, full body visible head to toe,",
+    "plain light-grey background, soft even lighting, no text, no watermark, no UI.",
+    "Layered papercraft character turnaround reference.",
+    "{{style}}",
+  ].join(" "),
+  presencePrompt: [
+    `Show this exact character, {{name}}, at the "{{zone}}" of her studio apartment.`,
+    "The spot: {{zoneDesc}}",
+    "Keep her appearance consistent with the reference image ({{description}}).",
+    "Natural pose, soft paper-layer shadows, bright crafty diorama lighting,",
+    "no text, no watermark, no UI. Square composition, slight high angle.",
+    "{{style}}",
+  ].join(" "),
+  scenePrompt: [
+    "Illustrate this moment of {{name}}'s livestream.",
+    "Where she is right now: {{position}}.",
+    "What is happening: {{narrative}}",
+    "Keep her appearance consistent with the reference image ({{description}}).",
+    "Charming layered-paper framing, expressive cut-paper posing, crafty stream-room diorama,",
+    "no text, no watermark, no UI. Square composition.",
+    "{{style}}",
+  ].join(" "),
+};
+
 export const IMAGE_STYLE_PRESETS: ImagePromptSet[] = [
   COZY_NEON,
   ANIME_CEL,
   GRAPHIC_NOVEL,
   SEMI_REAL,
   RETRO_SIM,
+  PIXEL_ART,
+  STORYBOOK,
+  SYNTHWAVE,
+  CLAYMATION,
+  PAPERCRAFT,
 ];
 
 const PRESET_BY_ID = Object.fromEntries(IMAGE_STYLE_PRESETS.map((p) => [p.id, p])) as Record<

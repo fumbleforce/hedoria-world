@@ -134,12 +134,30 @@ export async function migrateLegacyRoomImage(slotId: string): Promise<void> {
 // --- Per-character portraits (same KV store, prefixed keys) ------------------
 
 const portraitKey = (charId: string) => `portrait:${charId}`;
+const charBodyKey = (charId: string) => `cbody:${charId}`;
 
 export async function savePortrait(charId: string, dataUrl: string): Promise<void> {
   try {
     await kvPut(portraitKey(charId), dataUrl);
   } catch {
     /* best-effort */
+  }
+}
+
+/** Full-body T-pose reference for a named character (used in scene images). */
+export async function saveCharacterBody(charId: string, dataUrl: string): Promise<void> {
+  try {
+    await kvPut(charBodyKey(charId), dataUrl);
+  } catch {
+    /* best-effort */
+  }
+}
+
+export async function loadCharacterBody(charId: string): Promise<string | null> {
+  try {
+    return await kvGet(charBodyKey(charId));
+  } catch {
+    return null;
   }
 }
 
@@ -251,6 +269,33 @@ export async function deleteImagesForSlot(slotId: string): Promise<void> {
 export async function loadPortrait(charId: string): Promise<string | null> {
   try {
     return await kvGet(portraitKey(charId));
+  } catch {
+    return null;
+  }
+}
+
+// --- Style-preset preview thumbnails (global, not slot-scoped) ---------------
+
+/**
+ * Previews illustrate an art-style preset with a fixed common subject, so they
+ * are identical across saves. Keyed by preset id + a hash of the style text so
+ * editing a preset's style invalidates its stale preview.
+ */
+export function stylePreviewKey(presetId: string, styleText: string): string {
+  return `style-preview:${presetId}:${cyrb53(styleText)}`;
+}
+
+export async function saveStylePreview(key: string, dataUrl: string): Promise<void> {
+  try {
+    await kvPut(key, dataUrl);
+  } catch {
+    /* best-effort */
+  }
+}
+
+export async function loadStylePreview(key: string): Promise<string | null> {
+  try {
+    return await kvGet(key);
   } catch {
     return null;
   }

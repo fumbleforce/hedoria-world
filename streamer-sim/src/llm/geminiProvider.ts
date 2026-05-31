@@ -3,6 +3,9 @@ import { useStore } from "../state/store";
 import { toGeminiSchema } from "./schema";
 
 const DEFAULT_MODEL = "gemini-2.5-flash";
+// Generous default so replies finish their thought instead of being clipped by
+// a provider-side length cap. Overridable per-request via `maxTokens`.
+const DEFAULT_MAX_TOKENS = 1024;
 
 /**
  * Direct-to-Google Gemini. CORS-friendly, so it works from the browser with the
@@ -31,14 +34,17 @@ export class GeminiTextProvider implements LlmProvider {
     }));
     const body: Record<string, unknown> = { contents };
     if (request.system) body.systemInstruction = { parts: [{ text: request.system }] };
+    const gen: Record<string, unknown> = {
+      maxOutputTokens: request.maxTokens ?? DEFAULT_MAX_TOKENS,
+    };
     if (request.jsonMode || request.jsonSchema) {
-      const gen: Record<string, unknown> = { responseMimeType: "application/json" };
+      gen.responseMimeType = "application/json";
       if (request.jsonSchema) {
         const schema = toGeminiSchema(request.jsonSchema);
         if (schema) gen.responseSchema = schema;
       }
-      body.generationConfig = gen;
     }
+    body.generationConfig = gen;
     return body;
   }
 

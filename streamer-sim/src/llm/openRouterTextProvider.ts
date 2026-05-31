@@ -4,12 +4,20 @@ import { useStore } from "../state/store";
 const PROXY = "/__openrouter/chat";
 const DEFAULT_MODEL = "google/gemini-2.5-flash";
 const TIMEOUT_MS = 120_000;
+// Generous default so replies finish their thought instead of being clipped by
+// a provider-side length cap. Overridable per-request via `maxTokens`.
+const DEFAULT_MAX_TOKENS = 1024;
 
 function buildBody(model: string, request: LlmRequest): Record<string, unknown> {
   const messages: Array<{ role: string; content: string }> = [];
   if (request.system.trim()) messages.push({ role: "system", content: request.system });
   for (const m of request.messages) messages.push({ role: m.role, content: m.content });
-  const body: Record<string, unknown> = { model, messages, stream: false };
+  const body: Record<string, unknown> = {
+    model,
+    messages,
+    stream: false,
+    max_tokens: request.maxTokens ?? DEFAULT_MAX_TOKENS,
+  };
   if (request.jsonSchema) {
     // Native structured output: constrain the model to the schema directly.
     body.response_format = {
