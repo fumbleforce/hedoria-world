@@ -114,6 +114,7 @@ export const ZONE_MENUS: Record<ZoneId, { allowFreeform: boolean; options: Actio
   door: {
     allowFreeform: false,
     options: [
+      { id: "shop", label: "📦 Shop (upgrades & games)", prompt: "__open_shop__", liveOnly: false },
       { id: "check-door", label: "🚪 See who's there", prompt: "__door__", liveOnly: false },
       { id: "order-food", label: "🛵 Order delivery", prompt: "__order_food__", liveOnly: false },
     ],

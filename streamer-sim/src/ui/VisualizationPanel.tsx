@@ -18,19 +18,17 @@ export function VisualizationPanel() {
         <span>🎞 Visualization</span>
         {busy && <span className="viz__busy is-loading">{busy}…</span>}
       </div>
-      <div className="viz__frame">
-        {url ? (
-          <button className="viz__imgbtn" onClick={() => setLightbox(true)} title="Click to enlarge">
-            <img src={url} alt="latest visualization" className={busy ? "is-loading" : ""} />
-          </button>
-        ) : (
-          <div className={`viz__placeholder ${busy ? "is-loading" : ""}`}>
-            {busy
-              ? busy + "…"
-              : "No visualization yet. Create your character (🎭), then “Visualize here” in the room or “Visualize scene” in the narrator."}
-          </div>
-        )}
-      </div>
+      {url ? (
+        <button className="viz__imgbtn" onClick={() => setLightbox(true)} title="Click to enlarge">
+          <img src={url} alt="latest visualization" className={busy ? "is-loading" : ""} />
+        </button>
+      ) : (
+        <div className={`viz__placeholder ${busy ? "is-loading" : ""}`}>
+          {busy
+            ? busy + "…"
+            : "No visualization yet. Create your character (🎭), then “Visualize here” in the room or “Visualize scene” in the narrator."}
+        </div>
+      )}
       {lastImageId && <div className="viz__hint">Click the image to enlarge it.</div>}
       {lightbox && url && (
         <div className="lightbox" onClick={() => setLightbox(false)}>

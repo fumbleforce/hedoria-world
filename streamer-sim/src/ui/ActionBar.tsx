@@ -38,7 +38,6 @@ export function ActionBar({ controller }: { controller: GameController }) {
   const guestName = useStore((s) =>
     s.visitor ? (s.roster[s.visitor.charId]?.displayName || s.roster[s.visitor.charId]?.handle || "your guest") : "",
   );
-  const inScene = !!eventScene;
   const canGen = controller.canGenerateImages;
   const openRequestCount = useStore((s) => s.viewerRequests.filter((r) => r.status === "open").length);
   const [text, setText] = useState("");
@@ -167,9 +166,6 @@ export function ActionBar({ controller }: { controller: GameController }) {
         ) : (
           <>
             <NichePicker controller={controller} disabled={resolving} />
-            <button className="btn btn--primary" disabled={resolving || inScene} onClick={() => controller.goLive()}>● Go Live</button>
-            <button className="btn" disabled={resolving || inScene} onClick={() => controller.sleep()}>🛏️ Sleep</button>
-            <button className="btn" disabled={inScene} onClick={() => useStore.getState().setShopOpen(true)}>📦 Shop</button>
             <button className="btn" onClick={() => useStore.getState().setInventoryOpen(true)} title="Inventory">🎒</button>
             <button className="btn" onClick={() => useStore.getState().setGoalsOpen(true)} title="Goals">🎯</button>
             <button className="btn actionbar__requests-btn" onClick={() => useStore.getState().setRequestsOpen(true)} title="Viewer requests">

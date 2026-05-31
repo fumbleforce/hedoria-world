@@ -217,6 +217,8 @@ export interface StreamSession {
    * stream (see resetSession).
    */
   connectionTagCounts: Record<string, number>;
+  /** Extra anonymous viewers from raids this stream; folded into presence anon floor. */
+  viewerSurge: number;
 }
 
 export interface EventChoice {

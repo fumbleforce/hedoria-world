@@ -128,6 +128,7 @@ const initialSession = (): StreamSession => ({
   newFollowers: 0,
   peak: 0,
   connectionTagCounts: {},
+  viewerSurge: 0,
 });
 
 const initialSettings = (): Settings => ({

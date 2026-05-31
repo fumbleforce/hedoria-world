@@ -67,7 +67,7 @@ panel, where the DM director takes over. This is the same passive path as the le
 | `incomingDm` | real DM into the inbox (`pushDm` + `markDmUnread` + notify) |
 | `grantUpgrade` / `grantItem` | shop / flavor |
 | `masteryXp` | `addMasteryXp` |
-| `raid` | followers+hype bump (like chat raid) |
+| `raid` | channel followers +5×size, hype +4×size, live viewers +15×size (via `session.viewerSurge` → anon floor) |
 | `meetup` | `addPendingVisit` → visit scene |
 | `scheduleFollowup` | `pendingEventSeeds` queue |
 

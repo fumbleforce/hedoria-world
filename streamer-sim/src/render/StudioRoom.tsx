@@ -61,33 +61,21 @@ export function StudioRoom({ controller }: { controller: GameController }) {
     <div className="studio">
       <svg viewBox={`0 0 ${VB} ${VB}`} className="studio__svg" role="img" aria-label="studio apartment">
         <defs>
-          <radialGradient id="glow" cx="50%" cy="35%" r="75%">
-            <stop offset="0%" stopColor="#2a2440" />
-            <stop offset="100%" stopColor="#1a1626" />
-          </radialGradient>
           <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#3a3350" />
             <stop offset="100%" stopColor="#2e2942" />
           </linearGradient>
-          <clipPath id="roomClip">
-            <rect x="14" y="14" width={VB - 28} height={VB - 28} rx="14" />
-          </clipPath>
         </defs>
 
         {roomImage ? (
-          <>
-            <rect x="0" y="0" width={VB} height={VB} fill="#1a1626" />
-            <image
-              href={roomImage}
-              x="14"
-              y="14"
-              width={VB - 28}
-              height={VB - 28}
-              preserveAspectRatio="xMidYMid slice"
-              clipPath="url(#roomClip)"
-            />
-            <rect x="14" y="14" width={VB - 28} height={VB - 28} rx="14" fill="none" stroke="#4a4366" strokeWidth="3" />
-          </>
+          <image
+            href={roomImage}
+            x="0"
+            y="0"
+            width={VB}
+            height={VB}
+            preserveAspectRatio="xMidYMid slice"
+          />
         ) : (
           <DefaultRoom live={isLive} />
         )}
@@ -208,8 +196,7 @@ export function StudioRoom({ controller }: { controller: GameController }) {
 function DefaultRoom({ live }: { live: boolean }) {
   return (
     <>
-      <rect x="0" y="0" width={VB} height={VB} fill="url(#glow)" />
-      <rect x="14" y="14" width={VB - 28} height={VB - 28} rx="14" fill="url(#floor)" stroke="#4a4366" strokeWidth="3" />
+      <rect x="0" y="0" width={VB} height={VB} rx="14" fill="url(#floor)" stroke="#4a4366" strokeWidth="3" />
       {/* rug under the couch */}
       <ellipse cx={center(ZONES.couch.art)[0]} cy={center(ZONES.couch.art)[1] + 16} rx="64" ry="40" fill="#5b4a7a" opacity="0.45" />
       <Bed />

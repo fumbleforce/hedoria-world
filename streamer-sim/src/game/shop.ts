@@ -1,6 +1,7 @@
 import type { Upgrade } from "./types";
 import { SEGMENTS, type SegmentId } from "./segments";
 import { BALANCE } from "./balance";
+import { LEGACY_CAM_UPGRADE_IDS } from "./cameras";
 
 /** Catalogue of purchasable upgrades. Effects fold into the live model. */
 export const UPGRADES: readonly Upgrade[] = [
@@ -19,22 +20,6 @@ export const UPGRADES: readonly Upgrade[] = [
     cost: 90,
     description: "Flattering glow. A little more hype per bit.",
     effects: { hypeMult: 1.1 },
-  },
-  {
-    id: "1080p-cam",
-    name: "1080p Webcam",
-    category: "gear",
-    cost: 260,
-    description: "Sharp picture pulls a bigger crowd. Production quality up.",
-    effects: { viewerMult: 1.25, productionQuality: 1 },
-  },
-  {
-    id: "dslr-cam",
-    name: "DSLR + Capture Card",
-    category: "gear",
-    cost: 700,
-    description: "Cinematic look. Big production-quality lift that appeals to everyone.",
-    effects: { viewerMult: 1.35, productionQuality: 2 },
   },
   {
     id: "studio-lighting",

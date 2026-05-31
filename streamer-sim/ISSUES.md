@@ -151,5 +151,3 @@ Severity: 🔴 affects gameplay/feel · 🟡 confusing/misleading · ⚪ cosmeti
   `src/game/types.ts`.
 - [ ] **⚪ Unused re-exports `steeringForTier`, `fillPrompt`** in
   `src/game/evaluator.ts`.
-- [ ] **⚪ `__open_shop__` token** — handled but not present in any zone menu.
-  `src/game/studio.ts`, `src/game/controller.ts`.

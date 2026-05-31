@@ -48,6 +48,13 @@ before you choose. *(`arcs.ts`)*
 The reward text says "without going broke," but the goal only checks `day ≥ 30`.
 *(`goals.ts`)*
 
+### ✅ A6b — Raid chat promised viewers that never appeared *(resolved)*
+The director `raid` effect posted `🎉 Raid! ~N viewers pour in!` and bumped channel
+followers, but never touched live `currentViewers` — the anon floor was recalculated
+each beat without a raid bonus, so the HUD stayed flat. Raids now accumulate
+`session.viewerSurge`, folded into the anon floor until the stream ends.
+*(`controller.ts`, `types.ts`)*
+
 ### 🟡 A7 — Seasonal occasions are passive
 Holidays/birthday/anniversary apply a hype/comfort/tips tailwind + a narrated line at
 go-live, but there's **no interactive themed event** (no Halloween costume choice, no
@@ -195,8 +202,6 @@ ambient loop resumes on the player's next action.
 | `HANDLES`, `MOD_HANDLES` | `personas.ts` | Dead; anon handles are procedural. |
 | `deletePortrait(charId)` | `imageStore.ts` | Exported, never called. |
 | re-exports `steeringForTier`, `fillPrompt` | `evaluator.ts` | Unused re-exports. |
-| `__open_shop__` token | `studio.ts`/`controller.ts` | Handled, but not in any zone menu. |
-
 No `TODO`/`FIXME` markers exist in `src/`.
 
 ---

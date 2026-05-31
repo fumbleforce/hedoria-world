@@ -887,7 +887,7 @@ export class GameController {
     const mult = this.mults();
     const drivers = viewerDrivers(s.metrics, mult);
     const target = drivers.targetNamed;
-    const anon = drivers.anonFloor;
+    const anon = drivers.anonFloor + (s.session.viewerSurge ?? 0);
     const res = advancePresence(s.roster, s.clock, intensity, drivers.reputation, target, s.audience);
     const audience = audienceFromPresence(res.roster, res.online, s.audience, anon, this.spawnBias());
     s.setRoster(res.roster);
@@ -3001,12 +3001,18 @@ export class GameController {
           break;
         case "raid": {
           const mult = clamp(e.size ?? 1, 1, E.raidSizeMax);
-          const followers = 5 * mult;
-          const hype = 4 * mult;
+          const followerGain = 5 * mult;
+          const hypeGain = 4 * mult;
+          const viewerGain = followerGain * 3;
           setFeedbackContext(e.note ?? "incoming raid", "good");
-          s.patchMetrics({ followers: s.metrics.followers + followers, hype: s.metrics.hype + hype });
+          s.setSession({ viewerSurge: (s.session.viewerSurge ?? 0) + viewerGain });
+          s.patchMetrics({
+            followers: s.metrics.followers + followerGain,
+            hype: s.metrics.hype + hypeGain,
+          });
           clearFeedbackContext();
-          s.pushChat([this.sysChat(`🎉 Raid! ~${followers * 3} viewers pour in!`)]);
+          s.pushChat([this.sysChat(`🎉 Raid! ~${viewerGain} viewers pour in!`)]);
+          if (s.session.isLive) this.presenceTick();
           break;
         }
         case "meetup": {
@@ -3955,10 +3961,15 @@ export class GameController {
       });
 
       let fulfilledCount = 0;
+      const processed = new Set<string>();
       for (const entry of result.entries) {
         if (!entry.fulfilled) continue;
         const req = open[entry.index - 1];
-        if (!req) continue;
+        if (!req || processed.has(req.id)) continue;
+        // Re-read live status so a duplicate index (or an already-terminal
+        // request) can't double-reward off the stale snapshot.
+        if (s.viewerRequests.find((r) => r.id === req.id)?.status !== "open") continue;
+        processed.add(req.id);
 
         const c = s.roster[req.charId];
         const handle = c?.displayName || c?.handle || "Viewer";

@@ -130,7 +130,7 @@ domain mastery, and the systems below). See `docs/02`, `docs/03`, `docs/08`.
 > win/lose/eviction state, and the difficulty arc targets in `docs/02` are proposals
 > to validate by playtest.
 
-## 5. The "playing a game" + other sub-states
+## DONE: 5. The "playing a game" + other sub-states
 - **Generic sub-state engine**, like the event/meet engine, where we are actively doing some activity over longer periods of time. It could be things like reading a book aloud, masturbating on cam, anything in between. Engagved via a start activity menu like for actions, with some pre-filled options plus a custom option. 
 - **Activity story** (M). While playing, we get a more detailed narration during the current activity
 - **Game-specific chat & events** (S, LLM). Backseat gamers during FPS, scream-clip
@@ -195,7 +195,7 @@ domain mastery, and the systems below). See `docs/02`, `docs/03`, `docs/08`.
 
 ---
 
-## 11. Cameras & set design
+## 11. Cameras, items, gifts & set design
 - ⭐ **Camera placement as a system** (M, code+UI). You can only go live from a
   zone that has a camera. The streaming desk has the built-in cam; other zones
   (couch, bed, kitchenette, bathroom) require a camera placed there. Going live
@@ -205,14 +205,16 @@ domain mastery, and the systems below). See `docs/02`, `docs/03`, `docs/08`.
 - **Multiple cameras = multiple angles** (M). Buying and placing additional
   cameras gives chat extra views/angles of the studio. Surface a "cam switcher"
   (Desk Cam / Room Cam / Couch Cam…); the active angle flavors narration and
-  which zones are "on screen". More angles = production value = a viewer/hype bump.
+  which zones are "on screen". More angles = production value = a viewer/hype bump. We should make it so that we can only start streams form the computer if we only have the starter webcam. to sream for the sofa, we need more cams. Can also place cam in kitchen, bathroom (spicy) and bed (spicy). We should be able to generate cam footage from these locations. chat must be aware of these locations, and where the player is.
 - **Camera quality tiers** (S). Webcam → 1080p → DSLR rig; each placeable, each
   affecting viewer pull and which segments you attract — ties into the existing
   gear shop.
 - **"Off-camera" actions** (S). When live, doing something in a zone with no
   camera is private (no audience reaction) — useful for ducking out of view
   deliberately, and a natural tension with parasocial viewers wanting to see more.
-
+- **robust item system** should be able to handle generated new items, add clothes shopping, clothing into inventory
+- **character clothes** we should be able to define clothing, what is on and what is not, and narrate taking things on and off.
+- **gifts** NPCs can (rarely) send you gifts, either already defined items, or totally arbitrary items you can use, as a capability.
 
 
 ---

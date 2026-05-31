@@ -191,7 +191,7 @@ audience + comfort first, then escalation pays.
 | `donation` | `cash += amount × mult.income`, hype +1 |
 | `sub` | subs +1, `cash += (amount ?? 5) × mult.income`, hype +2 |
 | `follow` | followers +1 |
-| `raid` | followers +5, hype +4 |
+| `raid` | followers +5, hype +4 (chat kind); director `raid` effect also adds live viewers (+15×size max +45) |
 | `troll` | comfort −0.6 |
 | `creepy` | comfort −1 |
 
@@ -313,7 +313,7 @@ the full evaluate→resolve pipeline. **Token** prompts bypass the evaluator:
 | `__order_food__` | −$15, energy +18, comfort +6, hunger +50, 25 min (toast if broke) |
 | `__door__` | offline event roll or "empty hallway", 5 min |
 | `__outfit_cozy__` / `__outfit_cute__` / `__outfit_bold__` | outfit effects (see table above) |
-| `__open_shop__` | open shop — **implemented but not wired into any zone menu** (only the ActionBar shop button opens the shop) |
+| `__open_shop__` | open shop (door zone menu) |
 
 ## Activities (`activities.ts`)
 
