@@ -152,3 +152,78 @@ describe("resolveAction — readiness gating", () => {
     expect(res.readiness).toBeGreaterThan(0.9);
   });
 });
+
+describe("resolveAction — personal stat costs", () => {
+  const liveBase = {
+    metrics: metrics({ energy: 80, comfort: 80 }),
+    audience: audience({ cozy: 5 }),
+    mult,
+    contentTier: "flirty" as const,
+    isLive: true,
+  };
+
+  it("active beat spends energy even when LLM marks pressure up (softened)", () => {
+    const res = resolveAction({
+      ...liveBase,
+      verdict: verdict({ tags: ["energetic"], intensity: 3, pressure: { energy: "up" } }),
+    });
+    expect(res.metricsPatch.energy!).toBeLessThan(80);
+  });
+
+  it("active beat spends more when LLM marks pressure down", () => {
+    const base = { tags: ["energetic"] as ActionVerdict["tags"], intensity: 3 };
+    const soft = resolveAction({
+      ...liveBase,
+      verdict: verdict({ ...base, pressure: { energy: "up" } }),
+    });
+    const hard = resolveAction({
+      ...liveBase,
+      verdict: verdict({ ...base, pressure: { energy: "down" } }),
+    });
+    expect(hard.metricsPatch.energy!).toBeLessThan(soft.metricsPatch.energy!);
+  });
+
+  it("intimate beat spends comfort", () => {
+    const res = resolveAction({
+      ...liveBase,
+      verdict: verdict({ tags: ["flirty"], intensity: 3 }),
+    });
+    expect(res.metricsPatch.comfort!).toBeLessThan(80);
+  });
+
+  it("restful beat restores energy", () => {
+    const res = resolveAction({
+      ...liveBase,
+      metrics: metrics({ energy: 50 }),
+      verdict: verdict({ tags: ["chill"], intensity: 2 }),
+    });
+    expect(res.metricsPatch.energy!).toBeGreaterThan(50);
+  });
+
+  it("boundary beat restores comfort", () => {
+    const res = resolveAction({
+      ...liveBase,
+      metrics: metrics({ comfort: 50 }),
+      verdict: verdict({ tags: ["boundary-setting"], setsBoundary: true, intensity: 2 }),
+    });
+    expect(res.metricsPatch.comfort!).toBeGreaterThan(50);
+  });
+
+  it("higher showmanship mastery reduces energy cost", () => {
+    const v = verdict({ tags: ["energetic"], intensity: 3 });
+    const novice = resolveAction({
+      ...liveBase,
+      verdict: v,
+      mastery: { showmanship: 0, composure: 0 },
+    });
+    const vet = resolveAction({
+      ...liveBase,
+      verdict: v,
+      mastery: { showmanship: BALANCE.mastery.levelCurve * 4, composure: 0 },
+    });
+    const noviceDrop = 80 - (novice.metricsPatch.energy ?? 80);
+    const vetDrop = 80 - (vet.metricsPatch.energy ?? 80);
+    expect(vetDrop).toBeLessThan(noviceDrop);
+    expect(vetDrop).toBeGreaterThan(0);
+  });
+});

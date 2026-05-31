@@ -68,18 +68,42 @@ export function resolveAction(input: ResolveInput): ResolveResult {
   const showmanshipMult = input.mastery ? masteryCostMult(input.mastery.showmanship) : 1;
   const composureMult = input.mastery ? masteryCostMult(input.mastery.composure) : 1;
 
-  // Streamer stat pressure. Comfort cost is amplified for escalation (intensity
-  // >= gate) when comfort is already low — cheap early escalation bites harder.
-  let comfortDelta = pressureDelta(verdict.pressure.comfort, 5, intensity);
-  if (comfortDelta < 0 && intensity >= BALANCE.readiness.comfortGateFrom) {
-    const amp =
-      1 + (BALANCE.readiness.comfortCostAmplifyLow - 1) * (1 - metrics.comfort / 100);
-    comfortDelta *= amp * composureMult;
+  const cost = BALANCE.cost;
+  const tags = verdict.tags;
+
+  // ENERGY — code owns the sign; performing spends, resting restores.
+  const active =
+    tags.some((t) => (cost.energyTags as readonly string[]).includes(t)) ||
+    verdict.pressure.energy === "down";
+  const restful =
+    tags.some((t) => (cost.restfulTags as readonly string[]).includes(t)) && !active;
+  let energyDelta = 0;
+  if (active) {
+    let c = cost.energyPerIntensity * intensity;
+    if (verdict.pressure.energy === "up") c *= cost.pressureRelief;
+    else if (verdict.pressure.energy === "down") c *= cost.pressureAmplify;
+    energyDelta = -c * showmanshipMult;
+  } else if (restful) {
+    energyDelta = cost.recoverEnergyPerIntensity * intensity;
   }
 
-  // Energy cost (when it's a cost) is reduced by Showmanship.
-  let energyDelta = pressureDelta(verdict.pressure.energy, 4, intensity);
-  if (energyDelta < 0) energyDelta *= showmanshipMult;
+  // COMFORT — boundary restores; exposing/edgy content spends (low-comfort amplified).
+  const boundary = verdict.setsBoundary || tags.includes("boundary-setting");
+  const exposes =
+    tags.some((t) => (cost.comfortTags as readonly string[]).includes(t)) ||
+    verdict.pressure.comfort === "down";
+  let comfortDelta = 0;
+  if (boundary) {
+    comfortDelta = BALANCE.recovery.boundaryComfort;
+  } else if (exposes) {
+    let c = cost.comfortPerIntensity * intensity;
+    if (intensity >= BALANCE.readiness.comfortGateFrom) {
+      c *= 1 + (BALANCE.readiness.comfortCostAmplifyLow - 1) * (1 - metrics.comfort / 100);
+    }
+    if (verdict.pressure.comfort === "up") c *= cost.pressureRelief;
+    else if (verdict.pressure.comfort === "down") c *= cost.pressureAmplify;
+    comfortDelta = -c * composureMult;
+  }
 
   // Content freshness: a stale, repeated format gives less of a hype lift.
   const novelty = clamp(input.novelty ?? 1, 0, 1);

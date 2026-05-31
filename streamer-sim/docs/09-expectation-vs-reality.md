@@ -95,6 +95,12 @@ director (not a fixed `effects` payload) owns the fallout. The decisive block/re
 starts `stalker-legal` still lives only on `stalker-confront`. *(`controller.ts`,
 `events.ts`, `dmDirector.ts`)*
 
+### ✅ B6 — Personal stats only went up / LLM owned the cost sign *(resolved personal-stats fix)*
+Energy/comfort changes were driven by the LLM's `pressure` field with no code-owned
+baseline cost, and sleep reset energy to 100 nightly — so stats pinned at max and the
+readiness gate + mastery had nothing to act on. The resolver now computes hybrid
+tag+intensity costs (`BALANCE.cost`); sleep is partial restore (`BALANCE.recovery`).
+
 ### ✅ B5 — On-stream actions don't change affinity directly *(resolved §4 overhaul)*
 On-stream actions now warm named viewers directly via `distributeActionAffinity`: the
 verdict's **`connection`** score (0–3) and any **@mention** route through the

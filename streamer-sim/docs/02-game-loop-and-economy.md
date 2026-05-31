@@ -16,7 +16,7 @@ Persistent player stats (`Metrics`, initialized in `store.ts`):
 | `currentViewers` | ≥ 0 int | **0** | Live viewer count (display). |
 | `peakViewers` | ≥ 0 int | **0** | **Lifetime** peak (used by the 100-viewers goal). |
 | `hype` | 0–100 | **20** | Momentum; decays while live; drives tips/spawns. |
-| `energy` | 0–100 | **100** | Stamina; drains while live; full reset on sleep. |
+| `energy` | 0–100 | **100** | Stamina; spent on active live beats + time drift; partial restore on sleep; lifestyle actions (coffee/nap) matter. |
 | `mood` | 0–100 | **70** | Wellbeing. |
 | `comfort` | 0–100 | **90** | Boundary/parasocial pressure. Low comfort "feeds" stalkers. |
 | `day` | int ≥ 1 | **1** | In-world day counter. |
@@ -96,11 +96,12 @@ summary. **Does not advance the day or charge rent.**
 **`sleep`** (must be offline) — the day/rent step:
 ```
 day    += 1
-energy  = 100
-mood   += 8 + mult.moodPerDay
+energy  = min(100, energy + 70)   // partial restore (was hard reset to 100)
+mood   += 3 + mult.moodPerDay     // was +8
 hype    = max(15, hype × 0.6)
-comfort+= 6
-cash   -= rent          // base $20/day; +$25 if loft owned → $45
+comfort+= 2                       // was +6
+cash   -= rent
+```
 cash   -= utilityBill   // BALANCE.economy.utilityAmount ($18) every 7 days
 clock   = 8:00 pm
 ```
@@ -186,13 +187,29 @@ their `messageCount`. Tips route through `recordTip`/`bumpAffinity`.
 
 ## The resolver, in detail (`resolver.ts`)
 
-### Stat pressure
-A verdict marks each of hype/energy/mood/comfort as pressured `up`, `down`, or
-`none`. The delta:
+### Personal stat costs (code-owned, hybrid)
+
+Energy and comfort are **spent resources** — the resolver computes costs from **tags +
+intensity** (`BALANCE.cost`); the LLM's `pressure.energy/comfort` only nudges (amplify
+on `down`, soften on `up`).
+
+| Trigger | Effect |
+|---------|--------|
+| **Energy tags** (`energetic`, `skillful`, `hype`, `loud`, …) | Spend `energyPerIntensity (2.2) × intensity` (× Showmanship mastery) |
+| **Restful tags** (`chill`, `cozy`, `calm`, …) when not active | Recover `recoverEnergyPerIntensity (1.2) × intensity` |
+| **Comfort tags** (`flirty`, `teasing`, `suggestive`, `vulnerable`, …) | Spend `comfortPerIntensity (1.8) × intensity` (× Composure mastery; amplified when comfort already low) |
+| **`setsBoundary` / `boundary-setting`** | Restore `+6` comfort |
+| **Hype / mood** | Still LLM `pressure` × magnitude (bases hype 5, mood 4) |
+
+Live time drift still drains energy/hype each beat. Lifestyle coded actions (coffee,
+nap, freshen) are the main recovery levers between streams.
+
+### Stat pressure (hype/mood only)
+The verdict marks hype and mood as pressured `up`, `down`, or `none`. The delta:
 ```
 pressureDelta = (±1) × base × (0.6 + intensity × 0.18)
 ```
-Bases: hype **5** (× `mult.hype`), energy **4**, mood **4**, comfort **5**.
+Bases: hype **5** (× `mult.hype`), mood **4**. (Energy/comfort costs are code-owned — see above.)
 Example: hype-up at intensity 3 with `mult.hype` 1.1 → **+6.27** hype.
 
 ### Segment satisfaction drift (per segment, live)
@@ -326,11 +343,10 @@ never per-action-id):
 - **Composure** (`flirty`/`teasing`/`suggestive`/`bold`/`vulnerable`/`personal`/
   `boundary-*`) → lowers the **comfort** cost of intense content.
 
-`level = floor(sqrt(xp / 50))`; `costMult = clamp(1 − level×0.04, 0.5, 1)` (floored at
-50% — never free). XP (`xpPerIntensity × intensity`) is added per matching live action;
-level-ups surface as a prominent alert. This is the cost-efficiency half of the skill
-stat; the payoff-readiness half (Phase 3b) stays a separate lever, so an experienced
-streamer sustains escalation longer but still needs the audience built to get *paid*.
+`level = floor(sqrt(xp / 24))`; `costMult = clamp(1 − level×0.04, 0.5, 1)` (floored at
+50% — never free). XP (`xpPerIntensity 1.5 × intensity`) is added per matching live action;
+level-ups surface as a prominent alert. **HUD chips always show both domains from Lv 0**
+with progress % to the next level.
 
 ## Niches & schedule board (`niches.ts`, `BALANCE.niche`)
 `settings.niche` (variety / cozy / gaming / just-chatting / spicy) shifts presence

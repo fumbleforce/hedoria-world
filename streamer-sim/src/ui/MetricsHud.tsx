@@ -3,7 +3,7 @@ import { formatClock } from "../game/time";
 import { dateForDay } from "../game/calendar";
 import { getActiveSlot } from "../persist/saves";
 import { FloatingFeedback, useFeedbackJanitor } from "./FeedbackBubbles";
-import { masteryLevel } from "../game/mastery";
+import { masteryProgress } from "../game/mastery";
 import { BALANCE } from "../game/balance";
 
 function Bar({ label, value, color, metric }: { label: string; value: number; color: string; metric: string }) {
@@ -57,20 +57,26 @@ export function MetricsHud() {
 const MASTERY_GLYPH: Record<string, string> = { showmanship: "🎭", composure: "🧘" };
 const MASTERY_LABEL: Record<string, string> = { showmanship: "Showmanship", composure: "Composure" };
 
-/** Compact skill-level readout (personal progression). Hidden until earned. */
+/** Compact skill-level readout — always visible from Lv 0 with progress to next. */
 function MasteryChips() {
   const mastery = useStore((s) => s.mastery);
-  const chips = BALANCE.mastery.domains
-    .map((d) => ({ d, lvl: masteryLevel(mastery[d] ?? 0) }))
-    .filter((x) => x.lvl > 0);
-  if (!chips.length) return null;
   return (
     <div className="hud__mastery">
-      {chips.map(({ d, lvl }) => (
-        <span key={d} className="masterychip" title={`${MASTERY_LABEL[d]} level ${lvl} — lower personal cost on matching actions`}>
-          {MASTERY_GLYPH[d]} {MASTERY_LABEL[d]} <b>Lv {lvl}</b>
-        </span>
-      ))}
+      {BALANCE.mastery.domains.map((d) => {
+        const xp = mastery[d] ?? 0;
+        const { level, pct } = masteryProgress(xp);
+        const pctHint = level < 10 ? ` · ${Math.round(pct * 100)}%` : "";
+        return (
+          <span
+            key={d}
+            className="masterychip"
+            title={`${MASTERY_LABEL[d]} level ${level} — lower personal cost on matching actions`}
+          >
+            {MASTERY_GLYPH[d]} {MASTERY_LABEL[d]} <b>Lv {level}</b>
+            {pctHint}
+          </span>
+        );
+      })}
     </div>
   );
 }

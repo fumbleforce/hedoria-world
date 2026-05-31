@@ -5,6 +5,7 @@ import {
   masteryLevel,
   masteryCostMult,
   masteryXpForAction,
+  masteryProgress,
 } from "../mastery";
 import { BALANCE } from "../balance";
 
@@ -55,5 +56,12 @@ describe("mastery", () => {
     const neutral = masteryXpForAction(["chill", "calm"], 1);
     expect(neutral.showmanship).toBeUndefined();
     expect(neutral.composure).toBeUndefined();
+  });
+
+  it("tracks progress toward the next level", () => {
+    const c = BALANCE.mastery.levelCurve;
+    expect(masteryProgress(0)).toMatchObject({ level: 0, pct: 0 });
+    expect(masteryProgress(c / 2).pct).toBeCloseTo(0.5, 5);
+    expect(masteryProgress(c).level).toBe(1);
   });
 });

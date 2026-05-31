@@ -28,6 +28,27 @@ export function masteryLevel(xp: number): number {
   return Math.floor(Math.sqrt(Math.max(0, xp) / BALANCE.mastery.levelCurve));
 }
 
+export interface MasteryProgress {
+  level: number;
+  /** XP earned toward the next level (within current level band). */
+  into: number;
+  /** XP needed to reach the next level from current level start. */
+  need: number;
+  /** 0..1 progress within the current level band. */
+  pct: number;
+}
+
+/** Progress toward the next level for UI readouts. */
+export function masteryProgress(xp: number): MasteryProgress {
+  const level = masteryLevel(xp);
+  const levelStart = level * level * BALANCE.mastery.levelCurve;
+  const nextStart = (level + 1) * (level + 1) * BALANCE.mastery.levelCurve;
+  const into = Math.max(0, xp - levelStart);
+  const need = nextStart - levelStart;
+  const pct = need > 0 ? clamp(into / need, 0, 1) : 1;
+  return { level, into, need, pct };
+}
+
 /**
  * Cost multiplier for a domain (≤ 1). Each level shaves `efficiencyPerLevel`
  * off the personal cost of matching actions, floored so it's never free.

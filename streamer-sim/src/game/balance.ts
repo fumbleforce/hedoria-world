@@ -120,12 +120,56 @@ export const BALANCE = {
     productionQualityToAppeal: 0.5,
   },
 
+  /** Code-owned personal stat costs — the LLM only nudges via pressure up/down. */
+  cost: {
+    /** Active performance always spends energy (× intensity). */
+    energyPerIntensity: 2.2,
+    /** Intimate/edgy beats always spend comfort (× intensity). */
+    comfortPerIntensity: 1.8,
+    energyTags: [
+      "energetic",
+      "skillful",
+      "hype",
+      "loud",
+      "chaotic",
+      "funny",
+      "drama",
+      "bold",
+    ] as const,
+    comfortTags: [
+      "flirty",
+      "teasing",
+      "suggestive",
+      "bold",
+      "vulnerable",
+      "personal",
+      "boundary-crossing",
+    ] as const,
+    restfulTags: ["chill", "cozy", "calm", "low-energy", "boring"] as const,
+    /** A deliberately chill beat gives a little energy back (× intensity). */
+    recoverEnergyPerIntensity: 1.2,
+    /** LLM pressure "down" => deeper cost. */
+    pressureAmplify: 1.5,
+    /** LLM pressure "up" => softened cost. */
+    pressureRelief: 0.5,
+  },
+
+  /** Effortful recovery — nights no longer fully top you off. */
+  recovery: {
+    /** Nightly energy restored, capped at 100 (was hard reset to 100). */
+    sleepEnergy: 70,
+    sleepMood: 3,
+    sleepComfort: 2,
+    /** Asserting a boundary restores comfort. */
+    boundaryComfort: 6,
+  },
+
   mastery: {
     domains: ["showmanship", "composure"] as MasteryDomain[],
     /** XP gained per matching live action, scaled by intensity. */
-    xpPerIntensity: 1.0,
+    xpPerIntensity: 1.5,
     /** level = floor(sqrt(totalXp / levelCurve)). */
-    levelCurve: 50,
+    levelCurve: 24,
     /** Personal-cost reduction per level in that domain. */
     efficiencyPerLevel: 0.04,
     /** A cost never drops below this fraction (never free). */

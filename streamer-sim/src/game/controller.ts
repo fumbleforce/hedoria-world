@@ -1999,10 +1999,10 @@ export class GameController {
     // their own bubbles, no money "why".
     s.patchMetrics({
       day: newDay,
-      energy: 100,
-      mood: m.mood + 8 + mult.moodPerDay,
+      energy: Math.min(100, m.energy + BALANCE.recovery.sleepEnergy),
+      mood: m.mood + BALANCE.recovery.sleepMood + mult.moodPerDay,
       hype: Math.max(15, m.hype * 0.6),
-      comfort: m.comfort + 6,
+      comfort: m.comfort + BALANCE.recovery.sleepComfort,
     });
     // The money debit, explained.
     setFeedbackContext(utilityDue ? "rent & utilities" : "rent", "bad");
