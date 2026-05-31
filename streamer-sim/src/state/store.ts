@@ -170,6 +170,24 @@ const initialSettings = (): Settings => ({
   devMode: false,
 });
 
+/**
+ * Settings to seed a brand-new save slot. Technical/LLM config (provider, models,
+ * prompts, theme, dev flags) carries over from the current game for convenience,
+ * but the character identity (name, persona, gender, birthday) is reset to
+ * defaults so "New game" actually starts a fresh streamer rather than cloning the
+ * previous save's character.
+ */
+export function freshGameSettings(current: Settings): Settings {
+  const defaults = initialSettings();
+  return {
+    ...current,
+    streamerName: defaults.streamerName,
+    streamerPersona: defaults.streamerPersona,
+    gender: defaults.gender,
+    streamerBirthday: defaults.streamerBirthday,
+  };
+}
+
 export interface ActionMenu {
   title: string;
   subtitle?: string;
@@ -216,6 +234,10 @@ export interface StoreState {
   character: CharacterVisual;
   /** Per-zone presence image ids (the character placed in each zone). */
   presenceImages: Partial<Record<ZoneId, string>>;
+  /** Per-zone eye-level room backdrop image ids (people-free, reused for cam footage). */
+  zoneBackdrops: Partial<Record<ZoneId, string>>;
+  /** Per-zone eye-level single-furniture corner reference image ids. */
+  cornerImages: Partial<Record<ZoneId, string>>;
   /** In-memory cache of image id -> data URL, hydrated from IndexedDB. */
   imageCache: Record<string, string>;
   /** In-memory style-preset preview thumbnails (presetId -> data URL). */
@@ -313,6 +335,10 @@ export interface StoreState {
   setCharacter: (patch: Partial<CharacterVisual>) => void;
   setPresenceImage: (zone: ZoneId, imageId: string | null) => void;
   clearPresenceImages: () => void;
+  setZoneBackdrop: (zone: ZoneId, imageId: string | null) => void;
+  clearZoneBackdrops: () => void;
+  setCornerImage: (zone: ZoneId, imageId: string | null) => void;
+  clearCornerImages: () => void;
   cacheImage: (id: string, dataUrl: string) => void;
   uncacheImage: (id: string) => void;
   setStylePreview: (presetId: string, dataUrl: string) => void;
@@ -470,6 +496,8 @@ export const useStore = create<StoreState>()(
 
       character: defaultCharacterVisual(),
       presenceImages: {},
+      zoneBackdrops: {},
+      cornerImages: {},
       imageCache: {},
       stylePreviews: {},
       lastImageId: null,
@@ -631,6 +659,22 @@ export const useStore = create<StoreState>()(
           return { presenceImages: next };
         }),
       clearPresenceImages: () => set({ presenceImages: {} }),
+      setZoneBackdrop: (zone, imageId) =>
+        set((s) => {
+          const next = { ...s.zoneBackdrops };
+          if (imageId) next[zone] = imageId;
+          else delete next[zone];
+          return { zoneBackdrops: next };
+        }),
+      clearZoneBackdrops: () => set({ zoneBackdrops: {} }),
+      setCornerImage: (zone, imageId) =>
+        set((s) => {
+          const next = { ...s.cornerImages };
+          if (imageId) next[zone] = imageId;
+          else delete next[zone];
+          return { cornerImages: next };
+        }),
+      clearCornerImages: () => set({ cornerImages: {} }),
       cacheImage: (id, dataUrl) => set((s) => ({ imageCache: { ...s.imageCache, [id]: dataUrl } })),
       setStylePreview: (presetId, dataUrl) =>
         set((s) => ({ stylePreviews: { ...s.stylePreviews, [presetId]: dataUrl } })),
@@ -644,6 +688,18 @@ export const useStore = create<StoreState>()(
           }
           if (s.lastImageId === id) patch.lastImageId = null;
           if (s.streamFootageId === id) patch.streamFootageId = null;
+          const bdKey = (Object.keys(s.zoneBackdrops) as ZoneId[]).find((z) => s.zoneBackdrops[z] === id);
+          if (bdKey) {
+            const next = { ...s.zoneBackdrops };
+            delete next[bdKey];
+            patch.zoneBackdrops = next;
+          }
+          const crKey = (Object.keys(s.cornerImages) as ZoneId[]).find((z) => s.cornerImages[z] === id);
+          if (crKey) {
+            const next = { ...s.cornerImages };
+            delete next[crKey];
+            patch.cornerImages = next;
+          }
           return patch;
         }),
       setLastImage: (lastImageId) => set({ lastImageId }),
@@ -879,6 +935,8 @@ export const useStore = create<StoreState>()(
           inventory: wardrobeStarter ? [...keptInventory, ...wardrobeStarter.items] : savedInventory,
           equippedClothing: wardrobeStarter ? wardrobeStarter.equipped : (p.equippedClothing ?? {}),
           character: normalizeCharacterVisual(p.character),
+          zoneBackdrops: p.zoneBackdrops ?? {},
+          cornerImages: p.cornerImages ?? {},
           activity: p.session?.isLive ? (p.activity ?? null) : null,
           viewerRequests: migrateDmRequests(p.viewerRequests, p.dmThreads, metrics.day),
         };
@@ -923,6 +981,8 @@ export const useStore = create<StoreState>()(
         // Only the small ids persist here; the large blobs live in IndexedDB.
         character: s.character,
         presenceImages: s.presenceImages,
+        zoneBackdrops: s.zoneBackdrops,
+        cornerImages: s.cornerImages,
         lastImageId: s.lastImageId,
         streamFootageId: s.streamFootageId,
         // Persist the roster verbatim — relationships, memories AND the live

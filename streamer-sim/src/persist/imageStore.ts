@@ -10,7 +10,7 @@
  */
 import { getActiveSlotId } from "./saves";
 
-export type ImageKind = "room" | "portrait" | "body" | "presence" | "scene";
+export type ImageKind = "room" | "portrait" | "body" | "presence" | "scene" | "corner" | "backdrop";
 
 export interface StoredImage {
   id: string;

@@ -34,7 +34,31 @@ export function StreamView({ controller }: { controller: GameController }) {
   return (
     <div className="streamview">
       <div className="streamview__feed">
-        {url ? (
+        {canGen && (
+          <button
+            type="button"
+            className={`streamview__refresh btn btn--mini ${imageBusy ? "is-loading" : ""}`}
+            disabled={!!imageBusy}
+            onClick={() => void controller.generateCamFootage(undefined, true)}
+            title="Regenerate the live stream feed from the active camera"
+          >
+            {imageBusy ? "Generating…" : url ? "📹 Refresh feed" : "📹 Capture feed"}
+          </button>
+        )}
+
+        {!url && (
+          <div className="streamview__noimg">
+            {imageBusy ? (
+              <span className="is-loading">{imageBusy}…</span>
+            ) : !canGen ? (
+              <span>📷 {cam?.label ?? "Camera"} is rolling — enable image generation to see the feed.</span>
+            ) : (
+              <span>No camera feed yet — hit Refresh feed.</span>
+            )}
+          </div>
+        )}
+
+        {url && (
           <img
             src={url}
             alt="live stream feed"
@@ -42,21 +66,6 @@ export function StreamView({ controller }: { controller: GameController }) {
             onClick={() => setLightbox(true)}
             title="Click to enlarge"
           />
-        ) : (
-          <div className="streamview__noimg">
-            {imageBusy ? (
-              <span className="is-loading">{imageBusy}…</span>
-            ) : canGen ? (
-              <>
-                <span>No camera feed yet.</span>
-                <button className="btn btn--primary" onClick={() => void controller.generateCamFootage()}>
-                  📹 Capture feed
-                </button>
-              </>
-            ) : (
-              <span>📷 {cam?.label ?? "Camera"} is rolling — enable image generation to see the feed.</span>
-            )}
-          </div>
         )}
 
         {!onCamera && (

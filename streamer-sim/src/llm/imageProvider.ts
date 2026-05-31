@@ -152,7 +152,7 @@ export const DEFAULT_ROOM_PROMPT = [
   "an unmade bed (top-left), a streaming desk with dual monitors, webcam, ring light",
   "and RGB (top-right), a comfy couch with a rug (center), a small kitchenette with a",
   "hot plate and kettle (bottom-left), a front door (bottom-center), and a tiny",
-  "bathroom nook (bottom-right). No people, no text, no UI. Square composition,",
+  "bathroom nook with a bathroom door (bottom-right). No people, no text, no UI. Square composition,",
   "viewed slightly from above like a life-sim. {{upgrades}}",
 ].join(" ");
 

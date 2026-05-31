@@ -109,6 +109,13 @@ import {
   activeCameraMults,
   angleProductionBump,
   cameraForZone,
+  camFootagePrompt,
+  cornerPrompt,
+  perspectivePrompt,
+  visibleCorners,
+  zonePosture,
+  zonePlace,
+  genderTerms,
   CAMERA_SHOP,
   CAMERA_TIERS,
   isPlayerOnActiveCamera,
@@ -317,7 +324,7 @@ export class GameController {
       const hit = await getByCacheKey(cacheKey);
       if (hit) {
         s.cacheImage(hit.id, hit.dataUrl);
-        if (opts.kind !== "body") s.setLastImage(hit.id);
+        if (opts.kind !== "body" && opts.kind !== "backdrop" && opts.kind !== "corner") s.setLastImage(hit.id);
         diag.info("world", "image cache hit", { kind: opts.kind, label: opts.label });
         return hit;
       }
@@ -344,8 +351,8 @@ export class GameController {
       };
       const stored = await putImage(rec);
       s.cacheImage(stored.id, url);
-      // The body T-pose is a template, not a "visualization" worth centering.
-      if (opts.kind !== "body") s.setLastImage(stored.id);
+      // The body T-pose and room backdrops are templates, not centerpiece art.
+      if (opts.kind !== "body" && opts.kind !== "backdrop" && opts.kind !== "corner") s.setLastImage(stored.id);
       diag.info("world", "image generated", { kind: opts.kind, bytes: url.length });
       return stored;
     } catch (err) {
@@ -4522,6 +4529,144 @@ export class GameController {
     }
   }
 
+  /** Tier 1: eye-level single-furniture corner ref for one zone. */
+  private async ensureCornerImage(zoneId: ZoneId, force = false): Promise<{ url: string; id: string } | null> {
+    const s = this.s;
+    if (!force) {
+      const existingId = s.cornerImages[zoneId];
+      if (existingId) {
+        const cached = s.imageCache[existingId];
+        if (cached) return { url: cached, id: existingId };
+        const rec = await getImage(existingId);
+        if (rec) {
+          s.cacheImage(rec.id, rec.dataUrl);
+          return { url: rec.dataUrl, id: rec.id };
+        }
+      }
+    }
+    const zone = ZONES[zoneId];
+    if (!zone) return null;
+    const matchRoom = !!s.roomImage;
+    const refs = matchRoom ? [s.roomImage!] : [];
+    const prompt = cornerPrompt(zoneId, this.imageStyle(), matchRoom);
+    const rec = await this.genImage({
+      kind: "corner",
+      prompt,
+      label: `${zone.label} — furniture`,
+      refs: refs.length ? refs : undefined,
+      busyLabel: `Furnishing the ${zone.label}`,
+      force,
+      meta: { zone: zoneId },
+    });
+    if (rec) {
+      s.setCornerImage(zoneId, rec.id);
+      return { url: rec.dataUrl, id: rec.id };
+    }
+    return null;
+  }
+
+  /**
+   * Tier 2: eye-level room perspective for a zone, composed from visible corner refs.
+   * The studio map (when present) anchors colours and furniture; corner refs anchor layout.
+   */
+  private async ensureZoneBackdrop(zoneId: ZoneId, force = false): Promise<{ url: string; id: string } | null> {
+    const s = this.s;
+    if (!force) {
+      const existingId = s.zoneBackdrops[zoneId];
+      if (existingId) {
+        const cached = s.imageCache[existingId];
+        if (cached) return { url: cached, id: existingId };
+        const rec = await getImage(existingId);
+        if (rec) {
+          s.cacheImage(rec.id, rec.dataUrl);
+          return { url: rec.dataUrl, id: rec.id };
+        }
+      }
+    }
+    const zone = ZONES[zoneId];
+    if (!zone) return null;
+    const matchRoom = !!s.roomImage;
+    const refs: string[] = matchRoom ? [s.roomImage!] : [];
+    for (const cornerZone of visibleCorners(zoneId)) {
+      const corner = await this.ensureCornerImage(cornerZone, false);
+      if (corner) refs.push(corner.url);
+    }
+    const prompt = perspectivePrompt(zoneId, this.imageStyle(), matchRoom);
+    const rec = await this.genImage({
+      kind: "backdrop",
+      prompt,
+      label: `${zone.label} — perspective`,
+      refs: refs.length ? refs : undefined,
+      busyLabel: `Composing the ${zone.label} view`,
+      force,
+      meta: { zone: zoneId },
+    });
+    if (rec) {
+      s.setZoneBackdrop(zoneId, rec.id);
+      return { url: rec.dataUrl, id: rec.id };
+    }
+    return null;
+  }
+
+  /** Regenerate one zone's furniture corner image. */
+  async regenerateCorner(zoneId: ZoneId): Promise<void> {
+    const s = this.s;
+    if (!this.imageBackend) {
+      s.setToast("Set a Gemini or OpenRouter key to generate room art.");
+      return;
+    }
+    if (s.imageBusy) {
+      s.setToast("An image is already generating…");
+      return;
+    }
+    const rec = await this.ensureCornerImage(zoneId, true);
+    s.setToast(rec ? `${ZONES[zoneId]?.label ?? zoneId} furniture updated.` : "Couldn't regenerate furniture.");
+  }
+
+  /** Regenerate one zone's eye-level room perspective from current corner refs. */
+  async regeneratePerspective(zoneId: ZoneId): Promise<void> {
+    const s = this.s;
+    if (!this.imageBackend) {
+      s.setToast("Set a Gemini or OpenRouter key to generate room art.");
+      return;
+    }
+    if (s.imageBusy) {
+      s.setToast("An image is already generating…");
+      return;
+    }
+    const rec = await this.ensureZoneBackdrop(zoneId, true);
+    s.setToast(rec ? `${ZONES[zoneId]?.label ?? zoneId} angle updated.` : "Couldn't regenerate angle.");
+  }
+
+  /** Regenerate all furniture corners, then all room perspectives (sequential). */
+  async regenerateZoneBackdrops(): Promise<void> {
+    const s = this.s;
+    if (!this.imageBackend) {
+      s.setToast("Set a Gemini or OpenRouter key to generate room art.");
+      return;
+    }
+    if (s.imageBusy) {
+      s.setToast("An image is already generating…");
+      return;
+    }
+    const ids = Object.keys(ZONES) as ZoneId[];
+    let corners = 0;
+    for (const zoneId of ids) {
+      const rec = await this.ensureCornerImage(zoneId, true);
+      if (rec) corners += 1;
+    }
+    let angles = 0;
+    for (const zoneId of ids) {
+      const rec = await this.ensureZoneBackdrop(zoneId, true);
+      if (rec) angles += 1;
+    }
+    s.setToast(
+      corners || angles
+        ? `Regenerated ${corners} furniture piece${corners === 1 ? "" : "s"} and ${angles} angle${angles === 1 ? "" : "s"}.`
+        : "Couldn't regenerate room angles.",
+    );
+  }
+
   /** Generate stream-cam footage from a zone using the active camera tier. */
   async generateCamFootage(targetZone?: ZoneId, force = false): Promise<void> {
     const s = this.s;
@@ -4538,24 +4683,31 @@ export class GameController {
     const zone = ZONES[zoneId];
     const cam = s.cameras.find((c) => c.id === s.activeCameraId) ?? cameraForZone(s.cameras, zoneId);
     const tierLabel = cam ? CAMERA_TIERS[cam.tier].label : "Webcam";
+    // Ensure the eye-level room backdrop exists first, then reference it for the shot.
+    const backdrop = await this.ensureZoneBackdrop(zoneId);
     const ref = await this.bodyRef();
-    const positionLabel = zone
-      ? `${zone.label} — ${zone.description.replace(/[.\s]+$/, "")} (${tierLabel} angle)`
-      : "her studio";
     const look = describeEquippedLook(s.equippedClothing, s.inventory);
-    const refs: string[] = ref ? [ref.url] : [];
-    const promptVars = imagePromptVars(s.character, {
+    const char = s.character;
+    // References: her body template (likeness) + the room backdrop plate (space).
+    const refs: string[] = [];
+    if (ref) refs.push(ref.url);
+    if (backdrop) refs.push(backdrop.url);
+    // Posture: LLM converts live context into a photo-ready visual moment; mock/offline
+    // falls back to the zone's static resting posture.
+    const doing = await this.camVisualMoment(zoneId);
+    const prompt = camFootagePrompt({
       name: s.settings.streamerName,
-      position: positionLabel,
-      narrative: `Live stream cam shot from the ${tierLabel} at ${zone?.label ?? "the studio"}.`,
+      zoneId,
+      tier: cam?.tier ?? "webcam",
+      gender: s.settings.gender,
+      faceDescription: char.faceDescription.trim(),
+      bodyDescription: char.bodyDescription.trim(),
+      equippedLook: look,
       style: this.imageStyle(),
-    }, "full");
-    promptVars.description = `${promptVars.description}. Wearing: ${look}.`;
-    let prompt = fillImagePrompt(effectiveImagePrompt(s.settings, "scenePrompt"), promptVars);
-    if (s.roomImage) {
-      refs.push(s.roomImage);
-      prompt += " Use the provided room reference for layout and style.";
-    }
+      hasBackdropRef: !!backdrop,
+      posture: zonePosture(zoneId),
+      doing,
+    });
     const rec = await this.genImage({
       kind: "scene",
       prompt,
@@ -4568,19 +4720,87 @@ export class GameController {
     });
     if (rec) {
       s.setStreamFootage(rec.id);
-      s.pushStory({ kind: "image", text: rec.label, imageId: rec.id });
+      if (force) s.setToast("Stream feed updated.");
     }
+  }
+
+  /**
+   * LLM step: turn live activity + recent story into a short visual description
+   * suitable for a cam-footage image prompt. Mock/offline returns undefined so
+   * the prompt falls back to the zone's static resting posture.
+   */
+  private async camVisualMoment(zoneId: ZoneId): Promise<string | undefined> {
+    const s = this.s;
+    if (this.llm.isMock || !s.session.isLive) return undefined;
+
+    const zone = ZONES[zoneId];
+    const story = this.recentStoryRaw();
+    const activity = s.activity;
+    if (!story && !activity) return undefined;
+    const g = genderTerms(s.settings.gender);
+
+    const activityLines: string[] = [];
+    if (activity) {
+      if (activity.customText?.trim()) activityLines.push(`Custom activity: ${activity.customText.trim()}`);
+      else activityLines.push(`Activity: ${activity.label}`);
+      const def = ACTIVITY_BY_ID[activity.activityId];
+      if (def?.narrationHint) activityLines.push(`Activity context: ${def.narrationHint}`);
+    }
+
+    try {
+      const res = await this.llm.complete(
+        {
+          system: this.resolvePrompt("camVisual"),
+          messages: [
+            {
+              role: "user",
+              content: [
+                `${s.settings.streamerName}'s pronouns: ${g.subj}/${g.obj}/${g.poss}.`,
+                `Location: ${zone?.label ?? zoneId} (${zonePlace(zoneId)}).`,
+                activityLines.length ? activityLines.join("\n") : "",
+                story ? `Recent narration:\n${story}` : "",
+                `If nothing physical is happening, describe ${g.subj} ${g.plural ? "are" : "is"} ${zonePosture(zoneId)}.`,
+              ]
+                .filter(Boolean)
+                .join("\n\n"),
+            },
+          ],
+          jsonMode: true,
+          maxTokens: 120,
+        },
+        { kind: "other" },
+      );
+      const parsed = extractJson<{ visual?: string }>(res.text);
+      const visual = parsed?.visual?.trim();
+      return visual ? visual.slice(0, 220) : undefined;
+    } catch (err) {
+      diag.error("world", "cam visual moment failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return undefined;
+    }
+  }
+
+  /** Raw recent story beats for the cam-visual LLM (not pre-stripped for images). */
+  private recentStoryRaw(): string {
+    return this.s.story
+      .filter((e) => e.kind === "dm" || e.kind === "outcome" || e.kind === "action")
+      .slice(-4)
+      .map((e) => e.text)
+      .join("\n")
+      .trim();
   }
 
   /**
    * Fire-and-forget cam-footage refresh for the live Twitch-style view. Skips
    * silently when offline, busy, lacking an image backend, or off-camera.
+   * Pass force=true for a manual refresh (bypasses image cache).
    */
-  refreshStreamFootage(targetZone?: ZoneId): void {
+  refreshStreamFootage(targetZone?: ZoneId, force = false): void {
     const s = this.s;
     if (!s.session.isLive || !this.imageBackend || s.imageBusy) return;
     if (!this.canGenerateImages || !this.isOnCamera()) return;
-    void this.generateCamFootage(targetZone);
+    void this.generateCamFootage(targetZone, force);
   }
 }
 

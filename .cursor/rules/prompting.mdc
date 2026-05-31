@@ -1,0 +1,19 @@
+---
+description: How to write prompts for other LLMS
+alwaysApply: true
+---
+
+# Prompting
+
+## Do
+
+- Keep instructions short and clear
+
+
+### Images
+- Describe the image only, what is in it, how it looks, style and so on, without the purpuse you are going to use it for. 
+
+## Donts
+
+- Avoid negative prompts, it backfires, making the llm do the thing you don't want.
+- Avoid examples, as the cheaper llms tend to latch on to those examples and use them frequently.

@@ -208,10 +208,10 @@ export function StudioRoom({ controller }: { controller: GameController }) {
             <button
               className={`btn btn--mini ${imageBusy ? "is-loading" : ""}`}
               disabled={!!imageBusy}
-              onClick={() => void controller.generateCamFootage(zone)}
-              title="Generate live cam footage from this angle"
+              onClick={() => void controller.generateCamFootage(zone, true)}
+              title="Regenerate the live stream feed (center panel) from this camera"
             >
-              📹 Cam shot
+              📹 Refresh feed
             </button>
           )}
           </>

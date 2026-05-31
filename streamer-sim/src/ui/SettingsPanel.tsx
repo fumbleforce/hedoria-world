@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useStore, type SettingsTab } from "../state/store";
+import { useStore, freshGameSettings, type SettingsTab } from "../state/store";
 import { clearLlmStats } from "../llm/stats";
 import type { GameController } from "../game/controller";
 import type { ContentTier, LogLevel, TextBackend } from "../game/types";
@@ -14,6 +14,7 @@ import {
 import { useStoredImage } from "../persist/useStoredImage";
 import { deleteImagesForSlot, listImages, loadPortrait, type ImageKind, type StoredImage } from "../persist/imageStore";
 import { relationshipLevel } from "../game/characters";
+import { ZONES, type ZoneId } from "../game/studio";
 import {
   createAndActivateSlot,
   deleteSlot,
@@ -290,32 +291,147 @@ function PromptEditor({
 function RoomTab({ controller }: { controller: GameController }) {
   const generating = useStore((s) => s.generatingRoom);
   const roomImage = useStore((s) => s.roomImage);
+  const imageBusy = useStore((s) => s.imageBusy);
+  const cornerCount = useStore((s) => Object.keys(s.cornerImages).length);
+  const backdropCount = useStore((s) => Object.keys(s.zoneBackdrops).length);
+  const busy = generating || !!imageBusy;
+  const [lightbox, setLightbox] = useState<{ src: string; label: string } | null>(null);
 
   return (
     <>
       <div className="field">
         <span>Room art (LLM-generated background)</span>
-        {roomImage && (
-          <img src={roomImage} alt="generated room" className="settings__preview" />
-        )}
+        {roomImage ? (
+          <button
+            type="button"
+            className="settings__previewbtn"
+            onClick={() => setLightbox({ src: roomImage, label: "Studio room" })}
+            title="Click to enlarge"
+          >
+            <img src={roomImage} alt="generated room" className="settings__preview" />
+          </button>
+        ) : null}
         <div className="charcre__actions">
           <button
             className={`btn btn--primary ${generating ? "is-loading" : ""}`}
-            disabled={generating || !controller.canGenerateRoom}
+            disabled={busy || !controller.canGenerateRoom}
             onClick={() => void controller.generateRoom()}
           >
             {generating ? "Generating…" : roomImage ? "🖼 Regenerate room" : "🖼 Generate room"}
           </button>
           {roomImage && (
-            <button className="btn" disabled={generating} onClick={() => controller.clearRoom()}>Use default art</button>
+            <button className="btn" disabled={busy} onClick={() => controller.clearRoom()}>Use default art</button>
           )}
         </div>
         {!controller.canGenerateRoom && (
           <span className="hint">Set a Gemini or OpenRouter key (General tab) to enable image generation.</span>
         )}
       </div>
+      <div className="field">
+        <span>Furniture (eye-level)</span>
+        <div className="settings__angles">
+          {(Object.keys(ZONES) as ZoneId[]).map((zoneId) => (
+            <ZoneRoomThumb
+              key={`corner-${zoneId}`}
+              zoneId={zoneId}
+              useCorner
+              busy={busy}
+              controller={controller}
+              onEnlarge={(src, label) => setLightbox({ src, label })}
+            />
+          ))}
+        </div>
+        <span className="hint">
+          Single-furniture corner photos, matched to your room art when generated.{" "}
+          {cornerCount > 0 ? `${cornerCount}/6 generated.` : "None generated yet."}{" "}
+          Regenerate an angle after updating its furniture.
+        </span>
+      </div>
+      <div className="field">
+        <span>Cam angles (eye-level room views)</span>
+        <div className="settings__angles">
+          {(Object.keys(ZONES) as ZoneId[]).map((zoneId) => (
+            <ZoneRoomThumb
+              key={`angle-${zoneId}`}
+              zoneId={zoneId}
+              useCorner={false}
+              busy={busy}
+              controller={controller}
+              onEnlarge={(src, label) => setLightbox({ src, label })}
+            />
+          ))}
+        </div>
+        <div className="charcre__actions">
+          <button
+            className={`btn ${imageBusy ? "is-loading" : ""}`}
+            disabled={busy || !controller.canGenerateImages}
+            onClick={() => void controller.regenerateZoneBackdrops()}
+          >
+            {imageBusy ? "Generating…" : "🎥 Regenerate all"}
+          </button>
+        </div>
+        <span className="hint">
+          Composed room views from visible furniture corners, used in the live cam feed.{" "}
+          {backdropCount > 0 ? `${backdropCount}/6 generated.` : "None generated yet."}
+        </span>
+      </div>
       <p className="hint">Edit the room prompt and the shared image style in the Prompts tab.</p>
+
+      {lightbox && (
+        <div className="lightbox" onClick={() => setLightbox(null)}>
+          <img src={lightbox.src} alt={lightbox.label} onClick={(e) => e.stopPropagation()} />
+          <div className="lightbox__cap">{lightbox.label}</div>
+        </div>
+      )}
     </>
+  );
+}
+
+function ZoneRoomThumb({
+  zoneId,
+  useCorner,
+  busy,
+  controller,
+  onEnlarge,
+}: {
+  zoneId: ZoneId;
+  useCorner: boolean;
+  busy: boolean;
+  controller: GameController;
+  onEnlarge: (src: string, label: string) => void;
+}) {
+  const imageId = useStore((s) => (useCorner ? s.cornerImages[zoneId] : s.zoneBackdrops[zoneId]));
+  const src = useStoredImage(imageId);
+  const label = ZONES[zoneId]?.label ?? zoneId;
+  const regenLabel = useCorner ? "Regenerate furniture" : "Regenerate angle";
+
+  return (
+    <figure className="settings__angle">
+      {src ? (
+        <button
+          type="button"
+          className="settings__angle-imgbtn"
+          onClick={() => onEnlarge(src, label)}
+          title="Click to enlarge"
+        >
+          <img src={src} alt={label} loading="lazy" />
+        </button>
+      ) : (
+        <div className="settings__angle-empty">not generated</div>
+      )}
+      <figcaption>{label}</figcaption>
+      <button
+        type="button"
+        className="settings__angle-regen"
+        disabled={busy || !controller.canGenerateImages}
+        title={regenLabel}
+        onClick={() =>
+          void (useCorner ? controller.regenerateCorner(zoneId) : controller.regeneratePerspective(zoneId))
+        }
+      >
+        ↻
+      </button>
+    </figure>
   );
 }
 
@@ -430,12 +546,14 @@ function Preview({ label, src }: { label: string; src: string | null | undefined
   );
 }
 
-const KIND_ORDER: ImageKind[] = ["portrait", "body", "presence", "scene", "room"];
+const KIND_ORDER: ImageKind[] = ["portrait", "body", "presence", "scene", "corner", "backdrop", "room"];
 const KIND_LABEL: Record<ImageKind, string> = {
   portrait: "Portrait",
   body: "Body templates",
   presence: "Locations & presence",
   scene: "Scenes",
+  corner: "Furniture corners",
+  backdrop: "Room perspectives",
   room: "Room",
 };
 
@@ -514,7 +632,7 @@ function SavesTab() {
     const fallback = `Save ${slots.length + 1}`;
     const name = window.prompt("Name for the new save", fallback);
     if (name === null) return;
-    createAndActivateSlot(name.trim() || fallback, settings);
+    createAndActivateSlot(name.trim() || fallback, freshGameSettings(settings));
     window.location.reload();
   };
 

@@ -7,7 +7,7 @@
 import { ACTION_TAGS } from "./actions";
 import { SEGMENTS, SEGMENT_IDS } from "./segments";
 
-export type PromptId = "evaluator" | "narrator" | "chat" | "performance";
+export type PromptId = "evaluator" | "narrator" | "chat" | "performance" | "camVisual";
 
 export interface PromptDef {
   id: PromptId;
@@ -170,6 +170,21 @@ export const PROMPTS: Record<PromptId, PromptDef> = {
       "single quotes for the quoted phrase so the JSON remains valid.",
       "kind ∈ normal, hype, question, troll, flirty, creepy, donation, follow, sub, raid, mod.",
       "amount (USD) only for donation/sub.",
+    ].join("\n"),
+  },
+
+  camVisual: {
+    id: "camVisual",
+    label: "Cam Visual Moment",
+    description:
+      "Turns recent stream narration into a short, photo-ready visual description (pose, body language, expression) for live cam footage images.",
+    base: [
+      "You write a short visual description for a photo of {{name}}, a streamer in their studio apartment.",
+      "Given recent narration and context, describe only what is physically visible in the frame:",
+      "their pose, body language, facial expression, and any props they are holding or wearing in the moment.",
+      "Write in the third person about {{name}}, using the pronouns given in the user message.",
+      "One or two sentences maximum.",
+      "Return JSON only: {\"visual\": \"...\"}.",
     ].join("\n"),
   },
 };

@@ -65,7 +65,7 @@ const ANIME_CEL: ImagePromptSet = {
     "an unmade bed (top-left), a streaming desk with dual monitors, webcam, ring light",
     "and RGB (top-right), a comfy couch with a rug (center), a small kitchenette with a",
     "hot plate and kettle (bottom-left), a front door (bottom-center), and a tiny",
-    "bathroom nook (bottom-right). No people, no text, no UI. Square composition,",
+    "bathroom nook with a bathroom door (bottom-right). No people, no text, no UI. Square composition,",
     "viewed slightly from above like a slice-of-life anime background. {{upgrades}}",
   ].join(" "),
   portraitPrompt: [
@@ -120,7 +120,7 @@ const GRAPHIC_NOVEL: ImagePromptSet = {
     "an unmade bed (top-left), a streaming desk with dual monitors, webcam, ring light",
     "and RGB (top-right), a comfy couch with a rug (center), a small kitchenette with a",
     "hot plate and kettle (bottom-left), a front door (bottom-center), and a tiny",
-    "bathroom nook (bottom-right). No people, no text, no UI. Square composition,",
+    "bathroom nook with a bathroom door (bottom-right). No people, no text, no UI. Square composition,",
     "viewed slightly from above like a comic establishing panel. {{upgrades}}",
   ].join(" "),
   portraitPrompt: [
@@ -175,7 +175,7 @@ const SEMI_REAL: ImagePromptSet = {
     "an unmade bed (top-left), a streaming desk with dual monitors, webcam, ring light",
     "and RGB (top-right), a comfy couch with a rug (center), a small kitchenette with a",
     "hot plate and kettle (bottom-left), a front door (bottom-center), and a tiny",
-    "bathroom nook (bottom-right). No people, no text, no UI. Square composition,",
+    "bathroom nook with a bathroom door (bottom-right). No people, no text, no UI. Square composition,",
     "architectural clarity, viewed slightly from above like a life-sim. {{upgrades}}",
   ].join(" "),
   portraitPrompt: [
@@ -230,7 +230,7 @@ const RETRO_SIM: ImagePromptSet = {
     "an unmade bed (top-left), a streaming desk with dual monitors, webcam, ring light",
     "and RGB (top-right), a comfy couch with a rug (center), a small kitchenette with a",
     "hot plate and kettle (bottom-left), a front door (bottom-center), and a tiny",
-    "bathroom nook (bottom-right). No people, no text, no UI. Square composition,",
+    "bathroom nook with a bathroom door (bottom-right). No people, no text, no UI. Square composition,",
     "isometric camera angle like a classic life-sim build mode screenshot. {{upgrades}}",
   ].join(" "),
   portraitPrompt: [
@@ -285,7 +285,7 @@ const PIXEL_ART: ImagePromptSet = {
     "an unmade bed (top-left), a streaming desk with dual monitors, webcam, ring light",
     "and RGB (top-right), a comfy couch with a rug (center), a small kitchenette with a",
     "hot plate and kettle (bottom-left), a front door (bottom-center), and a tiny",
-    "bathroom nook (bottom-right). No people, no text, no UI. Square composition,",
+    "bathroom nook with a bathroom door (bottom-right). No people, no text, no UI. Square composition,",
     "viewed slightly from above like a classic top-down RPG room. {{upgrades}}",
   ].join(" "),
   portraitPrompt: [
@@ -340,7 +340,7 @@ const STORYBOOK: ImagePromptSet = {
     "an unmade bed (top-left), a streaming desk with dual monitors, webcam, ring light",
     "and RGB (top-right), a comfy couch with a rug (center), a small kitchenette with a",
     "hot plate and kettle (bottom-left), a front door (bottom-center), and a tiny",
-    "bathroom nook (bottom-right). No people, no text, no UI. Square composition,",
+    "bathroom nook with a bathroom door (bottom-right). No people, no text, no UI. Square composition,",
     "viewed slightly from above like a painted picture-book spread. {{upgrades}}",
   ].join(" "),
   portraitPrompt: [
@@ -395,7 +395,7 @@ const SYNTHWAVE: ImagePromptSet = {
     "an unmade bed (top-left), a streaming desk with dual monitors, webcam, ring light",
     "and RGB (top-right), a comfy couch with a rug (center), a small kitchenette with a",
     "hot plate and kettle (bottom-left), a front door (bottom-center), and a tiny",
-    "bathroom nook (bottom-right). No people, no text, no UI. Square composition,",
+    "bathroom nook with a bathroom door (bottom-right). No people, no text, no UI. Square composition,",
     "viewed slightly from above like a stylish life-sim. {{upgrades}}",
   ].join(" "),
   portraitPrompt: [
@@ -450,7 +450,7 @@ const CLAYMATION: ImagePromptSet = {
     "an unmade bed (top-left), a streaming desk with dual monitors, webcam, ring light",
     "and RGB (top-right), a comfy couch with a rug (center), a small kitchenette with a",
     "hot plate and kettle (bottom-left), a front door (bottom-center), and a tiny",
-    "bathroom nook (bottom-right). No people, no text, no UI. Square composition,",
+    "bathroom nook with a bathroom door (bottom-right). No people, no text, no UI. Square composition,",
     "viewed slightly from above like a miniature diorama. {{upgrades}}",
   ].join(" "),
   portraitPrompt: [
@@ -505,7 +505,7 @@ const PAPERCRAFT: ImagePromptSet = {
     "an unmade bed (top-left), a streaming desk with dual monitors, webcam, ring light",
     "and RGB (top-right), a comfy couch with a rug (center), a small kitchenette with a",
     "hot plate and kettle (bottom-left), a front door (bottom-center), and a tiny",
-    "bathroom nook (bottom-right). No people, no text, no UI. Square composition,",
+    "bathroom nook with a bathroom door (bottom-right). No people, no text, no UI. Square composition,",
     "viewed slightly from above like a paper diorama. {{upgrades}}",
   ].join(" "),
   portraitPrompt: [

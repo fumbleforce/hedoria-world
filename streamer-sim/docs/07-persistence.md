@@ -34,7 +34,11 @@ into `partialize` or restored in `boot` / `resumeLive()`.
 
 - `createSlot` / `createAndActivateSlot(name, seedSettings?)` — a new slot; "new game"
   seeds only the current **settings** into the slot, so metrics/roster/chat start
-  fresh from defaults.
+  fresh from defaults. The seed is run through `freshGameSettings()` first, which
+  carries over technical/LLM config (provider, models, prompts, theme, dev flags)
+  but resets the character identity (`streamerName`, `streamerPersona`, `gender`,
+  `streamerBirthday`) to defaults — otherwise the new game would clone the previous
+  save's streamer.
 - `setActiveSlot(id)` updates the index only; the Saves tab triggers a full
   `window.location.reload()` to rebind.
 - `updateActiveMeta` syncs the slot's `characterName/day/portraitId` (called on day

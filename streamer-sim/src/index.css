@@ -171,6 +171,10 @@ body {
 }
 .streamview__title { color: #fff; font-weight: 800; font-size: 0.95em; line-height: 1.2; }
 .streamview__sub { color: #d7d0e6; font-size: 0.78em; margin-top: 2px; }
+.streamview__refresh {
+  position: absolute; bottom: 52px; left: 10px; z-index: 3;
+  background: rgba(12,10,18,0.82); border-color: rgba(255,255,255,0.15);
+}
 .studio__label {
   fill: #d7d0e6; font-size: 13px; font-weight: 600;
   font-family: "Inter", system-ui, sans-serif; pointer-events: none;
@@ -841,6 +845,16 @@ input:focus, textarea:focus, select:focus { outline: 1px solid var(--accent-2); 
 
 /* settings: room preview + collapsible prompt editors */
 .settings__preview { width: 100%; max-height: 200px; object-fit: cover; border-radius: 10px; margin-bottom: 8px; }
+.settings__previewbtn { display: block; width: 100%; padding: 0; border: none; background: none; cursor: zoom-in; margin-bottom: 8px; }
+.settings__previewbtn .settings__preview { margin-bottom: 0; }
+.settings__angles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
+.settings__angle { margin: 0; display: flex; flex-direction: column; gap: 4px; position: relative; }
+.settings__angle-imgbtn { display: block; width: 100%; padding: 0; border: none; background: none; cursor: zoom-in; }
+.settings__angle img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
+.settings__angle-empty { width: 100%; aspect-ratio: 1 / 1; display: grid; place-items: center; border-radius: 8px; border: 1px dashed var(--line); color: var(--fg-2); font-size: 0.72em; background: #ffffff06; }
+.settings__angle figcaption { font-size: 0.72em; color: var(--fg-2); text-align: center; }
+.settings__angle-regen { position: absolute; top: 4px; right: 4px; width: 1.6rem; height: 1.6rem; padding: 0; border-radius: 6px; border: 1px solid var(--line); background: #00000088; color: var(--fg); font-size: 0.85em; cursor: pointer; line-height: 1; }
+.settings__angle-regen:disabled { opacity: 0.4; cursor: not-allowed; }
 .collapsible { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; margin-bottom: 14px; background: #ffffff06; }
 .collapsible > summary { cursor: pointer; font-size: 0.84em; font-weight: 600; color: var(--fg-2); list-style: none; }
 .collapsible > summary::-webkit-details-marker { display: none; }
