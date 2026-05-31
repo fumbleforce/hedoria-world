@@ -12,6 +12,7 @@ import type {
   CharacterVisual,
   EventRecord,
   PendingVisit,
+  ViewerRequest,
   VisitorScene,
   EventScene,
   PendingEventSeed,
@@ -250,6 +251,12 @@ export interface StoreState {
   calendarOpen: boolean;
   /** DM-triggered IRL visits waiting to fire at the door. */
   pendingVisits: PendingVisit[];
+  /** Structured viewer content requests from DMs. */
+  viewerRequests: ViewerRequest[];
+  /** Whether the viewer-requests panel is open. */
+  requestsOpen: boolean;
+  /** True while the fulfillment judge is running. */
+  requestsBusy: boolean;
   /** Active in-person guest scene, if one is currently playing out. */
   visitor: VisitorScene | null;
   /** Active director-authored interactive event scene. */
@@ -329,6 +336,10 @@ export interface StoreState {
   setCalendarOpen: (b: boolean) => void;
   addPendingVisit: (visit: PendingVisit) => void;
   clearPendingVisit: (charId: string) => void;
+  addViewerRequest: (req: ViewerRequest) => void;
+  patchViewerRequest: (id: string, patch: Partial<ViewerRequest>) => void;
+  setRequestsOpen: (b: boolean) => void;
+  setRequestsBusy: (b: boolean) => void;
   startVisitor: (scene: VisitorScene) => void;
   pushVisitorLine: (line: VisitorScene["lines"][number]) => void;
   patchVisitor: (patch: Partial<VisitorScene>) => void;
@@ -375,6 +386,36 @@ function dedupeStoryEntries(story: StoryEntry[]): StoryEntry[] {
     seen.add(e.id);
     return true;
   });
+}
+
+/** Backfill viewerRequests from legacy DM system lines on old saves. */
+function migrateDmRequests(
+  existing: ViewerRequest[] | undefined,
+  dmThreads: Record<string, DmLine[]> | undefined,
+  day: number,
+): ViewerRequest[] {
+  if (existing?.length) return existing;
+  const out: ViewerRequest[] = [];
+  const seen = new Set<string>();
+  for (const [charId, lines] of Object.entries(dmThreads ?? {})) {
+    for (const line of lines) {
+      if (line.kind !== "system" || !line.text.startsWith("request:")) continue;
+      const ask = line.text.slice("request:".length).trim();
+      if (!ask) continue;
+      const key = `${charId}::${ask}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({
+        id: uid("req"),
+        charId,
+        ask,
+        status: "open",
+        rewardType: "affinity",
+        createdDay: day,
+      });
+    }
+  }
+  return out;
 }
 
 export const useStore = create<StoreState>()(
@@ -430,6 +471,9 @@ export const useStore = create<StoreState>()(
       goalsOpen: false,
       calendarOpen: false,
       pendingVisits: [],
+      viewerRequests: [],
+      requestsOpen: false,
+      requestsBusy: false,
       visitor: null,
       eventScene: null,
       pendingEventSeeds: [],
@@ -692,6 +736,14 @@ export const useStore = create<StoreState>()(
         }),
       clearPendingVisit: (charId) =>
         set((s) => ({ pendingVisits: s.pendingVisits.filter((v) => v.charId !== charId) })),
+      addViewerRequest: (req) =>
+        set((s) => ({ viewerRequests: [...s.viewerRequests, req] })),
+      patchViewerRequest: (id, patch) =>
+        set((s) => ({
+          viewerRequests: s.viewerRequests.map((r) => (r.id === id ? { ...r, ...patch } : r)),
+        })),
+      setRequestsOpen: (requestsOpen) => set({ requestsOpen }),
+      setRequestsBusy: (requestsBusy) => set({ requestsBusy }),
       startVisitor: (visitor) => set({ visitor }),
       pushVisitorLine: (line) =>
         set((s) =>
@@ -744,6 +796,7 @@ export const useStore = create<StoreState>()(
           roster,
           ownedActivities: p.ownedActivities ?? [],
           activity: p.session?.isLive ? (p.activity ?? null) : null,
+          viewerRequests: migrateDmRequests(p.viewerRequests, p.dmThreads, metrics.day),
         };
       },
       partialize: (s) => ({
@@ -766,6 +819,7 @@ export const useStore = create<StoreState>()(
         recentEvents: s.recentEvents,
         completedGoals: s.completedGoals,
         pendingVisits: s.pendingVisits,
+        viewerRequests: s.viewerRequests,
         visitor: s.visitor,
         eventScene: s.eventScene,
         pendingEventSeeds: s.pendingEventSeeds,

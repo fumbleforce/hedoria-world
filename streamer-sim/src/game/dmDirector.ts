@@ -10,7 +10,7 @@ export type DmEffect =
   | { type: "tip"; amount: number; note?: string }
   | { type: "gift"; item: string; note?: string }
   | { type: "image"; subject: string; note?: string }
-  | { type: "request"; ask: string; note?: string }
+  | { type: "request"; ask: string; rewardType?: "affinity" | "cash"; rewardAmount?: number; note?: string }
   | { type: "reveal"; name: string; note?: string }
   | { type: "affinity"; delta: number; note?: string }
   | { type: "threat"; delta: number; note?: string }
@@ -34,7 +34,8 @@ export async function directDm(adapter: LlmAdapter, ctx: DmDirectorContext): Pro
       "Read the DM exchange and return JSON effects that are justified by what was said.",
       "Effects should be modest and sparse; emit none when nothing actionable happened.",
       "Do not invent impossible events or huge money swings.",
-      "Field rules per effect type: tip→amount; gift→item; image→subject; request→ask; reveal→name; affinity/threat→delta; relationship→relationship; meetup→hint (short summary of the visit plan). Always include the type's required field.",
+      "Field rules per effect type: tip→amount; gift→item; image→subject; request→ask (optional rewardType/rewardAmount when they promise a tip); reveal→name; affinity/threat→delta; relationship→relationship; meetup→hint (short summary of the visit plan). Always include the type's required field.",
+      "For request: if the viewer promises a specific tip/payment for the ask, set rewardType to cash and rewardAmount to the dollar figure; otherwise omit reward fields (defaults to a bond reward). Do not re-emit request for asks already fulfilled in the thread.",
       "If the viewer shares their real name in the thread (theirs, not the streamer's), emit a `reveal` with that exact name so the player learns it. Only when they actually offer it — never force it.",
       "When the viewer is heading to or arriving at the streamer's home, emit a SINGLE `meetup` effect (not one per message).",
       steeringForTier(ctx.settings),
@@ -101,7 +102,15 @@ function parseDmEffects(text: string): DmEffect[] | null {
     } else if (type === "image" && typeof o.subject === "string") {
       out.push({ type, subject: o.subject.slice(0, 80), note });
     } else if (type === "request" && typeof o.ask === "string") {
-      out.push({ type, ask: o.ask.slice(0, 120), note });
+      const ask = o.ask.slice(0, 120);
+      const rawReward = typeof o.rewardType === "string" ? o.rewardType : "affinity";
+      const rewardType = rawReward === "cash" ? "cash" : "affinity";
+      if (rewardType === "cash") {
+        const amount = clampNumber(o.rewardAmount, 1, 120);
+        if (amount !== null) out.push({ type, ask, rewardType, rewardAmount: amount, note });
+      } else {
+        out.push({ type, ask, rewardType: "affinity", note });
+      }
     } else if (type === "reveal" && typeof o.name === "string") {
       out.push({ type, name: o.name.slice(0, 28), note });
     } else if (type === "affinity") {
@@ -158,6 +167,8 @@ const EFFECT_SCHEMA: Record<string, unknown> = {
           item: { type: "string" },
           subject: { type: "string" },
           ask: { type: "string" },
+          rewardType: { type: "string", enum: ["affinity", "cash"] },
+          rewardAmount: { type: "number" },
           name: { type: "string" },
           delta: { type: "number" },
           relationship: { type: "string", enum: ["none", "romantic", "sexual", "dominant", "submissive", "married"] },

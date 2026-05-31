@@ -296,6 +296,24 @@ export interface DmLine {
   kind?: "text" | "image" | "gift" | "system";
   imageId?: string;
   amount?: number;
+  /** Links a system request line to structured ViewerRequest state. */
+  requestId?: string;
+}
+
+export type RequestStatus = "open" | "fulfilled" | "dismissed";
+export type RequestRewardType = "affinity" | "cash";
+
+/** Structured viewer content request from a DM exchange. */
+export interface ViewerRequest {
+  id: string;
+  charId: string;
+  ask: string;
+  status: RequestStatus;
+  rewardType: RequestRewardType;
+  rewardAmount?: number;
+  createdDay: number;
+  fulfilledDay?: number;
+  evidence?: string;
 }
 
 export interface PendingVisit {

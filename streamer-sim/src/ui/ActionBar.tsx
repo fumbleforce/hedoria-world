@@ -40,6 +40,7 @@ export function ActionBar({ controller }: { controller: GameController }) {
   );
   const inScene = !!eventScene;
   const canGen = controller.canGenerateImages;
+  const openRequestCount = useStore((s) => s.viewerRequests.filter((r) => r.status === "open").length);
   const [text, setText] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -154,6 +155,9 @@ export function ActionBar({ controller }: { controller: GameController }) {
               <button className="btn" disabled={resolving} onClick={() => useStore.getState().setActivityPickerOpen(true)}>🎬 Activity</button>
             )}
             <button className="btn" onClick={() => useStore.getState().setGoalsOpen(true)} title="Goals">🎯</button>
+            <button className="btn actionbar__requests-btn" onClick={() => useStore.getState().setRequestsOpen(true)} title="Viewer requests">
+              📋{openRequestCount > 0 && <sup className="actionbar__badge">{openRequestCount}</sup>}
+            </button>
             <button className="btn" onClick={() => useStore.getState().setInventoryOpen(true)} title="Inventory">🎒</button>
             <button className="btn" onClick={() => useStore.getState().openSettings("character")} title="Character appearance">🎭</button>
             <button className="btn" onClick={() => useStore.getState().openSettings("gallery")} title="Gallery">🖼</button>
@@ -168,6 +172,9 @@ export function ActionBar({ controller }: { controller: GameController }) {
             <button className="btn" disabled={inScene} onClick={() => useStore.getState().setShopOpen(true)}>📦 Shop</button>
             <button className="btn" onClick={() => useStore.getState().setInventoryOpen(true)} title="Inventory">🎒</button>
             <button className="btn" onClick={() => useStore.getState().setGoalsOpen(true)} title="Goals">🎯</button>
+            <button className="btn actionbar__requests-btn" onClick={() => useStore.getState().setRequestsOpen(true)} title="Viewer requests">
+              📋{openRequestCount > 0 && <sup className="actionbar__badge">{openRequestCount}</sup>}
+            </button>
             <button className="btn" onClick={() => useStore.getState().openSettings("character")} title="Character appearance">🎭</button>
             <button className="btn" onClick={() => useStore.getState().openSettings("gallery")} title="Gallery">🖼</button>
             <button className="btn" onClick={() => useStore.getState().openSettings()} title="Settings">⚙</button>

@@ -80,6 +80,7 @@ See [02 — Zones & token actions](./02-game-loop-and-economy.md#zones--token-ac
 | `characters.ts` | `CharacterSheet`, handle/name generation, relationship levels, spawn rolls. |
 | `relationships.ts` | Affinity milestones, name reveals, the stalker escalation logic, word-of-mouth. |
 | `dmDirector.ts` | Reads a DM thread → structured `DmEffect`s (tip/gift/image/reveal/request/affinity/threat/relationship/meetup); LLM + keyword fallback. |
+| `requestJudge.ts` | Batched LLM judge for viewer-request fulfillment (`Check completed`); mock keyword overlap fallback. |
 | `presence.ts` | Who's online each beat; derives segment populations. |
 | `chatEngine.ts` | Chat burst generation (LLM + mock), parsing, cross-talk dynamics. |
 | `events.ts` | The 12 event triggers, weighting, cooldown-aware rolling. |

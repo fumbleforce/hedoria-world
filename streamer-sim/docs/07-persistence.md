@@ -53,7 +53,7 @@ Persist name is `limelight-save-v3` by default but is **retargeted at boot** to
 `metrics`, `session`, `activity` (while live), `audience`, `settings`, `ownedUpgrades`, `ownedActivities`, `promptOverrides`,
 `eventLog`, `recentEvents`, `arcs`, `completedGoals`, `roomImage`, `dmThreads`, `chat`,
 `story`, `clock`, `zone`, `character` (ids only), `presenceImages` (ids), `lastImageId`,
-`roster` (verbatim, **including** online flags), `pendingVisits`, and the active
+`roster` (verbatim, **including** online flags), `pendingVisits`, `viewerRequests`, and the active
 `visitor` guest scene (so an in-progress visit survives a reload).
 
 > `chat`, `story`, `clock`, and `zone` were **recently added** to fix history being

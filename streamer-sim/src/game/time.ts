@@ -60,6 +60,13 @@ export function clockAfterSleep(_currentClock: number): number {
   return WAKE_TIME;
 }
 
+/** Minutes spent asleep before the next WAKE_TIME (for overnight need drain). */
+export function sleepDurationMinutes(clock: number): number {
+  const tod = timeOfDay(clock);
+  if (tod >= WAKE_TIME) return MINUTES_PER_DAY - tod + WAKE_TIME;
+  return WAKE_TIME - tod;
+}
+
 /** True when a live session should auto-end for lateness (past ~2am). */
 export function streamTooLate(clock: number): boolean {
   return clock >= NIGHT_END;

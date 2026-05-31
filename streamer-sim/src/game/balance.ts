@@ -77,6 +77,11 @@ export const BALANCE = {
     decayGraceDays: 1,
   },
 
+  request: {
+    /** Max bonus affinity the fulfillment judge may add on top of the base payout. */
+    fulfillmentBonusMax: 2,
+  },
+
   economy: {
     tipConstant: 0.07, // was 0.12
     /** Early tips scale by min(1, followers / ramp) so a tiny audience earns little. */
@@ -109,7 +114,8 @@ export const BALANCE = {
   },
 
   needs: {
-    drainPerMin: { hunger: 0.06, bladder: 0.09, hygiene: 0.035 },
+    /** ~5h stream should push bladder toward warn; hunger/hygiene creep over a long day. */
+    drainPerMin: { hunger: 0.08, bladder: 0.21, hygiene: 0.06 },
     warnBelow: 35,
     criticalBelow: 15,
     strainFloor: 0.6,
@@ -206,9 +212,9 @@ export const BALANCE = {
     /** Nightly energy restored, capped at 100 (was hard reset to 100). */
     sleepEnergy: 70,
     sleepComfort: 5,
-    sleepBladder: 100,
-    sleepHygiene: 40,
-    sleepHunger: 30,
+    /** Small overnight bumps — needs still drain for the full sleep window in sleep(). */
+    sleepHygiene: 8,
+    sleepHunger: -5,
     /** Asserting a boundary restores comfort. */
     boundaryComfort: 6,
   },

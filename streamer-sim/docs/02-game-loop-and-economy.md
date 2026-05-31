@@ -91,9 +91,10 @@ seconds = clock − streamStartClock
 ```
 
 ### Needs (`game/needs.ts`, `BALANCE.needs`)
-- Drains per minute: hunger **0.06**, bladder **0.09**, hygiene **0.035**.
+- Drains per minute: hunger **0.08**, bladder **0.21**, hygiene **0.06**.
 - Below **35** (`warnBelow`): `needsStrain` lowers viewer pull (`needsFactor` down to **0.6** floor).
 - Below **15** (`criticalBelow`): extra comfort/energy drain per live beat; throttled DM nag (`nagCooldownBeats` **6**).
+- **Sleep** applies the same drains for `sleepDurationMinutes(clock)` (hours until 9:00 am), then small hygiene **+8** / hunger **−5** — bladder is **not** reset to full.
 - **Physical cues** (`physicalCues`) feed narration/DM (public + private) and chat (`visibleCues` — public only; bladder is private, never in chat).
 
 ### Viewer drivers (`game/derived.ts`)

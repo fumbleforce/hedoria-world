@@ -32,7 +32,8 @@ import {
 } from "../persist/imageStore";
 import { diag } from "../diag/log";
 import { useStore, type ActionMenu, setFeedbackContext, clearFeedbackContext } from "../state/store";
-import type { ChatMessage, ContentTier, DmLine, EventChoice, GameEvent, Metrics, PendingEventSeed } from "./types";
+import type { ChatMessage, ContentTier, DmLine, EventChoice, GameEvent, Metrics, PendingEventSeed, ViewerRequest } from "./types";
+import { judgeRequestFulfillment } from "./requestJudge";
 import type { PlayerAction, ActionOption, ActionVerdict } from "./actions";
 import { generateChatBurst, audienceSummary, chatBurstCount, chatAmbientPlan, growthPing } from "./chatEngine";
 import { evaluateAction } from "./evaluator";
@@ -111,6 +112,7 @@ import {
   weightForIntensity,
   formatClock,
   clockAfterSleep,
+  sleepDurationMinutes,
   streamTooLate,
   streamElapsed,
   type TimeWeight,
@@ -2234,15 +2236,24 @@ export class GameController {
       ? Math.round(m.horny * BALANCE.horny.sleepHalve)
       : 0;
 
+    const sleepMin = sleepDurationMinutes(s.clock);
+    const overnightNeeds = drainNeeds(m, sleepMin);
+
     // Restorative overnight changes — surfaced as their own bubbles, no money "why".
     s.patchMetrics({
       day: newDay,
       energy: Math.min(100, m.energy + BALANCE.recovery.sleepEnergy),
       hype: Math.max(15, m.hype * 0.6),
       comfort: m.comfort + BALANCE.recovery.sleepComfort + mult.comfortPerDay,
-      bladder: BALANCE.recovery.sleepBladder,
-      hygiene: Math.min(100, m.hygiene + BALANCE.recovery.sleepHygiene),
-      hunger: Math.min(100, m.hunger + BALANCE.recovery.sleepHunger),
+      bladder: overnightNeeds.bladder ?? m.bladder,
+      hygiene: Math.min(
+        100,
+        Math.max(0, (overnightNeeds.hygiene ?? m.hygiene) + BALANCE.recovery.sleepHygiene),
+      ),
+      hunger: Math.min(
+        100,
+        Math.max(0, (overnightNeeds.hunger ?? m.hunger) + BALANCE.recovery.sleepHunger),
+      ),
       horny: hornyAfter,
     });
 
@@ -2715,6 +2726,16 @@ export class GameController {
       s.pushEventSceneLine({ role: "narrator", text: outcome.narration });
       this.dm(outcome.narration);
       if (outcome.effects.length) await this.applyEventEffects(outcome.effects);
+      if (s.session.isLive && !outcome.sceneEnd) {
+        const beatContext = `during ${scene.title} — ${outcome.narration.slice(0, 220)}`;
+        const count = chatBurstCount(s.metrics.hype, totalViewers(s.audience), "continue");
+        const msgs = await generateChatBurst(this.llm, this.chatCtx(beatContext, count));
+        if (msgs.length) {
+          s.pushChat(msgs);
+          this.applyChatEffects(msgs);
+          this.syncViewers();
+        }
+      }
       // Time drifts during a scene, but far slower than a normal turn so the
       // moment can breathe without burning the whole night.
       this.advanceTime(BALANCE.events.beatMinutes);
@@ -2764,6 +2785,7 @@ export class GameController {
     };
     if (this.llm.isMock) return fallback;
     const c = scene.charId ? this.s.roster[scene.charId] : undefined;
+    const act = this.activityPrompt();
     const req = {
       system: [
         this.resolvePrompt("narrator"),
@@ -2772,7 +2794,16 @@ export class GameController {
         passive
           ? "The streamer hangs back — DO NOT invent their words. Let the situation evolve."
           : "React to what the streamer just said/did.",
+        act
+          ? [
+              "The stream is LIVE and a locked activity segment is in progress.",
+              "The audience is watching — narrate as a performative on-cam moment, not a private secret.",
+              activityLockBlock(act),
+            ].join("\n")
+          : "",
         "Return modest `effects` (capability array) for small nudges; big payoffs come at scene end.",
+        "Allowed effect types only: metric, money, followers, subscribers, affinity, threat, relationship, revealName, blockViewer, spawnViewer, incomingDm, grantUpgrade, grantItem, masteryXp, raid, meetup, scheduleFollowup, none.",
+        "Use `delta` for numeric changes (metric, followers, affinity, …) — never invent custom type names or alternate keys like `size`.",
         "Set sceneEnd true only when the arc naturally concludes THIS beat (rare).",
         scene.stakes ? `Stakes: ${scene.stakes}` : "",
       ]
@@ -3868,6 +3899,118 @@ export class GameController {
     }
   }
 
+  /** Dismiss an open viewer request without reward. */
+  dismissRequest(id: string): void {
+    const s = this.s;
+    const req = s.viewerRequests.find((r) => r.id === id);
+    if (!req || req.status !== "open") return;
+    const c = s.roster[req.charId];
+    s.patchViewerRequest(id, { status: "dismissed" });
+    const handle = c?.displayName || c?.handle || "Viewer";
+    s.logEvent(`${handle} request dismissed: ${req.ask}.`);
+    if (c) {
+      const note = "you passed on their ask";
+      s.patchCharacter(req.charId, {
+        memory: c.memory ? `${c.memory}; ${note}`.slice(-180) : note,
+      });
+    }
+  }
+
+  /** Batch-check open requests against recent stream/story content. */
+  async checkRequestCompletion(): Promise<void> {
+    const s = this.s;
+    if (s.requestsBusy || s.resolving || s.visitor || s.eventScene) return;
+
+    const open = s.viewerRequests.filter((r) => r.status === "open");
+    if (!open.length) return;
+
+    s.setRequestsBusy(true);
+    try {
+      const judgeItems = open.map((r, i) => {
+        const c = s.roster[r.charId];
+        const handle = c?.displayName || c?.handle || "viewer";
+        const rewardLabel =
+          r.rewardType === "cash" && r.rewardAmount
+            ? `$${r.rewardAmount} tip`
+            : `+${BALANCE.affinity.sources.request} bond`;
+        return { index: i + 1, ask: r.ask, handle, rewardLabel };
+      });
+
+      const recentStoryExtra = s.story
+        .filter((e) => e.kind === "action" || e.kind === "quote" || e.kind === "dm" || e.kind === "outcome")
+        .slice(-10)
+        .map((e) => (e.kind === "quote" ? `She said: "${e.text}"` : e.text))
+        .join("\n");
+
+      const recentStory = [this.recentStoryContext(), recentStoryExtra].filter(Boolean).join("\n").slice(-1200);
+
+      const result = await judgeRequestFulfillment(this.llm, {
+        settings: s.settings,
+        requests: judgeItems,
+        streamMemory: this.streamMemory,
+        recentStory,
+        recentChat: this.recentChatLines().slice(-8),
+        day: s.metrics.day,
+        isLive: s.session.isLive,
+      });
+
+      let fulfilledCount = 0;
+      for (const entry of result.entries) {
+        if (!entry.fulfilled) continue;
+        const req = open[entry.index - 1];
+        if (!req) continue;
+
+        const c = s.roster[req.charId];
+        const handle = c?.displayName || c?.handle || "Viewer";
+
+        if (req.rewardType === "cash" && req.rewardAmount) {
+          this.recordTip(req.charId, req.rewardAmount, { hype: 1 });
+        } else {
+          this.bumpAffinity(req.charId, BALANCE.affinity.sources.request, "request");
+        }
+
+        if (entry.bonusAffinity && entry.bonusAffinity > 0) {
+          this.bumpAffinity(
+            req.charId,
+            clamp(entry.bonusAffinity, 0, BALANCE.request.fulfillmentBonusMax),
+            "request",
+          );
+        }
+
+        s.patchViewerRequest(req.id, {
+          status: "fulfilled",
+          fulfilledDay: s.metrics.day,
+          evidence: entry.evidence || undefined,
+        });
+
+        const reaction =
+          entry.reaction?.trim() ||
+          `omg you actually did the ${req.ask}, thank you!!`;
+        s.pushDm(req.charId, { role: "them", kind: "text", text: reaction });
+
+        this.recordInteraction(req.charId, "request", `Fulfilled: ${req.ask}`);
+        if (c) {
+          const note = `you did ${req.ask} for them`;
+          s.patchCharacter(req.charId, {
+            memory: c.memory ? `${c.memory}; ${note}`.slice(-180) : note,
+          });
+        }
+
+        s.logEvent(`Request fulfilled for ${handle}: ${req.ask}.`);
+        fulfilledCount++;
+      }
+
+      s.setToast(
+        fulfilledCount > 0
+          ? `${fulfilledCount} request${fulfilledCount === 1 ? "" : "s"} fulfilled`
+          : "Nothing matched yet — keep going.",
+      );
+      diag.info("world", "request check", { open: open.length, fulfilled: fulfilledCount });
+    } finally {
+      s.setRequestsBusy(false);
+    }
+  }
+
   private async applyDmEffects(charId: string, effects: DmEffect[]): Promise<void> {
     const s = this.s;
     const c = s.roster[charId];
@@ -3924,13 +4067,35 @@ export class GameController {
           }
           break;
         case "request": {
-          s.pushDm(charId, { role: "them", kind: "system", text: `request: ${e.ask}` });
+          const rewardType = e.rewardType === "cash" ? "cash" : "affinity";
+          const rewardAmount =
+            rewardType === "cash" && e.rewardAmount
+              ? clamp(Math.round(e.rewardAmount), 1, 120)
+              : undefined;
+          const ask = e.ask.trim().slice(0, 120);
+          const req: ViewerRequest = {
+            id: uid("req"),
+            charId,
+            ask,
+            status: "open",
+            rewardType,
+            rewardAmount,
+            createdDay: s.metrics.day,
+          };
+          s.addViewerRequest(req);
+          s.pushDm(charId, {
+            role: "them",
+            kind: "system",
+            text: `request: ${ask}`,
+            requestId: req.id,
+          });
           const cur = this.s.roster[charId];
           if (cur) {
-            const note = `asked you to ${e.ask}`.slice(0, 90);
+            const note = `asked you to ${ask}`.slice(0, 90);
             s.patchCharacter(charId, { memory: cur.memory ? `${cur.memory}; ${note}`.slice(-180) : note });
           }
-          s.logEvent(`DM: ${c.displayName || c.handle} asked you to ${e.ask}.`);
+          s.logEvent(`DM: ${c.displayName || c.handle} asked you to ${ask}.`);
+          s.setToast(`New request from ${c.displayName || c.handle}`);
           break;
         }
         case "affinity": {

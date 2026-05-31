@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "../state/store";
 import type { GameController } from "../game/controller";
-import type { DmLine } from "../game/types";
+import type { DmLine, ViewerRequest } from "../game/types";
+import { BALANCE } from "../game/balance";
 import { ARCHETYPE_BY_ID } from "../game/archetypes";
 import { avatarFor, relationshipLevel, revealedSheet, personalityProse, personalityTable, backstoryLayerLabel, type CharacterSheet, type RevealedSheet } from "../game/characters";
 import { loadPortrait } from "../persist/imageStore";
@@ -20,6 +21,7 @@ export function CharacterModal({ controller }: { controller: GameController }) {
   const id = useStore((s) => s.openCharId);
   const roster = useStore((s) => s.roster);
   const convo = useStore((s) => (s.openCharId ? s.dmThreads[s.openCharId] ?? EMPTY : EMPTY));
+  const viewerRequests = useStore((s) => s.viewerRequests);
   const busy = useStore((s) => s.dmBusy);
   const portraitBusyId = useStore((s) => s.portraitBusyId);
   const [text, setText] = useState("");
@@ -101,7 +103,7 @@ export function CharacterModal({ controller }: { controller: GameController }) {
           <div className="dm__scroll" ref={scrollRef}>
             {convo.length === 0 && <p className="rail__empty">Say hi — see what they're like one-on-one.</p>}
             {convo.map((l, i) => (
-              <DmMessage key={i} line={l} handle={c.handle} />
+              <DmMessage key={i} line={l} handle={c.handle} controller={controller} viewerRequests={viewerRequests} />
             ))}
             {busy && <div className="dm__line dm__line--them dm__pending is-loading">…typing…</div>}
           </div>
@@ -257,9 +259,23 @@ function PersonalityTable({ c }: { c: CharacterSheet }) {
 
 const LOCKED = "??? — get to know them";
 
-function DmMessage({ line, handle }: { line: DmLine; handle: string }) {
+function DmMessage({
+  line,
+  handle,
+  controller,
+  viewerRequests,
+}: {
+  line: DmLine;
+  handle: string;
+  controller: GameController;
+  viewerRequests: ViewerRequest[];
+}) {
   const imageUrl = useStoredImage(line.imageId);
   const who = line.role === "me" ? "You" : handle;
+  const linkedReq = line.requestId
+    ? viewerRequests.find((r) => r.id === line.requestId)
+    : undefined;
+
   if (line.kind === "image") {
     return (
       <div className={`dm__line dm__line--${line.role}`}>
@@ -277,9 +293,38 @@ function DmMessage({ line, handle }: { line: DmLine; handle: string }) {
     );
   }
   if (line.kind === "system") {
+    const rewardChip = linkedReq
+      ? linkedReq.rewardType === "cash" && linkedReq.rewardAmount
+        ? `$${linkedReq.rewardAmount} tip`
+        : `+${BALANCE.affinity.sources.request} bond`
+      : null;
+    const statusChip =
+      linkedReq?.status === "fulfilled"
+        ? "fulfilled ✓"
+        : linkedReq?.status === "dismissed"
+          ? "dismissed"
+          : linkedReq?.status === "open"
+            ? "open"
+            : null;
     return (
       <div className={`dm__line dm__line--${line.role}`}>
         <span className="dm__kind dm__kind--system">{line.text}</span>
+        {linkedReq && (
+          <div className="dm__request-meta">
+            {statusChip && rewardChip && (
+              <span className="requests__chip">{statusChip} · {rewardChip}</span>
+            )}
+            {linkedReq.status === "open" && line.requestId && (
+              <button
+                type="button"
+                className="btn btn--sm"
+                onClick={() => controller.dismissRequest(line.requestId!)}
+              >
+                Dismiss
+              </button>
+            )}
+          </div>
+        )}
       </div>
     );
   }

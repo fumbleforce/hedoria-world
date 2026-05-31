@@ -18,7 +18,7 @@ Files: `src/App.tsx`, `src/render/StudioRoom.tsx`, `src/ui/*`, `src/index.css`.
 └─────────────────────────────────────────────────────────┘
 
 Overlays (modals): ActionMenuModal · CharacterModal · ActivityPicker ·
-ShopPanel · InventoryPanel · SettingsPanel · EventModal · GoalsPanel
+ShopPanel · InventoryPanel · SettingsPanel · EventModal · GoalsPanel · CalendarPanel · RequestsPanel
 Floating: toast (bottom) · backendChip (bottom-right)
 ```
 
@@ -41,20 +41,21 @@ minmax(280px,340px)`, capped at 1340px. Until `boot()` resolves, a
 | **NarratorPanel** | `ui/NarratorPanel.tsx` | center bottom | The story feed (dm / action / outcome / quote / image entries) and a "Visualize scene" button. |
 | **ChatPanel** | `ui/ChatPanel.tsx` | right top | Live chat log; clicking a known user's handle opens their CharacterModal. Streamer's spoken lines do **not** appear here (they go to the narrator). |
 | **CharacterGallery** | `ui/CharacterGallery.tsx` | right bottom | Audience-segment bars (when live) + the Regulars list. Each card shows the real name once known with the handle as a muted `@handle` secondary. Click → CharacterModal. |
-| **ActionBar** | `ui/ActionBar.tsx` | footer | Freeform input + Act + Continue. Live: Actions dropdown, Game, Goals, Inventory, Character, Gallery, Settings, End. Offline: Go Live, Sleep, Shop, Inventory, etc. **During a visit:** a "🏠 In person" banner, Say/Do + Continue (guest leads), 📸 Visualize, Inventory, 🚪 See them out — Go Live/Sleep/Shop hidden. **During an event scene:** a "⚡ In the moment" banner + stakes, Say/Do + Continue, 📸 Visualize, ✓ See it through — Go Live/Sleep/Shop hidden. |
+| **ActionBar** | `ui/ActionBar.tsx` | footer | Freeform input + Act + Continue. Live: Actions dropdown, Game, Goals, **Requests** 📋 (badge = open count), Inventory, Character, Gallery, Settings, End. Offline: Go Live, Sleep, Shop, Inventory, Goals, **Requests**, etc. **During a visit:** a "🏠 In person" banner, Say/Do + Continue (guest leads), 📸 Visualize, Inventory, 🚪 See them out — Go Live/Sleep/Shop hidden. **During an event scene:** a "⚡ In the moment" banner + stakes, Say/Do + Continue, 📸 Visualize, ✓ See it through — Go Live/Sleep/Shop hidden. |
 
 ## Modals (overlay)
 
 | Component | File | Opened by | Shows / does |
 |-----------|------|-----------|--------------|
 | **ActionMenuModal** | `ui/ActionMenuModal.tsx` | clicking a zone | The zone's contextual actions + a freeform box (when the zone allows it). |
-| **CharacterModal** | `ui/CharacterModal.tsx` | clicking a chatter/regular | The character sheet (name + handle, relationship, archetype, memory), the DM thread, and "generate portrait". DM lines render by `kind`: plain text, inline **image**, 💸/🎁 **gift**, or italic **system** (requests). |
+| **CharacterModal** | `ui/CharacterModal.tsx` | clicking a chatter/regular | The character sheet (name + handle, relationship, archetype, memory), the DM thread, and "generate portrait". DM lines render by `kind`: plain text, inline **image**, 💸/🎁 **gift**, or italic **system** (requests — shows status/reward chip + Dismiss when open). |
 | **ActivityPicker** | `ui/ActivityPicker.tsx` | "Activity" 🎬 (live) | Pick a catalogue activity (grouped by category, tier-gated, shop-locked games) or type a custom activity. |
 | **ShopPanel** | `ui/ShopPanel.tsx` | "Shop" / shop button | Game Library (purchasable activities) + upgrades by category; buy with cash. |
 | **InventoryPanel** | `ui/InventoryPanel.tsx` | "Inventory" 🎒 | Owned upgrades grouped by category, per-item effect tags, and combined passive bonuses from `multipliersFor`. |
 | **SettingsPanel** | `ui/SettingsPanel.tsx` | "Settings" / 🎭 / 🖼 | 7 tabs (see below). |
 | **EventModal** | `ui/EventModal.tsx` | a pending event | The event text + discrete choices, plus a freeform response box when `allowFreeform`. |
 | **GoalsPanel** | `ui/GoalsPanel.tsx` | "Goals" 🎯 | Soft goals with progress bars + active story arcs ("threads") with their next day. |
+| **RequestsPanel** | `ui/RequestsPanel.tsx` | "Requests" 📋 (ActionBar; badge when open) | All viewer content requests (Open / Fulfilled / Dismissed). **Check completed** runs the batched fulfillment judge; per-row **Dismiss** on open items. Click handle → CharacterModal. |
 
 > The DM **guest visit** and **Event Director scenes** have no modal — they play out inline. The `StudioRoom` draws the
 > guest by the couch (visits only), the `ActionBar` shows a "🏠 In person" or "⚡ In the moment" banner + meeting/scene controls

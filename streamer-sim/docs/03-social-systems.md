@@ -183,7 +183,7 @@ Affinity is **scarce and earned**. Every gain/loss routes through one function,
 | `dm` (first exchange/day) | +4 | once-per-day real bump (`lastDmAffinityDay`) |
 | `dmRepeat` (same-day follow-ups) | +0.3 | soft-capped token |
 | `tip` | min($×0.05, 6) | reciprocal, cap-exempt |
-| `gift` / `request` | +2 / +3 | reciprocal, cap-exempt |
+| `gift` / `request` | +2 / +3 | reciprocal, cap-exempt; **request** fires on **fulfillment** (Check completed), not on creation |
 | `visit` (per-beat signal, on resolve) | +3…+6 | reciprocal, cap-exempt |
 | `referral` (referred-friend spawn) | +6 | seeded warmer |
 | `event` (Event Director capability) | ±delta | cap-exempt; via `bumpAffinity(..., "event")` |
@@ -291,7 +291,7 @@ keyword fallback covers the mock backend). `applyDmEffects` then makes each one 
 | `gift {item}` | small mood/comfort bump + a 🎁 gift line. |
 | `image {subject}` | generates a candid "photo" via the image backend, stores it, posts an inline image line. |
 | `reveal {name}` | sets `displayName` (only if still unknown) + marks `known`. |
-| `request {ask}` | posts a system line and appends a short memory note. |
+| `request {ask}` | creates a structured **`ViewerRequest`** (`viewerRequests[]`), posts a linked system DM line (`requestId`), appends memory, toast. Promised reward locked at creation: default **+3 bond** (`BALANCE.affinity.sources.request`) or **cash** when the viewer named a tip (`rewardType`/`rewardAmount` from the director). Affinity/cash pays out only on fulfillment (see below). |
 | `affinity {delta}` | ±8, then milestone check. |
 | `threat {delta}` | ±2 (clamped 0–3); can feed the stalker systems. |
 | `relationship {type}` | sets `CharacterSheet.relationship`, **gated** by `allowRelationship` (affinity ≥45; `romantic`/`married` allowed above that, the more explicit types only at `risque`/`unhinged`/`custom` tiers). |
@@ -336,6 +336,30 @@ them away), starting the meetup cooldown.
 
 These are distinct from the `dm` **event** trigger (a modal interrupt) — see
 [04](./04-events-arcs-goals.md).
+
+### Viewer requests (`viewerRequests`, `requestJudge.ts`)
+
+When the DM director emits a `request` effect, `applyDmEffects` creates a persisted
+**`ViewerRequest`** (`types.ts`: `id`, `charId`, `ask`, `status`, `rewardType`,
+`rewardAmount?`, `createdDay`, `fulfilledDay?`, `evidence?`). Status lifecycle:
+`open → fulfilled` or `open → dismissed` (terminal states never re-evaluate).
+
+- **Creation:** `addViewerRequest` + DM system line with `requestId`. Hybrid rewards:
+  promised payout locked from conversation (cash if they named a tip; else affinity +3).
+  Toast: "New request from {handle}".
+- **Dismiss:** `controller.dismissRequest(id)` — no reward, no penalty; memory note
+  optional ("you passed on their ask").
+- **Fulfillment:** player hits **Check completed** in the Requests panel
+  (`controller.checkRequestCompletion()`). One batched LLM call via
+  `judgeRequestFulfillment` (`requestJudge.ts`) compares all open requests against
+  `streamMemory`, recent story beats, and recent chat. Code applies numbers:
+  - cash promise → `recordTip(charId, rewardAmount)` (same pipeline as DM tips)
+  - default → `bumpAffinity(..., BALANCE.affinity.sources.request, "request")`
+  - optional bonus affinity 0–2 when above-and-beyond (`BALANCE.request.fulfillmentBonusMax`)
+  - thank-you DM line, memory/interaction log, evidence stored on the request
+- Works **live or offline** (judges recent story, not just the live session).
+- **Migration:** old saves with only `request:` DM lines backfill into `viewerRequests`
+  on load (`migrateDmRequests` in `store.ts` merge).
 
 ## Numbers cheat-sheet
 

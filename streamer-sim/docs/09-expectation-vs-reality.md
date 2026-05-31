@@ -74,6 +74,14 @@ an 18-name pool) or by **`generateBackstory`** when you first open a sheet (an L
 backstory path can pre-empt the milestone's flavor beat. *(`relationships.ts`,
 `controller.ts`)*
 
+### ✅ B5 — (resolved) DM `request` effects were flavor-only
+Previously the DM director could emit `request: …` system lines, but there was no
+structured tracking, no fulfillment check, and `BALANCE.affinity.sources.request` was
+never applied. Now `viewerRequests[]` persists open/fulfilled/dismissed state,
+**RequestsPanel** + **Check completed** (`requestJudge.ts`) apply promised rewards
+(affinity or cash + optional bonus), and affinity pays on fulfillment not creation.
+*(`controller.ts`, `requestJudge.ts`, `store.ts`, `RequestsPanel.tsx`)*
+
 ### 🟡 B2 — Stalker arc isn't the documented chat→DM→door→IRL ladder
 It's a daily **threat counter** (1→2→3, ≤1 step/day, gated only by `comfort < 75`)
 plus *overlapping* random events: the `door-knock` event turns creepy at threat ≥1, and

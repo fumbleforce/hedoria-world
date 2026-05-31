@@ -181,6 +181,9 @@ export async function authorEvent(
       "Pick mode:",
       "  - \"scene\": interactive, multi-beat (confrontations, a viewer at the door, a big moment)",
       "  - \"notice\": a single narrated beat with immediate effects (small passive happenings)",
+      ctx.activity
+        ? "An activity segment is already the interactive loop — prefer \"notice\" for in-segment beats; only use \"scene\" for a genuine confrontation or boundary moment that needs multiple beats."
+        : "",
       "Compose ONLY from listed capabilities in effects; never invent operations. Code owns every number — your deltas are suggestions and will be clamped.",
       "BACK YOUR NARRATION WITH CAPABILITIES: if your opening says a DM/message arrived, a tip came in, followers spiked, a gift showed up, or a viewer raided, you MUST include the matching effect (incomingDm, money, followers, grantItem, raid, …). Never narrate a consequence you didn't author as an effect.",
       "If the beat is fundamentally someone messaging her privately (a DM, an off-stream ask, a troll's message), use mode \"notice\" with an `incomingDm` effect: bind the sender via `charRef` and give the GIST of why they're reaching out in `note`. The sender writes their own line in-voice and decides what to reveal — don't script their exact words or names. A real DM lands in her inbox and she replies in the DM panel, where the DM director takes over. Do NOT open a scene that merely describes a DM.",
@@ -228,6 +231,8 @@ export async function resolveEvent(
       "Given the transcript, return JSON { effects: EventEffect[] } that the player's choices earned.",
       "Effects should be proportional to what happened — modest and sparse; emit none when nothing changed.",
       "Use only capability types from the schema. Code clamps every number.",
+      "Allowed types: metric, money, followers, subscribers, affinity, threat, relationship, revealName, blockViewer, spawnViewer, incomingDm, grantUpgrade, grantItem, masteryXp, raid, meetup, scheduleFollowup, none.",
+      "Numeric magnitude goes in `delta` (metric, followers, affinity, …) or `amount` (money) — never `size` or invented field names.",
       steeringForTier(ctx.settings),
     ].join("\n"),
     messages: [
@@ -252,6 +257,12 @@ export async function resolveEvent(
   }
 }
 
+/** Read delta from LLM JSON; models sometimes emit `size` instead of `delta`. */
+function effectDelta(o: Record<string, unknown>, min: number, max: number): number | null {
+  const raw = o.delta !== undefined ? o.delta : o.size;
+  return clampNumber(raw, min, max);
+}
+
 /** Parse + clamp effects from raw LLM JSON; drops invalid charRef/upgradeId. */
 export function parseEventEffects(text: string, ctx?: Pick<EventDirectorContext, "rosterIds" | "upgradeIds">): EventEffect[] | null {
   const json = extractJson<{ effects?: unknown }>(text);
@@ -271,7 +282,7 @@ export function parseEventEffects(text: string, ctx?: Pick<EventDirectorContext,
 
     if (type === "metric") {
       const key = typeof o.key === "string" && (METRIC_KEYS as readonly string[]).includes(o.key) ? o.key : null;
-      const delta = clampNumber(o.delta, -E.metricDeltaBand, E.metricDeltaBand);
+      const delta = effectDelta(o, -E.metricDeltaBand, E.metricDeltaBand);
       if (key && delta !== null) out.push({ type, key: key as (typeof METRIC_KEYS)[number], delta, note });
     } else if (type === "money") {
       const amount = clampNumber(o.amount, E.cashMin, E.cashMax);
