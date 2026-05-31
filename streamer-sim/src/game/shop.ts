@@ -1,4 +1,6 @@
 import type { Upgrade } from "./types";
+import { SEGMENTS, type SegmentId } from "./segments";
+import { BALANCE } from "./balance";
 
 /** Catalogue of purchasable upgrades. Effects fold into the live model. */
 export const UPGRADES: readonly Upgrade[] = [
@@ -23,8 +25,48 @@ export const UPGRADES: readonly Upgrade[] = [
     name: "1080p Webcam",
     category: "gear",
     cost: 260,
-    description: "Sharp picture pulls a bigger crowd.",
-    effects: { viewerMult: 1.25 },
+    description: "Sharp picture pulls a bigger crowd. Production quality up.",
+    effects: { viewerMult: 1.25, productionQuality: 1 },
+  },
+  {
+    id: "dslr-cam",
+    name: "DSLR + Capture Card",
+    category: "gear",
+    cost: 700,
+    description: "Cinematic look. Big production-quality lift that appeals to everyone.",
+    effects: { viewerMult: 1.35, productionQuality: 2 },
+  },
+  {
+    id: "studio-lighting",
+    name: "Studio Lighting Kit",
+    category: "gear",
+    cost: 320,
+    description: "Polished, professional glow — raises the whole ceiling.",
+    effects: { hypeMult: 1.08, productionQuality: 1 },
+  },
+  {
+    id: "lava-lamp",
+    name: "Lava Lamp & Plush Rug",
+    category: "furniture",
+    cost: 110,
+    description: "Soft, dreamy corner. Draws and delights the cozy crowd.",
+    effects: { segmentAppeal: { cozy: 2, lonely: 1 } },
+  },
+  {
+    id: "neon-arcade",
+    name: "Neon Arcade Signs",
+    category: "furniture",
+    cost: 160,
+    description: "Loud, electric backdrop the hype beasts love.",
+    effects: { segmentAppeal: { hype: 2, trolls: 1 } },
+  },
+  {
+    id: "premium-backdrop",
+    name: "Premium Velvet Backdrop",
+    category: "furniture",
+    cost: 420,
+    description: "Exclusive, high-end vibe that flatters the whales.",
+    effects: { segmentAppeal: { whales: 2 }, incomeMult: 1.05 },
   },
   {
     id: "green-screen",
@@ -74,9 +116,13 @@ export interface Multipliers {
   income: number;
   moodPerDay: number;
   rentPerDay: number;
+  /** Summed global production quality (lifts appeal for all segments). */
+  productionQuality: number;
+  /** Summed targeted baseline appeal per segment from owned décor. */
+  segmentAppeal: Partial<Record<SegmentId, number>>;
 }
 
-const BASE_RENT_PER_DAY = 20;
+const BASE_RENT_PER_DAY = BALANCE.economy.rentBase;
 
 export function multipliersFor(ownedIds: readonly string[]): Multipliers {
   const m: Multipliers = {
@@ -85,6 +131,8 @@ export function multipliersFor(ownedIds: readonly string[]): Multipliers {
     income: 1,
     moodPerDay: 0,
     rentPerDay: BASE_RENT_PER_DAY,
+    productionQuality: 0,
+    segmentAppeal: {},
   };
   for (const up of UPGRADES) {
     if (!ownedIds.includes(up.id)) continue;
@@ -93,6 +141,55 @@ export function multipliersFor(ownedIds: readonly string[]): Multipliers {
     if (up.effects.incomeMult) m.income *= up.effects.incomeMult;
     if (up.effects.moodPerDay) m.moodPerDay += up.effects.moodPerDay;
     if (up.effects.rentPerDay) m.rentPerDay += up.effects.rentPerDay;
+    if (up.effects.productionQuality) m.productionQuality += up.effects.productionQuality;
+    if (up.effects.segmentAppeal) {
+      for (const [seg, v] of Object.entries(up.effects.segmentAppeal) as [SegmentId, number][]) {
+        m.segmentAppeal[seg] = (m.segmentAppeal[seg] ?? 0) + v;
+      }
+    }
   }
   return m;
+}
+
+/** Human-readable stat lines for one upgrade's effects (inventory / shop detail). */
+export function formatUpgradeEffects(effects: Upgrade["effects"]): string[] {
+  const lines: string[] = [];
+  if (effects.viewerMult && effects.viewerMult !== 1) {
+    const pct = Math.round((effects.viewerMult - 1) * 100);
+    lines.push(`${pct >= 0 ? "+" : ""}${pct}% viewers`);
+  }
+  if (effects.hypeMult && effects.hypeMult !== 1) {
+    const pct = Math.round((effects.hypeMult - 1) * 100);
+    lines.push(`${pct >= 0 ? "+" : ""}${pct}% hype`);
+  }
+  if (effects.incomeMult && effects.incomeMult !== 1) {
+    const pct = Math.round((effects.incomeMult - 1) * 100);
+    lines.push(`${pct >= 0 ? "+" : ""}${pct}% income`);
+  }
+  if (effects.moodPerDay) lines.push(`+${effects.moodPerDay} mood/day`);
+  if (effects.rentPerDay) lines.push(`+$${effects.rentPerDay} rent/day`);
+  if (effects.productionQuality) {
+    lines.push(`+${effects.productionQuality} production quality`);
+  }
+  if (effects.segmentAppeal) {
+    for (const [seg, v] of Object.entries(effects.segmentAppeal) as [SegmentId, number][]) {
+      if (v) lines.push(`+${v} ${SEGMENTS[seg].label} appeal`);
+    }
+  }
+  return lines;
+}
+
+/** Combined passive bonuses from everything you own. */
+export function formatMultipliersSummary(m: Multipliers): string[] {
+  const lines: string[] = [];
+  if (m.viewer !== 1) lines.push(`Viewers ×${m.viewer.toFixed(2)}`);
+  if (m.hype !== 1) lines.push(`Hype ×${m.hype.toFixed(2)}`);
+  if (m.income !== 1) lines.push(`Income ×${m.income.toFixed(2)}`);
+  if (m.moodPerDay) lines.push(`Mood +${m.moodPerDay}/day`);
+  lines.push(`Rent $${m.rentPerDay}/day`);
+  if (m.productionQuality) lines.push(`Production quality +${m.productionQuality}`);
+  for (const [seg, v] of Object.entries(m.segmentAppeal) as [SegmentId, number][]) {
+    if (v) lines.push(`${SEGMENTS[seg].label} appeal +${v}`);
+  }
+  return lines;
 }

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useStore } from "../state/store";
 import type { GameController } from "../game/controller";
 import type { StoryEntry } from "../game/types";
+import { MentionText } from "./MentionText";
 
 /** The Dungeon Master sidebar: the unfolding story, in prose. */
 export function NarratorPanel({ controller }: { controller: GameController }) {
@@ -43,7 +44,7 @@ export function NarratorPanel({ controller }: { controller: GameController }) {
           </p>
         )}
         {story.map((e) => (
-          <StoryLine key={e.id} entry={e} imageCache={imageCache} onZoom={setLightbox} />
+          <StoryLine key={e.id} entry={e} imageCache={imageCache} onZoom={setLightbox} controller={controller} />
         ))}
         {resolving && <p className="story story--pending is-loading">…the narrator is writing…</p>}
       </div>
@@ -62,10 +63,12 @@ function StoryLine({
   entry,
   imageCache,
   onZoom,
+  controller,
 }: {
   entry: StoryEntry;
   imageCache: Record<string, string>;
   onZoom: (lb: { src: string; cap: string }) => void;
+  controller: GameController;
 }) {
   const editStory = useStore((s) => s.editStory);
   const deleteStory = useStore((s) => s.deleteStory);
@@ -135,7 +138,7 @@ function StoryLine({
     return (
       <p className="story story--quote">
         {tools}
-        <span className="story__mic">🎙</span> {entry.text}
+        <span className="story__mic">🎙</span> <MentionText text={entry.text} controller={controller} />
         {entry.edited && <span className="story__edited" title="edited"> ·edited</span>}
       </p>
     );
@@ -144,7 +147,7 @@ function StoryLine({
   return (
     <p className={`story story--${entry.kind}`}>
       {tools}
-      {entry.text}
+      <MentionText text={entry.text} controller={controller} />
       {entry.edited && <span className="story__edited" title="edited"> ·edited</span>}
     </p>
   );

@@ -12,7 +12,7 @@ Persistent player stats (`Metrics`, initialized in `store.ts`):
 |--------|-------|---------|------|
 | `cash` | unbounded (2 dp) | **$250** | Spendable money. |
 | `followers` | ≥ 0 int | **35** | Reach; scales presence target & follower gain; goal targets. |
-| `subscribers` | ≥ 0 int | **1** | Tracked & goal-rewarded. **No recurring sub income is implemented.** |
+| `subscribers` | ≥ 0 int | **1** | Tracked & goal-rewarded. Pays **recurring monthly income** (see Recurring sub income). |
 | `currentViewers` | ≥ 0 int | **0** | Live viewer count (display). |
 | `peakViewers` | ≥ 0 int | **0** | **Lifetime** peak (used by the 100-viewers goal). |
 | `hype` | 0–100 | **20** | Momentum; decays while live; drives tips/spawns. |
@@ -22,7 +22,29 @@ Persistent player stats (`Metrics`, initialized in `store.ts`):
 | `day` | int ≥ 1 | **1** | In-world day counter. |
 
 `patchMetrics` clamps hype/energy/mood/comfort to 0–100 and updates
-`peakViewers = max(peakViewers, currentViewers)`.
+`peakViewers = max(peakViewers, currentViewers)`. It also **auto-diffs** changes
+into floating feedback bubbles (see [08 → Feedback layer](./08-ui-map.md)).
+
+### Metrics taxonomy (how to think about them)
+The flat `Metrics` object groups conceptually, and the rebalance treats each group
+differently:
+- **Personal — body & psyche** (persist, restored by lifestyle): `energy`, `mood`,
+  `comfort`. **Comfort is the escalation gate** (readiness, below).
+- **Personal progression — who she's becoming**: **mastery** XP per skill domain
+  (`store.mastery`, see Mastery). The lever that bends *personal costs* down.
+- **Channel — the business / score** (persist): `cash`, `followers`, `subscribers`.
+- **Live / momentum** (this stream only): `hype`, `currentViewers`, `peakViewers`,
+  the `StreamSession` tallies (incl. `connectionTagCounts`).
+- **World**: `day`, `clock`.
+
+Readiness draws on *personal* stats to gate *channel* reward; mastery is the personal
+lever that lowers personal cost over time.
+
+### Balance module (`game/balance.ts`)
+Every tunable constant in the sections below lives in one exported `BALANCE` object
+(affinity weights/caps/decay, economy curves, subs, novelty, niches, readiness, gear,
+mastery). `resolver.ts`, `controller.ts`, `presence.ts`, `relationships.ts`, and
+`shop.ts` read from it, so the whole rebalance is tuned in one place.
 
 ### Session (transient, NOT persisted)
 Per-stream tallies in `StreamSession`: `round` (turn counter), `seconds`
@@ -79,28 +101,58 @@ mood   += 8 + mult.moodPerDay
 hype    = max(15, hype × 0.6)
 comfort+= 6
 cash   -= rent          // base $20/day; +$25 if loft owned → $45
+cash   -= utilityBill   // BALANCE.economy.utilityAmount ($18) every 7 days
 clock   = 8:00 pm
 ```
-Warns if cash goes negative. (No bankruptcy/eviction loss exists yet.)
+Then, in order: **recurring sub income** (on the 30-day cadence),
+**novelty recovery** (rest freshens repeated content), and **affinity decay**
+(neglected bonds cool — see [03](./03-social-systems.md)). The money debit is
+surfaced as an explicit "rent & utilities" feedback bubble. Warns if cash goes
+negative. (No bankruptcy/eviction loss exists yet.)
+
+### Recurring sub income (`payRecurringSubs`)
+On a `BALANCE.subs.cadenceDays` (30) boundary, pays
+`subscribers × monthlyValue ($3.5) × mult.income` through the income path with a
+prominent positive alert. Predictable recurring revenue vs. one-off tips is the main
+early-game escape hatch.
 
 ## The economy
 
 ### Tips (live actions, in `resolver.ts`)
 For each segment with `satisfaction > 55` and `population > 0`:
 ```
-tip += ((sat − 55) / 45) × tipFactor × population × 0.12 × mult.income
+tip += ((sat − 55) / 45) × tipFactor × population × tipConstant(0.07) × mult.income
+```
+Then the total is scaled by **readiness × monetizationRamp × novelty**:
+```
+monetizationRamp = min(1, followers / 150)   // a tiny new audience barely tips
 ```
 Segment `tipFactor`: hype 0.8, lonely 1.1, simps 1.6, trolls 0.2, cozy 0.9,
-**whales 5.0**, stalkers 1.2.
+**whales 5.0**, stalkers 1.2. Whales/subs are the meaningful early lever.
 
 ### Follower gain (live actions, `resolver.ts`)
 ```
 satWeightedHappy = Σ over happy segments: ((sat − 55)/45) × growthFactor × population
+satWeightedHappy ×= readiness × novelty
 reach            = 0.4 + min(1.8, followers / 500)
-gainedFollowers  = max(0, round(satWeightedHappy × 0.18 × reach))
+gainedFollowers  = max(0, round(satWeightedHappy × followerGrowth(0.16) × reach))
 ```
 Segment `growthFactor`: hype 1.3, lonely 1.0, simps 1.1, trolls 0.6, cozy 1.0,
 whales 0.4, stalkers 0.5.
+
+### Readiness gating (`resolver.ts`, `BALANCE.readiness`)
+Positive payoff (tips + followers) is gated by how *ready* the moment is — the
+classifier stays pure; the resolver owns the numbers:
+- **Audience fit** — `fit = Σ max(0, appeal)×pop / totalPop`; payoff scales by
+  `(1−fitWeight) + fitWeight×fitNorm`. Spicy content with no simps/whales present →
+  near-zero tips, while its negative appeal sours the cozy crowd who *are* there.
+- **Comfort** — for `intensity ≥ 2`, payoff scales with comfort headroom **and** the
+  comfort *cost* is amplified (up to ×1.8) when comfort is already low.
+- **Energy** — `intensity ≥ 2` underperforms below 30 energy.
+- **Hype** — big swings (`intensity ≥ 4`) convert better at high hype.
+
+So the same "go spicy" verdict pays out wildly differently by context: build the
+audience + comfort first, then escalation pays.
 
 > **Offline actions apply stat pressure but no tips/followers** (resolver guards on
 > live state).
@@ -115,8 +167,9 @@ whales 0.4, stalkers 0.5.
 | `troll` | mood −0.6 |
 | `creepy` | comfort −1 |
 
-A message from a **named character** also grants **+0.6 affinity** (cap 100),
-increments their `messageCount`, and logs any tip to them.
+A message from a **named character** also grants a tiny **+0.05 affinity** through
+the ledger (soft-capped per day — see [03](./03-social-systems.md)) and increments
+their `messageCount`. Tips route through `recordTip`/`bumpAffinity`.
 
 ### Coded lifestyle costs
 | Action | Cash | Other | Minutes |
@@ -160,16 +213,20 @@ comfortFromAudience += comfortFactor × population × (sat / 100)
 `setsBoundary` → stalker satisfaction **−25**. Else, if the tier allows stalkers and
 the action's tags include `vulnerable`/`suggestive`/`boundary-crossing` → **+12**.
 
-> **The resolver never changes segment *population*.** Populations are entirely
-> presence-driven (see [03](./03-social-systems.md)). The comment in `segments.ts`
-> about unhappy segments "shrinking and leaving" is **not implemented**.
+> **The resolver never changes segment *population* directly** — populations are
+> presence-driven. But strongly **dissatisfied segments now leave faster**: presence
+> adds a per-character leave boost from their segment's satisfaction
+> (`(55−sat)/55 × leaveOnDislikeBoost`), so pushing content a room dislikes visibly
+> empties it. (Closes the old `segments.ts` "shrink & leave" gap — see
+> [09](./09-expectation-vs-reality.md).)
 
 ## Actions
 
 `ActionVerdict` (`actions.ts`): `plausible`, `tags` (from a closed set of ~29),
 `intensity` 1–5, sparse `appeal` per segment (−3..3), `pressure` (up/down/none on
-each stat), `narration`, optional `setsBoundary`. `PlayerAction` carries the text, a
-`source` (`freeform | menu | furniture`), and an optional hint.
+each stat), `narration`, optional `setsBoundary`, and **`connection` 0–3** (how much
+the beat deepens a 1:1 bond — drives directed affinity). `PlayerAction` carries the
+text, a `source` (`freeform | menu | furniture`), and an optional hint.
 
 If a verdict is **not plausible**, the controller DMs the reason, toasts, and
 returns early — no time advance, no resolve.
@@ -231,19 +288,62 @@ the game's `pleases` list**, on top of the normal verdict.
 |---------|------|--------|
 | usb-mic | $120 | viewer ×1.1, hype ×1.05 |
 | ring-light | $90 | hype ×1.1 |
-| 1080p-cam | $260 | viewer ×1.25 |
+| 1080p-cam | $260 | viewer ×1.25, **productionQuality +1** |
+| dslr-cam | $700 | viewer ×1.35, **productionQuality +2** |
+| studio-lighting | $320 | hype ×1.08, **productionQuality +1** |
 | green-screen | $150 | income ×1.15 |
+| lava-lamp | $110 | **segmentAppeal {cozy+2, lonely+1}** |
+| neon-arcade | $160 | **segmentAppeal {hype+2, trolls+1}** |
+| premium-backdrop | $420 | **segmentAppeal {whales+2}**, income ×1.05 |
 | gaming-chair | $200 | moodPerDay +4 |
 | plant-wall | $130 | moodPerDay +3, viewer ×1.05 |
 | soundproofing | $180 | moodPerDay +3 |
 | loft-apartment | $1500 | viewer ×1.3, income ×1.1, **rentPerDay +25**, moodPerDay +5 |
 
-With everything owned: viewer ×1.51, hype ×1.16, income ×1.32, moodPerDay +15.
+**Two gear axes** drive the money loop (cash → the right gear → the right audience
+grows → more recurring income):
+- **`productionQuality`** — a *global* lift (camera/mic/lighting) folded into per-segment
+  baseline appeal (`× gear.productionQualityToAppeal`) — appeals to everyone, raises the
+  ceiling.
+- **`segmentAppeal`** — *targeted décor* adding passive baseline appeal to specific
+  segments **and** nudging presence spawn weights, so you literally attract the crowd you
+  invest in (lavalamp → cozy, neon → hype, premium backdrop → whales).
 
-> **`mult.viewer` is computed but never read** — nothing in the resolver or presence
-> uses it, so camera/gear upgrades currently have **no effect on viewer counts**.
-> Only `mult.hype`, `mult.income`, `mult.moodPerDay`, and `mult.rentPerDay` actually
-> do anything. See [09](./09-expectation-vs-reality.md).
+> **`mult.viewer` is now wired**: `presenceTick` scales the named-cast target and the
+> anonymous floor by it, so camera/gear upgrades finally grow the audience. (Closes a
+> [09](./09-expectation-vs-reality.md) mismatch.)
+
+### Wardrobe outfits (`outfits.ts`)
+The worn outfit (`settings.outfit`, set by the change-outfit actions) applies a passive
+**baseline-appeal** nudge while live: cozy → cozy/lonely, cute → hype/simps,
+bold → simps/whales (cozy −). A cheaper, faster lever than gear for shaping appeal.
+
+## Mastery — personal progression (`mastery.ts`, `BALANCE.mastery`)
+Live actions earn XP in skill **domains** keyed off the verdict's *tags* (uniform,
+never per-action-id):
+- **Showmanship** (`energetic`/`skillful`/`hype`/`funny`/`loud`/`chaotic`) → lowers the
+  **energy** cost of matching actions.
+- **Composure** (`flirty`/`teasing`/`suggestive`/`bold`/`vulnerable`/`personal`/
+  `boundary-*`) → lowers the **comfort** cost of intense content.
+
+`level = floor(sqrt(xp / 50))`; `costMult = clamp(1 − level×0.04, 0.5, 1)` (floored at
+50% — never free). XP (`xpPerIntensity × intensity`) is added per matching live action;
+level-ups surface as a prominent alert. This is the cost-efficiency half of the skill
+stat; the payoff-readiness half (Phase 3b) stays a separate lever, so an experienced
+streamer sustains escalation longer but still needs the audience built to get *paid*.
+
+## Niches & schedule board (`niches.ts`, `BALANCE.niche`)
+`settings.niche` (variety / cozy / gaming / just-chatting / spicy) shifts presence
+**spawn weights** and adds **baseline appeal** per segment, so a cozy niche pulls the
+cozy/lonely crowd while spicy pulls simps/whales (and pushes cozy away). Switching costs
+a small follower hit + a freshness reset. Picked from the offline ActionBar
+"🗓 schedule board".
+
+## Novelty & burnout (`BALANCE.novelty`, `events.ts`)
+Per-content **freshness** (`store.contentNovelty`, keyed by niche) drains
+`drainPerRepeat` (0.18, floor 0.4) on each live action and dulls hype/tips/follower
+gain; rest + variety recover it (`recoverPerRest` on sleep). Chronic low **mood + comfort**
+arms a **burnout event** (offline) that forces a rest choice.
 
 ## Content tiers (`content.ts`)
 

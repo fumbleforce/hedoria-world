@@ -76,6 +76,16 @@ export interface CharacterSheet {
   hasBody: boolean;
   /** Id of the regular whose word-of-mouth "brought" them, if any. */
   referredBy?: string;
+
+  // ---- affinity ledger bookkeeping (see balance.ts / relationships.applyAffinity) ----
+  /** In-world day the daily soft-cap budget belongs to (-1 = none yet). */
+  affinityDay: number;
+  /** Soft-source affinity already accrued on `affinityDay`. */
+  affinityGainedToday: number;
+  /** Last in-world day a DM granted the real (once-per-day) bump (-1 = never). */
+  lastDmAffinityDay: number;
+  /** Last in-world day of any meaningful interaction (gates decay; -1 = never). */
+  lastInteractionDay: number;
 }
 
 export type Roster = Record<string, CharacterSheet>;
@@ -128,6 +138,10 @@ export function seedCharacter(arch: Archetype, clock: number): CharacterSheet {
     quirks: "",
     hasPortrait: false,
     hasBody: false,
+    affinityDay: -1,
+    affinityGainedToday: 0,
+    lastDmAffinityDay: -1,
+    lastInteractionDay: -1,
   };
 }
 
@@ -150,6 +164,10 @@ export function normalizeCharacter(c: CharacterSheet): CharacterSheet {
     quirks: c.quirks ?? "",
     hasPortrait: c.hasPortrait ?? false,
     hasBody: c.hasBody ?? false,
+    affinityDay: c.affinityDay ?? -1,
+    affinityGainedToday: c.affinityGainedToday ?? 0,
+    lastDmAffinityDay: c.lastDmAffinityDay ?? -1,
+    lastInteractionDay: c.lastInteractionDay ?? -1,
   };
 }
 

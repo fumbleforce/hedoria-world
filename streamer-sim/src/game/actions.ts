@@ -46,6 +46,13 @@ export interface ActionVerdict {
   narration: string;
   /** Whether this action sets/respects a boundary (defuses stalker growth). */
   setsBoundary?: boolean;
+  /**
+   * 0-3: how much this action genuinely deepens a 1:1 bond (naming/remembering
+   * someone, heartfelt personal attention, fulfilling a request) vs. generic
+   * crowd-pleasing. Drives directed affinity gains. Generic flirting/hype = 0-1;
+   * a specific, personal moment for a named viewer = 2-3.
+   */
+  connection?: number;
 }
 
 export type ActionSource = "freeform" | "menu" | "furniture";

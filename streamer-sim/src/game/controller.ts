@@ -31,7 +31,7 @@ import {
   loadStylePreview,
 } from "../persist/imageStore";
 import { diag } from "../diag/log";
-import { useStore, type ActionMenu } from "../state/store";
+import { useStore, type ActionMenu, setFeedbackContext, clearFeedbackContext } from "../state/store";
 import type { ChatMessage, ContentTier, DmLine, EventChoice, GameEvent, Metrics } from "./types";
 import type { PlayerAction, ActionOption, ActionVerdict } from "./actions";
 import { generateChatBurst, audienceSummary } from "./chatEngine";
@@ -45,7 +45,7 @@ import { directDm, type DmEffect } from "./dmDirector";
 import { multipliersFor, UPGRADES } from "./shop";
 import { fillPrompt, PROMPTS, type PromptId } from "./prompts";
 import { steeringForTier } from "./content";
-import { initialAudience } from "./segments";
+import { initialAudience, SEGMENT_IDS } from "./segments";
 import { ZONE_MENUS, ZONES, type ZoneId } from "./studio";
 import { GAME_BY_ID } from "./games";
 import { ARCHETYPE_BY_ID } from "./archetypes";
@@ -64,8 +64,16 @@ import {
   advanceStalkerArc,
   checkMilestones,
   sourReview,
+  applyAffinity,
+  decayAffinities,
   type MilestoneOutcome,
 } from "./relationships";
+import { extractMentions } from "./mentions";
+import { BALANCE, type AffinitySource } from "./balance";
+import { masteryXpForAction, masteryLevel } from "./mastery";
+import { NICHES, nicheBaselineAppeal, nicheSpawnBias, type NicheId } from "./niches";
+import { outfitAppeal } from "./outfits";
+import type { SegmentId } from "./segments";
 import {
   STREAM_START,
   NIGHT_END,
@@ -680,6 +688,83 @@ export class GameController {
     return multipliersFor(this.s.ownedUpgrades);
   }
 
+  // ----------------------------------------------------------- niche / novelty
+
+  /** The current content key novelty is tracked against (the active niche). */
+  private contentKey(): string {
+    return this.s.settings.niche;
+  }
+
+  /** Current content freshness (1 = fresh, floored by BALANCE.novelty.floor). */
+  private currentNovelty(): number {
+    return this.s.contentNovelty[this.contentKey()] ?? 1;
+  }
+
+  /**
+   * Combined passive baseline appeal per segment: targeted décor (gear
+   * segmentAppeal) + the active niche's baseline + a global lift from production
+   * quality (camera/mic/lighting appeal to everyone).
+   */
+  private baselineAppeal(): Partial<Record<SegmentId, number>> {
+    const mult = this.mults();
+    const out: Partial<Record<SegmentId, number>> = {};
+    const add = (seg: SegmentId, v: number) => { out[seg] = (out[seg] ?? 0) + v; };
+    for (const [seg, v] of Object.entries(mult.segmentAppeal) as [SegmentId, number][]) add(seg, v);
+    for (const [seg, v] of Object.entries(nicheBaselineAppeal(this.s.settings.niche)) as [SegmentId, number][]) add(seg, v);
+    for (const [seg, v] of Object.entries(outfitAppeal(this.s.settings.outfit)) as [SegmentId, number][]) add(seg, v);
+    const global = mult.productionQuality * BALANCE.gear.productionQualityToAppeal;
+    if (global) for (const seg of SEGMENT_IDS) add(seg, global);
+    return out;
+  }
+
+  /** Combined spawn-weight bias: niche pull + targeted gear décor. */
+  private spawnBias(): Partial<Record<SegmentId, number>> {
+    const out: Partial<Record<SegmentId, number>> = { ...nicheSpawnBias(this.s.settings.niche) };
+    const gear = this.mults().segmentAppeal;
+    for (const [seg, v] of Object.entries(gear) as [SegmentId, number][]) {
+      // Décor appeal also nudges who shows up, at a gentler rate than the niche.
+      out[seg] = (out[seg] ?? 0) + v * 0.15;
+    }
+    return out;
+  }
+
+  /** A repeated format gets staler; freshness drains toward the floor. */
+  private drainNovelty(): void {
+    const key = this.contentKey();
+    const cur = this.s.contentNovelty[key] ?? 1;
+    const next = Math.max(BALANCE.novelty.floor, cur - BALANCE.novelty.drainPerRepeat);
+    if (next !== cur) this.s.setNovelty(key, next);
+  }
+
+  /** Rest + variety restore freshness across all content (called on sleep). */
+  private recoverNovelty(): void {
+    for (const key of Object.keys(this.s.contentNovelty)) {
+      const cur = this.s.contentNovelty[key];
+      if (cur < 1) this.s.setNovelty(key, Math.min(1, cur + BALANCE.novelty.recoverPerRest));
+    }
+  }
+
+  /**
+   * Switch content niche. Shifts who shows up + baseline appeal going forward;
+   * costs a small follower + freshness hit (you reset audience expectations).
+   */
+  setNiche(niche: NicheId): void {
+    const s = this.s;
+    if (s.settings.niche === niche) return;
+    const prev = NICHES[s.settings.niche]?.label ?? s.settings.niche;
+    s.setSettings({ niche });
+    const followerCost = Math.round(s.metrics.followers * BALANCE.niche.switchFollowerCost);
+    if (followerCost > 0) {
+      setFeedbackContext(`switched from ${prev}`, "warn");
+      s.patchMetrics({ followers: s.metrics.followers - followerCost });
+      clearFeedbackContext();
+    }
+    // The new niche starts a little stale (you're rebuilding the format).
+    s.setNovelty(niche, Math.max(BALANCE.novelty.floor, 1 - BALANCE.niche.switchNoveltyHit));
+    s.logEvent(`Switched niche to ${NICHES[niche]?.label ?? niche}${followerCost > 0 ? ` (−${followerCost} followers)` : ""}.`);
+    s.setToast(`Now streaming: ${NICHES[niche]?.label ?? niche}.`);
+  }
+
   // ----------------------------------------------------------- prompts / DM log
 
   resolvePrompt(id: PromptId): string {
@@ -766,8 +851,13 @@ export class GameController {
   private presenceTick(): void {
     const s = this.s;
     const intensity = this.intensity();
-    const res = advancePresence(s.roster, s.clock, intensity, this.reputation(), this.targetNamed());
-    const audience = audienceFromPresence(res.roster, res.online, s.audience, this.anonFloor());
+    // Gear/production quality grows the audience: scale the named-cast target and
+    // the anonymous floor by the (previously dead) viewer multiplier.
+    const viewerMult = this.mults().viewer;
+    const target = Math.round(this.targetNamed() * viewerMult);
+    const anon = Math.round(this.anonFloor() * viewerMult);
+    const res = advancePresence(s.roster, s.clock, intensity, this.reputation(), target, s.audience);
+    const audience = audienceFromPresence(res.roster, res.online, s.audience, anon, this.spawnBias());
     s.setRoster(res.roster);
     s.setAudience(audience);
     s.patchMetrics({ currentViewers: totalViewers(audience) });
@@ -1066,9 +1156,9 @@ export class GameController {
       case "__order_food__": return this.orderFood();
       case "__door__": return this.answerDoor();
       case "__open_shop__": this.s.setShopOpen(true); return;
-      case "__outfit_cozy__": return this.coded("You change into something soft and comfy.", { mood: 3, comfort: 4 }, "🧶 Cozy fit", 10);
-      case "__outfit_cute__": return this.coded("You pick a cute, photogenic fit.", { mood: 3, hype: 4 }, "✨ Cute fit", 10);
-      case "__outfit_bold__": return this.coded("You go for something bold and eye-catching.", { hype: 6, comfort: -3 }, "🔥 Bold fit", 10);
+      case "__outfit_cozy__": this.s.setSettings({ outfit: "cozy" }); return this.coded("You change into something soft and comfy. The cozy crowd melts.", { mood: 3, comfort: 4 }, "🧶 Cozy fit (cozy crowd ♥)", 10);
+      case "__outfit_cute__": this.s.setSettings({ outfit: "cute" }); return this.coded("You pick a cute, photogenic fit. Hype picks up.", { mood: 3, hype: 4 }, "✨ Cute fit (hype ♥)", 10);
+      case "__outfit_bold__": this.s.setSettings({ outfit: "bold" }); return this.coded("You go for something bold and eye-catching. Simps take notice.", { hype: 6, comfort: -3 }, "🔥 Bold fit (simps/whales ♥)", 10);
       default:
         void this.submitAction({ text: opt.prompt, source: "menu" });
     }
@@ -1235,6 +1325,9 @@ export class GameController {
           mult: this.mults(),
           contentTier: s.settings.contentTier,
           isLive: s.session.isLive,
+          mastery: s.mastery,
+          baselineAppeal: this.baselineAppeal(),
+          novelty: this.currentNovelty(),
         });
         s.patchMetrics(result.metricsPatch);
         s.setAudience(result.audience);
@@ -1272,6 +1365,9 @@ export class GameController {
           const msgs = await generateChatBurst(this.llm, this.chatCtx(reactTo, count));
           this.s.pushChat(msgs);
           this.applyChatEffects(msgs);
+          this.distributeActionAffinity(action, verdict);
+          this.earnMasteryXp(verdict);
+          this.drainNovelty();
 
           if (s.playing) s.setPlaying({ ...s.playing, roundsPlayed: s.playing.roundsPlayed + 1 });
         } else {
@@ -1618,7 +1714,9 @@ export class GameController {
     const arch = rollArchetype(this.intensity());
     const friend = seedCharacter(arch, s.clock);
     friend.referredBy = referrerId;
-    friend.affinity = clamp(friend.affinity + 6, 0, 100); // arrives a touch warmer
+    // Arrives a touch warmer thanks to the friend who vouched for the channel.
+    friend.affinity = clamp(friend.affinity + BALANCE.affinity.sources.referral, 0, 100);
+    friend.lastInteractionDay = s.metrics.day;
     s.upsertCharacter(friend);
     const who = referrer.displayName || referrer.handle;
     this.sysStory(`${who} brought a friend — ${friend.handle} just showed up because of them.`);
@@ -1626,31 +1724,162 @@ export class GameController {
   }
 
   /**
+   * THE single affinity write path for the controller. Routes every change
+   * through the ledger (diminishing returns + per-day soft cap + source
+   * weighting), sets the feedback "why" context so the bubble/log explains the
+   * cause, applies the patch, and runs milestone checks. Returns the real delta.
+   */
+  private bumpAffinity(
+    charId: string,
+    rawDelta: number,
+    source: AffinitySource,
+    extra?: Partial<CharacterSheet>,
+  ): number {
+    const s = this.s;
+    const c = s.roster[charId];
+    if (!c) return 0;
+    const prevAffinity = c.affinity;
+    const { patch, applied, reason } = applyAffinity(c, rawDelta, source, s.metrics.day);
+    setFeedbackContext(applied !== 0 ? reason : undefined, applied >= 0 ? "good" : "warn");
+    s.patchCharacter(charId, { ...patch, ...extra });
+    clearFeedbackContext();
+    const updated = this.s.roster[charId];
+    if (updated) {
+      const outcomes = checkMilestones(updated, prevAffinity, s.metrics.day);
+      if (outcomes.length) this.applyMilestones(charId, outcomes);
+    }
+    return applied;
+  }
+
+  /**
+   * Recurring subscriber income, paid on a calendar cadence (e.g. every 30
+   * in-world days) through the income path. Predictable recurring revenue vs.
+   * one-off tips is a real strategic axis and the main early-game escape hatch.
+   */
+  private payRecurringSubs(day: number): void {
+    const s = this.s;
+    if (day % BALANCE.subs.cadenceDays !== 0) return;
+    const subs = s.metrics.subscribers;
+    if (subs <= 0) return;
+    const gross = subs * BALANCE.subs.monthlyValue * this.mults().income;
+    if (gross <= 0) return;
+    setFeedbackContext(`monthly sub payout · ${subs} sub${subs > 1 ? "s" : ""}`, "good");
+    s.patchMetrics({ cash: s.metrics.cash + gross });
+    clearFeedbackContext();
+    if (s.session.isLive) s.setSession({ earnings: s.session.earnings + gross });
+    s.logEvent(`💰 Monthly sub payout: +$${gross.toFixed(0)} from ${subs} sub${subs > 1 ? "s" : ""}.`);
+    s.setToast(`💰 Sub payout: +$${gross.toFixed(0)} from ${subs} subscriber${subs > 1 ? "s" : ""}!`);
+  }
+
+  /** Affinity earned from a tip, scaled by amount (reciprocal: bypasses the cap). */
+  private tipAffinity(amount: number): number {
+    return Math.min(amount * BALANCE.affinity.sources.tip.perDollar, BALANCE.affinity.sources.tip.max);
+  }
+
+  /**
    * Unified tip pipeline shared by live chat donations/subs and DM tips:
    * multipliers, session earnings (only while live), per-character tipped total,
    * affinity growth, and milestone checks all happen in one place.
    */
-  private recordTip(charId: string | undefined, amount: number, opts?: { hype?: number; affinityDelta?: number }): void {
+  private recordTip(charId: string | undefined, amount: number, opts?: { hype?: number }): void {
     if (amount <= 0) return;
     const s = this.s;
     const cashDelta = amount * this.mults().income;
     const metricsPatch: Partial<Metrics> = { cash: s.metrics.cash + cashDelta };
     if (opts?.hype) metricsPatch.hype = s.metrics.hype + opts.hype;
+    setFeedbackContext("they tipped you", "good");
     s.patchMetrics(metricsPatch);
+    clearFeedbackContext();
     if (s.session.isLive) s.setSession({ earnings: s.session.earnings + cashDelta });
     if (!charId) return;
     const c = s.roster[charId];
     if (!c) return;
-    const prevAffinity = c.affinity;
-    s.patchCharacter(charId, {
+    this.bumpAffinity(charId, this.tipAffinity(amount), "tip", {
       tipped: c.tipped + amount,
-      affinity: clamp(c.affinity + (opts?.affinityDelta ?? 0.6), 0, 100),
       lastSeenClock: s.clock,
     });
-    const updated = this.s.roster[charId];
-    if (!updated) return;
-    const outcomes = checkMilestones(updated, prevAffinity, s.metrics.day);
-    if (outcomes.length) this.applyMilestones(charId, outcomes);
+  }
+
+  /**
+   * Affinity that flows from a LIVE action itself (not the chat reacting to it):
+   *  - @mentions (public/live only): a strong, targeted bonus to each named,
+   *    online viewer — calling someone out by handle is intentional personalization.
+   *  - connection-driven bonding: the verdict's `connection` score (how personal
+   *    the beat was) distributed to ONLINE viewers whose segment actually liked
+   *    the action, with per-stream repeat decay so looping one crowd-pleaser
+   *    yields almost nothing after a couple of beats.
+   * Keyed entirely off the verdict (connection/tags/appeal) — never off action id
+   * or keywords — so a menu shortcut and a custom line are rewarded identically.
+   */
+  private distributeActionAffinity(action: PlayerAction, verdict: ActionVerdict): void {
+    const s = this.s;
+    const online = Object.values(s.roster).filter((c) => c.online);
+    if (!online.length) return;
+
+    // @mentions: targeted, short-circuits appeal weighting (lands on THEM).
+    const mentioned = new Set(extractMentions(action.text, s.roster, true));
+    for (const id of mentioned) {
+      this.bumpAffinity(id, BALANCE.affinity.sources.mention, "mention", { lastSeenClock: s.clock });
+    }
+
+    const connection = verdict.connection ?? 0;
+    if (connection > 0) {
+      // Per-stream repeat decay keyed by the action's dominant tag.
+      const tag = verdict.tags[0] ?? "generic";
+      const counts = { ...(s.session.connectionTagCounts ?? {}) };
+      const n = counts[tag] ?? 0;
+      counts[tag] = n + 1;
+      s.setSession({ connectionTagCounts: counts });
+      const repeatMult = Math.pow(BALANCE.affinity.repeatTagDecay, n);
+
+      for (const c of online) {
+        if (mentioned.has(c.id)) continue; // already got the stronger mention bump
+        const seg = ARCHETYPE_BY_ID[c.archetypeId]?.segment ?? "cozy";
+        const appeal = verdict.appeal[seg] ?? 0;
+        if (appeal <= 0) continue; // only viewers who liked the beat bond from it
+        const appealWeight = clamp(appeal / 3, 0, 1);
+        const raw = BALANCE.affinity.sources.action * connection * appealWeight * repeatMult;
+        if (raw <= 0.001) continue;
+        this.bumpAffinity(c.id, raw, "action", { lastSeenClock: s.clock });
+      }
+    }
+  }
+
+  /**
+   * Earn mastery XP from a live action, keyed off the verdict's tags (uniform,
+   * never per-action-id). Surfaces a level-up as a prominent alert — a veteran
+   * spends less energy/comfort on the same act (the cost reduction lives in the
+   * resolver via masteryCostMult).
+   */
+  private earnMasteryXp(verdict: ActionVerdict): void {
+    const s = this.s;
+    const gained = masteryXpForAction(verdict.tags, verdict.intensity);
+    if (!Object.keys(gained).length) return;
+    const before = s.mastery;
+    s.addMasteryXp(gained);
+    const after = this.s.mastery;
+    for (const d of BALANCE.mastery.domains) {
+      if (masteryLevel(after[d]) <= masteryLevel(before[d])) continue;
+      const lvl = masteryLevel(after[d]);
+      const label = d === "showmanship" ? "Showmanship" : "Composure";
+      const note =
+        d === "showmanship"
+          ? "high-energy bits cost less energy now"
+          : "intense bits cost less comfort now";
+      s.pushFeedback([
+        {
+          id: uid("fb"),
+          channel: "alert",
+          key: `mastery-${d}`,
+          text: `${label} Lv ${lvl}`,
+          tone: "good",
+          reason: note,
+          ts: Date.now(),
+        },
+      ]);
+      s.logEvent(`⭐ ${label} reached level ${lvl} — ${note}.`);
+      s.setToast(`⭐ ${label} Lv ${lvl}! ${note}.`);
+    }
   }
 
   private applyChatEffects(msgs: ChatMessage[]): void {
@@ -1683,18 +1912,17 @@ export class GameController {
       // are preserved instead of being clobbered.
       const cur = msg.characterId ? this.s.roster[msg.characterId] : undefined;
       if (msg.characterId && cur) {
-        const prevAffinity = cur.affinity;
-        s.patchCharacter(msg.characterId, {
-          messageCount: cur.messageCount + 1,
-          lastSeenClock: s.clock,
-          ...(isTip ? {} : { affinity: clamp(cur.affinity + 0.6, 0, 100) }),
-        });
-        if (!isTip) {
-          const upd = this.s.roster[msg.characterId];
-          if (upd) {
-            const outcomes = checkMilestones(upd, prevAffinity, s.metrics.day);
-            if (outcomes.length) this.applyMilestones(msg.characterId, outcomes);
-          }
+        if (isTip) {
+          // recordTip already handled affinity/lastSeen + milestones; only count
+          // the message line here.
+          s.patchCharacter(msg.characterId, { messageCount: cur.messageCount + 1 });
+        } else {
+          // Just being in chat barely moves the needle (ledger-weighted +0.05,
+          // soft-capped per day) — presence isn't intimacy.
+          this.bumpAffinity(msg.characterId, BALANCE.affinity.sources.chat, "chat", {
+            messageCount: cur.messageCount + 1,
+            lastSeenClock: s.clock,
+          });
         }
       }
     }
@@ -1762,22 +1990,53 @@ export class GameController {
     const mult = this.mults();
     const rent = mult.rentPerDay;
     const m = s.metrics;
+    const newDay = m.day + 1;
+    // Recurring utility bill on a calendar cadence — standing still loses money.
+    const utilityDue =
+      newDay % BALANCE.economy.utilityEveryDays === 0 ? BALANCE.economy.utilityAmount : 0;
+
+    // Restorative overnight changes (energy/mood/comfort/hype) — surfaced as
+    // their own bubbles, no money "why".
     s.patchMetrics({
-      day: m.day + 1,
+      day: newDay,
       energy: 100,
       mood: m.mood + 8 + mult.moodPerDay,
       hype: Math.max(15, m.hype * 0.6),
       comfort: m.comfort + 6,
-      cash: m.cash - rent,
     });
+    // The money debit, explained.
+    setFeedbackContext(utilityDue ? "rent & utilities" : "rent", "bad");
+    s.patchMetrics({ cash: s.metrics.cash - rent - utilityDue });
+    clearFeedbackContext();
     s.setClock(STREAM_START);
-    this.sysStory(`You sleep. Day ${m.day + 1} begins. Rent: -$${rent.toFixed(0)}.`);
-    s.logEvent(`Day ${m.day + 1} begins. Rent: -$${rent.toFixed(0)}.`);
-    diag.info("economy", "sleep / rent", { day: m.day + 1, rent });
+
+    // Recurring subscriber income (Phase 4): predictable monthly payout, the
+    // main early-game escape hatch, paid through the income path.
+    this.payRecurringSubs(newDay);
+
+    // Rest + variety freshen up repeated content.
+    this.recoverNovelty();
+
+    // Cool neglected bonds: anyone not interacted with past the grace window
+    // loses affinity scaled by how close they were. Surfaced as cooling feedback.
+    const decays = decayAffinities(s.roster, newDay);
+    for (const d of decays) {
+      setFeedbackContext(d.reason, "warn");
+      s.patchCharacter(d.id, d.patch);
+      clearFeedbackContext();
+    }
+    if (decays.length) {
+      s.logEvent(`${decays.length} bond${decays.length > 1 ? "s" : ""} cooled from neglect.`);
+    }
+
+    const billLine = utilityDue ? ` Utilities: -$${utilityDue.toFixed(0)}.` : "";
+    this.sysStory(`You sleep. Day ${newDay} begins. Rent: -$${rent.toFixed(0)}.${billLine}`);
+    s.logEvent(`Day ${newDay} begins. Rent: -$${rent.toFixed(0)}.${billLine}`);
+    diag.info("economy", "sleep / rent", { day: newDay, rent, utilityDue });
     s.setToast(
-      m.cash - rent < 0
-        ? `Day ${m.day + 1}. Rent of $${rent.toFixed(0)} put you in the red!`
-        : `Day ${m.day + 1}. Rent: -$${rent.toFixed(0)}.`,
+      s.metrics.cash < 0
+        ? `Day ${newDay}. Bills of $${(rent + utilityDue).toFixed(0)} put you in the red!`
+        : `Day ${newDay}. Rent: -$${rent.toFixed(0)}.${billLine}`,
     );
     this.checkGoals();
     // A new day may bring a due visit or arc beat.
@@ -1885,7 +2144,7 @@ export class GameController {
     const charId = ev.characterId;
     const c = charId ? s.roster[charId] : undefined;
     const name = c?.displayName || c?.handle || "a viewer";
-    this.recordTip(charId, amount, { hype: 1, affinityDelta: 0.9 });
+    this.recordTip(charId, amount, { hype: 1 });
     s.pushChat([
       { id: uid("tip"), user: c?.handle ?? "a_viewer", text: `donated $${amount}! 💸`, kind: "donation", amount, characterId: charId, ts: Date.now() },
     ]);
@@ -2209,20 +2468,20 @@ export class GameController {
     if (scene.suggestedRelationship !== "none" && this.allowRelationship(scene.suggestedRelationship, c.affinity, s.settings.contentTier)) {
       nextRel = scene.suggestedRelationship;
     }
-    const prevAffinity = c.affinity;
+    // Meeting in person is the strongest reciprocal signal — route it through
+    // the ledger (cap-exempt visit source), then apply the non-affinity patch.
     s.patchCharacter(charId, {
       relationship: nextRel,
-      affinity: clamp(c.affinity + scene.relationshipScore, 0, 100),
       threat: clamp(c.threat + scene.threatDelta, 0, 3),
       lastSeenClock: s.clock,
       lastVisitDay: s.metrics.day,
     });
+    this.bumpAffinity(charId, scene.relationshipScore, "visit");
     const updated = this.s.roster[charId];
     if (updated) {
+      // Milestones were already checked inside bumpAffinity above.
       const memory = await this.condenseMemory(updated, "you met in person at your apartment", endReason);
       s.patchCharacter(charId, { memory });
-      const outcomes = checkMilestones(updated, prevAffinity, s.metrics.day);
-      if (outcomes.length) this.applyMilestones(charId, outcomes);
     }
     s.endVisitor();
     s.clearPendingVisit(charId);
@@ -2342,7 +2601,7 @@ export class GameController {
   devTip(charId: string, amount: number): void {
     const s = this.s;
     const c = s.roster[charId];
-    this.recordTip(charId, amount, { hype: 1, affinityDelta: 0.9 });
+    this.recordTip(charId, amount, { hype: 1 });
     s.setToast(`${c?.displayName || c?.handle || "Someone"} tipped $${amount}.`);
     s.logEvent(`[dev] ${c?.displayName || c?.handle || charId} tipped $${amount}.`);
   }
@@ -2442,17 +2701,18 @@ export class GameController {
       // so replies are contextual instead of cold non-sequiturs.
       const history = this.s.dmThreads[id] ?? [];
       const reply = await this.dmReply(c, history, id);
-      // Talking 1:1 builds the relationship and a condensed memory.
-      const prevAffinity = c.affinity;
-      const affinity = clamp(c.affinity + 3, 0, 100);
+      // Talking 1:1 builds the relationship and a condensed memory. The first DM
+      // exchange of the in-world day is the real bump; same-day follow-ups are
+      // tokens, so sending five messages in one sitting ≈ one meaningful beat.
       const memory = await this.condenseMemory(c, t, reply);
-      this.s.patchCharacter(id, { affinity, memory, known: true, lastSeenClock: s.clock });
-      // A 1:1 talk can push past a relationship threshold.
-      const updated = this.s.roster[id];
-      if (updated) {
-        const outcomes = checkMilestones(updated, prevAffinity, s.metrics.day);
-        if (outcomes.length) this.applyMilestones(id, outcomes);
-      }
+      const day = s.metrics.day;
+      const firstToday = c.lastDmAffinityDay !== day;
+      this.bumpAffinity(
+        id,
+        firstToday ? BALANCE.affinity.sources.dmDaily : BALANCE.affinity.sources.dmRepeat,
+        firstToday ? "dm" : "dmRepeat",
+        { memory, known: true, lastSeenClock: s.clock, lastDmAffinityDay: day },
+      );
       const now = this.s.roster[id];
       if (now) {
         const effects = await directDm(this.llm, {
@@ -2469,7 +2729,7 @@ export class GameController {
         });
         await this.applyDmEffects(id, effects);
       }
-      diag.info("world", "dm exchange", { handle: c.handle, affinity: Math.round(affinity) });
+      diag.info("world", "dm exchange", { handle: c.handle, affinity: Math.round(this.s.roster[id]?.affinity ?? c.affinity) });
     } finally {
       this.s.setDmBusy(false);
     }
@@ -2581,7 +2841,7 @@ export class GameController {
     for (const e of effects) {
       switch (e.type) {
         case "tip":
-          this.recordTip(charId, e.amount, { affinityDelta: 0.9 });
+          this.recordTip(charId, e.amount, {});
           s.pushDm(charId, { role: "them", kind: "gift", amount: e.amount, text: `sent $${e.amount}${e.note ? ` — ${e.note}` : ""}` });
           s.logEvent(`DM: ${c.displayName || c.handle} tipped $${e.amount}.`);
           break;
@@ -2589,6 +2849,8 @@ export class GameController {
           s.patchMetrics({ mood: s.metrics.mood + 2, comfort: s.metrics.comfort + 1 });
           s.pushDm(charId, { role: "them", kind: "gift", text: `sent a gift: ${e.item}` });
           s.logEvent(`DM: ${c.displayName || c.handle} sent a gift (${e.item}).`);
+          // A gift is genuine reciprocal investment — strong, cap-exempt.
+          this.bumpAffinity(charId, BALANCE.affinity.sources.gift, "gift");
           break;
         case "image":
           if (!this.imageBackend) break;
@@ -2635,14 +2897,9 @@ export class GameController {
           break;
         }
         case "affinity": {
-          const cur = this.s.roster[charId];
-          if (!cur) break;
-          const prev = cur.affinity;
-          s.patchCharacter(charId, { affinity: clamp(cur.affinity + e.delta, 0, 100) });
-          const upd = this.s.roster[charId];
-          if (!upd) break;
-          const outcomes = checkMilestones(upd, prev, s.metrics.day);
-          if (outcomes.length) this.applyMilestones(charId, outcomes);
+          // Director-judged relationship move from the conversation. Signed
+          // semantics preserved (losses bite in full); gains still diminish.
+          this.bumpAffinity(charId, e.delta, "dm");
           break;
         }
         case "threat": {
@@ -2685,8 +2942,7 @@ export class GameController {
       s.logEvent(`${c.displayName || c.handle} is now ${relationship} with you.`);
     }
     if (relationshipScore) {
-      const cur = this.s.roster[charId];
-      if (cur) s.patchCharacter(charId, { affinity: clamp(cur.affinity + relationshipScore, 0, 100) });
+      this.bumpAffinity(charId, relationshipScore, "dm");
     }
   }
 

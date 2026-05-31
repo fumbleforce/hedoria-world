@@ -7,11 +7,14 @@ import { ChatPanel } from "./ui/ChatPanel";
 import { NarratorPanel } from "./ui/NarratorPanel";
 import { VisualizationPanel } from "./ui/VisualizationPanel";
 import { CharacterGallery } from "./ui/CharacterGallery";
+import { ChangeLogPanel } from "./ui/ChangeLogPanel";
+import { StatsPanel } from "./ui/StatsPanel";
 import { ActionBar } from "./ui/ActionBar";
 import { ActionMenuModal } from "./ui/ActionMenuModal";
 import { CharacterModal } from "./ui/CharacterModal";
 import { GamePicker } from "./ui/GamePicker";
 import { ShopPanel } from "./ui/ShopPanel";
+import { InventoryPanel } from "./ui/InventoryPanel";
 import { SettingsPanel } from "./ui/SettingsPanel";
 import { EventModal } from "./ui/EventModal";
 import { GoalsPanel } from "./ui/GoalsPanel";
@@ -43,6 +46,8 @@ export function App() {
       <main className="stage">
         <div className="stage__left">
           <StudioRoom controller={controller} />
+          <ChangeLogPanel />
+          <StatsPanel />
         </div>
 
         <div className="stage__center">
@@ -62,6 +67,7 @@ export function App() {
       <CharacterModal controller={controller} />
       <GamePicker controller={controller} />
       <ShopPanel controller={controller} />
+      <InventoryPanel />
       <SettingsPanel controller={controller} />
       <EventModal controller={controller} />
       <GoalsPanel />

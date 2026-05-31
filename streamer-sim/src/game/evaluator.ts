@@ -109,6 +109,7 @@ function logVerdict(via: string, action: PlayerAction, v: ActionVerdict): void {
     appeal: v.appeal,
     pressure: v.pressure,
     setsBoundary: v.setsBoundary,
+    connection: v.connection,
   });
 }
 
@@ -142,6 +143,7 @@ function parseVerdict(text: string): ActionVerdict | null {
     pressure,
     narration,
     setsBoundary: json.setsBoundary === true,
+    connection: clamp(typeof json.connection === "number" ? json.connection : 0, 0, 3),
   };
 }
 
@@ -165,6 +167,7 @@ function verdictSchema(): Record<string, unknown> {
       },
       narration: { type: "string" },
       setsBoundary: { type: "boolean" },
+      connection: { type: "integer" },
     },
     required: ["plausible", "tags", "intensity", "narration"],
   };
@@ -199,6 +202,7 @@ function reconcileVerdicts(a: ActionVerdict, b: ActionVerdict): ActionVerdict {
     pressure,
     narration: a.narration,
     setsBoundary: a.setsBoundary || b.setsBoundary,
+    connection: clamp(Math.round(((a.connection ?? 0) + (b.connection ?? 0)) / 2), 0, 3),
   };
 }
 
@@ -315,6 +319,7 @@ function localEvaluate(action: PlayerAction, ctx: EvalContext): ActionVerdict {
         pressure: rule.pressure ?? {},
         setsBoundary: rule.setsBoundary,
         narration: rule.narration ?? "You do your thing for the camera.",
+        connection: connectionFromTags(rule.tags),
       };
     }
   }
@@ -326,7 +331,22 @@ function localEvaluate(action: PlayerAction, ctx: EvalContext): ActionVerdict {
     appeal: { cozy: 1, lonely: 1 },
     pressure: { energy: "down" },
     narration: `You ${action.text.replace(/[.!?]+$/, "")}. Chat takes it in.`,
+    connection: connectionFromTags(["personal", "calm"]),
   };
+}
+
+/**
+ * Offline heuristic for the connection score (the LLM judges this directly when
+ * a real backend is configured). Personal/grateful/exclusive beats bond; pure
+ * spectacle/flirt does not. Kept generic — no per-action knowledge.
+ */
+function connectionFromTags(tags: ActionTag[]): number {
+  let c = 0;
+  for (const t of tags) {
+    if (t === "personal" || t === "grateful" || t === "exclusive") c += 1;
+    if (t === "kind" || t === "wholesome" || t === "attention") c += 0.5;
+  }
+  return clamp(Math.round(c), 0, 3);
 }
 
 function tierCap(s: Settings): number {

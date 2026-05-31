@@ -57,6 +57,18 @@ the deliverable, not optional follow-up.
 - Offline/mock paths must keep the game playable without API keys.
 - Do not import from Hedoria `engine/` — this project is standalone.
 
+## Verification (don't ship on green tests alone)
+
+- **Passing unit tests ≠ the app runs.** They cover pure logic, not React/store
+  wiring. After any UI or store change, actually boot it (`npm run dev`) and confirm
+  the HUD renders — a white-screen render crash will not fail `tsc` or `vitest`.
+- **Zustand v5 selectors must return stable references.** A selector that builds a
+  **new array/object every call** (e.g. `useStore((s) => s.feedback.filter(...))`)
+  breaks v5's `Object.is` snapshot check and spins into an infinite render loop
+  ("Maximum update depth exceeded"). Select the stable slice (`s.feedback`) and
+  `filter`/`map`/derive in the render body (with `useMemo` if needed) — never inside
+  the selector. (This was the boot crash in the §4 overhaul.)
+
 ## Useful references
 
 - Player-facing readme: [`README.md`](README.md)

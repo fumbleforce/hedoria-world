@@ -11,14 +11,14 @@ Files: `src/App.tsx`, `src/render/StudioRoom.tsx`, `src/ui/*`, `src/index.css`.
 │ stage__left  │ stage__center      │ stage__right        │
 │              │                    │                     │
 │ StudioRoom   │ VisualizationPanel │ ChatPanel           │
-│              │ NarratorPanel      │ CharacterGallery    │
-│              │                    │                     │
+│ ChangeLog    │ NarratorPanel      │ CharacterGallery    │
+│ StatsPanel   │                    │                     │
 ├──────────────┴────────────────────┴─────────────────────┤
 │ ActionBar  (footer)                                      │
 └─────────────────────────────────────────────────────────┘
 
 Overlays (modals): ActionMenuModal · CharacterModal · GamePicker ·
-ShopPanel · SettingsPanel · EventModal · GoalsPanel
+ShopPanel · InventoryPanel · SettingsPanel · EventModal · GoalsPanel
 Floating: toast (bottom) · backendChip (bottom-right)
 ```
 
@@ -34,12 +34,14 @@ minmax(280px,340px)`, capped at 1340px. Until `boot()` resolves, a
 | Component | File | Where | Shows / does |
 |-----------|------|-------|--------------|
 | **MetricsHud** | `ui/MetricsHud.tsx` | header | Brand, streamer name, active save name, day + in-world date, live clock; cash/followers/subs/viewers; hype/energy/mood/comfort bars. |
-| **StudioRoom** | `render/StudioRoom.tsx` | left | Interactive room (zone hotspots + avatar) and the "Visualize here" button. See [06](./06-images-and-presentation.md). |
+| **StudioRoom** | `render/StudioRoom.tsx` | left (top) | Interactive room (zone hotspots + avatar) and the "Visualize here" button. See [06](./06-images-and-presentation.md). |
+| **ChangeLogPanel** | `ui/ChangeLogPanel.tsx` | left (below map) | Scrollable, newest-first **activity log** of every metric/affinity/alert change (signed delta, tone color, and the "why" when known). Fed from `store.changeLog`, the structured sibling of the floating bubbles. |
+| **StatsPanel** | `ui/StatsPanel.tsx` | left (below activity) | Live readout of setup + passive modifiers: niche, outfit, content freshness, gear multipliers (production quality, viewers, hype, income, rent, segment appeal), and mastery levels. Derived from `ownedUpgrades` + settings — not duplicated in `Metrics`. |
 | **VisualizationPanel** | `ui/VisualizationPanel.tsx` | center top | The latest generated image (`lastImageId`); click → gallery. |
 | **NarratorPanel** | `ui/NarratorPanel.tsx` | center bottom | The story feed (dm / action / outcome / quote / image entries) and a "Visualize scene" button. |
 | **ChatPanel** | `ui/ChatPanel.tsx` | right top | Live chat log; clicking a known user's handle opens their CharacterModal. Streamer's spoken lines do **not** appear here (they go to the narrator). |
 | **CharacterGallery** | `ui/CharacterGallery.tsx` | right bottom | Audience-segment bars (when live) + the Regulars list. Each card shows the real name once known with the handle as a muted `@handle` secondary. Click → CharacterModal. |
-| **ActionBar** | `ui/ActionBar.tsx` | footer | Freeform input + Act + Continue. Live: Actions dropdown, Game, Goals, Character, Gallery, Settings, End. Offline: Go Live, Sleep, Shop, etc. **During a visit:** a "🏠 In person" banner, Say/Do + Continue (guest leads), 📸 Visualize, 🚪 See them out — Go Live/Sleep/Shop hidden. |
+| **ActionBar** | `ui/ActionBar.tsx` | footer | Freeform input + Act + Continue. Live: Actions dropdown, Game, Goals, Inventory, Character, Gallery, Settings, End. Offline: Go Live, Sleep, Shop, Inventory, etc. **During a visit:** a "🏠 In person" banner, Say/Do + Continue (guest leads), 📸 Visualize, Inventory, 🚪 See them out — Go Live/Sleep/Shop hidden. |
 
 ## Modals (overlay)
 
@@ -49,6 +51,7 @@ minmax(280px,340px)`, capped at 1340px. Until `boot()` resolves, a
 | **CharacterModal** | `ui/CharacterModal.tsx` | clicking a chatter/regular | The character sheet (name + handle, relationship, archetype, memory), the DM thread, and "generate portrait". DM lines render by `kind`: plain text, inline **image**, 💸/🎁 **gift**, or italic **system** (requests). |
 | **GamePicker** | `ui/GamePicker.tsx` | "Game" (live) | Pick a mini-game (`MINI_GAMES`). |
 | **ShopPanel** | `ui/ShopPanel.tsx` | "Shop" / shop button | Upgrades by category; buy with cash. |
+| **InventoryPanel** | `ui/InventoryPanel.tsx` | "Inventory" 🎒 | Owned upgrades grouped by category, per-item effect tags, and combined passive bonuses from `multipliersFor`. |
 | **SettingsPanel** | `ui/SettingsPanel.tsx` | "Settings" / 🎭 / 🖼 | 7 tabs (see below). |
 | **EventModal** | `ui/EventModal.tsx` | a pending event | The event text + discrete choices, plus a freeform response box when `allowFreeform`. |
 | **GoalsPanel** | `ui/GoalsPanel.tsx` | "Goals" 🎯 | Soft goals with progress bars + active story arcs ("threads") with their next day. |
@@ -75,3 +78,33 @@ minmax(280px,340px)`, capped at 1340px. Until `boot()` resolves, a
 - **backendChip** — bottom-right; shows `"offline engine"` when on Mock, else the
   backend name. It reads the setting once at render, so it can go stale if you change
   the backend without reloading.
+
+## Feedback layer (where the +/− bubbles come from)
+
+The §4 overhaul added a legibility layer so every state change explains itself.
+
+- **Source of truth** — a transient (non-persisted) `feedback: FeedbackBubble[]` slice
+  in `state/store.ts`. `patchMetrics` and `patchCharacter` **auto-diff** their changes
+  into bubbles (coalescing repeated deltas), tagged with a tone and an optional
+  **reason** string set via `setFeedbackContext`/`clearFeedbackContext` around the code
+  that caused the change (so "+$12 — whale tip", "−4 comfort — pushed past the room").
+- **Activity log** — the same three bubble sources (metric diff, affinity diff,
+  `pushFeedback` alerts) also append a structured `ChangeLogEntry` to the
+  (non-persisted) `changeLog` slice, rendered newest-first by `ChangeLogPanel` under
+  the studio map. This is the durable, scrollable counterpart to the ~1.7 s bubbles.
+- **Rendering** — `ui/FeedbackBubbles.tsx` exports `<FloatingFeedback>` (the float-up
+  `+N/−N` chip) and the `useFeedbackJanitor` hook that expires bubbles (~1.5 s).
+  - **HUD** (`MetricsHud.tsx`): chips float from the changed `Stat`
+    (cash/followers/subs) and `Bar` (hype/energy/mood/comfort); also hosts the
+    **mastery chips** readout (showmanship/composure levels).
+  - **Character cards** (`CharacterGallery.tsx` / `CharacterModal.tsx`): affinity
+    `+N/−N` bubble on the avatar, plus a persistent warming/**cooling arrow** so neglect
+    (decay) is legible at a glance.
+- **"What changed" log** — reasoned feedback also writes a `logEvent` line (notable ones
+  reach the story feed), giving the §8 "what changed" panel essentially for free.
+- CSS keyframes (float-up + fade) live in `index.css` (`.fb-layer` / `.fb-bubble`);
+  containers that host bubbles are `position: relative`.
+
+The niche **schedule board** picker also lives in the offline `ActionBar`
+(`NichePicker`), and `@handle` mentions render as highlighted chips via
+`ui/MentionText.tsx` in chat and the narrator feed.

@@ -45,6 +45,9 @@ export type ThemeId = "limelight" | "ocean" | "ember";
 
 export type { ImageStylePresetId } from "../llm/imagePresets";
 import type { ImageStylePresetId } from "../llm/imagePresets";
+import type { SegmentId } from "./segments";
+import type { NicheId } from "./niches";
+import type { OutfitId } from "./outfits";
 
 export interface Settings {
   streamerName: string;
@@ -57,6 +60,10 @@ export interface Settings {
   contentTier: ContentTier;
   /** Author-supplied steering appended verbatim when contentTier === "custom". */
   customSteering: string;
+  /** Content niche — shapes who shows up + baseline appeal (see game/niches.ts). */
+  niche: NicheId;
+  /** Currently-worn outfit — a passive live appeal nudge (see game/outfits.ts). */
+  outfit: OutfitId;
   textBackend: TextBackend;
   geminiModel: string;
   openRouterModel: string;
@@ -132,6 +139,52 @@ export interface Metrics {
   day: number;
 }
 
+/** Tone for feedback bubbles / event-log lines. */
+export type FeedbackTone = "good" | "bad" | "warn" | "neutral";
+
+/**
+ * A transient "what just changed" signal surfaced as a floating bubble (and,
+ * when it carries a reason, an event-log line). Auto-captured from metric/
+ * character mutations so every state change is legible.
+ */
+export interface FeedbackBubble {
+  id: string;
+  channel: "metric" | "character" | "alert";
+  /** metric name | character id | alert kind. */
+  key: string;
+  /** Signed numeric change (+N / -N), when applicable. */
+  delta?: number;
+  /** Free text for alerts (e.g. "New follower"). */
+  text?: string;
+  tone: FeedbackTone;
+  /** The "why" — also written to the event log when present. */
+  reason?: string;
+  ts: number;
+}
+
+/**
+ * A persisted-for-the-session line in the activity log (the panel under the
+ * studio map). Every metric/affinity/alert change is recorded here so the player
+ * has a scrollable "what changed, and why" history, not just transient bubbles.
+ */
+export interface ChangeLogEntry {
+  id: string;
+  ts: number;
+  channel: "metric" | "character" | "alert";
+  /** Human label: metric name, character name, or alert title. */
+  label: string;
+  /** Signed numeric change, when applicable. */
+  delta?: number;
+  /** How to render the delta. */
+  unit?: "cash" | "count" | "affinity";
+  /** Free text for alerts / non-numeric entries. */
+  text?: string;
+  tone: FeedbackTone;
+  reason?: string;
+  /** In-world day the change happened, for grouping/labeling. */
+  day: number;
+}
+
 export interface StreamSession {
   isLive: boolean;
   /** Turn counter for the current stream. */
@@ -140,6 +193,12 @@ export interface StreamSession {
   earnings: number;
   newFollowers: number;
   peak: number;
+  /**
+   * Per-stream repeat tracker for the dominant connection-tag of each action,
+   * so spamming the same crowd-pleaser yields diminishing affinity. Reset every
+   * stream (see resetSession).
+   */
+  connectionTagCounts: Record<string, number>;
 }
 
 export interface EventChoice {
@@ -271,5 +330,9 @@ export interface Upgrade {
     incomeMult?: number;
     moodPerDay?: number;
     rentPerDay?: number;
+    /** Global production quality: lifts appeal for ALL segments (camera/mic/lighting). */
+    productionQuality?: number;
+    /** Targeted décor: passive baseline appeal for specific segments (lavalamp→cozy). */
+    segmentAppeal?: Partial<Record<SegmentId, number>>;
   };
 }

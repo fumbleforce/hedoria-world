@@ -65,25 +65,34 @@ for you to pick from. Items marked ⭐ are the ones I'd reach for first.
 - **Goal/quest layer** (M). Soft objectives ("hit 1k followers", "survive a month's
   rent", "go full-time") with payoffs, giving the sandbox a spine.
 
-## 4. Game systems & economy
+## DONE: 4. Game systems & economy
 
-- ⭐ **Economy balance pass** (M, code). Tune tip/follower/rent curves into a real
-  difficulty arc; right now it's first-draft numbers. Add a slow early game and
-  meaningful money pressure.
-- **Schedule & burnout** (M). Streaming the same thing daily decays novelty;
-  variety and rest matter; chronic low mood/comfort risks a burnout event.
-- **Sub tiers & recurring income** (S). Subscribers pay monthly; build predictable
-  income vs. one-off tips, changing strategy.
-- **Outfits as real items** (M). Wardrobe choices are owned items with stats
-  (cute→hype, bold→simps/comfort cost); unlock/buy more.
-- **Content niches & schedule board** (M). Pick a niche (cozy/horror/just-chatting/
-  spicy); audience composition shifts to match; switching has churn cost.
-- **Equipment progression depth** (S). More gear tiers; visible effect on stream
-  quality and which segments you can attract.
-- **Save slots + new game** (S, code). Multiple saves, a proper reset, an
-  export/import of the JSON save.
-- **Win/lose & endings** (M). Eviction (bankruptcy) loss; "go full-time" /
-  "quit on your terms" / "burn out" endings.
+Delivered by the **Affinity & Economy Overhaul** (centralized `game/balance.ts`,
+the `applyAffinity` ledger, resolver readiness gating, the feedback-bubble layer,
+domain mastery, and the systems below). See `docs/02`, `docs/03`, `docs/08`.
+
+- ✅ ⭐ **Economy balance pass** (M, code). Tip/follower/rent curves retuned via
+  `BALANCE.economy` into a slow early game: lower `tipConstant`, a monetization ramp
+  (`min(1, followers/150)`), a recurring utility bill, and readiness gating so payoff
+  depends on audience fit + comfort/energy/hype. `mult.viewer` is now wired into
+  presence so gear grows the audience.
+- ✅ **Schedule & burnout** (M). Per-niche novelty drains on repeats and recovers with
+  rest (dulls hype/tips/followers when stale); chronic low mood + comfort arms a
+  burnout event.
+- ✅ **Sub tiers & recurring income** (S). `payRecurringSubs` pays
+  `subscribers × $3.5 × mult.income` on a 30-day cadence — predictable income vs. tips.
+- ✅ **Outfits as real items** (S). Worn outfit (`settings.outfit`) applies passive live
+  appeal nudges (cute→hype/simps, bold→simps/whales & comfort cost, cozy→cozy/lonely).
+- ✅ **Content niches & schedule board** (M). Offline `NichePicker` sets a niche that
+  shifts presence spawn weights + baseline appeal; switching costs a follower hit +
+  freshness reset.
+- ✅ **Equipment progression depth** (S). New camera tiers + themed décor add
+  `productionQuality` (global appeal/viewer pull) and `segmentAppeal` (targeted crowd
+  pull + spawn bias).
+
+> **Adjacent, still open:** affinity is now effort-gated, but there's no
+> win/lose/eviction state, and the difficulty arc targets in `docs/02` are proposals
+> to validate by playtest.
 
 ## 5. The "playing a game" sub-state
 
@@ -216,6 +225,137 @@ worth revisiting.
   through `resolveEvent`'s stalker-threat block — harmless today (its choice
   labels don't match the regexes), but a latent coupling to isolate if that block
   grows.
+
+---
+
+## 13. NPC depth pass — motives, progressive reveal, layered memory
+
+The named cast (`game/characters.ts`) is seeded once and barely deepens after.
+A sheet's `vibe`/`wants` are fixed archetype constants; `backstory`/`quirks`
+generate exactly once on first open (`controller.generateBackstory`) and never
+change again; `memory` is a single ≤180-char line that `condenseMemory`
+overwrites on every DM, so history is lost. The modal (`CharacterModal.tsx`)
+dumps the *entire* ground-truth sheet the instant you click. The threads below
+mostly hang off triggers that already exist (`checkMilestones` for affinity,
+`advanceStalkerArc` for threat).
+
+### A. Layered, per-character motives (M, LLM+code)
+- ⭐ **Problem:** `wantsForArchetype` maps each of the 7 segments to ONE fixed
+  phrase, so *every* simp literally "wants flirty attention and banter" and every
+  whale "to be acknowledged by name". Motive is a segment constant, not a person.
+- Replace the single `wants` string with a small motive structure on
+  `CharacterSheet`: a **surface want** + a **deeper need** + a **fear/insecurity**
+  + a **soft boundary**. Seed it with per-character variation (roll within the
+  archetype, not a segment constant) and let the LLM enrich it (see C).
+- Feeds the DM director, chat voice, and visit scenes so two simps read
+  differently; gives the evaluator more to react to than one phrase.
+
+### B. Progressive reveal (player) + dev X-ray (local) (M, code+UI)
+- ⭐ **Production view:** a fresh character is **anonymous** — handle only. Name,
+  backstory, quirks, true motive, and threat are hidden until *earned*. The sheet
+  shows a "what you know so far" view; unknown rows render as locked placeholders
+  ("??? — get to know them"), not blanks.
+  - Name unlocks at the `regular` milestone (already wired in
+    `relationships.milestoneFor`) — keep it.
+  - Vibe / surface-want hints surface around `familiar` / after N interactions.
+  - Backstory fragments unlock at affinity thresholds + threat steps (see C).
+  - The ⚠ Threat row only appears once they've actually crept on you (threat ≥ 1
+    via `advanceStalkerArc`), not pre-labelled by archetype.
+- **Dev X-ray (local only):** behind `import.meta.env.DEV` (and/or a Dev-tab
+  toggle — the Dev tooling already exists in `SettingsPanel`/`controller.dev*`),
+  render the full ground-truth sheet inside a **visibly-distinct coloured
+  container** ("DEV · X-RAY") *alongside* the gated player view, so you can see at
+  a glance what's hidden vs. revealed. Strip it from production builds.
+
+### C. Sheets that deepen over time (M, LLM+code)
+- ⭐ **Problem:** `generateBackstory` is one-shot — the bio is identical at
+  affinity 35 and 95, and threat escalation never enriches it.
+- Store backstory as **ordered fragments** (an array) instead of one string.
+  Each crossed affinity level (familiar→regular→friend→confidant) or threat step
+  (1→2→3) **appends a new, more intimate/sophisticated layer**, authored by the
+  LLM with the *prior* layers + memory as context so it stays consistent and
+  escalates rather than contradicting itself.
+- Threat layers reveal the darker truth (the creep's real fixation), tying the
+  reveal directly to the stalker arc.
+- Hook the enrichment into the existing trigger points: `checkMilestones`
+  (affinity) and `advanceStalkerArc` (threat) in `relationships.ts`, applied by
+  the controller the same way milestones already are.
+
+### D. Real memory / interaction record-keeping (M, code+LLM)
+- ⭐ **Problem:** `memory` is one overwritten ≤160-char line (`condenseMemory`),
+  so the relationship has no actual history.
+- Add a **structured, append-only interaction log** per character: timestamped
+  entries for DMs, tips, requests, gifts, visits, milestones, threat changes, and
+  name mentions. Most are already emitted globally via `logEvent` — they just
+  aren't attributed to the character.
+- Keep a rolling condensed `memory` as the *summary*, but build it from the
+  recent log entries (mirroring `controller.refreshStreamMemory`) instead of a
+  blind two-line merge — richer, and it can cite specifics.
+- Surface a scrollable "History with {name}" section in the modal, and feed
+  recent entries into the DM / chat / visit prompts for continuity.
+
+### E. Fix repetitive viewer names ("everyone is Mark/Marcus") (S, code+LLM)
+- Two culprits:
+  1. `generateBackstory` asks the model for *"a plausible first name"* with no
+     constraint, so it keeps returning Mark / Marcus / Jake. Either drop LLM
+     naming and draw from a curated, de-duplicated pool (extend `DISPLAY_NAMES`
+     in `relationships.ts`, currently 18 gender-neutral names), or pass the
+     roster's existing names as a do-not-repeat list and ask for a gender mix.
+  2. The `chat` prompt lets the LLM invent anonymous usernames, which collapse to
+     the same handful of real first names. Steer it toward varied, lowercase,
+     handle-style usernames (not real names), and/or pre-supply anonymous handles
+     from `anonHandle()` so the model writes the *text*, not the identity.
+- Enforce **uniqueness** of revealed `displayName`s within the roster.
+
+### F. More varied handles (S, code)
+- ⭐ **Problem:** `makeHandle` draws from each archetype's tiny `nameParts` pool
+  (5 fragments) glued to one of ~11 `HANDLE_SUFFIX`es, so a hype-fan is forever
+  `pog`/`hype`/`based`/`letsgo`/`champ` + a suffix — the same dozen handles recur.
+- Widen the generator: a shared bank of generic word-fragments (nouns, adjectives,
+  hobbies, animals, gamer-speak) combined with the archetype's flavour parts;
+  more join patterns (camelCase, numbers, leet, doubled words, `_TV`/`xX…Xx`);
+  optional digit runs. Aim for combinatorial variety, not a fixed table.
+- De-dupe against the live roster so the same handle never appears twice, and so
+  a fresh spawn doesn't echo someone already on screen.
+- Make handles read as *internet usernames*, distinct from the real-name
+  `displayName` (§E) — the two should never look like the same naming scheme.
+
+### G. Characters have a gender (S, code+LLM)
+- ⭐ **Problem:** only the streamer has a `gender` (`Settings.gender`); viewers
+  don't, so name reveals pull from a gender-neutral `DISPLAY_NAMES` list and the
+  DM/chat/narrator/visit prompts have no pronouns to work with — everyone reads
+  androgynous and the LLM guesses inconsistently.
+- Add a `gender` field to `CharacterSheet`, rolled at `seedCharacter` time (a
+  realistic mix, optionally skewed per archetype/segment where it fits the
+  fantasy). Persist it; backfill in `normalizeCharacter`.
+- Thread it through: name pools become gendered (extend §E), pronouns flow into
+  the DM / chat / visit / narrator prompts, and portrait/body image generation
+  gets the right cue (today only the streamer's gender reaches image gen).
+
+### H. Richer, more varied archetypes — no two stalkers alike (M, code+LLM)
+- ⭐ **Problem:** the 20 `ARCHETYPES` are one blurb + 5 sample lines each, and
+  every instance of an archetype is a carbon copy — both stalkers (`creep`,
+  `stalker`) share the same `blurb`, `wants`, and line bank, so they feel
+  identical. Variety is per-archetype, never per-character.
+- **Per-instance differentiation:** at seed time, roll a few modifiers on top of
+  the archetype — a trait/quirk axis, an intensity, a backstory hook, a distinct
+  obsession (for stalkers: *what* they fixate on and *how* they express it).
+  Two stalkers should diverge from the first message. Pairs naturally with the
+  layered motives in §A.
+- **Broaden the catalogue:** more archetypes and sub-variants per segment
+  (especially the thin/edge ones — stalkers, whales, trolls) so the room isn't
+  drawn from the same 20 moulds; consider data-driving them (ties into §9
+  "data-driven archetypes").
+- **Deeper archetype definitions:** richer personality beyond a one-line blurb —
+  speech tics, do/don't behaviours, escalation tendencies — so the LLM voice and
+  the offline `fromCharacter` mock both have more to work with.
+
+> **Suggested slice for this section:** F + E + G together are the cheap,
+> high-visibility identity fixes (varied handles, varied names, gender) — do them
+> first. Then B (progressive reveal + dev X-ray) since it reframes the modal.
+> Then H + A (per-instance archetype variety + layered motives) and C + D
+> (deepening + memory), which share the milestone/threat hooks and the LLM
+> authoring plumbing.
 
 ---
 

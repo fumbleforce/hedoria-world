@@ -4,6 +4,8 @@ import type { GameController } from "../game/controller";
 import { avatarFor, relationshipLevel, type CharacterSheet } from "../game/characters";
 import { loadPortrait } from "../persist/imageStore";
 import { SEGMENTS, SEGMENT_IDS } from "../game/segments";
+import { BALANCE } from "../game/balance";
+import { FloatingFeedback } from "./FeedbackBubbles";
 
 /**
  * The right rail: a compact audience-segment strip on top, then a gallery of
@@ -15,6 +17,7 @@ export function CharacterGallery({ controller }: { controller: GameController })
   const audience = useStore((s) => s.audience);
   const isLive = useStore((s) => s.session.isLive);
   const unreadDms = useStore((s) => s.unreadDms);
+  const day = useStore((s) => s.metrics.day);
 
   const chars = Object.values(roster)
     .filter((c) => c.messageCount > 0 || c.known || c.online || unreadDms[c.id])
@@ -78,8 +81,13 @@ export function CharacterGallery({ controller }: { controller: GameController })
                   {c.attendanceStreak >= 3 && <span className="card__streak" title={`${c.attendanceStreak} streams running`}>🔥{c.attendanceStreak}</span>}
                   {c.online && <span className="card__dot" title="online" />}
                 </span>
-                <span className="card__rel">{relationshipLevel(c.affinity)}{c.threat >= 2 ? " · ⚠ stalker" : ""}</span>
+                <span className="card__rel">
+                  {relationshipLevel(c.affinity)}
+                  <TrendArrow c={c} day={day} />
+                  {c.threat >= 2 ? " · ⚠ stalker" : ""}
+                </span>
               </span>
+              <FloatingFeedback channel="character" feedbackKey={c.id} />
             </button>
           ))
         )}
@@ -102,6 +110,16 @@ function CardAvatar({ c }: { c: CharacterSheet }) {
       {url ? <img className="card__portrait" src={url} alt={c.handle} /> : avatarFor(c)}
     </span>
   );
+}
+
+/** Small persistent arrow: a bond cools (↓) once neglected past the grace window. */
+function TrendArrow({ c, day }: { c: CharacterSheet; day: number }) {
+  if (c.lastInteractionDay < 0 || c.affinity <= 0) return null;
+  const idle = day - c.lastInteractionDay;
+  if (idle > BALANCE.affinity.decayGraceDays) {
+    return <span className="card__trend card__trend--cool" title={`Cooling — ${idle} days since you connected`}> ❄</span>;
+  }
+  return null;
 }
 
 function satColor(s: number): string {

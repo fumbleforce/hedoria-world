@@ -14,13 +14,18 @@ import type {
   EventRecord,
   PendingVisit,
   VisitorScene,
+  FeedbackBubble,
+  FeedbackTone,
+  ChangeLogEntry,
 } from "../game/types";
+import { uid } from "../rng/rng";
 import { SPAWN_ZONE, type ZoneId } from "../game/studio";
 import { saveRoomImage } from "../persist/imageStore";
 import { getActiveSlotId, updateActiveMeta } from "../persist/saves";
 import { applyTheme } from "../ui/themes";
 import { initialAudience, type AudienceState } from "../game/segments";
 import type { CharacterSheet, Roster } from "../game/characters";
+import { initialMastery, normalizeMastery, type MasteryState } from "../game/mastery";
 import type { PromptId } from "../game/prompts";
 import type { ActionOption } from "../game/actions";
 import { STREAM_START } from "../game/time";
@@ -28,6 +33,59 @@ import type { LlmCallStat } from "../llm/types";
 
 const MAX_CHAT = 140;
 const MAX_STORY = 200;
+const MAX_FEEDBACK = 30;
+const MAX_CHANGELOG = 200;
+
+/** Metrics that surface as floating feedback bubbles when they change. */
+const FEEDBACK_METRICS = [
+  "cash",
+  "followers",
+  "subscribers",
+  "hype",
+  "energy",
+  "mood",
+  "comfort",
+] as const;
+type FeedbackMetricKey = (typeof FEEDBACK_METRICS)[number];
+
+/** Smallest change worth surfacing per metric (avoids float noise). */
+const FEEDBACK_EPSILON: Record<FeedbackMetricKey, number> = {
+  cash: 0.5,
+  followers: 1,
+  subscribers: 1,
+  hype: 1,
+  energy: 1,
+  mood: 1,
+  comfort: 1,
+};
+
+/**
+ * Short-lived "why" context the controller sets right before a mutation so the
+ * auto-diff bubbles/log lines can explain the cause. A plain module variable
+ * (not React state) since it's read synchronously inside the store action and
+ * cleared immediately after.
+ */
+let feedbackReason: { text?: string; tone?: FeedbackTone; log?: boolean } | null = null;
+
+/** Set the reason context for the next metric/character mutation(s). */
+export function setFeedbackContext(
+  text: string | undefined,
+  tone?: FeedbackTone,
+  log = true,
+): void {
+  feedbackReason = { text, tone, log };
+}
+export function clearFeedbackContext(): void {
+  feedbackReason = null;
+}
+
+function toneForMetric(key: FeedbackMetricKey, delta: number): FeedbackTone {
+  // Every tracked metric reads "up = good" except none here invert; large drops
+  // in wellbeing stats lean warn.
+  if (delta > 0) return "good";
+  if (key === "energy" || key === "mood" || key === "comfort") return "warn";
+  return "bad";
+}
 
 const initialMetrics = (): Metrics => ({
   cash: 250,
@@ -49,6 +107,7 @@ const initialSession = (): StreamSession => ({
   earnings: 0,
   newFollowers: 0,
   peak: 0,
+  connectionTagCounts: {},
 });
 
 const initialSettings = (): Settings => ({
@@ -59,6 +118,8 @@ const initialSettings = (): Settings => ({
   theme: "limelight",
   contentTier: "flirty",
   customSteering: "",
+  niche: "variety",
+  outfit: "casual",
   textBackend: "mock",
   geminiModel: "gemini-2.5-flash",
   openRouterModel: "google/gemini-2.5-flash",
@@ -139,6 +200,7 @@ export interface StoreState {
   /** Character id whose portrait is currently being generated, or null. */
   portraitBusyId: string | null;
   shopOpen: boolean;
+  inventoryOpen: boolean;
   settingsOpen: boolean;
   /** Active tab in the Settings modal. */
   settingsTab: SettingsTab;
@@ -147,6 +209,14 @@ export interface StoreState {
   ownedUpgrades: string[];
   promptOverrides: Partial<Record<PromptId, string>>;
   toast: string | null;
+  /** Persisted experience/mastery XP per skill domain (personal progression). */
+  mastery: MasteryState;
+  /** Per-content freshness 0..1 (drains on repeats, recovers on rest/variety). */
+  contentNovelty: Record<string, number>;
+  /** Transient floating feedback bubbles (not persisted). */
+  feedback: FeedbackBubble[];
+  /** Scrollable activity log of every metric/affinity/alert change (not persisted). */
+  changeLog: ChangeLogEntry[];
 
   /** Condensed history of recent events (cooldowns + callback narration). */
   recentEvents: EventRecord[];
@@ -207,6 +277,7 @@ export interface StoreState {
   setDmBusy: (b: boolean) => void;
   setPortraitBusy: (id: string | null) => void;
   setShopOpen: (b: boolean) => void;
+  setInventoryOpen: (b: boolean) => void;
   setSettingsOpen: (b: boolean) => void;
   setSettingsTab: (tab: SettingsTab) => void;
   /** Open the Settings modal directly on a given tab. */
@@ -216,6 +287,14 @@ export interface StoreState {
   logEvent: (line: string) => void;
   addUpgrade: (id: string) => void;
   setToast: (t: string | null) => void;
+  /** Add XP to one or more mastery domains. */
+  addMasteryXp: (delta: Partial<MasteryState>) => void;
+  /** Set the freshness (0..1) of a content key. */
+  setNovelty: (key: string, value: number) => void;
+  /** Push one or more feedback bubbles (coalesces same channel+key within a beat). */
+  pushFeedback: (bubbles: FeedbackBubble[]) => void;
+  /** Remove expired bubbles by id. */
+  expireFeedback: (ids: string[]) => void;
 
   pushEventRecord: (rec: EventRecord) => void;
   addArc: (arc: StoryArc) => void;
@@ -301,6 +380,7 @@ export const useStore = create<StoreState>()(
       dmBusy: false,
       portraitBusyId: null,
       shopOpen: false,
+      inventoryOpen: false,
       settingsOpen: false,
       settingsTab: "general",
 
@@ -308,6 +388,10 @@ export const useStore = create<StoreState>()(
       ownedUpgrades: [],
       promptOverrides: {},
       toast: null,
+      mastery: initialMastery(),
+      contentNovelty: {},
+      feedback: [],
+      changeLog: [],
 
       recentEvents: [],
       arcs: [],
@@ -331,7 +415,19 @@ export const useStore = create<StoreState>()(
           m.currentViewers = Math.max(0, Math.round(m.currentViewers));
           m.peakViewers = Math.max(m.peakViewers, m.currentViewers);
           if (m.day !== s.metrics.day) updateActiveMeta({ day: m.day });
-          return { metrics: m };
+          // Auto-capture: surface every meaningful metric change as a bubble.
+          const bubbles = diffMetricBubbles(s.metrics, m);
+          const next: Partial<StoreState> = { metrics: m };
+          if (bubbles.length) {
+            next.feedback = mergeFeedback(s.feedback, bubbles);
+            const log = feedbackReason?.log !== false ? logLinesFor(bubbles) : [];
+            if (log.length) next.eventLog = [...log, ...s.eventLog].slice(0, 50);
+            next.changeLog = appendChangeLog(
+              s.changeLog,
+              bubbles.map((b) => metricChangeEntry(b, m.day)),
+            );
+          }
+          return next;
         }),
       setAudience: (audience) => set({ audience }),
       setClock: (clock) => set({ clock }),
@@ -415,7 +511,42 @@ export const useStore = create<StoreState>()(
         set((s) => {
           const cur = s.roster[id];
           if (!cur) return s;
-          return { roster: { ...s.roster, [id]: { ...cur, ...patch } } };
+          const updated = { ...cur, ...patch };
+          const out: Partial<StoreState> = { roster: { ...s.roster, [id]: updated } };
+          // Auto-capture affinity changes as a character-channel bubble.
+          if (typeof patch.affinity === "number") {
+            const delta = updated.affinity - cur.affinity;
+            if (Math.abs(delta) >= 0.05) {
+              const bubble: FeedbackBubble = {
+                id: uid("fb"),
+                channel: "character",
+                key: id,
+                delta,
+                tone: delta >= 0 ? "good" : "warn",
+                reason: feedbackReason?.text,
+                ts: Date.now(),
+              };
+              out.feedback = mergeFeedback(s.feedback, [bubble]);
+              const who = updated.displayName || updated.handle;
+              out.changeLog = appendChangeLog(s.changeLog, [
+                {
+                  id: uid("cl"),
+                  ts: bubble.ts,
+                  channel: "character",
+                  label: who,
+                  delta,
+                  unit: "affinity",
+                  tone: bubble.tone,
+                  reason: bubble.reason,
+                  day: s.metrics.day,
+                },
+              ]);
+              if (feedbackReason?.text && feedbackReason.log !== false) {
+                out.eventLog = [`${who}: ${feedbackReason.text}`, ...s.eventLog].slice(0, 50);
+              }
+            }
+          }
+          return out;
         }),
       setRoster: (roster) => set({ roster }),
 
@@ -445,6 +576,7 @@ export const useStore = create<StoreState>()(
       setDmBusy: (dmBusy) => set({ dmBusy }),
       setPortraitBusy: (portraitBusyId) => set({ portraitBusyId }),
       setShopOpen: (shopOpen) => set({ shopOpen }),
+      setInventoryOpen: (inventoryOpen) => set({ inventoryOpen }),
       setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
       setSettingsTab: (settingsTab) => set({ settingsTab }),
       openSettings: (tab) => set(tab ? { settingsOpen: true, settingsTab: tab } : { settingsOpen: true }),
@@ -464,6 +596,49 @@ export const useStore = create<StoreState>()(
       addUpgrade: (id) =>
         set((s) => (s.ownedUpgrades.includes(id) ? s : { ownedUpgrades: [...s.ownedUpgrades, id] })),
       setToast: (toast) => set({ toast }),
+      addMasteryXp: (delta) =>
+        set((s) => {
+          const next = { ...s.mastery };
+          let changed = false;
+          for (const [k, v] of Object.entries(delta) as [keyof MasteryState, number][]) {
+            if (v) {
+              next[k] = (next[k] ?? 0) + v;
+              changed = true;
+            }
+          }
+          return changed ? { mastery: next } : s;
+        }),
+      setNovelty: (key, value) =>
+        set((s) => ({ contentNovelty: { ...s.contentNovelty, [key]: clamp(value, 0, 1) } })),
+      pushFeedback: (bubbles) =>
+        set((s) =>
+          bubbles.length
+            ? {
+                feedback: mergeFeedback(s.feedback, bubbles),
+                changeLog: appendChangeLog(
+                  s.changeLog,
+                  bubbles.map((b) => ({
+                    id: uid("cl"),
+                    ts: b.ts,
+                    channel: b.channel,
+                    label: b.text ?? b.key,
+                    delta: b.delta,
+                    unit: b.key === "cash" ? "cash" : "count",
+                    text: b.text,
+                    tone: b.tone,
+                    reason: b.reason,
+                    day: s.metrics.day,
+                  })),
+                ),
+              }
+            : s,
+        ),
+      expireFeedback: (ids) =>
+        set((s) => {
+          if (!ids.length) return s;
+          const drop = new Set(ids);
+          return { feedback: s.feedback.filter((b) => !drop.has(b.id)) };
+        }),
 
       pushEventRecord: (rec) =>
         set((s) => ({ recentEvents: [...s.recentEvents, rec].slice(-MAX_EVENT_MEMORY) })),
@@ -506,6 +681,8 @@ export const useStore = create<StoreState>()(
           ...current,
           ...p,
           settings: { ...current.settings, ...(p.settings ?? {}) },
+          mastery: normalizeMastery(p.mastery),
+          contentNovelty: p.contentNovelty ?? {},
           story,
         };
       },
@@ -518,6 +695,8 @@ export const useStore = create<StoreState>()(
         settings: s.settings,
         ownedUpgrades: s.ownedUpgrades,
         promptOverrides: s.promptOverrides,
+        mastery: s.mastery,
+        contentNovelty: s.contentNovelty,
         eventLog: s.eventLog,
         recentEvents: s.recentEvents,
         arcs: s.arcs,
@@ -551,4 +730,91 @@ export const useStore = create<StoreState>()(
 
 function clamp(v: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, v));
+}
+
+/** Build feedback bubbles from a metric change, honoring the reason context. */
+function diffMetricBubbles(prev: Metrics, next: Metrics): FeedbackBubble[] {
+  const out: FeedbackBubble[] = [];
+  for (const key of FEEDBACK_METRICS) {
+    const delta = next[key] - prev[key];
+    if (Math.abs(delta) < FEEDBACK_EPSILON[key]) continue;
+    out.push({
+      id: uid("fb"),
+      channel: "metric",
+      key,
+      delta,
+      tone: feedbackReason?.tone ?? toneForMetric(key, delta),
+      reason: feedbackReason?.text,
+      ts: Date.now(),
+    });
+  }
+  return out;
+}
+
+const FEEDBACK_LABEL: Record<FeedbackMetricKey, string> = {
+  cash: "Cash",
+  followers: "Followers",
+  subscribers: "Subs",
+  hype: "Hype",
+  energy: "Energy",
+  mood: "Mood",
+  comfort: "Comfort",
+};
+
+/** Turn a metric bubble into a structured activity-log entry. */
+function metricChangeEntry(b: FeedbackBubble, day: number): ChangeLogEntry {
+  return {
+    id: uid("cl"),
+    ts: b.ts,
+    channel: "metric",
+    label: FEEDBACK_LABEL[b.key as FeedbackMetricKey] ?? b.key,
+    delta: b.delta,
+    unit: b.key === "cash" ? "cash" : "count",
+    tone: b.tone,
+    reason: b.reason,
+    day,
+  };
+}
+
+/** Prepend new entries (newest first) and cap the activity log. */
+function appendChangeLog(current: ChangeLogEntry[], incoming: ChangeLogEntry[]): ChangeLogEntry[] {
+  if (!incoming.length) return current;
+  const next = [...incoming.reverse(), ...current];
+  return next.length > MAX_CHANGELOG ? next.slice(0, MAX_CHANGELOG) : next;
+}
+
+/** Event-log lines for reasoned metric bubbles ("Cash +$12 · sub payout"). */
+function logLinesFor(bubbles: FeedbackBubble[]): string[] {
+  const out: string[] = [];
+  for (const b of bubbles) {
+    if (!b.reason || b.channel !== "metric" || b.delta == null) continue;
+    const label = FEEDBACK_LABEL[b.key as FeedbackMetricKey] ?? b.key;
+    const sign = b.delta >= 0 ? "+" : "";
+    const amount = b.key === "cash" ? `${sign}$${Math.abs(b.delta).toFixed(0)}` : `${sign}${Math.round(b.delta)}`;
+    out.push(`${label} ${amount} · ${b.reason}`);
+  }
+  return out;
+}
+
+/**
+ * Append bubbles, coalescing with a recent bubble of the same channel+key (so a
+ * beat that nudges cash five times shows one running total, not five fragments).
+ */
+function mergeFeedback(current: FeedbackBubble[], incoming: FeedbackBubble[]): FeedbackBubble[] {
+  const COALESCE_MS = 700;
+  const next = [...current];
+  for (const b of incoming) {
+    const idx = next.findIndex(
+      (e) => e.channel === b.channel && e.key === b.key && b.ts - e.ts < COALESCE_MS,
+    );
+    if (idx >= 0 && b.delta != null && next[idx].delta != null) {
+      const merged = { ...next[idx], delta: next[idx].delta! + b.delta, ts: b.ts };
+      if (b.reason) merged.reason = b.reason;
+      merged.tone = b.tone;
+      next[idx] = merged;
+    } else {
+      next.push(b);
+    }
+  }
+  return next.length > MAX_FEEDBACK ? next.slice(next.length - MAX_FEEDBACK) : next;
 }

@@ -3,6 +3,7 @@ import { useStore } from "../state/store";
 import type { GameController } from "../game/controller";
 import { tierIntensity } from "../game/content";
 import { GAME_BY_ID } from "../game/games";
+import { NICHES, NICHE_IDS, type NicheId } from "../game/niches";
 
 /** Concrete live actions, each a clear thing with an obvious outcome. */
 interface QuickAction {
@@ -101,6 +102,7 @@ export function ActionBar({ controller }: { controller: GameController }) {
               <button className="btn" disabled={resolving} onClick={() => void controller.generateScene()} title="Visualize this moment">📸 Visualize</button>
             )}
             <button className="btn" onClick={() => useStore.getState().openSettings("gallery")} title="Gallery">🖼</button>
+            <button className="btn" onClick={() => useStore.getState().setInventoryOpen(true)} title="Inventory">🎒</button>
             <button className="btn" onClick={() => useStore.getState().openSettings()} title="Settings">⚙</button>
             <button className="btn btn--danger" disabled={resolving} onClick={() => void controller.endVisit()} title="Wrap up the visit">🚪 See them out</button>
           </>
@@ -129,6 +131,7 @@ export function ActionBar({ controller }: { controller: GameController }) {
               <button className="btn" disabled={resolving} onClick={() => useStore.getState().setGamePickerOpen(true)}>🎮 Game</button>
             )}
             <button className="btn" onClick={() => useStore.getState().setGoalsOpen(true)} title="Goals">🎯</button>
+            <button className="btn" onClick={() => useStore.getState().setInventoryOpen(true)} title="Inventory">🎒</button>
             <button className="btn" onClick={() => useStore.getState().openSettings("character")} title="Character appearance">🎭</button>
             <button className="btn" onClick={() => useStore.getState().openSettings("gallery")} title="Gallery">🖼</button>
             <button className="btn" onClick={() => useStore.getState().openSettings()} title="Settings">⚙</button>
@@ -136,9 +139,11 @@ export function ActionBar({ controller }: { controller: GameController }) {
           </>
         ) : (
           <>
+            <NichePicker controller={controller} disabled={resolving} />
             <button className="btn btn--primary" disabled={resolving} onClick={() => controller.goLive()}>● Go Live</button>
             <button className="btn" disabled={resolving} onClick={() => controller.sleep()}>🛏️ Sleep</button>
             <button className="btn" onClick={() => useStore.getState().setShopOpen(true)}>📦 Shop</button>
+            <button className="btn" onClick={() => useStore.getState().setInventoryOpen(true)} title="Inventory">🎒</button>
             <button className="btn" onClick={() => useStore.getState().setGoalsOpen(true)} title="Goals">🎯</button>
             <button className="btn" onClick={() => useStore.getState().openSettings("character")} title="Character appearance">🎭</button>
             <button className="btn" onClick={() => useStore.getState().openSettings("gallery")} title="Gallery">🖼</button>
@@ -147,5 +152,25 @@ export function ActionBar({ controller }: { controller: GameController }) {
         )}
       </div>
     </footer>
+  );
+}
+
+/** Schedule-board: pick the content niche you'll stream (shapes your audience). */
+function NichePicker({ controller, disabled }: { controller: GameController; disabled: boolean }) {
+  const niche = useStore((s) => s.settings.niche);
+  return (
+    <label className="nichepick" title={NICHES[niche]?.blurb}>
+      <span className="nichepick__icon">🗓</span>
+      <select
+        className="nichepick__select"
+        value={niche}
+        disabled={disabled}
+        onChange={(e) => controller.setNiche(e.target.value as NicheId)}
+      >
+        {NICHE_IDS.map((id) => (
+          <option key={id} value={id}>{NICHES[id].label}</option>
+        ))}
+      </select>
+    </label>
   );
 }

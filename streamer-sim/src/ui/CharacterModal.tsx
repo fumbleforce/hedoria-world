@@ -6,6 +6,7 @@ import { ARCHETYPE_BY_ID } from "../game/archetypes";
 import { avatarFor, relationshipLevel } from "../game/characters";
 import { loadPortrait } from "../persist/imageStore";
 import { useStoredImage } from "../persist/useStoredImage";
+import { FloatingFeedback } from "./FeedbackBubbles";
 import { formatClock } from "../game/time";
 
 // Stable reference so the zustand selector doesn't return a fresh [] each render
@@ -61,6 +62,7 @@ export function CharacterModal({ controller }: { controller: GameController }) {
         <div className="modal__head">
           <span className="char__avatar">
             {portrait ? <img className="char__portrait" src={portrait} alt={c.handle} /> : avatarFor(c)}
+            <FloatingFeedback channel="character" feedbackKey={c.id} />
           </span>
           <div className="char__id">
             <h2>{c.displayName ? `${c.displayName} ` : ""}<span className="char__handle-sub">{c.handle}</span></h2>

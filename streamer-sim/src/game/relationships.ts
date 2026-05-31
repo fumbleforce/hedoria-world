@@ -11,7 +11,127 @@ import type { CharacterSheet, RelationshipLevel } from "./characters";
 import { relationshipLevel } from "./characters";
 import { ARCHETYPE_BY_ID } from "./archetypes";
 import { ev, choice } from "./events";
-import { pick } from "../rng/rng";
+import { pick, clamp } from "../rng/rng";
+import { BALANCE, type AffinitySource } from "./balance";
+
+// --------------------------------------------------------------- affinity ledger
+
+/**
+ * THE single chokepoint for affinity changes. Every gain/loss in the game routes
+ * through here so the rules (diminishing returns, a per-character daily soft cap,
+ * and per-source weighting) are enforced in one place and stay tunable from
+ * balance.ts. Pure: returns the patch to apply + the actual delta + a short human
+ * "why" the feedback layer surfaces. The controller owns applying the patch and
+ * running milestone checks against the new affinity.
+ *
+ * `rawDelta` is the *intent* before scaling: pass a positive base for a gain
+ * (it gets diminished + capped) or a negative number for a loss (applied raw —
+ * boundaries/penalties always bite). Source governs weighting + cap exemption.
+ */
+export function applyAffinity(
+  c: CharacterSheet,
+  rawDelta: number,
+  source: AffinitySource,
+  day: number,
+): { patch: Partial<CharacterSheet>; applied: number; reason: string } {
+  const cfg = BALANCE.affinity;
+  // Reset the daily budget when the day rolls over.
+  const budgetUsed = c.affinityDay === day ? c.affinityGainedToday : 0;
+
+  let applied: number;
+  let newBudgetUsed = budgetUsed;
+
+  if (rawDelta > 0) {
+    // Diminishing returns: the closer to 100, the slower it climbs.
+    const gainScale = clamp(1 - c.affinity / cfg.diminishingPivot, cfg.diminishingFloor, 1);
+    let gain = rawDelta * gainScale;
+    // Soft sources are throttled by the per-day budget; reciprocal investment
+    // (tips/requests/gifts/visits) bypasses the cap and always lands.
+    if (cfg.softSources.includes(source)) {
+      const remaining = Math.max(0, cfg.dailySoftCap - budgetUsed);
+      gain = Math.min(gain, remaining);
+      newBudgetUsed = budgetUsed + gain;
+    }
+    applied = gain;
+  } else {
+    // Losses (boundaries, decay-by-director, soured DMs) apply in full.
+    applied = rawDelta;
+  }
+
+  const newAffinity = clamp(c.affinity + applied, 0, 100);
+  // Recompute against the clamp so the reason reflects what really happened.
+  const realDelta = newAffinity - c.affinity;
+
+  const patch: Partial<CharacterSheet> = {
+    affinity: newAffinity,
+    affinityDay: day,
+    affinityGainedToday: newBudgetUsed,
+    lastInteractionDay: day,
+  };
+
+  return { patch, applied: realDelta, reason: affinityReason(realDelta, source) };
+}
+
+const SOURCE_PHRASE: Record<AffinitySource, string> = {
+  chat: "chatting along",
+  action: "you played to them",
+  mention: "you called them out by name",
+  dm: "your DM",
+  dmRepeat: "your DMs",
+  tip: "they tipped you",
+  request: "you came through for them",
+  gift: "their gift",
+  visit: "your time together",
+  referral: "a friend brought them in",
+};
+
+function affinityReason(delta: number, source: AffinitySource): string {
+  const sign = delta >= 0 ? "+" : "";
+  return `${sign}${delta.toFixed(1)} bond · ${SOURCE_PHRASE[source]}`;
+}
+
+// ----------------------------------------------------------------- decay
+
+export interface AffinityDecay {
+  id: string;
+  patch: Partial<CharacterSheet>;
+  delta: number;
+  reason: string;
+}
+
+/**
+ * Cool neglected bonds. Any character not interacted with for more than the
+ * grace window loses affinity scaled by their current level (a confidant has
+ * the furthest to fall). Does NOT stamp `lastInteractionDay` — the whole point
+ * is that nothing happened. Returns per-character patches for the controller to
+ * apply + a "why" for the feedback/log.
+ */
+export function decayAffinities(
+  roster: Record<string, CharacterSheet>,
+  day: number,
+): AffinityDecay[] {
+  const cfg = BALANCE.affinity;
+  const out: AffinityDecay[] = [];
+  for (const c of Object.values(roster)) {
+    if (c.affinity <= 0) continue;
+    if (c.lastInteractionDay < 0) continue; // never interacted — nothing to cool
+    const idle = day - c.lastInteractionDay;
+    if (idle <= cfg.decayGraceDays) continue;
+    const level = relationshipLevel(c.affinity);
+    const loss = cfg.decayPerIdleDay[level];
+    if (!loss) continue;
+    const newAffinity = clamp(c.affinity - loss, 0, 100);
+    const delta = newAffinity - c.affinity;
+    if (delta === 0) continue;
+    out.push({
+      id: c.id,
+      patch: { affinity: newAffinity },
+      delta,
+      reason: `${delta.toFixed(1)} bond · ${idle} days quiet`,
+    });
+  }
+  return out;
+}
 
 // --------------------------------------------------------------- milestones
 

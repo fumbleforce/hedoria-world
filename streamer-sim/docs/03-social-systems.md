@@ -154,17 +154,48 @@ to 3 ticks, 850 ms apart, paused during `resolving`/`pendingEvent`.
 
 ## Relationships & milestones (`relationships.ts`)
 
-**Affinity changes:**
-| Source | Δ affinity |
-|--------|-----------|
-| Named char chat message | +0.6 (cap 100) |
-| Player DM exchange | +3 |
-| DM director (tip/affinity/relationship effects) | tip +0.9, `affinity` ±8, relationship signal +3…+6 |
-| Visit scene (per-beat relationship signal, on resolve) | +3…+6 per romantic/sexual/etc. signal |
-| Referred-friend spawn | +6 (on top of seed) |
-| Event: block/report/move/confront | −20 |
-| Event: soft boundary / don't open / wait | −10 |
-| **Actions** | none directly — only indirectly via the chat burst |
+### The affinity ledger (`applyAffinity`) — the single write path
+
+Affinity is **scarce and earned**. Every gain/loss routes through one function,
+`applyAffinity(c, rawDelta, source, day)` in `relationships.ts`, which enforces:
+
+- **Diminishing returns** — `gainScale = clamp(1 − affinity/pivot, floor, 1)`
+  (pivot 115, floor 0.2). A confidant climbs ~5× slower than a stranger. Losses
+  bypass this (boundaries always bite).
+- **Per-character daily soft cap** — soft sources (`chat`, `action`, `mention`,
+  `dmRepeat`) share a per-day budget (`dailySoftCap` = 6). Reciprocal investment
+  (`tip`/`request`/`gift`/`visit`/`dm`/`referral`) **bypasses the cap** — getting
+  someone to *do* something for you is the real lever.
+- **Source weighting** — base `rawDelta` per source comes from `BALANCE.affinity.sources`.
+- It returns `{ patch, applied, reason }`; the controller applies the patch, runs
+  milestone checks, and the `reason` ("+1.0 bond · they tipped you") feeds the
+  feedback layer (bubbles + event log).
+
+**Affinity sources** (base weight → after diminishing + cap):
+| Source | Base Δ | Notes |
+|--------|--------|-------|
+| `chat` (named line) | +0.05 | soft-capped; presence isn't intimacy |
+| `action` (verdict `connection`) | up to +0.8 × connection × appealFit | only viewers whose segment *liked* it; per-stream repeat decay ×0.5ⁿ |
+| `mention` (`@handle`, live only) | +1.0 | targeted; short-circuits appeal weighting |
+| `dm` (first exchange/day) | +4 | once-per-day real bump (`lastDmAffinityDay`) |
+| `dmRepeat` (same-day follow-ups) | +0.3 | soft-capped token |
+| `tip` | min($×0.05, 6) | reciprocal, cap-exempt |
+| `gift` / `request` | +2 / +3 | reciprocal, cap-exempt |
+| `visit` (per-beat signal, on resolve) | +3…+6 | reciprocal, cap-exempt |
+| `referral` (referred-friend spawn) | +6 | seeded warmer |
+| DM director `affinity` effect | ±delta | signed; gains diminish, losses bite |
+| Event: block/report/move/confront | −20 | bypasses diminishing |
+| Event: soft boundary / don't open / wait | −10 | bypasses diminishing |
+
+**Decay** (`decayAffinities`, on sleep): any character idle longer than
+`decayGraceDays` (1) loses `decayPerIdleDay[level]` (confidant −3 … stranger −0.5),
+scaled by how close the bond was. `lastInteractionDay` is stamped by every routed
+gain; decay does **not** stamp it. The Regulars card shows a ❄ cooling marker once a
+bond is neglected. Already-fired milestones don't refire on a re-climb.
+
+> **Design constraint — actions are uniform.** Affinity from an action keys *only*
+> off the verdict (`connection`, `tags`, `appeal`), never off an action id/label/keyword,
+> so a menu shortcut and a custom "write a haiku about @mara's cat" reward identically.
 
 **Milestones** fire when a character's relationship-level index increases (handles
 multi-level jumps):
@@ -305,14 +336,19 @@ These are distinct from the `dm` **event** trigger (a modal interrupt) — see
 ```
 Affinity thresholds:   15 / 35 / 60 / 85
 Seed affinity:         2–12
-Chat affinity / msg:   +0.6
-DM affinity / exchange:+3
+Diminishing returns:   gainScale = clamp(1 − aff/115, 0.2, 1)
+Daily soft cap:        6  (chat/action/mention/dmRepeat; tips/gifts/etc bypass)
+Chat affinity / msg:   +0.05  (soft-capped)
+DM affinity / day:     +4 first exchange, +0.3 same-day repeats
+@mention (live):       +1.0 targeted
+Tip affinity:          min($×0.05, 6)  reciprocal, cap-exempt
 Referral bonus:        +6
+Decay / idle day:      confidant −3 … stranger −0.5 (grace 1 day)
 Block/report affinity: −20  (soft boundary −10)
-Target online named:   clamp(followers/22 + 2, 2, 14)
+Target online named:   clamp(followers/22 + 2, 2, 14) × viewerMult
 Spawn attempt chance:  0.6 + min(1, followers/300)×0.1
 Stalker spawn bias:    8% + intensity×3%  → 60% pick stalker archetype
-Leave probability:     8%–15%
+Leave probability:     8%–15% + dislike boost (dissatisfied segments leave faster)
 Return probability:    5%–17%
 Stalker escalate:      comfort < 75, ≤1/day, threat 1→2→3
 Online friend cap:     16

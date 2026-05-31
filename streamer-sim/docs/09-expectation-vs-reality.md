@@ -10,11 +10,15 @@ Severity legend: 🔴 affects gameplay/feel · 🟡 confusing/misleading · ⚪ 
 
 ## A. Mechanics that don't do what they look like
 
-### 🔴 A1 — Camera/viewer gear upgrades have no effect
-`shop.ts` computes `mult.viewer` (usb-mic ×1.1, 1080p-cam ×1.25, plant-wall ×1.05,
-loft ×1.3), but **nothing reads `mult.viewer`**. Viewer counts come purely from
+### ✅ A1 — Camera/viewer gear upgrades have no effect *(resolved §4 overhaul)*
+`presenceTick` now scales the named-cast target **and** the anonymous floor by
+`mult.viewer`, so camera/mic/plant/loft upgrades grow the audience. Gear also gained
+two new appeal axes (`productionQuality`, `segmentAppeal`) wired into baseline appeal
+and spawn bias. *(historical note below.)* `shop.ts` computes `mult.viewer` (usb-mic
+×1.1, 1080p-cam ×1.25, plant-wall ×1.05,
+loft ×1.3), but **nothing read `mult.viewer`**. Viewer counts came purely from
 `presence.ts` (a function of followers + hype). So the entire "viewer multiplier"
-half of the shop is inert; only `mult.hype`, `mult.income`, `mult.moodPerDay`, and
+half of the shop was inert; only `mult.hype`, `mult.income`, `mult.moodPerDay`, and
 `mult.rentPerDay` actually do anything. *(`shop.ts`, `resolver.ts`, `presence.ts`)*
 
 ### 🔴 A2 — Mini-game `hypePerRound` / `energyPerRound` are ignored
@@ -22,16 +26,17 @@ Each mini-game defines per-round hype/energy numbers, but the only thing applied
 while playing is **+1 appeal to each `pleases` segment**. The named tuning is dead.
 *(`games.ts`, `controller.ts`)*
 
-### 🔴 A3 — Segments never shrink from being unhappy
-`segments.ts` comments that unhappy segments "shrink and leave," but the resolver only
-moves **satisfaction** — segment **population** is 100% presence-driven (followers +
-hype + random drift). You can't actually lose a crowd by displeasing them within a
-stream; they just tip/follow less. *(`resolver.ts`, `segments.ts`, `presence.ts`)*
+### ✅ A3 — Segments never shrink from being unhappy *(resolved §4 overhaul)*
+Population is still presence-driven, but **dissatisfied segments now leave faster**:
+`presenceTick` adds a per-character leave boost `(55−sat)/55 × leaveOnDislikeBoost`,
+so pushing content a room dislikes visibly empties it. The old gap: the resolver only
+moved **satisfaction** — segment **population** was 100% presence-driven, so you
+couldn't lose a crowd by displeasing them mid-stream. *(`presence.ts`, `resolver.ts`)*
 
-### 🔴 A4 — No recurring subscriber income
-`subscribers` is tracked and goal-rewarded, and subs grant a one-off cash bump in
-chat, but there is **no monthly/recurring sub payout**. *(known backlog item)*
-*(`controller.ts`, `goals.ts`)*
+### ✅ A4 — No recurring subscriber income *(resolved §4 overhaul)*
+`payRecurringSubs` (called from `sleep`) now pays `subscribers × $3.5 × mult.income`
+on a 30-day cadence through the income path, surfaced as a positive alert.
+*(`controller.ts`, `balance.ts`)*
 
 ### 🔴 A5 — Sponsorship "Push for more" gamble is decided at build time
 The renewal gamble's random payout (`renewal×2` or `0`) is rolled when the event is
@@ -90,10 +95,13 @@ director (not a fixed `effects` payload) owns the fallout. The decisive block/re
 starts `stalker-legal` still lives only on `stalker-confront`. *(`controller.ts`,
 `events.ts`, `dmDirector.ts`)*
 
-### 🔴 B5 — On-stream actions don't change affinity directly
-Affinity moves via chat messages (+0.6), DMs (+3), the **DM director** (tips/affinity/
-relationship effects), and **in-person visits** — but a great *on-stream moment*
-doesn't itself warm a specific named viewer except indirectly through the chat burst.
+### ✅ B5 — On-stream actions don't change affinity directly *(resolved §4 overhaul)*
+On-stream actions now warm named viewers directly via `distributeActionAffinity`: the
+verdict's **`connection`** score (0–3) and any **@mention** route through the
+`applyAffinity` ledger (appeal-weighted, with per-stream repeat-tag decay), so a great
+moment deepens specific bonds — not just the incidental chat burst. *Previously:*
+affinity moved via chat messages, DMs, the **DM director**, and **in-person visits**,
+but a great *on-stream moment* didn't itself warm a specific named viewer.
 *(`relationships.ts`, `controller.ts`, `dmDirector.ts`)*
 
 ---
@@ -166,7 +174,7 @@ so a mid-stream refresh stays live instead of dropping offline.
 |--------|------|------|
 | `eventChance(base, intensity)` | `events.ts` | Exported, never called; live/offline rates are hardcoded (28% / 40%). |
 | `nightProgress(clock)` | `time.ts` | Never used for event gating. |
-| `mult.viewer` | `shop.ts` | Computed, never read (see A1). |
+| ~~`mult.viewer`~~ | `shop.ts` | **Now read** by `presenceTick` (A1 resolved). |
 | `hypePerRound` / `energyPerRound` | `games.ts` | Defined, never applied (see A2). |
 | `HANDLES`, `MOD_HANDLES` | `personas.ts` | Dead; anon handles are procedural. |
 | `deletePortrait(charId)` | `imageStore.ts` | Exported, never called. |
@@ -182,11 +190,11 @@ No `TODO`/`FIXME` markers exist in `src/`.
 These are design gaps more than bugs (and most are tracked in
 [`../IMPROVEMENTS.md`](../IMPROVEMENTS.md)):
 
-1. **Economy is first-draft.** Rent/tip/follower curves aren't tuned into a real
-   difficulty arc; gear upgrades barely matter (A1); no recurring income (A4); no
-   win/lose/eviction. *(IMPROVEMENTS §4)*
-2. **Viewer gear & niches are flavor.** With `mult.viewer` unused and segment
-   population presence-only, equipment and content choices don't yet steer the audience
+1. **Economy is second-draft.** The §4 overhaul added centralized `BALANCE` curves, a
+   monetization ramp, a recurring utility bill, and recurring sub income (A4) for a real
+   early-game difficulty arc; still no win/lose/eviction. *(IMPROVEMENTS §4)*
+2. **Viewer gear & niches now bite.** `mult.viewer` is wired (A1), dissatisfied segments
+   leave faster (A3), and gear/niche/outfit appeal + spawn bias steer the audience
    mechanically. *(A1, A3)*
 3. **Arcs are shallow.** 4 chains (sponsorship, viral, stalker-legal, relationship),
    day-boundary-only, two of them ≤2 stages; the engine is data-driven so more are

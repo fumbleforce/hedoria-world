@@ -71,6 +71,18 @@ export const EVENT_TRIGGERS: EventTrigger[] = [
       ]);
     },
   },
+  // ---- Wellbeing ------------------------------------------------------------
+  {
+    id: "burnout",
+    live: false,
+    // Arms when both mood and comfort are chronically low — the body says stop.
+    weight: (c) => (c.metrics.mood < 35 && c.metrics.comfort < 45 ? 2.5 : 0),
+    build: () =>
+      ev("🪫 Burnout is creeping in", "Everything feels heavy. The thought of going live makes your chest tighten.", "danger", [
+        choice("Take the day to truly rest", "You log off, silence the phone, and let yourself recover.", { mood: 18, comfort: 16, energy: 20 }),
+        choice("Push through it anyway", "You grind on, running on empty. It costs you.", { mood: -5, comfort: -4, energy: -12 }),
+      ]),
+  },
   // ---- Door / deliveries ----------------------------------------------------
   {
     id: "package",

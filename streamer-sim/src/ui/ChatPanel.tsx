@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useStore } from "../state/store";
 import type { GameController } from "../game/controller";
 import type { ChatMessage } from "../game/types";
+import { MentionText } from "./MentionText";
 
 const KIND_CLASS: Record<string, string> = {
   hype: "chat__msg--hype",
@@ -36,14 +37,19 @@ export function ChatPanel({ controller }: { controller: GameController }) {
       <div className="chat__scroll" ref={ref}>
         {chat.length === 0 && <p className="rail__empty">Go live to fill the chat.</p>}
         {chat.map((m) => (
-          <ChatRow key={m.id} m={m} onOpen={() => m.characterId && controller.openCharacter(m.characterId)} />
+          <ChatRow
+            key={m.id}
+            m={m}
+            controller={controller}
+            onOpen={() => m.characterId && controller.openCharacter(m.characterId)}
+          />
         ))}
       </div>
     </section>
   );
 }
 
-function ChatRow({ m, onOpen }: { m: ChatMessage; onOpen: () => void }) {
+function ChatRow({ m, controller, onOpen }: { m: ChatMessage; controller: GameController; onOpen: () => void }) {
   if (m.kind === "system") return <div className="chat__msg chat__msg--system">{m.text}</div>;
   const cls = KIND_CLASS[m.kind] ?? "";
   const badge =
@@ -62,7 +68,7 @@ function ChatRow({ m, onOpen }: { m: ChatMessage; onOpen: () => void }) {
       >
         {m.user}
       </span>
-      <span className="chat__text">{m.text}</span>
+      <span className="chat__text"><MentionText text={m.text} controller={controller} /></span>
     </div>
   );
 }

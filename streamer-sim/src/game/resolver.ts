@@ -10,6 +10,8 @@ import type { ContentTier, Metrics } from "./types";
 import { tierIntensity } from "./content";
 import type { Multipliers } from "./shop";
 import { clamp } from "../rng/rng";
+import { BALANCE } from "./balance";
+import { masteryCostMult, type MasteryState } from "./mastery";
 
 /**
  * The DISPOSER. Takes the evaluator's verdict + current state and computes
@@ -29,6 +31,12 @@ export interface ResolveInput {
   mult: Multipliers;
   contentTier: ContentTier;
   isLive: boolean;
+  /** Mastery XP per domain — reduces the personal cost of matching actions. */
+  mastery?: MasteryState;
+  /** Passive baseline appeal per segment (gear décor + production quality + niche). */
+  baselineAppeal?: Partial<Record<string, number>>;
+  /** Content freshness 0..1 — repeats drain it, dulling hype/appeal/follower gain. */
+  novelty?: number;
 }
 
 export interface ResolveResult {
@@ -37,6 +45,8 @@ export interface ResolveResult {
   earned: number;
   gainedFollowers: number;
   summary: string;
+  /** Readiness multiplier applied to positive payoff (1 = full; <1 = gated). */
+  readiness: number;
 }
 
 const PRESSURE_STEP: Record<Exclude<StatPressure, "none">, number> = { up: 1, down: -1 };
@@ -52,22 +62,56 @@ export function resolveAction(input: ResolveInput): ResolveResult {
   const audience = cloneAudience(input.audience);
   const tierMax = tierIntensity(input.contentTier);
 
+  // Mastery cost-efficiency: a veteran spends less on the same act. Showmanship
+  // shaves energy cost; Composure shaves the comfort cost of escalation. Floored
+  // so it's never free (see balance.mastery.efficiencyFloor).
+  const showmanshipMult = input.mastery ? masteryCostMult(input.mastery.showmanship) : 1;
+  const composureMult = input.mastery ? masteryCostMult(input.mastery.composure) : 1;
+
+  // Streamer stat pressure. Comfort cost is amplified for escalation (intensity
+  // >= gate) when comfort is already low — cheap early escalation bites harder.
+  let comfortDelta = pressureDelta(verdict.pressure.comfort, 5, intensity);
+  if (comfortDelta < 0 && intensity >= BALANCE.readiness.comfortGateFrom) {
+    const amp =
+      1 + (BALANCE.readiness.comfortCostAmplifyLow - 1) * (1 - metrics.comfort / 100);
+    comfortDelta *= amp * composureMult;
+  }
+
+  // Energy cost (when it's a cost) is reduced by Showmanship.
+  let energyDelta = pressureDelta(verdict.pressure.energy, 4, intensity);
+  if (energyDelta < 0) energyDelta *= showmanshipMult;
+
+  // Content freshness: a stale, repeated format gives less of a hype lift.
+  const novelty = clamp(input.novelty ?? 1, 0, 1);
+  let hypeDelta = pressureDelta(verdict.pressure.hype, 5, intensity) * mult.hype;
+  if (hypeDelta > 0) hypeDelta *= novelty;
+
   const metricsPatch: Partial<Metrics> = {
-    hype: metrics.hype + pressureDelta(verdict.pressure.hype, 5, intensity) * mult.hype,
-    energy: metrics.energy + pressureDelta(verdict.pressure.energy, 4, intensity),
+    hype: metrics.hype + hypeDelta,
+    energy: metrics.energy + energyDelta,
     mood: metrics.mood + pressureDelta(verdict.pressure.mood, 4, intensity),
-    comfort: metrics.comfort + pressureDelta(verdict.pressure.comfort, 5, intensity),
+    comfort: metrics.comfort + comfortDelta,
   };
 
   let earned = 0;
   let satWeightedHappy = 0;
   let comfortFromAudience = 0;
+  let fitNumerator = 0;
+  let popSum = 0;
 
   if (isLive) {
     for (const id of SEGMENT_IDS) {
       const def = SEGMENTS[id];
       const seg = audience[id];
-      const appeal = verdict.appeal[id] ?? inferAppeal(def.likes, def.dislikes, verdict.tags);
+      const base = verdict.appeal[id] ?? inferAppeal(def.likes, def.dislikes, verdict.tags);
+      // Layer in the passive baseline appeal from gear/décor/niche/production
+      // quality so investment literally shapes how content lands per segment.
+      const appeal = clamp(base + (input.baselineAppeal?.[id] ?? 0), -3, 3);
+
+      // Audience-fit accumulators: positive payoff only materializes against the
+      // segments actually present that liked the action.
+      fitNumerator += Math.max(0, appeal) * seg.population;
+      popSum += seg.population;
 
       // Satisfaction drifts toward an appeal-driven target.
       const satTarget = clamp(50 + appeal * 14, 0, 100);
@@ -76,7 +120,11 @@ export function resolveAction(input: ResolveInput): ResolveResult {
       // Tips from satisfied heads.
       if (seg.satisfaction > 55 && seg.population > 0) {
         earned +=
-          ((seg.satisfaction - 55) / 45) * def.tipFactor * seg.population * 0.12 * mult.income;
+          ((seg.satisfaction - 55) / 45) *
+          def.tipFactor *
+          seg.population *
+          BALANCE.economy.tipConstant *
+          mult.income;
       }
 
       // Comfort pressure from segment nature × engagement.
@@ -100,8 +148,28 @@ export function resolveAction(input: ResolveInput): ResolveResult {
       audience.stalkers.satisfaction = clamp(audience.stalkers.satisfaction + 12, 0, 100);
     }
 
-    const reach = 0.4 + Math.min(1.8, metrics.followers / 500);
-    const gainedFollowers = Math.max(0, Math.round(satWeightedHappy * 0.18 * reach));
+    // Readiness gates the positive payoff: how well the action fit the room,
+    // plus escalation gates (comfort/energy/hype) for higher-intensity beats.
+    const readiness = readinessFactor(verdict, metrics, fitNumerator, popSum);
+    earned *= readiness;
+    satWeightedHappy *= readiness;
+
+    // Early monetization ramp: a tiny new audience barely tips, so the first
+    // streams are lean and whales/subs are the real lever out of precarity.
+    const monetizationRamp = Math.min(1, metrics.followers / BALANCE.economy.monetizationRampFollowers);
+    earned *= monetizationRamp;
+
+    // Stale content also dulls tips + follower growth.
+    earned *= novelty;
+    satWeightedHappy *= novelty;
+
+    const reach =
+      BALANCE.economy.reachBase +
+      Math.min(BALANCE.economy.reachCap, metrics.followers * BALANCE.economy.reachPerFollower);
+    const gainedFollowers = Math.max(
+      0,
+      Math.round(satWeightedHappy * BALANCE.economy.followerGrowth * reach),
+    );
 
     metricsPatch.cash = metrics.cash + earned;
     metricsPatch.comfort = (metricsPatch.comfort ?? metrics.comfort) + comfortFromAudience;
@@ -110,13 +178,55 @@ export function resolveAction(input: ResolveInput): ResolveResult {
     const summary = buildSummary(earned, gainedFollowers, verdict);
     diag.group("resolver", `resolve "${truncate(verdict.narration, 36)}"`, () => {
       diag.info("resolver", "stat patch", roundPatch(metricsPatch));
-      diag.info("economy", "tips/follows", { earned: round(earned), gainedFollowers });
+      diag.info("economy", "tips/follows", {
+        earned: round(earned),
+        gainedFollowers,
+        readiness: round(readiness),
+      });
     });
-    return { metricsPatch, audience, earned, gainedFollowers, summary };
+    return { metricsPatch, audience, earned, gainedFollowers, summary, readiness };
   }
 
   diag.info("resolver", "resolve (offline)", roundPatch(metricsPatch));
-  return { metricsPatch, audience, earned: 0, gainedFollowers: 0, summary: "" };
+  return { metricsPatch, audience, earned: 0, gainedFollowers: 0, summary: "", readiness: 1 };
+}
+
+/**
+ * Compute the readiness multiplier for positive payoff. Audience fit always
+ * applies (well-targeted content pays, poorly-targeted content doesn't); the
+ * comfort/energy/hype gates only bite for escalation (intensity >= gate / 4),
+ * so a new streamer who immediately goes spicy with no matching audience and
+ * low comfort earns almost nothing, while a built-up one cashes in.
+ */
+function readinessFactor(
+  verdict: ActionVerdict,
+  metrics: Metrics,
+  fitNumerator: number,
+  popSum: number,
+): number {
+  const cfg = BALANCE.readiness;
+  const intensity = verdict.intensity;
+
+  // fit ~ average positive appeal across the present audience (0..3); normalize
+  // so an average appeal of ~1.5 across the room counts as a full fit.
+  const fit = popSum > 0 ? fitNumerator / popSum : 0;
+  const fitNorm = clamp(fit / 1.5, 0, 1);
+  let factor = (1 - cfg.fitWeight) + cfg.fitWeight * fitNorm;
+
+  if (intensity >= cfg.comfortGateFrom) {
+    // Comfort headroom gates escalation payoff.
+    factor *= 0.4 + 0.6 * (metrics.comfort / 100);
+    // Exhaustion shows on camera for demanding beats.
+    if (metrics.energy < cfg.energyPenaltyBelow) {
+      factor *= 0.5 + 0.5 * (metrics.energy / cfg.energyPenaltyBelow);
+    }
+  }
+  // Big swings convert better when the room is already hot.
+  if (intensity >= 4) {
+    factor *= 1 + cfg.hypeBonusAt100 * (metrics.hype / 100);
+  }
+
+  return clamp(factor, 0, 1.5);
 }
 
 function inferAppeal(likes: string[], dislikes: string[], tags: string[]): number {
