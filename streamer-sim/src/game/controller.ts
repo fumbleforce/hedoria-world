@@ -32,16 +32,22 @@ import {
 } from "../persist/imageStore";
 import { diag } from "../diag/log";
 import { useStore, type ActionMenu, setFeedbackContext, clearFeedbackContext } from "../state/store";
-import type { ChatMessage, ContentTier, DmLine, EventChoice, GameEvent, Metrics } from "./types";
+import type { ChatMessage, ContentTier, DmLine, EventChoice, GameEvent, Metrics, PendingEventSeed } from "./types";
 import type { PlayerAction, ActionOption, ActionVerdict } from "./actions";
 import { generateChatBurst, audienceSummary } from "./chatEngine";
 import { evaluateAction } from "./evaluator";
 import { resolveAction, totalViewers } from "./resolver";
-import { rollEvent, type EventContext } from "./events";
-import { startArc, arcEventDue, advanceArc } from "./arcs";
 import { occasionForDay } from "./calendar";
 import { newlyCompletedGoals } from "./goals";
 import { directDm, type DmEffect } from "./dmDirector";
+import {
+  authorEvent,
+  resolveEvent as resolveDirectorEvent,
+  parseEventEffects,
+  type EventDirectorContext,
+  type EventEffect,
+  type EventSpec,
+} from "./eventDirector";
 import { multipliersFor, UPGRADES } from "./shop";
 import { fillPrompt, PROMPTS, type PromptId } from "./prompts";
 import { steeringForTier } from "./content";
@@ -101,6 +107,10 @@ export class GameController {
   private streamMemory = "";
   /** Beats since the stream summary was last refreshed (throttles the summariser). */
   private beatsSinceSummary = 0;
+  /** Live beats since the last director-authored event scene. */
+  private beatsSinceLastEvent = 999;
+  /** In-world day when the last director event fired (offline throttle). */
+  private lastEventDay = 0;
 
   constructor(
     private readonly llm: LlmAdapter,
@@ -847,8 +857,13 @@ export class GameController {
     return Math.min(1, this.s.metrics.followers / 300);
   }
 
-  /** Drift the named cast + refresh segment populations from presence. */
-  private presenceTick(): void {
+  /**
+   * Drift the named cast + refresh segment populations from presence. Pass
+   * `announce: false` when rebuilding transient presence (e.g. resuming a live
+   * session after a reload) so the restored roster doesn't spam "joined" lines
+   * for people who were already in the room.
+   */
+  private presenceTick(announce = true): void {
     const s = this.s;
     const intensity = this.intensity();
     // Gear/production quality grows the audience: scale the named-cast target and
@@ -875,11 +890,11 @@ export class GameController {
           streamsAttended: c.streamsAttended + 1,
           attendanceStreak: streak,
         });
-        if (streak >= 3) {
+        if (announce && streak >= 3) {
           this.s.pushChat([this.sysChat(`${c.displayName || c.handle} — ${streak} streams running 🔥`)]);
         }
       }
-      if (c.affinity >= 35) {
+      if (announce && c.affinity >= 35) {
         this.s.pushChat([this.sysChat(`${c.displayName || c.handle} (${relationshipLevel(c.affinity)}) joined`)]);
       }
     }
@@ -908,14 +923,10 @@ export class GameController {
     s.setToast(`⚠ ${target.displayName || target.handle} is escalating.`);
     s.logEvent(`⚠ ${target.displayName || target.handle} escalated to threat ${outcome.patch.threat}.`);
     diag.info("event", "stalker escalated", { handle: target.handle, threat: outcome.patch.threat });
-    // At max threat, force the confrontation rather than waiting for the roll.
+    // At max threat, the director must address it — no hardcoded confrontation modal.
     if (outcome.patch.threat === 3) {
-      const ev = rollEvent(this.eventCtx());
-      // rollEvent will heavily favour the threat-3 confront trigger; raise it.
-      if (ev) {
-        void this.raiseEvent(ev);
-        return true;
-      }
+      void this.maybeTryDirectorEvent(true);
+      return true;
     }
     return false;
   }
@@ -940,6 +951,7 @@ export class GameController {
     const s = this.s;
     if (s.session.isLive) return;
     if (s.visitor) return s.setToast("You've got company over — see them out first.");
+    if (s.eventScene) return s.setToast("You're in the middle of something — see it through first.");
     if (s.metrics.energy < 10) {
       s.setToast("Too exhausted to stream — sleep or eat first.");
       return;
@@ -980,8 +992,9 @@ export class GameController {
     this.streamMemory = "";
     this.beatsSinceSummary = 0;
     // Rebuild who's "in the room" (online flags + per-segment audience) from the
-    // persisted roster, then resume the ambient chatter.
-    this.presenceTick();
+    // persisted roster, then resume the ambient chatter. Suppress arrival
+    // announcements: these people were already here before the reload.
+    this.presenceTick(false);
     this.startAmbient("the stream picks back up after a blip");
     diag.info("round", "resumed live session after reload", { round: s.session.round });
   }
@@ -1154,7 +1167,7 @@ export class GameController {
       case "__freshen__": return this.coded("A hot shower. You feel human again.", { mood: 6, comfort: 5, energy: 4 }, "🚿 Freshened up", 20);
       case "__scroll__": return this.coded("You scroll fan mail in bed. Sweet messages, a couple of weird ones.", { mood: 3, comfort: -1 }, "📱 Read fan mail", 15);
       case "__order_food__": return this.orderFood();
-      case "__door__": return this.answerDoor();
+      case "__door__": void this.answerDoor(); return;
       case "__open_shop__": this.s.setShopOpen(true); return;
       case "__outfit_cozy__": this.s.setSettings({ outfit: "cozy" }); return this.coded("You change into something soft and comfy. The cozy crowd melts.", { mood: 3, comfort: 4 }, "🧶 Cozy fit (cozy crowd ♥)", 10);
       case "__outfit_cute__": this.s.setSettings({ outfit: "cute" }); return this.coded("You pick a cute, photogenic fit. Hype picks up.", { mood: 3, hype: 4 }, "✨ Cute fit (hype ♥)", 10);
@@ -1177,6 +1190,7 @@ export class GameController {
     if (s.resolving) return;
     // During an in-person visit, Continue lets the guest take the lead.
     if (s.visitor) return this.visitContinue();
+    if (s.eventScene) return this.eventContinue();
     if (!s.session.isLive) {
       // Offline continue = potter around; maybe a knock/package/DM.
       this.advanceTime(TIME_COST.continue);
@@ -1287,6 +1301,7 @@ export class GameController {
     if (s.resolving) return;
     // While a visitor is present, every action is a beat in the in-person scene.
     if (s.visitor) return this.visitBeat(action.text);
+    if (s.eventScene) return this.eventBeat(action.text);
     this.stopAmbient();
     s.setResolving(true);
 
@@ -1460,6 +1475,7 @@ export class GameController {
   /** Shared post-action housekeeping while live: end checks, presence, events. */
   private afterBeat(context: string): void {
     const s = this.s;
+    this.beatsSinceLastEvent += 1;
     if (s.metrics.energy <= 0) return this.endStream("ran out of energy");
     if (s.clock >= NIGHT_END) return this.endStream("it got late");
 
@@ -1472,24 +1488,7 @@ export class GameController {
     // events (too-specific DM, door knock, confrontation) ride the normal roll.
     if (this.advanceStalkerArcs()) return;
 
-    const ev = rollEvent(this.eventCtx());
-    if (ev && Math.random() < 0.28) {
-      void this.raiseEvent(ev);
-      return;
-    }
-    this.startAmbient(context);
-  }
-
-  private eventCtx(): EventContext {
-    const s = this.s;
-    return {
-      metrics: s.metrics,
-      intensity: this.intensity(),
-      isLive: s.session.isLive,
-      roster: s.roster,
-      online: this.onlineIds(),
-      recentTriggerIds: s.recentEvents.map((r) => r.triggerId),
-    };
+    void this.maybeTryDirectorEvent(false, context);
   }
 
   // ----------------------------------------------------------- seasonal / arcs / goals
@@ -1560,47 +1559,24 @@ export class GameController {
     };
   }
 
-  /** Raise the first due arc-stage event, if any. Returns true if one fired. */
+  /** Raise the first due visit or follow-up seed, if any. Returns true if one fired. */
   private maybeArcEvent(): boolean {
     const s = this.s;
-    if (s.pendingEvent) return false;
+    if (s.pendingEvent || s.eventScene) return false;
     const visit = this.consumeDueVisit();
     if (visit) {
       void this.raiseEvent(visit);
       return true;
     }
-    for (const arc of s.arcs) {
-      const event = arcEventDue(arc, s.metrics.day);
-      if (event) {
-        void this.raiseEvent(event);
-        return true;
-      }
+    const due = this.consumeDueEventSeed();
+    if (due) {
+      void this.maybeTryDirectorEvent(true, undefined, due.seed);
+      return true;
     }
     return false;
   }
 
-  /** Start a multi-step arc when a seed event was resolved a particular way. */
-  private maybeStartArc(event: GameEvent, choiceLabel: string): void {
-    const s = this.s;
-    const day = s.metrics.day;
-    const label = choiceLabel.toLowerCase();
-    if (event.triggerId === "brand-deal" && label.includes("take it")) {
-      const offer = 50 + Math.round(s.metrics.followers / 4);
-      s.addArc(startArc("sponsorship", { day, data: { brand: pick(BRANDS), offer } }));
-      this.sysStory("You sign on with the sponsor — they'll expect a real segment in a day or two.");
-      s.logEvent("Arc started: sponsorship deal.");
-    } else if (event.triggerId === "viral-clip" && label.includes("lean")) {
-      s.addArc(startArc("viral", { day, data: { topic: "your clip" } }));
-      this.sysStory("You ride the clip. Word is spreading fast — this could snowball over the next day.");
-      s.logEvent("Arc started: viral clip.");
-    } else if (event.triggerId === "stalker-confront" && /block|report/.test(label)) {
-      const c = event.characterId ? s.roster[event.characterId] : undefined;
-      s.addArc(startArc("stalker-legal", { day, characterId: event.characterId, data: { handle: c?.displayName || c?.handle || "them" } }));
-      s.logEvent(`Arc started: legal follow-up on ${c?.displayName || c?.handle || "them"}.`);
-    }
-  }
-
-  /** Shared post-resolution bookkeeping: event memory, arc advance, goal checks. */
+  /** Shared post-resolution bookkeeping: event memory + goal checks. */
   private finishEvent(event: GameEvent, choiceLabel: string, resolution: string): void {
     const s = this.s;
     s.pushEventRecord({
@@ -1610,15 +1586,6 @@ export class GameController {
       choice: choiceLabel,
       resolution,
     });
-    if (event.advancesArc) {
-      const arc = s.arcs.find((a) => a.id === event.advancesArc!.id);
-      if (arc) {
-        const next = advanceArc(arc, s.metrics.day);
-        if (next) s.updateArc(arc.id, next);
-        else s.removeArc(arc.id);
-      }
-    }
-    this.maybeStartArc(event, choiceLabel);
     this.checkGoals();
   }
 
@@ -1675,9 +1642,8 @@ export class GameController {
    * (referred friends, follower bumps) rides along. Returns true if an event was
    * raised so callers can stop ambient chat.
    */
-  private applyMilestones(charId: string, outcomes: MilestoneOutcome[]): boolean {
+  private applyMilestones(charId: string, outcomes: MilestoneOutcome[]): void {
     const s = this.s;
-    let raised = false;
     let followerDelta = 0;
     for (const o of outcomes) {
       // Record the milestone so it never refires.
@@ -1696,13 +1662,9 @@ export class GameController {
       }
       if (o.spawnFriend) this.spawnReferredFriend(charId);
       if (o.followerDelta) followerDelta += o.followerDelta;
-      if (o.kind === "event" && o.event && !raised && !s.pendingEvent) {
-        void this.raiseEvent(o.event);
-        raised = true;
-      }
+      // Milestone modal events retired — director reads milestone signals instead.
     }
     if (followerDelta) s.patchMetrics({ followers: s.metrics.followers + followerDelta });
-    return raised;
   }
 
   /** Word-of-mouth: a happy regular brings a compatible new viewer along. */
@@ -1987,6 +1949,7 @@ export class GameController {
     const s = this.s;
     if (s.session.isLive) return s.setToast("End the stream before bed.");
     if (s.visitor) return s.setToast("You can't sleep — someone's over right now.");
+    if (s.eventScene) return s.setToast("You can't sleep — you're in the middle of something.");
     const mult = this.mults();
     const rent = mult.rentPerDay;
     const m = s.metrics;
@@ -2049,17 +2012,18 @@ export class GameController {
     this.coded("You order delivery. Twenty minutes later: a hot meal.", { cash: -15, energy: 18, mood: 6 }, "🛵 Ordered delivery (-$15)", 25);
   }
 
-  private answerDoor(): void {
+  private async answerDoor(): Promise<void> {
     const s = this.s;
     if (s.session.isLive) return s.setToast("Not while you're live!");
     const visit = this.consumeDueVisit();
     if (visit) {
-      void this.raiseEvent(visit);
+      await this.raiseEvent(visit);
       return;
     }
-    const ev = rollEvent(this.eventCtx(), { offlineOnly: true }) ?? null;
-    if (ev) void this.raiseEvent(ev);
-    else this.coded("You open the door. Empty hallway — must've been the wind.", { comfort: -1 }, "🚪 No one there", 5);
+    const fired = await this.maybeTryDirectorEvent(false);
+    if (!fired && !s.resolving) {
+      this.coded("You open the door. Empty hallway — must've been the wind.", { comfort: -1 }, "🚪 No one there", 5);
+    }
   }
 
   private async maybeOfflineEvent(): Promise<void> {
@@ -2068,10 +2032,13 @@ export class GameController {
       await this.raiseEvent(visit);
       return;
     }
-    const ev = rollEvent(this.eventCtx(), { offlineOnly: true });
-    if (ev && Math.random() < 0.4) {
-      await this.raiseEvent(ev);
-    } else {
+    const due = this.consumeDueEventSeed();
+    if (due) {
+      await this.maybeTryDirectorEvent(true, undefined, due.seed);
+      return;
+    }
+    const fired = await this.maybeTryDirectorEvent(false);
+    if (!fired) {
       this.dm(pick([
         "You tidy up a little and check your phone. Quiet evening.",
         "You stretch, water the one surviving plant, and scroll a bit.",
@@ -2227,6 +2194,535 @@ export class GameController {
     } catch {
       return ev.narrationSeed;
     }
+  }
+
+  // ----------------------------------------------------------- event director
+
+  private buildEventDirectorContext(seed?: string): EventDirectorContext {
+    const s = this.s;
+    const mults = this.mults();
+    const segParts = Object.entries(mults.segmentAppeal)
+      .filter(([, v]) => v)
+      .map(([k, v]) => `${k}+${v}`);
+    const online = Object.values(s.roster)
+      .filter((c) => c.online)
+      .sort((a, b) => b.threat - a.threat || b.affinity - a.affinity)
+      .slice(0, 10);
+    const maxThreat = Math.max(0, ...online.map((c) => c.threat));
+    const signals: EventDirectorContext["signals"] = [];
+    if (maxThreat >= 3) {
+      signals.push({ id: "threat-3", label: "A stalker has reached maximum threat", mustAddress: true });
+    } else if (maxThreat >= 2) {
+      signals.push({ id: "threat-2", label: "A stalker is highly escalated" });
+    }
+    if (!s.session.isLive && s.metrics.mood < 35 && s.metrics.comfort < 45) {
+      signals.push({ id: "burnout", label: "Chronic low mood and comfort — burnout pressure", mustAddress: true });
+    }
+    if (s.metrics.cash < mults.rentPerDay * 2) {
+      signals.push({ id: "rent-crunch", label: "Cash is tight relative to rent" });
+    }
+    if (s.metrics.hype > 65 && s.session.isLive) {
+      signals.push({ id: "viral-potential", label: "High hype — something could snowball" });
+    }
+    if (s.metrics.energy < 25) signals.push({ id: "low-energy", label: "Running low on energy" });
+    for (const c of online) {
+      if (c.affinity >= 60 && c.relationship === "none" && c.threat <= 0) {
+        signals.push({ id: `confidant-${c.id}`, label: `${c.handle} is very close — relationship milestone` });
+      }
+    }
+    const noveltyKeys = Object.values(s.contentNovelty);
+    const avgNovelty =
+      noveltyKeys.length ? noveltyKeys.reduce((a, b) => a + b, 0) / noveltyKeys.length : 1;
+    if (avgNovelty < 0.5) signals.push({ id: "content-stale", label: "Content feels repetitive" });
+
+    return {
+      settings: s.settings,
+      metrics: s.metrics,
+      isLive: s.session.isLive,
+      recentNarrative: this.recentNarrative(),
+      viewers: online.map((c) => ({
+        id: c.id,
+        handle: c.handle,
+        displayName: c.displayName,
+        archetype: ARCHETYPE_BY_ID[c.archetypeId]?.label ?? c.archetypeId,
+        affinity: c.affinity,
+        threat: c.threat,
+        relationship: c.relationship,
+        memory: c.memory,
+      })),
+      mastery: {
+        showmanship: masteryLevel(s.mastery.showmanship),
+        composure: masteryLevel(s.mastery.composure),
+      },
+      niche: s.settings.niche ?? "variety",
+      outfit: s.settings.outfit ?? "cozy",
+      productionQuality: mults.productionQuality,
+      segmentAppealSummary: segParts.join(", "),
+      pendingFollowups: s.pendingEventSeeds.map((p) => ({ day: p.day, seed: p.seed, charId: p.charId })),
+      recentEventTitles: s.recentEvents.map((r) => r.title).slice(-14),
+      signals,
+      beatsSinceLastEvent: this.beatsSinceLastEvent,
+      daysSinceLastEvent: s.metrics.day - this.lastEventDay,
+      rosterIds: Object.keys(s.roster),
+      upgradeIds: UPGRADES.map((u) => u.id),
+      seed,
+    };
+  }
+
+  private directorThrottleOk(mustAddress: boolean): boolean {
+    const s = this.s;
+    if (s.eventScene || s.visitor || s.pendingEvent) return false;
+    if (mustAddress) return true;
+    const E = BALANCE.events;
+    if (s.session.isLive) return this.beatsSinceLastEvent >= E.minBeatsBetweenLive;
+    return s.metrics.day - this.lastEventDay >= E.minDaysBetweenOffline;
+  }
+
+  private consumeDueEventSeed(): PendingEventSeed | undefined {
+    const s = this.s;
+    const due = s.pendingEventSeeds.find((p) => p.day <= s.metrics.day);
+    if (!due) return undefined;
+    s.removePendingEventSeed(due.id);
+    return due;
+  }
+
+  /** State-driven event gate — replaces ambient rollEvent. Returns true if something started. */
+  private async maybeTryDirectorEvent(
+    mustAddress = false,
+    ambientContext?: string,
+    seed?: string,
+  ): Promise<boolean> {
+    const s = this.s;
+    if (!this.directorThrottleOk(mustAddress)) {
+      if (ambientContext && s.session.isLive) this.startAmbient(ambientContext);
+      return false;
+    }
+    const ctx = this.buildEventDirectorContext(seed);
+    const spec = await authorEvent(this.llm, ctx);
+    if (!spec) {
+      if (ambientContext && s.session.isLive) this.startAmbient(ambientContext);
+      return false;
+    }
+    this.stopAmbient();
+    this.markDirectorEventFired();
+    if (spec.mode === "notice") {
+      await this.deliverDirectorNotice(spec);
+      if (ambientContext && s.session.isLive) this.startAmbient(ambientContext);
+      return true;
+    }
+    await this.startEventScene(spec, seed);
+    return true;
+  }
+
+  private markDirectorEventFired(): void {
+    this.beatsSinceLastEvent = 0;
+    this.lastEventDay = this.s.metrics.day;
+  }
+
+  private async deliverDirectorNotice(spec: EventSpec): Promise<void> {
+    const s = this.s;
+    this.dm(spec.opening);
+    s.logEvent(`${spec.title}: ${spec.opening.slice(0, 80)}`);
+    if (spec.effects?.length) await this.applyEventEffects(spec.effects);
+    s.pushEventRecord({
+      triggerId: "director-notice",
+      title: spec.title,
+      day: s.metrics.day,
+      resolution: spec.opening.slice(0, 120),
+    });
+    s.setToast(spec.title);
+    this.checkGoals();
+  }
+
+  private resolveEventCharId(spec: EventSpec): string | undefined {
+    const ref = spec.characterRef;
+    if (!ref || ref === "new") return undefined;
+    if (ref.startsWith("online:")) return ref.slice("online:".length);
+    if (this.s.roster[ref]) return ref;
+    return undefined;
+  }
+
+  private async startEventScene(spec: EventSpec, seed?: string): Promise<void> {
+    const s = this.s;
+    const charId = this.resolveEventCharId(spec);
+    s.startEventScene({
+      title: spec.title,
+      tone: spec.tone,
+      charId,
+      stakes: spec.stakes,
+      beats: 0,
+      transcript: `Start: ${spec.opening}`,
+      netEffects: {},
+      lines: [{ role: "system", text: spec.opening }],
+      seed,
+    });
+    this.dm(spec.opening);
+    s.logEvent(`Event scene: ${spec.title}`);
+    s.setToast(spec.title);
+    diag.info("event", "event scene started", { title: spec.title });
+    // Apply any opening/setup effects the author attached (e.g. an incomingDm that
+    // lands the message the scene is reacting to). End-of-scene consequences come
+    // separately from resolveEvent.
+    if (spec.effects?.length) await this.applyEventEffects(spec.effects);
+    void this.generateEventImage(spec.opening);
+  }
+
+  async eventBeat(text: string): Promise<void> {
+    const t = text.trim();
+    if (!t) return;
+    await this.runEventBeat(t);
+  }
+
+  async eventContinue(): Promise<void> {
+    await this.runEventBeat(null);
+  }
+
+  async endEventScene(): Promise<void> {
+    const s = this.s;
+    if (!s.eventScene || s.resolving) return;
+    await this.resolveEventScene("You decide to see this through and bring the moment to a close.");
+  }
+
+  private async runEventBeat(playerText: string | null): Promise<void> {
+    const s = this.s;
+    const scene = s.eventScene;
+    if (!scene || s.resolving) return;
+    s.setResolving(true);
+    try {
+      if (playerText) {
+        s.pushEventSceneLine({ role: "me", text: playerText });
+        s.pushStory({ kind: "action", text: `(You: ${playerText})` });
+      } else {
+        s.pushStory({ kind: "action", text: `(You hang back and let the moment unfold…)` });
+      }
+      const cue =
+        playerText ?? "(The streamer stays quiet — show what happens next on its own initiative.)";
+      const outcome = await this.judgeEventBeat(scene, cue, playerText === null);
+      s.pushEventSceneLine({ role: "narrator", text: outcome.narration });
+      this.dm(outcome.narration);
+      if (outcome.effects.length) await this.applyEventEffects(outcome.effects);
+      // Time drifts during a scene, but far slower than a normal turn so the
+      // moment can breathe without burning the whole night.
+      this.advanceTime(BALANCE.events.beatMinutes);
+      const transcriptLine = playerText ? `You: ${playerText}` : "You: (waited and watched)";
+      s.patchEventScene({
+        beats: scene.beats + 1,
+        transcript: `${scene.transcript}\n${transcriptLine}\nOutcome: ${outcome.narration}`,
+      });
+      if (outcome.sceneEnd) await this.resolveEventScene(outcome.resolution ?? "The moment reaches its natural end.");
+    } finally {
+      s.setResolving(false);
+    }
+  }
+
+  private async resolveEventScene(endReason: string): Promise<void> {
+    const s = this.s;
+    const scene = s.eventScene;
+    if (!scene) return;
+    const ctx = this.buildEventDirectorContext(scene.seed);
+    const effects = await resolveDirectorEvent(this.llm, ctx, scene.transcript);
+    if (effects.length) await this.applyEventEffects(effects);
+    this.outcome(endReason);
+    s.pushEventRecord({
+      triggerId: "director-scene",
+      title: scene.title,
+      day: s.metrics.day,
+      resolution: endReason.slice(0, 120),
+    });
+    s.endEventScene();
+    s.setToast("The moment passes.");
+    s.logEvent(`Event resolved: ${scene.title}`);
+    this.checkGoals();
+    if (s.session.isLive) this.startAmbient("after the event");
+  }
+
+  private async judgeEventBeat(
+    scene: NonNullable<ReturnType<typeof useStore.getState>["eventScene"]>,
+    text: string,
+    passive: boolean,
+  ): Promise<{ narration: string; effects: EventEffect[]; sceneEnd: boolean; resolution?: string }> {
+    const fallback = {
+      narration: passive
+        ? "The tension shifts — something unspoken hangs in the air, and the moment keeps moving whether you're ready or not."
+        : "You push through the beat. The room — or the phone — reacts in ways you can't fully control yet.",
+      effects: [] as EventEffect[],
+      sceneEnd: false,
+    };
+    if (this.llm.isMock) return fallback;
+    const c = scene.charId ? this.s.roster[scene.charId] : undefined;
+    const req = {
+      system: [
+        this.resolvePrompt("narrator"),
+        "You are narrating one beat of an interactive event scene in a streamer life-sim.",
+        "Write vivid narration (3-5 sentences). Include spoken dialogue in quotes when someone speaks.",
+        passive
+          ? "The streamer hangs back — DO NOT invent their words. Let the situation evolve."
+          : "React to what the streamer just said/did.",
+        "Return modest `effects` (capability array) for small nudges; big payoffs come at scene end.",
+        "Set sceneEnd true only when the arc naturally concludes THIS beat (rare).",
+        scene.stakes ? `Stakes: ${scene.stakes}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n"),
+      messages: [
+        {
+          role: "user" as const,
+          content: [
+            `Event: ${scene.title} (${scene.tone})`,
+            c
+              ? `Viewer involved: ${c.displayName || c.handle} (threat ${c.threat}, aff ${Math.round(c.affinity)})`
+              : "",
+            `Transcript:\n${scene.transcript.slice(-1400)}`,
+            passive ? "The streamer waits silently." : `The streamer now: "${text}"`,
+            `Beat ${scene.beats + 1}.`,
+          ]
+            .filter(Boolean)
+            .join("\n"),
+        },
+      ],
+      jsonMode: true,
+      jsonSchema: EVENT_SCENE_SCHEMA,
+    };
+    try {
+      const parsed = await completeJsonWithRepair(this.llm, req, (t) => this.parseEventSceneOutcome(t), "story");
+      return parsed ?? fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  private parseEventSceneOutcome(text: string): {
+    narration: string;
+    effects: EventEffect[];
+    sceneEnd: boolean;
+    resolution?: string;
+  } | null {
+    const json = extractJson<Record<string, unknown>>(text);
+    if (!json || typeof json !== "object") return null;
+    const narration = typeof json.narration === "string" ? json.narration.trim().slice(0, 800) : "";
+    if (!narration) return null;
+    const ctx = this.buildEventDirectorContext();
+    const effects = Array.isArray(json.effects)
+      ? parseEventEffects(JSON.stringify({ effects: json.effects }), ctx) ?? []
+      : [];
+    const sceneEnd = json.sceneEnd === true;
+    const resolution = typeof json.resolution === "string" ? json.resolution.slice(0, 200) : undefined;
+    return { narration, effects, sceneEnd, resolution };
+  }
+
+  /** Tolerant scene image from an opening beat — async, non-blocking. */
+  private async generateEventImage(opening: string): Promise<void> {
+    if (!this.canGenerateImages) return;
+    const s = this.s;
+    const desc = s.character.description.trim();
+    if (!desc || !opening.trim()) return;
+    try {
+      const ref = await this.bodyRef();
+      const zone = ZONES[s.zone];
+      const positionLabel = zone
+        ? `${zone.label} — ${zone.description.replace(/[.\s]+$/, "")}`
+        : "her studio";
+      const rec = await this.genImage({
+        kind: "scene",
+        prompt: fillImagePrompt(effectiveImagePrompt(s.settings, "scenePrompt"), {
+          name: s.settings.streamerName,
+          description: desc,
+          position: positionLabel,
+          narrative: opening.slice(0, 360),
+          style: this.imageStyle(),
+        }),
+        label: s.eventScene?.title ?? "Event scene",
+        refs: ref ? [ref.url] : undefined,
+        sourceImageId: ref?.id,
+        busyLabel: "Visualizing event",
+      });
+      if (rec && s.eventScene) s.patchEventScene({ imageId: rec.id });
+    } catch {
+      // Non-fatal
+    }
+  }
+
+  async applyEventEffects(effects: EventEffect[]): Promise<void> {
+    const s = this.s;
+    const E = BALANCE.events;
+    const alert = (key: string, reason: string, tone: "good" | "warn" | "neutral" | "bad" = "good", delta?: number) => {
+      s.pushFeedback([{ id: uid("fb"), channel: "alert", key, delta, tone, reason, ts: Date.now() }]);
+    };
+    for (const e of effects) {
+      switch (e.type) {
+        case "metric": {
+          const reason = e.note ?? `${e.key} shift`;
+          setFeedbackContext(reason, e.delta >= 0 ? "good" : "warn");
+          s.patchMetrics({ [e.key]: (s.metrics[e.key] as number) + e.delta });
+          if (s.eventScene) {
+            const prev = s.eventScene.netEffects[e.key] ?? 0;
+            s.patchEventScene({ netEffects: { ...s.eventScene.netEffects, [e.key]: prev + e.delta } });
+          }
+          clearFeedbackContext();
+          break;
+        }
+        case "money": {
+          const reason = e.note ?? "event payout";
+          setFeedbackContext(reason, e.amount >= 0 ? "good" : "warn");
+          if (e.charRef) this.recordTip(e.charRef, e.amount, {});
+          else {
+            const cashDelta = e.amount * this.mults().income;
+            s.patchMetrics({ cash: s.metrics.cash + cashDelta });
+            if (s.session.isLive) s.setSession({ earnings: s.session.earnings + cashDelta });
+          }
+          clearFeedbackContext();
+          break;
+        }
+        case "followers": {
+          setFeedbackContext(e.note ?? "new followers", e.delta >= 0 ? "good" : "warn");
+          s.patchMetrics({ followers: Math.max(0, s.metrics.followers + e.delta) });
+          clearFeedbackContext();
+          break;
+        }
+        case "subscribers": {
+          setFeedbackContext(e.note ?? "subs", e.delta >= 0 ? "good" : "warn");
+          s.patchMetrics({ subscribers: Math.max(0, s.metrics.subscribers + e.delta) });
+          clearFeedbackContext();
+          break;
+        }
+        case "affinity":
+          if (s.roster[e.charRef]) {
+            this.bumpAffinity(e.charRef, e.delta, "event");
+          }
+          break;
+        case "threat": {
+          const c = s.roster[e.charRef];
+          if (!c) break;
+          const next = clamp(c.threat + e.delta, E.threatMin, E.threatMax);
+          setFeedbackContext(e.note ?? "threat shift", next > c.threat ? "bad" : "good");
+          s.patchCharacter(e.charRef, { threat: next });
+          clearFeedbackContext();
+          break;
+        }
+        case "relationship": {
+          const c = s.roster[e.charRef];
+          if (!c) break;
+          if (this.allowRelationship(e.relationship, c.affinity, s.settings.contentTier)) {
+            s.patchCharacter(e.charRef, { relationship: e.relationship });
+            alert("relationship", e.note ?? `now ${e.relationship}`);
+            s.logEvent(`${c.displayName || c.handle} is now ${e.relationship} with you.`);
+          }
+          break;
+        }
+        case "revealName": {
+          const c = s.roster[e.charRef];
+          if (c && !c.displayName) {
+            s.patchCharacter(e.charRef, { displayName: e.name, known: true });
+            alert("reveal", `${c.handle} is ${e.name}`);
+            s.logEvent(`${c.handle} revealed their name — ${e.name}.`);
+          }
+          break;
+        }
+        case "blockViewer": {
+          const c = s.roster[e.charRef];
+          if (!c) break;
+          this.bumpAffinity(e.charRef, -20, "event", { online: false, threat: 0 });
+          const sour = sourReview(c);
+          setFeedbackContext(sour.log, "warn");
+          s.patchMetrics({ followers: s.metrics.followers + sour.followerDelta });
+          clearFeedbackContext();
+          alert("block", e.note ?? `blocked ${c.handle}`, "warn");
+          s.logEvent(`Blocked ${c.displayName || c.handle}.`);
+          break;
+        }
+        case "spawnViewer":
+          this.spawnEventViewer(e.archetypeHint);
+          alert("spawn", e.note ?? "someone new showed up");
+          break;
+        case "grantUpgrade": {
+          if (!s.ownedUpgrades.includes(e.upgradeId)) {
+            s.addUpgrade(e.upgradeId);
+            const up = UPGRADES.find((u) => u.id === e.upgradeId);
+            alert("upgrade", e.note ?? `Unlocked: ${up?.name ?? e.upgradeId}`);
+            s.logEvent(`Unlocked upgrade: ${up?.name ?? e.upgradeId}.`);
+          }
+          break;
+        }
+        case "grantItem": {
+          setFeedbackContext(e.note ?? e.name, "good");
+          s.patchMetrics({ mood: s.metrics.mood + 2, comfort: s.metrics.comfort + 1 });
+          clearFeedbackContext();
+          s.logEvent(`Received: ${e.name}.`);
+          break;
+        }
+        case "masteryXp":
+          s.addMasteryXp({ [e.domain]: e.amount });
+          alert(`mastery-${e.domain}`, e.note ?? `${e.domain} practice`, "good", e.amount);
+          break;
+        case "raid": {
+          const mult = clamp(e.size ?? 1, 1, E.raidSizeMax);
+          const followers = 5 * mult;
+          const hype = 4 * mult;
+          setFeedbackContext(e.note ?? "incoming raid", "good");
+          s.patchMetrics({ followers: s.metrics.followers + followers, hype: s.metrics.hype + hype });
+          clearFeedbackContext();
+          s.pushChat([this.sysChat(`🎉 Raid! ~${followers * 3} viewers pour in!`)]);
+          break;
+        }
+        case "meetup": {
+          const c = s.roster[e.charRef];
+          if (!c) break;
+          const alreadyPending = s.pendingVisits.some((v) => v.charId === e.charRef);
+          const sceneActive = s.visitor?.charId === e.charRef;
+          if (alreadyPending || sceneActive) break;
+          s.addPendingVisit({ charId: e.charRef, hint: e.hint, day: s.metrics.day + (e.days ?? 0) });
+          alert("meetup", e.note ?? `${c.displayName || c.handle} is coming over`);
+          s.logEvent(`${c.displayName || c.handle} is coming over.`);
+          s.setToast(`${c.displayName || c.handle} said they're coming over.`);
+          break;
+        }
+        case "incomingDm": {
+          const charId = e.charRef && s.roster[e.charRef] ? e.charRef : this.pickDmSender();
+          if (!charId) break;
+          const c = s.roster[charId];
+          if (!c) break;
+          const opener = e.message?.trim() || (await this.composeIncomingDm(c, e.note ?? ""));
+          s.pushDm(charId, { role: "them", text: opener });
+          if (s.openCharId !== charId) s.markDmUnread(charId);
+          const label = c.displayName || c.handle;
+          if (s.session.isLive) this.notify(`📨 New DM from ${label}`);
+          s.setToast(`📨 New DM from ${label}`);
+          s.logEvent(`📨 DM from ${label}: "${opener.slice(0, 60)}"`);
+          alert("dm", e.note ?? `${label} messaged you`, "neutral");
+          break;
+        }
+        case "scheduleFollowup": {
+          if (s.pendingEventSeeds.length >= E.maxPendingFollowups) break;
+          const id = uid("seed");
+          s.addPendingEventSeed({
+            id,
+            day: s.metrics.day + e.days,
+            seed: e.seed,
+            charId: e.charRef,
+          });
+          alert("followup", e.note ?? `Follow-up in ${e.days} day(s)`, "neutral");
+          s.logEvent(`Follow-up scheduled in ${e.days} day(s): ${e.seed.slice(0, 60)}`);
+          break;
+        }
+        case "none":
+          break;
+      }
+    }
+  }
+
+  private spawnEventViewer(archetypeHint?: string): void {
+    const s = this.s;
+    if (Object.values(s.roster).filter((c) => c.online).length >= BALANCE.events.onlineCap) return;
+    const arch = rollArchetype(this.intensity());
+    const c = seedCharacter(arch, s.clock);
+    if (archetypeHint) {
+      const note = archetypeHint.slice(0, 60);
+      c.memory = note;
+    }
+    c.lastInteractionDay = s.metrics.day;
+    s.upsertCharacter(c);
+    this.sysStory(`${c.handle} just showed up — ${archetypeHint ?? "a new face in the crowd"}.`);
+    s.logEvent(`New viewer: ${c.handle}.`);
   }
 
   resolveEvent(event: GameEvent, choice: EventChoice): void {
@@ -2494,17 +2990,22 @@ export class GameController {
     this.maybeStartVisitArc(charId);
   }
 
-  /** Seed a budding-relationship arc when an in-person visit ended warm. */
+  /** Seed a follow-up when an in-person visit ended warm (replaces hardcoded relationship arc). */
   private maybeStartVisitArc(charId: string): void {
     const s = this.s;
     const c = s.roster[charId];
     if (!c) return;
-    if (s.arcs.some((a) => a.kind === "relationship" && a.characterId === charId)) return;
-    if (c.threat >= 2) return; // danger path is handled by threat / stalker systems
+    if (c.threat >= 2) return;
     if (c.relationship !== "none" || c.affinity >= 60) {
-      s.addArc(startArc("relationship", { day: s.metrics.day, characterId: charId, data: { handle: c.displayName || c.handle } }));
+      if (s.pendingEventSeeds.length >= BALANCE.events.maxPendingFollowups) return;
+      s.addPendingEventSeed({
+        id: uid("seed"),
+        day: s.metrics.day + 2,
+        seed: `something shifted with ${c.displayName || c.handle} after the visit — a follow-up beat`,
+        charId,
+      });
       this.sysStory(`Something shifted with ${c.displayName || c.handle} tonight — this might be going somewhere.`);
-      s.logEvent(`Arc started: something real with ${c.displayName || c.handle}.`);
+      s.logEvent(`Follow-up seeded: something real with ${c.displayName || c.handle}.`);
     }
   }
 
@@ -3011,9 +3512,6 @@ function cleanQuote(text: string): string | null {
   return t ? t.slice(0, 600) : null;
 }
 
-/** In-world sponsor names, picked when a brand-deal arc starts. */
-const BRANDS = ["VoltFizz Energy", "PixelPaw Pet Co.", "NoctaBrew Coffee", "AuraGlow Skincare", "ByteSnacks", "Hyperion GG"];
-
 const STAT_KEYS = ["hype", "energy", "mood", "comfort"] as const;
 const EVENT_OUTCOME_SCHEMA: Record<string, unknown> = {
   type: "object",
@@ -3033,6 +3531,31 @@ const EVENT_OUTCOME_SCHEMA: Record<string, unknown> = {
     },
   },
   required: ["resolution"],
+};
+
+const EVENT_SCENE_SCHEMA: Record<string, unknown> = {
+  type: "object",
+  properties: {
+    narration: { type: "string" },
+    effects: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          type: { type: "string" },
+          key: { type: "string" },
+          delta: { type: "number" },
+          amount: { type: "number" },
+          charRef: { type: "string" },
+          note: { type: "string" },
+        },
+        required: ["type"],
+      },
+    },
+    sceneEnd: { type: "boolean" },
+    resolution: { type: "string" },
+  },
+  required: ["narration"],
 };
 
 const VISIT_OUTCOME_SCHEMA: Record<string, unknown> = {

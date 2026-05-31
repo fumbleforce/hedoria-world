@@ -241,31 +241,8 @@ export interface GameEvent {
    * "dings". The player can follow up with the existing "Thank a supporter" action.
    */
   deliverAsTip?: number;
-  /** When this event belongs to a multi-step arc, its id. */
-  arcId?: string;
-  /** When resolving this event should advance/finish an arc. */
-  advancesArc?: { id: string; kind: ArcKind };
   /** Extra context handed to the LLM judge when resolving freeform. */
   stakes?: string;
-}
-
-/** Kinds of multi-step story chains that span turns/days. */
-export type ArcKind = "sponsorship" | "viral" | "stalker-legal" | "relationship";
-
-/** A live multi-step chain: spawns follow-up events on later days. */
-export interface StoryArc {
-  id: string;
-  kind: ArcKind;
-  /** Which stage fires next (0-based index into the arc's stage list). */
-  stage: number;
-  /** Short label for logs/UI. */
-  title: string;
-  /** In-world day the next stage becomes eligible. */
-  nextDay: number;
-  /** Optional bound character (e.g. the stalker, the sponsor contact). */
-  characterId?: string;
-  /** Free-form per-arc payload (offer size, clip topic, …). */
-  data?: Record<string, string | number>;
 }
 
 /** A condensed record of a past event, for cooldowns + callback narration. */
@@ -313,6 +290,34 @@ export interface VisitorScene {
   threatDelta: number;
   suggestedRelationship: "none" | "romantic" | "sexual" | "dominant" | "submissive" | "married";
   lines: VisitorSceneLine[];
+}
+
+export interface EventSceneLine {
+  role: "me" | "narrator" | "system";
+  text: string;
+}
+
+/** Active director-authored interactive event scene. */
+export interface EventScene {
+  title: string;
+  tone: string;
+  charId?: string;
+  stakes?: string;
+  beats: number;
+  transcript: string;
+  /** Record-only rollup for event memory; player-facing deltas use the feedback layer. */
+  netEffects: Partial<Metrics>;
+  lines: EventSceneLine[];
+  imageId?: string;
+  seed?: string;
+}
+
+/** LLM-scheduled emergent follow-up queued for a future day. */
+export interface PendingEventSeed {
+  id: string;
+  day: number;
+  seed: string;
+  charId?: string;
 }
 
 export type UpgradeCategory = "gear" | "furniture" | "apartment";

@@ -1,48 +1,88 @@
 # 04 — Events, Arcs & Goals
 
-Files: `src/game/events.ts`, `arcs.ts`, `goals.ts`, `calendar.ts`, `types.ts`,
+Files: `src/game/events.ts`, `eventDirector.ts`, `goals.ts`, `calendar.ts`, `types.ts`,
 `controller.ts`, `state/store.ts`, `ui/EventModal.tsx`, `ui/GoalsPanel.tsx`.
+
+> The legacy multi-step `arcs.ts` chain system was removed — the director composes
+> equivalent threads on the fly with `scheduleFollowup` / `meetup` seeds.
 
 ## When events fire
 
-| Context | Mechanism | Chance |
-|---------|-----------|--------|
-| Live, every `afterBeat` | `rollEvent(eventCtx())` after the stalker check | **28%** (if the roll returns a non-null event) |
-| Offline `continueStory` | `rollEvent(..., {offlineOnly:true})` | **40%** |
-| Offline `answerDoor` | offline roll | always attempts (falls back to "no one there") |
-| Stalker hits threat 3 | forced `stalker-confront` raise | forced |
-| A **pending visit** is due (offline only) | `consumeDueVisit` raises a `dm-visit-door` event before the normal roll | forced when due |
+Events are **director-authored**, not hardcoded rolls. On each live `afterBeat`,
+offline `continueStory`, or `answerDoor`, the controller calls
+`maybeTryDirectorEvent` when a code throttle allows it (see `BALANCE.events` in
+[02](./02-game-loop-and-economy.md)):
 
-`rollEvent` filters by live/offline, applies cooldowns, then does a weighted random
-pick. `finalize()` binds a character if needed, sets the `triggerId`, and sets
-`allowFreeform` (true for all except `stalker-confront`).
+| Context | Mechanism |
+|---------|-----------|
+| Live, every `afterBeat` | `authorEvent(eventDirectorContext)` after stalker escalation — returns a scene, a notice, or null |
+| Offline `continueStory` | same director gate; due follow-up seeds checked first |
+| Offline `answerDoor` | due visit doorstep first, then director |
+| Stalker hits threat 3 | `mustAddress` signal — bypasses min-gap throttle; static fallback if LLM declines |
+| Burnout pressure (mood<35 & comfort<45 offline) | `mustAddress` signal with forced-rest fallback |
+| Due **pending visit** (offline) | `consumeDueVisit` → `dm-visit-door` modal (unchanged) |
+| Due **pendingEventSeed** | re-authors a seeded scene via `authorEvent(..., seed)` |
 
-> `eventChance(base, intensity)` is **exported but never called** — the 28%/40%
-> numbers are controller constants, not derived from it.
+There is **no fixed probability** (the old 28%/40% rolls are gone). Calm state →
+usually null; high-signal state → frequent scenes. Guardrails: one scene at a time,
+`minBeatsBetweenLive` (4) / `minDaysBetweenOffline` (1).
 
-## The 12 event triggers (`events.ts`)
+Legacy `EVENT_TRIGGERS` in `events.ts` remain for reference and passive delivery
+flags (`deliverAsDm`, `deliverAsTip`) but are no longer rolled ambiently.
 
-Each event has a `weight(ctx)`, builds a `GameEvent` with choices, and may bind a
-character. Choice `effects` are `Partial<Metrics>`.
+## Event Director (`eventDirector.ts`)
 
-| Event | When (live?) | Weight | Choices (effects) |
-|-------|-----|--------|-------------------|
-| **tip-spike** | live | 1.2 if hype>45 else 0.5 | **No modal.** Delivered as a passive 💸 donation — see "Incoming tips" below. |
-| **raid** | live | 1.0 if followers>80 else 0.3 | size ∈ {15,25,40,60}: Welcome (followers +round(n×0.4), hype +10) / Quick show (followers +round(n×0.6), hype +14, energy −6) |
-| **package** | offline | 1.0 | Open now (mood +6) / Set aside (—) |
-| **door-knock** | offline | 0.9 if intensity≥1 else 0.4 | creepy branch (bound threat≥1 & intensity≥1): Don't open (comfort −8, mood −4) / Open (comfort −16, mood −8, followers +3). Neutral: Answer (mood +3) / Ignore (—) |
-| **dm** | either | 1.0 if anyone online else 0.2 | **No modal.** Delivered as a real incoming DM — see "Incoming DMs" below. |
-| **stalker-confront** | either | 3 if a online threat≥3 else **0** | (discrete-only) Block & report (comfort +18, mood +4, followers −4) → starts stalker-legal arc / Confront on stream (hype +16, followers +12, comfort −10, mood −6) / Move (−$300, comfort +24, mood +6) / Wait it out (comfort −12, mood −6) |
-| **brand-deal** | either | 1.0 if followers>150 else 0.15 | offer = 50+round(followers/4): Take it (+$offer, hype −4, comfort −2) → starts sponsorship arc / Decline (hype +4, mood +3) |
-| **viral-clip** | live | 1.1 if hype>60 else 0.35 | Lean into it (hype +10, followers +20) → starts viral arc / Stay measured (hype +4, followers +8) |
-| **landlord-visit** | offline | 1.3 if cash<250 else 0.5 | Pay on the spot (−$150, comfort +4) / Ask for days (mood −5, comfort −5) |
-| **sick-day** | offline | 1.1 if energy<45 or mood<40 else 0.3 | Rest (energy +20, mood +6, comfort +6) / Push through (energy −10, mood −6, comfort −3) |
-| **power-cut** | live | 0.45 | Phone + hotspot (hype +4, energy −5, comfort −2) / Call it early (hype −4, mood −3) → **ends the stream** |
+Two LLM roles:
 
-Plus **two milestone events** (not in this catalogue, but using the same modal — see
-[03](./03-social-systems.md)): whale **patronage** (friend milestone) and lonely/simp
-**confession** (confidant milestone). These carry no `triggerId`, arc hook, or
-cooldown id.
+1. **`authorEvent`** — reads a compact state snapshot (+ signals) and returns
+   `{ spec: EventSpec | null }`. Mode `scene` starts an interactive beat loop;
+   mode `notice` narrates once and applies immediate effects.
+2. **`resolveEvent`** — after a scene ends, returns `EventEffect[]` (the capability
+   vocabulary) applied by `applyEventEffects` in the controller.
+
+Per-beat narration uses **`judgeEventBeat`** (mirrors visit scenes). Consequences
+surface through the **feedback layer** (`setFeedbackContext` + auto-diff bubbles).
+Each beat also advances the clock by `BALANCE.events.beatMinutes` (2 min) — time
+passes during a scene, but far slower than a normal turn so the moment can breathe.
+
+**Author must back narration with capabilities.** The `authorEvent` prompt forbids
+narrating a consequence (a DM, a tip, a follower spike, a gift, a raid) without the
+matching effect. In particular, anything that is "someone messages her privately"
+should be a `notice` carrying an `incomingDm` effect (with the literal `message` text
+and a `charRef` sender) — a real DM then lands in the inbox and she replies in the DM
+panel, where the DM director takes over. This is the same passive path as the legacy
+`deliverAsDm` flag, now expressed as a first-class capability.
+
+### Capability vocabulary (`EventEffect`)
+
+| Capability | Hook |
+|------------|------|
+| `metric` | `patchMetrics` (clamped) |
+| `money` | income path / `recordTip` |
+| `followers` / `subscribers` | `patchMetrics` |
+| `affinity` | `bumpAffinity(..., "event")` via affinity ledger |
+| `threat` / `relationship` / `revealName` | character patch (gated) |
+| `blockViewer` | block + `sourReview` |
+| `spawnViewer` | `seedCharacter` |
+| `incomingDm` | real DM into the inbox (`pushDm` + `markDmUnread` + notify) |
+| `grantUpgrade` / `grantItem` | shop / flavor |
+| `masteryXp` | `addMasteryXp` |
+| `raid` | followers+hype bump (like chat raid) |
+| `meetup` | `addPendingVisit` → visit scene |
+| `scheduleFollowup` | `pendingEventSeeds` queue |
+
+## Legacy catalogue (`events.ts`) — no longer ambiently rolled
+
+Each event below was previously rolled by weight. Only passive delivery paths remain active if raised explicitly:
+
+| Event | Notes |
+|-------|-------|
+| **tip-spike** | Passive 💸 via `deliverAsTip` if raised |
+| **dm** | Real DM via `deliverAsDm` if raised |
+| **dm-visit-door** | Still raised by due pending visits |
+| *(others)* | Retired from ambient rolls — director composes equivalents organically |
+
+## Old weighted triggers (reference only)
 
 ### Incoming DMs (the `dm` trigger — no modal)
 

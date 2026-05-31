@@ -29,7 +29,8 @@ export type AffinitySource =
   | "request"
   | "gift"
   | "visit"
-  | "referral";
+  | "referral"
+  | "event";
 
 export const BALANCE = {
   affinity: {
@@ -50,6 +51,7 @@ export const BALANCE = {
       gift: 2,
       visit: 3,
       referral: 6,
+      event: 2,
     },
     /** Sources counted against the per-day soft cap (everything else bypasses it). */
     softSources: ["chat", "action", "mention", "dmRepeat"] as AffinitySource[],
@@ -162,6 +164,41 @@ export const BALANCE = {
     sleepComfort: 2,
     /** Asserting a boundary restores comfort. */
     boundaryComfort: 6,
+  },
+
+  events: {
+    /** Minimum live beats between director-authored scenes. */
+    minBeatsBetweenLive: 4,
+    /** Minimum in-world days between offline director scenes. */
+    minDaysBetweenOffline: 1,
+    /** Max queued follow-up seeds at once. */
+    maxPendingFollowups: 5,
+    followupDaysMin: 1,
+    followupDaysMax: 14,
+    /** Per-effect metric delta clamp (hype/energy/mood/comfort). */
+    metricDeltaBand: 25,
+    cashMin: -500,
+    cashMax: 500,
+    followersMin: -150,
+    followersMax: 400,
+    subscribersMin: -20,
+    subscribersMax: 40,
+    affinityMin: -12,
+    affinityMax: 12,
+    threatMin: -3,
+    threatMax: 3,
+    masteryXpMin: 1,
+    masteryXpMax: 30,
+    /** Max raid multiplier (× base followers/hype bump). */
+    raidSizeMax: 3,
+    onlineCap: 16,
+    /** Per-beat scene judge clamps (smaller than resolve). */
+    beatMetricBand: 12,
+    beatFollowersMax: 40,
+    beatCashMax: 200,
+    /** In-world minutes that elapse per scene beat — far slower than a normal
+     * turn (TIME_COST.continue ≈ 6) so an event can breathe. */
+    beatMinutes: 2,
   },
 
   mastery: {

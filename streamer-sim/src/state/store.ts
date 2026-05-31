@@ -10,10 +10,11 @@ import type {
   PlayingState,
   DmLine,
   CharacterVisual,
-  StoryArc,
   EventRecord,
   PendingVisit,
   VisitorScene,
+  EventScene,
+  PendingEventSeed,
   FeedbackBubble,
   FeedbackTone,
   ChangeLogEntry,
@@ -220,8 +221,6 @@ export interface StoreState {
 
   /** Condensed history of recent events (cooldowns + callback narration). */
   recentEvents: EventRecord[];
-  /** Live multi-step story chains (sponsorship, viral arc, …). */
-  arcs: StoryArc[];
   /** Ids of soft objectives the player has already achieved. */
   completedGoals: string[];
   /** Whether the goals panel is open. */
@@ -230,6 +229,10 @@ export interface StoreState {
   pendingVisits: PendingVisit[];
   /** Active in-person guest scene, if one is currently playing out. */
   visitor: VisitorScene | null;
+  /** Active director-authored interactive event scene. */
+  eventScene: EventScene | null;
+  /** LLM-scheduled emergent follow-ups waiting for their day. */
+  pendingEventSeeds: PendingEventSeed[];
   /** In-memory LLM call telemetry for Settings → LLM (session-only, not saved). */
   llmStats: LlmCallStat[];
 
@@ -297,9 +300,6 @@ export interface StoreState {
   expireFeedback: (ids: string[]) => void;
 
   pushEventRecord: (rec: EventRecord) => void;
-  addArc: (arc: StoryArc) => void;
-  updateArc: (id: string, patch: Partial<StoryArc>) => void;
-  removeArc: (id: string) => void;
   completeGoal: (id: string) => void;
   setGoalsOpen: (b: boolean) => void;
   addPendingVisit: (visit: PendingVisit) => void;
@@ -308,6 +308,12 @@ export interface StoreState {
   pushVisitorLine: (line: VisitorScene["lines"][number]) => void;
   patchVisitor: (patch: Partial<VisitorScene>) => void;
   endVisitor: () => void;
+  startEventScene: (scene: EventScene) => void;
+  pushEventSceneLine: (line: EventScene["lines"][number]) => void;
+  patchEventScene: (patch: Partial<EventScene>) => void;
+  endEventScene: () => void;
+  addPendingEventSeed: (seed: PendingEventSeed) => void;
+  removePendingEventSeed: (id: string) => void;
 }
 
 const MAX_EVENT_MEMORY = 14;
@@ -394,11 +400,12 @@ export const useStore = create<StoreState>()(
       changeLog: [],
 
       recentEvents: [],
-      arcs: [],
       completedGoals: [],
       goalsOpen: false,
       pendingVisits: [],
       visitor: null,
+      eventScene: null,
+      pendingEventSeeds: [],
       llmStats: [],
 
       setBooted: (booted) => set({ booted }),
@@ -642,11 +649,6 @@ export const useStore = create<StoreState>()(
 
       pushEventRecord: (rec) =>
         set((s) => ({ recentEvents: [...s.recentEvents, rec].slice(-MAX_EVENT_MEMORY) })),
-      addArc: (arc) =>
-        set((s) => ({ arcs: [...s.arcs.filter((a) => a.id !== arc.id), arc] })),
-      updateArc: (id, patch) =>
-        set((s) => ({ arcs: s.arcs.map((a) => (a.id === id ? { ...a, ...patch } : a)) })),
-      removeArc: (id) => set((s) => ({ arcs: s.arcs.filter((a) => a.id !== id) })),
       completeGoal: (id) =>
         set((s) => (s.completedGoals.includes(id) ? s : { completedGoals: [...s.completedGoals, id] })),
       setGoalsOpen: (goalsOpen) => set({ goalsOpen }),
@@ -667,6 +669,20 @@ export const useStore = create<StoreState>()(
       patchVisitor: (patch) =>
         set((s) => (s.visitor ? { visitor: { ...s.visitor, ...patch } } : s)),
       endVisitor: () => set({ visitor: null }),
+      startEventScene: (eventScene) => set({ eventScene }),
+      pushEventSceneLine: (line) =>
+        set((s) =>
+          s.eventScene
+            ? { eventScene: { ...s.eventScene, lines: [...s.eventScene.lines, line] } }
+            : s,
+        ),
+      patchEventScene: (patch) =>
+        set((s) => (s.eventScene ? { eventScene: { ...s.eventScene, ...patch } } : s)),
+      endEventScene: () => set({ eventScene: null }),
+      addPendingEventSeed: (seed) =>
+        set((s) => ({ pendingEventSeeds: [...s.pendingEventSeeds, seed] })),
+      removePendingEventSeed: (id) =>
+        set((s) => ({ pendingEventSeeds: s.pendingEventSeeds.filter((p) => p.id !== id) })),
     }),
     {
       name: "limelight-save-v3",
@@ -699,10 +715,11 @@ export const useStore = create<StoreState>()(
         contentNovelty: s.contentNovelty,
         eventLog: s.eventLog,
         recentEvents: s.recentEvents,
-        arcs: s.arcs,
         completedGoals: s.completedGoals,
         pendingVisits: s.pendingVisits,
         visitor: s.visitor,
+        eventScene: s.eventScene,
+        pendingEventSeeds: s.pendingEventSeeds,
         roomImage: s.roomImage,
         dmThreads: s.dmThreads,
         unreadDms: s.unreadDms,

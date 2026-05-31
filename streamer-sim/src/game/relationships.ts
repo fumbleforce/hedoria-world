@@ -83,6 +83,7 @@ const SOURCE_PHRASE: Record<AffinitySource, string> = {
   gift: "their gift",
   visit: "your time together",
   referral: "a friend brought them in",
+  event: "what happened",
 };
 
 function affinityReason(delta: number, source: AffinitySource): string {

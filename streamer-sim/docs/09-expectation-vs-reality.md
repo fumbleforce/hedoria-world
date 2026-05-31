@@ -81,19 +81,17 @@ see [04](./04-events-arcs-goals.md)). There's no strict ordered state machine, a
 the comfort threshold (not the oversharing/ignored-creepy-chat the comment describes).
 *(`relationships.ts`, `events.ts`)*
 
-### 🟡 B3 — Freeform event responses bypass special logic
-`resolveEventFreeform` applies LLM-judged metric deltas but **skips** stalker
-threat/sour-review handling, **arc starts** (arcs only start from matching discrete
-choice *labels*), and the power-cut early-end. So responding in your own words to a
-brand deal / viral clip / confrontation won't start the corresponding arc.
-*(`controller.ts`)* — `stalker-confront` correctly disables freeform for safety.
+### ✅ B3 — (resolved) Event Director replaces thin modal events
+Hardcoded modal events and ambient `rollEvent` are retired. The Event Director authors
+scenes/notices from state + signals; consequences use the capability vocabulary and
+surface through the feedback layer. *(`eventDirector.ts`, `controller.ts`)*
 
 ### ✅ B4 — (resolved) The everyday `dm` event is now a real DM, not a modal
 It no longer has canned "Block and report / Reply kindly" choices: it's delivered into
 the sender's DM thread with a notification and answered conversationally, so the DM
-director (not a fixed `effects` payload) owns the fallout. The decisive block/report that
-starts `stalker-legal` still lives only on `stalker-confront`. *(`controller.ts`,
-`events.ts`, `dmDirector.ts`)*
+director (not a fixed `effects` payload) owns the fallout. Stalker threat-3 is now a
+`mustAddress` director signal (static fallback if LLM declines), not `stalker-confront`.
+*(`controller.ts`, `events.ts`, `dmDirector.ts`, `eventDirector.ts`)*
 
 ### ✅ B6 — Personal stats only went up / LLM owned the cost sign *(resolved personal-stats fix)*
 Energy/comfort changes were driven by the LLM's `pressure` field with no code-owned
@@ -178,7 +176,7 @@ so a mid-stream refresh stays live instead of dropping offline.
 
 | Symbol | File | Note |
 |--------|------|------|
-| `eventChance(base, intensity)` | `events.ts` | Exported, never called; live/offline rates are hardcoded (28% / 40%). |
+| `eventChance(base, intensity)` | `events.ts` | Exported, unused; events are state-driven via Event Director. |
 | `nightProgress(clock)` | `time.ts` | Never used for event gating. |
 | ~~`mult.viewer`~~ | `shop.ts` | **Now read** by `presenceTick` (A1 resolved). |
 | `hypePerRound` / `energyPerRound` | `games.ts` | Defined, never applied (see A2). |

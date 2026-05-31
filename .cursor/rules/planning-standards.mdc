@@ -1,0 +1,43 @@
+---
+description: How to write plans detailed enough for weaker-model handoff without full implementation
+alwaysApply: true
+---
+
+# Planning Standards
+
+When creating plans (Plan mode, task breakdowns, or handoff docs), write for a weaker model such as Composer 2.5 to execute without guessing — but do **not** write the full implementation into the plan.
+
+## Goal
+
+The plan is a **spec + map**, not a code dump. A weaker model should know *what* to do, *where*, *why*, and *how to verify*, without you pre-writing every line.
+
+## Include
+
+- **Objective**: One sentence on the outcome and constraints.
+- **Context**: Relevant files, modules, types, and existing patterns to follow (with paths).
+- **Steps**: Ordered, actionable tasks — each with a concrete deliverable.
+- **Touch points**: Which files/functions to create or change, and what behavior each change should produce.
+- **Decisions**: Non-obvious choices already made (approach, naming, edge-case handling).
+- **Out of scope**: What this work explicitly does not include.
+- **Verification**: How to confirm success (tests, manual checks, expected behavior).
+
+## Exclude
+
+- Full function bodies, complete diffs, or copy-paste-ready implementations.
+- Re-explaining obvious language/framework basics.
+- Vague steps like "implement the feature" or "fix the bug" without file targets and acceptance criteria.
+
+## Good vs bad step
+
+```markdown
+❌ BAD
+- Add validation to the form
+
+✅ GOOD
+- In `src/ui/SignupForm.tsx`, validate email on blur using the same pattern as `LoginForm.tsx`; show inline error via existing `FieldError` component; block submit until valid.
+- Verify: invalid email shows error; valid email allows submit.
+```
+
+## Handoff bar
+
+Before finishing a plan, ask: *Could Composer 2.5 start immediately with only this plan and the codebase, without clarifying questions?* If not, add missing file paths, behavior specs, or verification steps — not more code.

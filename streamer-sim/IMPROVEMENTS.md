@@ -6,7 +6,36 @@ for you to pick from. Items marked ⭐ are the ones I'd reach for first.
 
 ---
 
-## DONE: 1. LLM harness & quality (make the AI feel smart)
+## DONE: Event Director & interactive scenes (2026-05)
+
+Replaced ambient `rollEvent` with an LLM **Event Director** (`eventDirector.ts`)
+that composes a typed **capability vocabulary** (`EventEffect`) from live state +
+signals. Delivery modes:
+
+- **Scene** — multi-beat loop in the narrator feed (ActionBar "⚡ In the moment");
+  resolve applies big consequences via `applyEventEffects`.
+- **Notice** — one beat + immediate effects (passive path).
+
+Hardcoded raises retired (stalker-confront force-roll, milestone modals, burnout
+modal, 28%/40% rolls). Follow-ups use `pendingEventSeeds` instead of `ARC_DEFS`
+chains. Consequences surface through the feedback layer.
+
+Follow-ups (2026-05, post-review):
+- **Dead code removed** — deleted `arcs.ts`, the `arcs` store slice, `maybeStartArc`,
+  and the `StoryArc`/`ArcKind` types + GoalsPanel "story threads" UI (the director
+  supersedes them). Dropped the unused `masteryLevelsFor` export.
+- **`incomingDm` capability** — events that narrate a private message now land a real
+  DM in the inbox (`pushDm` + unread + notify) instead of just describing one. The
+  author prompt requires DM-shaped beats to use `notice` + `incomingDm` with literal
+  `message` text, and forbids narrating any consequence without the matching effect.
+- **Scenes pass time slowly** — each beat advances the clock by
+  `BALANCE.events.beatMinutes` (2 min) so events breathe without burning the night.
+
+Files: `eventDirector.ts`, `controller.ts` (`maybeTryDirectorEvent`,
+`applyEventEffects`, scene loop), `balance.ts` (`BALANCE.events`), `store.ts`
+(`eventScene`, `pendingEventSeeds`), `ActionBar.tsx`.
+
+---
 
 - ⭐ **Conversation memory for live chat** (M, LLM). Chat bursts currently see the
   last ~6 lines. Give the chat model a rolling summary of the whole stream so

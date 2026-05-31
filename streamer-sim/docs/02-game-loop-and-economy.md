@@ -46,6 +46,12 @@ Every tunable constant in the sections below lives in one exported `BALANCE` obj
 mastery). `resolver.ts`, `controller.ts`, `presence.ts`, `relationships.ts`, and
 `shop.ts` read from it, so the whole rebalance is tuned in one place.
 
+**Event director** (`BALANCE.events`): throttle gaps (`minBeatsBetweenLive`,
+`minDaysBetweenOffline`), follow-up caps, and per-capability clamp bands for
+`EventEffect` parsing in `eventDirector.ts`. Event consequences route through the
+same income/affinity/mastery hooks as the rest of the game (`recordTip`,
+`bumpAffinity` with source `"event"`, `addMasteryXp`).
+
 ### Session (transient, NOT persisted)
 Per-stream tallies in `StreamSession`: `round` (turn counter), `seconds`
 (`clock - STREAM_START`, i.e. minutes elapsed despite the name), `earnings` (cash
@@ -79,7 +85,7 @@ round  += 1
 Example: an 8-minute (medium) action costs −0.96 energy and −0.8 hype.
 
 > `nightProgress(clock)` exists in `time.ts` but is **not used** for event gating;
-> the live event chance is a flat 28%.
+> events are state-driven via the Event Director (see [04](./04-events-arcs-goals.md)).
 
 ## Going live, ending, sleeping
 
@@ -387,4 +393,4 @@ LLM declines in-character at low tiers via the steering text.
 4. Time +8 min (medium) → energy −0.96, hype −0.8.
 5. Chat burst of `clamp(round(viewers/6) + 2, 3, 8)` messages reacts.
 6. `presenceTick` reshapes who's online and the segment populations.
-7. 28% chance a random event fires.
+7. Event Director may author a scene or notice (state-driven; no fixed % roll).

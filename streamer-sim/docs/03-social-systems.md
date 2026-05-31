@@ -183,9 +183,8 @@ Affinity is **scarce and earned**. Every gain/loss routes through one function,
 | `gift` / `request` | +2 / +3 | reciprocal, cap-exempt |
 | `visit` (per-beat signal, on resolve) | +3…+6 | reciprocal, cap-exempt |
 | `referral` (referred-friend spawn) | +6 | seeded warmer |
+| `event` (Event Director capability) | ±delta | cap-exempt; via `bumpAffinity(..., "event")` |
 | DM director `affinity` effect | ±delta | signed; gains diminish, losses bite |
-| Event: block/report/move/confront | −20 | bypasses diminishing |
-| Event: soft boundary / don't open / wait | −10 | bypasses diminishing |
 
 **Decay** (`decayAffinities`, on sleep): any character idle longer than
 `decayGraceDays` (1) loses `decayPerIdleDay[level]` (confidant −3 … stranger −0.5),
