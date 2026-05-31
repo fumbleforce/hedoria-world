@@ -25,7 +25,8 @@ fixed 1:1.
 | Method | Kind | Notes |
 |--------|------|-------|
 | `generateRoom()` | room | Sets the studio background; also added to the gallery. |
-| `generateCharacter()` | portrait + body | Body is generated from the portrait (image-to-image) so the face/outfit match. Changing the character clears presence renders. |
+| `generateCharacter()` | portrait + body | Body is generated from the portrait (image-to-image) so the face/hair match; the body renders the currently equipped clothing via the `{{outfit}}` placeholder. Changing the character clears presence renders. |
+| `generateCharacterBodyOnly()` | body | Regenerates only the T-pose body template — reuses the existing portrait as a likeness reference and the current equipped clothing. Gallery "regen" on a body image calls this instead of redoing the portrait. |
 | `generatePresence(zone)` | presence | The character placed in a specific zone; uses the body as a reference. |
 | `generateScene()` | scene | A "stream cam" moment; pushed into the narrator feed. References: the streamer's body T-pose (likeness) + the **room art** (`roomImage`, for apartment layout/style) + — during an in-person **visit** — the guest's own full-body T-pose. The guest body is generated on demand by `ensureCharacterBody()` (using their portrait as a likeness reference when one exists), stored under a `cbody:<id>` KV key, and reused thereafter; it falls back to the portrait, then a text description. The prompt names each reference. |
 | `generateCamFootage(zone?)` | scene | Live **cam shot** from the active camera tier + zone (StudioRoom **📹 Cam shot**). Includes equipped look in the prompt. Bathroom/bed angles require no-limits content tier. The result id is stored as `streamFootageId` and becomes the live **Stream view** feed. `meta: { zone, cameraTier }`. |
@@ -54,6 +55,9 @@ Default templates: `DEFAULT_IMAGE_STYLE` (the universal `{{style}}` line),
 `DEFAULT_ROOM_PROMPT`, `DEFAULT_PORTRAIT_PROMPT`, `DEFAULT_BODY_PROMPT`,
 `DEFAULT_PRESENCE_PROMPT`, `DEFAULT_SCENE_PROMPT`, filled via `fillImagePrompt`
 (`{{name}}`, `{{description}}`, `{{zone}}`, `{{narrative}}`, `{{upgrades}}`, …).
+The body prompts also fill `{{outfit}}` with the character's currently equipped
+clothing (`describeEquippedLook(equippedClothing, inventory)`), so regenerating the
+body template renders what she is actually wearing.
 
 **Effective prompt resolution** (`effectiveImagePrompt(settings, field)`):
 1. A non-empty per-field **override** in settings wins.

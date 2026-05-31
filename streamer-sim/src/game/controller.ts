@@ -392,8 +392,57 @@ export class GameController {
     });
     if (portrait) s.setCharacter({ portraitId: portrait.id });
 
-    // Build the body from the portrait so the face/outfit match — pass the
-    // just-generated portrait as a reference image.
+    const body = await this.generateCharacterBodyImage(
+      force,
+      portrait ? { url: portrait.dataUrl, id: portrait.id } : null,
+    );
+
+    if (portrait || body) {
+      // The character changed, so every image templated from it (per-zone
+      // presence renders) is now stale — drop them so they're regenerated.
+      s.clearPresenceImages();
+      s.setToast("Character visuals updated — re-visualize locations to refresh them.");
+    }
+  }
+
+  /** Regenerate only the full-body T-pose template (portrait unchanged). */
+  async generateCharacterBodyOnly(bodyDescription: string, force = false): Promise<void> {
+    const s = this.s;
+    const bodyDesc = bodyDescription.trim();
+    if (!bodyDesc && !s.character.bodyDescription.trim()) {
+      s.setToast("Describe your streamer's body first.");
+      return;
+    }
+    s.setCharacter({ bodyDescription: bodyDesc || s.character.bodyDescription });
+    const body = await this.generateCharacterBodyImage(force);
+    if (body) {
+      s.clearPresenceImages();
+      s.setToast("Body template updated — re-visualize locations to refresh them.");
+    }
+  }
+
+  private async portraitRef(): Promise<{ url: string; id: string } | null> {
+    const portraitId = this.s.character.portraitId;
+    if (!portraitId) return null;
+    const cached = this.s.imageCache[portraitId];
+    if (cached) return { url: cached, id: portraitId };
+    const rec = await getImage(portraitId);
+    if (!rec) return null;
+    this.s.cacheImage(rec.id, rec.dataUrl);
+    return { url: rec.dataUrl, id: rec.id };
+  }
+
+  private async generateCharacterBodyImage(
+    force = false,
+    portrait?: { url: string; id: string } | null,
+  ): Promise<StoredImage | null> {
+    const s = this.s;
+    const name = s.settings.streamerName;
+    const gender = (s.settings.gender ?? "").trim();
+    const style = this.imageStyle();
+    const char = s.character;
+    const portraitRef = portrait ?? (await this.portraitRef());
+
     const body = await this.genImage({
       kind: "body",
       prompt: fillImagePrompt(
@@ -402,23 +451,18 @@ export class GameController {
           name,
           style,
           gender,
-          ...(portrait ? { match: "Match the face, hair, and outfit of the reference portrait exactly." } : {}),
+          outfit: describeEquippedLook(s.equippedClothing, s.inventory),
+          ...(portraitRef ? { match: "Match the face and hair of the reference portrait exactly." } : {}),
         }, "body"),
       ),
       label: `${name} — body (template)`,
-      refs: portrait ? [portrait.dataUrl] : undefined,
-      sourceImageId: portrait?.id,
+      refs: portraitRef ? [portraitRef.url] : undefined,
+      sourceImageId: portraitRef?.id,
       busyLabel: "Generating body template",
       force,
     });
     if (body) s.setCharacter({ bodyId: body.id });
-
-    if (portrait || body) {
-      // The character changed, so every image templated from it (per-zone
-      // presence renders) is now stale — drop them so they're regenerated.
-      s.clearPresenceImages();
-      s.setToast("Character visuals updated — re-visualize locations to refresh them.");
-    }
+    return body;
   }
 
   /** The body data URL used as a templating reference, if available. */
@@ -550,9 +594,13 @@ export class GameController {
   async regenerateImage(rec: StoredImage): Promise<void> {
     const s = this.s;
     if (!this.imageBackend || s.imageBusy) return;
-    if (rec.kind === "portrait" || rec.kind === "body") {
+    if (rec.kind === "portrait") {
       const c = s.character;
       await this.generateCharacter(c.faceDescription, c.bodyDescription, true);
+      return;
+    }
+    if (rec.kind === "body") {
+      await this.generateCharacterBodyOnly(s.character.bodyDescription, true);
       return;
     }
     if (rec.kind === "presence" && rec.meta?.zone) {

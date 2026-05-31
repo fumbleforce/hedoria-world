@@ -439,10 +439,21 @@ function CharacterTab({ controller }: { controller: GameController }) {
   const character = useStore((s) => s.character);
   const settings = useStore((s) => s.settings);
   const set = useStore((s) => s.setSettings);
+  const setCharacter = useStore((s) => s.setCharacter);
   const busy = useStore((s) => s.imageBusy);
   const name = settings.streamerName;
   const [faceDesc, setFaceDesc] = useState(character.faceDescription);
   const [bodyDesc, setBodyDesc] = useState(character.bodyDescription);
+  // Persist description edits to the store as the player types so they survive
+  // closing/reopening the panel, even without regenerating the images.
+  const editFaceDesc = (value: string) => {
+    setFaceDesc(value);
+    setCharacter({ faceDescription: value });
+  };
+  const editBodyDesc = (value: string) => {
+    setBodyDesc(value);
+    setCharacter({ bodyDescription: value });
+  };
   const portrait = useStoredImage(character.portraitId);
   const body = useStoredImage(character.bodyId);
   const canGen = controller.canGenerateImages;
@@ -496,7 +507,7 @@ function CharacterTab({ controller }: { controller: GameController }) {
           rows={3}
           value={faceDesc}
           placeholder="e.g. warm brown eyes, light freckles, soft natural makeup, warm smile…"
-          onChange={(e) => setFaceDesc(e.target.value)}
+          onChange={(e) => editFaceDesc(e.target.value)}
         />
       </label>
 
@@ -506,7 +517,7 @@ function CharacterTab({ controller }: { controller: GameController }) {
           rows={3}
           value={bodyDesc}
           placeholder="e.g. early 20s, shoulder-length pink hair, petite build, cute energy…"
-          onChange={(e) => setBodyDesc(e.target.value)}
+          onChange={(e) => editBodyDesc(e.target.value)}
         />
       </label>
 
@@ -523,6 +534,14 @@ function CharacterTab({ controller }: { controller: GameController }) {
           title="Generate a fresh portrait + body template"
         >
           {busy ? busy + "…" : portrait || body ? "Regenerate portrait + body" : "Generate portrait + body"}
+        </button>
+        <button
+          className={`btn ${busy ? "is-loading" : ""}`}
+          disabled={!!busy || !canGen || !bodyDesc.trim()}
+          onClick={() => void controller.generateCharacterBodyOnly(bodyDesc, true)}
+          title="Regenerate only the body template (uses current portrait and equipped clothing)"
+        >
+          {body ? "Regenerate body only" : "Generate body only"}
         </button>
       </div>
       {!canGen && (

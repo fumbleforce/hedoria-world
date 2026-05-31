@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { makeClothingItem } from "../items";
-import { wardrobeAppeal, starterClothingForOutfit, isLegacyStarterWardrobe } from "../wardrobe";
+import { wardrobeAppeal, starterClothingForOutfit, isLegacyStarterWardrobe, describeEquippedLook } from "../wardrobe";
 
 describe("wardrobe", () => {
   it("starter set is real garments: underwear + top + bottom", () => {
@@ -20,6 +20,19 @@ describe("wardrobe", () => {
     expect(isLegacyStarterWardrobe(legacy)).toBe(true);
     const real = starterClothingForOutfit("cozy").items;
     expect(isLegacyStarterWardrobe(real)).toBe(false);
+  });
+
+  it("describeEquippedLook always lists core slots with explicit nothing", () => {
+    const jeans = makeClothingItem({ name: "Jeans", description: "x", slot: "bottom", vibes: { casual: 1 } });
+    expect(describeEquippedLook({}, [])).toBe("underwear: nothing, top: nothing, bottom: nothing");
+    expect(describeEquippedLook({ bottom: jeans.id }, [jeans])).toBe(
+      "underwear: nothing, top: nothing, bottom: Jeans",
+    );
+    const set = starterClothingForOutfit("casual");
+    const look = describeEquippedLook(set.equipped, set.items);
+    expect(look).toMatch(/underwear: Cotton Bra & Briefs/);
+    expect(look).toMatch(/top: Everyday Tee/);
+    expect(look).toMatch(/bottom: Blue Jeans/);
   });
 
   it("stacks vibe tags with diminishing returns", () => {

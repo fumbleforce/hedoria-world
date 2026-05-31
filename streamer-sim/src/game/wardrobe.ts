@@ -150,18 +150,32 @@ export function isLegacyStarterWardrobe(inventory: readonly Item[]): boolean {
   return !hasRealGarment;
 }
 
-/** Human-readable summary of equipped vibes for prompts. */
+/** Core garment slots always spelled out in image prompts (explicit "nothing" when empty). */
+const CORE_OUTFIT_SLOTS: ClothingSlot[] = ["underwear", "top", "bottom"];
+
+function outfitSlotDescription(
+  slot: ClothingSlot,
+  equipped: Partial<Record<ClothingSlot, string>>,
+  byId: Map<string, Item>,
+): string {
+  const id = equipped[slot];
+  const item = id ? byId.get(id) : undefined;
+  return `${slot}: ${item?.name ?? "nothing"}`;
+}
+
+/** Human-readable summary of equipped clothing for prompts and UI. */
 export function describeEquippedLook(
   equipped: Partial<Record<ClothingSlot, string>>,
   inventory: readonly Item[],
 ): string {
   const byId = new Map(inventory.map((i) => [i.id, i]));
-  const parts: string[] = [];
+  const parts = CORE_OUTFIT_SLOTS.map((slot) => outfitSlotDescription(slot, equipped, byId));
   for (const slot of CLOTHING_SLOTS) {
+    if (CORE_OUTFIT_SLOTS.includes(slot)) continue;
     const id = equipped[slot];
     if (!id) continue;
     const item = byId.get(id);
-    if (item) parts.push(`${clothingSlotLabel(slot)}: ${item.name}`);
+    if (item) parts.push(`${slot}: ${item.name}`);
   }
-  return parts.length ? parts.join("; ") : "casual default";
+  return parts.join(", ");
 }

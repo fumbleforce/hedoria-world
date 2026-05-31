@@ -169,6 +169,7 @@ export const DEFAULT_BODY_PROMPT = [
   "Full-body character reference sheet of {{name}}, a {{gender}} video-game streamer.",
   "Body: {{bodyDescription}}.",
   "{{match}}",
+  "Wearing: {{outfit}}.",
   "Standing in a neutral A-pose / T-pose, facing forward, full body visible head to toe,",
   "plain flat light-grey studio background, even lighting, no shadows on the floor,",
   "no text, no watermark, no UI. A clean character turnaround reference.",
