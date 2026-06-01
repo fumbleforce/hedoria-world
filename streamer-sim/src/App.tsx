@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { boot, type BootResult } from "./boot";
 import { useStore } from "./state/store";
 import { AuthModal } from "./ui/AuthModal";
+import { LoginScreen } from "./ui/LoginScreen";
 import { supabaseConfigured } from "./lib/supabase";
 import { useCloudSync } from "./auth/useCloudSync";
 import { StudioRoom } from "./render/StudioRoom";
@@ -42,29 +43,25 @@ export function App() {
     return () => clearTimeout(t);
   }, [toast]);
 
+  // Hard auth gate: when Supabase is configured, a dedicated login screen
+  // renders *instead of* the game until the player signs in. (Local dev without
+  // Supabase skips the gate so the offline engine stays reachable.)
+  if (supabaseConfigured && !auth.user) {
+    return <LoginScreen loading={auth.loading} signInWithDiscord={auth.signInWithDiscord} />;
+  }
+
+  if (!services) {
+    return <div className="boot"><div className="boot__card">◉ Limelight — booting…</div></div>;
+  }
+
+  const { controller } = services;
+
   // Reactive chip: show the real provider name only when it's actually usable.
   // In prod OpenRouter requires a session; in dev the local proxy needs no auth.
   const chipLabel =
     textBackend === "gemini" ? "gemini"
     : textBackend === "openrouter" && (!supabaseConfigured || hasSession) ? "openrouter"
     : "offline engine";
-
-  if (!services) {
-    return (
-      <div className="boot">
-        <div className="boot__card">◉ Limelight — booting…</div>
-        {supabaseConfigured && !auth.loading && !auth.user && (
-          <button className="signInCta" onClick={() => setShowAuth(true)}>
-            Sign in with Discord
-            <span className="signInCta__note">AI responses require signing in</span>
-          </button>
-        )}
-        {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
-      </div>
-    );
-  }
-
-  const { controller } = services;
 
   return (
     <div className="app">
@@ -104,21 +101,14 @@ export function App() {
       {toast && <div className="toast">{toast}</div>}
       <div className="backendChip">{chipLabel}</div>
 
-      {supabaseConfigured && !auth.loading && !auth.user ? (
-        <button className="signInCta" onClick={() => setShowAuth(true)}>
-          Sign in with Discord
-          <span className="signInCta__note">AI responses require signing in</span>
-        </button>
-      ) : (
-        <button
-          className="accountChip"
-          onClick={() => setShowAuth(true)}
-          title={supabaseConfigured ? "Account & cloud saves" : "Cloud saves (not configured)"}
-          aria-label="Account"
-        >
-          ☁
-        </button>
-      )}
+      <button
+        className="accountChip"
+        onClick={() => setShowAuth(true)}
+        title={supabaseConfigured ? "Account & cloud saves" : "Cloud saves (not configured)"}
+        aria-label="Account"
+      >
+        ☁
+      </button>
       {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
     </div>
   );

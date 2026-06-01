@@ -698,16 +698,22 @@ input:focus, textarea:focus, select:focus { outline: 1px solid var(--accent-2); 
 .backendChip { position: fixed; bottom: 7px; right: 12px; font-size: 0.7em; color: var(--fg-2); opacity: 0.55; }
 .accountChip { position: fixed; bottom: 4px; right: 110px; font-size: 1em; background: none; border: none; cursor: pointer; color: var(--fg-2); opacity: 0.45; padding: 0; line-height: 1; }
 .accountChip:hover { opacity: 0.9; }
-.signInCta {
-  position: fixed; bottom: 30px; right: 12px;
-  display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
-  background: var(--accent); border: none; border-radius: 8px;
-  padding: 8px 14px; color: var(--btn-on-accent);
-  font: inherit; font-weight: 700; font-size: 0.85em;
-  cursor: pointer; transition: filter 0.15s;
+/* Full-screen login gate (renders instead of the game when signed out). */
+.login {
+  display: grid; place-items: center; height: 100vh; padding: 24px;
+  background: radial-gradient(1100px 520px at 50% -8%, var(--bg-glow), var(--bg)) fixed;
 }
-.signInCta:hover { filter: brightness(1.1); }
-.signInCta__note { font-size: 0.75em; font-weight: 400; opacity: 0.85; }
+.login__card {
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  background: var(--panel-solid); border: 1px solid var(--line); border-radius: 18px;
+  padding: 40px 44px; max-width: 380px; text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+}
+.login__logo { font-size: 1.8em; font-weight: 800; letter-spacing: 0.5px; color: var(--accent); }
+.login__tagline { color: var(--fg-2); margin: 0; font-size: 0.9em; }
+.login__status { color: var(--fg-2); margin: 8px 0 0; }
+.login__discord { margin-top: 10px; min-width: 220px; justify-content: center; font-size: 1em; padding: 11px 18px; }
+.login__note { color: var(--fg-2); font-size: 0.8em; margin: 4px 0 0; }
 
 /* ---------------------------------------------------------------- visual immersion (#12) */
 .btn--mini { padding: 3px 9px; font-size: 0.74em; }

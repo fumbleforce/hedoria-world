@@ -37,6 +37,14 @@ controller / chatEngine / evaluator
 `canUseOpenRouter = !supabaseConfigured || hasSession` — in dev the local proxy
 needs no auth; in prod the edge function requires a live JWT.
 
+> **Deployed builds are hard-gated behind login** (`App` renders `LoginScreen`
+> instead of the game until `auth.user` exists — see [08](./08-ui-map.md)), so in
+> practice `hasSession` is true by the time the game UI mounts. The `pick()` gate
+> and the mock floor remain as defense-in-depth for the **boot race** (session
+> resolves a beat after boot) and the **unconfigured-dev** path. So the
+> "signed-out → mock" routing only really fires in dev, during the boot race, or
+> when the edge-function probe fails (backend undeployed / no key).
+
 `resolveTextProvider(geminiKey, openRouterOk)` builds the available provider
 instances. In prod, `openRouterOk = supabaseConfigured` so the `OpenRouterTextProvider`
 instance is always constructed (its lazy JWT fetch fires per-request). In dev,
