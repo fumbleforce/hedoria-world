@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { boot, type BootResult } from "./boot";
 import { useStore } from "./state/store";
-import { AuthModal } from "./ui/AuthModal";
+import { AccountPanel } from "./ui/AccountPanel";
 import { LoginScreen } from "./ui/LoginScreen";
 import { supabaseConfigured } from "./lib/supabase";
 import { useCloudSync } from "./auth/useCloudSync";
@@ -27,7 +27,6 @@ import { RequestsPanel } from "./ui/RequestsPanel";
 
 export function App() {
   const [services, setServices] = useState<BootResult | null>(null);
-  const [showAuth, setShowAuth] = useState(false);
   const toast = useStore((s) => s.toast);
   const textBackend = useStore((s) => s.settings.textBackend);
   const hasSession = useStore((s) => s.hasSession);
@@ -100,16 +99,7 @@ export function App() {
 
       {toast && <div className="toast">{toast}</div>}
       <div className="backendChip">{chipLabel}</div>
-
-      <button
-        className="accountChip"
-        onClick={() => setShowAuth(true)}
-        title={supabaseConfigured ? "Account & cloud saves" : "Cloud saves (not configured)"}
-        aria-label="Account"
-      >
-        ☁
-      </button>
-      {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
+      <AccountPanel />
     </div>
   );
 }

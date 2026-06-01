@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useStore, freshGameSettings, type SettingsTab } from "../state/store";
+import { useStore, type SettingsTab } from "../state/store";
 import { clearLlmStats } from "../llm/stats";
 import type { GameController } from "../game/controller";
 import type { ContentTier, LogLevel, TextBackend } from "../game/types";
@@ -12,18 +12,9 @@ import {
   type ImagePromptField,
 } from "../llm/imagePresets";
 import { useStoredImage } from "../persist/useStoredImage";
-import { deleteImagesForSlot, listImages, loadPortrait, type ImageKind, type StoredImage } from "../persist/imageStore";
+import { listImages, loadPortrait, type ImageKind, type StoredImage } from "../persist/imageStore";
 import { relationshipLevel } from "../game/characters";
 import { ZONES, type ZoneId } from "../game/studio";
-import {
-  createAndActivateSlot,
-  deleteSlot,
-  getActiveSlot,
-  listSlots,
-  renameSlot,
-  setActiveSlot,
-  type SaveSlotMeta,
-} from "../persist/saves";
 import { diag } from "../diag/log";
 import { THEMES } from "./themes";
 import { OpenRouterModelField } from "./OpenRouterModelField";
@@ -42,7 +33,6 @@ const TABS: Array<{ id: SettingsTab; label: string }> = [
   { id: "room", label: "Room" },
   { id: "character", label: "Character" },
   { id: "gallery", label: "Gallery" },
-  { id: "saves", label: "Saves" },
   { id: "llm", label: "LLM" },
   { id: "dev", label: "Dev" },
 ];
@@ -72,7 +62,6 @@ export function SettingsPanel({ controller }: { controller: GameController }) {
         {tab === "room" && <RoomTab controller={controller} />}
         {tab === "character" && <CharacterTab controller={controller} />}
         {tab === "gallery" && <GalleryTab controller={controller} />}
-        {tab === "saves" && <SavesTab />}
         {tab === "llm" && <LlmTab />}
         {tab === "dev" && <DevTab controller={controller} />}
       </div>
@@ -635,87 +624,6 @@ function GalleryTab({ controller }: { controller: GameController }) {
       )}
     </div>
   );
-}
-
-function SavesTab() {
-  const settings = useStore((s) => s.settings);
-  const [slots, setSlots] = useState<SaveSlotMeta[]>(() => listSlots());
-  const active = getActiveSlot();
-
-  const refresh = () => setSlots(listSlots());
-  useEffect(() => {
-    refresh();
-  }, []);
-
-  const onCreate = () => {
-    const fallback = `Save ${slots.length + 1}`;
-    const name = window.prompt("Name for the new save", fallback);
-    if (name === null) return;
-    createAndActivateSlot(name.trim() || fallback, freshGameSettings(settings));
-    window.location.reload();
-  };
-
-  const onLoad = (slotId: string) => {
-    if (slotId === active.id) return;
-    setActiveSlot(slotId);
-    window.location.reload();
-  };
-
-  const onRename = (slot: SaveSlotMeta) => {
-    const next = window.prompt("Rename save", slot.name);
-    if (next === null) return;
-    renameSlot(slot.id, next);
-    refresh();
-  };
-
-  const onDelete = async (slot: SaveSlotMeta) => {
-    if (slots.length <= 1) return;
-    if (!window.confirm(`Delete "${slot.name}"? This removes its world progress and image library.`)) return;
-    await deleteImagesForSlot(slot.id);
-    const { deleted } = deleteSlot(slot.id);
-    if (!deleted) return;
-    if (slot.id === active.id) window.location.reload();
-    else refresh();
-  };
-
-  return (
-    <div className="saves">
-      <div className="saves__head">
-        <p className="hint">Autosave is always on. Load switches the active save slot.</p>
-        <button className="btn btn--primary" onClick={onCreate}>New game</button>
-      </div>
-
-      <div className="saves__grid">
-        {slots.map((slot) => (
-          <div key={slot.id} className={`saveCard ${slot.id === active.id ? "saveCard--active" : ""}`}>
-            <SavePortrait slot={slot} />
-            <div className="saveCard__meta">
-              <div className="saveCard__title">{slot.name}</div>
-              <div className="saveCard__line">
-                {slot.characterName || "Unknown streamer"} · Day {slot.day}
-              </div>
-              <div className="saveCard__line">{new Date(slot.updatedAt).toLocaleString()}</div>
-            </div>
-            <div className="saveCard__actions">
-              <button className="btn btn--mini" disabled={slot.id === active.id} onClick={() => onLoad(slot.id)}>
-                {slot.id === active.id ? "Active" : "Load"}
-              </button>
-              <button className="btn btn--mini" onClick={() => onRename(slot)}>Rename</button>
-              <button className="btn btn--mini btn--danger" disabled={slots.length <= 1} onClick={() => void onDelete(slot)}>
-                Delete
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function SavePortrait({ slot }: { slot: SaveSlotMeta }) {
-  const src = useStoredImage(slot.portraitId);
-  if (!src) return <div className="savePortrait savePortrait--empty">No portrait</div>;
-  return <img className="savePortrait" src={src} alt={`${slot.name} portrait`} loading="lazy" />;
 }
 
 const KIND_TITLE: Record<string, string> = {

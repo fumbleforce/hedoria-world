@@ -196,7 +196,7 @@ export interface ActionMenu {
 }
 
 /** Tabs in the unified Settings modal. */
-export type SettingsTab = "general" | "prompts" | "room" | "character" | "gallery" | "saves" | "llm" | "dev";
+export type SettingsTab = "general" | "prompts" | "room" | "character" | "gallery" | "llm" | "dev";
 
 export interface StoreState {
   booted: boolean;
@@ -263,6 +263,7 @@ export interface StoreState {
   shopOpen: boolean;
   inventoryOpen: boolean;
   settingsOpen: boolean;
+  accountOpen: boolean;
   /** Active tab in the Settings modal. */
   settingsTab: SettingsTab;
 
@@ -369,6 +370,7 @@ export interface StoreState {
   setShopOpen: (b: boolean) => void;
   setInventoryOpen: (b: boolean) => void;
   setSettingsOpen: (b: boolean) => void;
+  setAccountOpen: (b: boolean) => void;
   setSettingsTab: (tab: SettingsTab) => void;
   /** Open the Settings modal directly on a given tab. */
   openSettings: (tab?: SettingsTab) => void;
@@ -520,6 +522,7 @@ export const useStore = create<StoreState>()(
       shopOpen: false,
       inventoryOpen: false,
       settingsOpen: false,
+      accountOpen: false,
       settingsTab: "general",
 
       eventLog: [],
@@ -787,6 +790,7 @@ export const useStore = create<StoreState>()(
       setShopOpen: (shopOpen) => set({ shopOpen }),
       setInventoryOpen: (inventoryOpen) => set({ inventoryOpen }),
       setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
+      setAccountOpen: (accountOpen) => set({ accountOpen }),
       setSettingsTab: (settingsTab) => set({ settingsTab }),
       openSettings: (tab) => set(tab ? { settingsOpen: true, settingsTab: tab } : { settingsOpen: true }),
       setSettings: (patch) => {
