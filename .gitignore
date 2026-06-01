@@ -1,6 +1,10 @@
 # macOS
 .DS_Store
 
+# Claude Code agent worktrees — prevent them being committed as ghost submodules
+world/.claude/worktrees/
+.claude/worktrees/
+
 # World specific files
 config-backups/
 config.json
