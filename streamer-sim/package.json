@@ -12,6 +12,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.106.2",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "seedrandom": "^3.0.5",

@@ -112,6 +112,11 @@ async function runBoot(): Promise<BootResult> {
 }
 
 async function fetchOpenRouterStatus(): Promise<boolean> {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+  if (supabaseUrl) {
+    // In production the edge function holds the key; assume available if Supabase is configured.
+    return true;
+  }
   try {
     const r = await fetch("/__openrouter/status");
     if (!r.ok) return false;

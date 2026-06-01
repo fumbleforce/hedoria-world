@@ -50,12 +50,23 @@ neither real provider exists it returns the Mock directly. At boot, a stale/defa
   `responseSchema = toGeminiSchema(...)`.
 - **Streaming:** real SSE via `:streamGenerateContent?alt=sse`.
 
-### OpenRouter (`openRouterTextProvider.ts`) — via the dev proxy `/__openrouter/chat`
+### OpenRouter (`openRouterTextProvider.ts`)
 - Default model `google/gemini-2.5-flash`. 120 s timeout. `stream: false` hardcoded.
 - **Structured output:** `response_format: {type: "json_schema", json_schema:
   {name, strict: false, schema}}` — `strict: false` to avoid 400s, so it's
   best-effort. `jsonMode` alone → `{type: "json_object"}`.
 - **No `stream()` method** → DM "streaming" degrades to one chunk.
+
+**Proxy routing** (resolved at module load):
+
+| Environment | Proxy endpoint | Auth |
+|---|---|---|
+| Dev (`VITE_SUPABASE_URL` absent) | `/__openrouter/chat` (Vite middleware) | none — server-side key in `.env` |
+| Prod (`VITE_SUPABASE_URL` set) | `{SUPABASE_URL}/functions/v1/openrouter-proxy` | Supabase JWT injected per request |
+
+The edge function `supabase/functions/openrouter-proxy/index.ts` holds the
+`OPENROUTER_API_KEY` secret server-side and verifies the caller's JWT before
+forwarding to OpenRouter.
 
 ### Mock (`mockProvider.ts`)
 `id = "mock-local"`; returns `"{}"` in JSON mode, `""` otherwise. Real offline
