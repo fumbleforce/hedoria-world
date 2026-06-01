@@ -17,8 +17,6 @@ export type MasteryDomain = "showmanship" | "composure";
 
 /** Relationship levels, as keys for the decay table. */
 type AffinityLevelKey = "stranger" | "familiar" | "regular" | "friend" | "confidant";
-
-/** How an affinity change was earned — governs weighting + cap behaviour. */
 export type AffinitySource =
   | "chat"
   | "action"
@@ -309,3 +307,126 @@ export const MASTERY_TAGS: Record<MasteryDomain, string[]> = {
 
 /** Optional per-segment baseline appeal contributed by themed gear/decor. */
 export type SegmentAppeal = Partial<Record<SegmentId, number>>;
+
+/** Gameplay difficulty — tunes economy, bills, and survival pressure (not content tone). */
+export type DifficultyLevel = "easy" | "normal" | "hard";
+
+export type BalanceConfig = typeof BALANCE;
+
+export type DifficultyOption = {
+  id: DifficultyLevel;
+  label: string;
+  blurb: string;
+};
+
+export const DIFFICULTY_LEVELS: DifficultyOption[] = [
+  { id: "easy", label: "Easy", blurb: "More income, lighter bills, gentler needs." },
+  { id: "normal", label: "Normal", blurb: "The default Limelight experience." },
+  { id: "hard", label: "Hard", blurb: "Tighter money, faster burnout, slower growth." },
+];
+
+type BalancePatch = {
+  economy?: {
+    tipConstant?: number;
+    followerGrowth?: number;
+    passiveFollowerRate?: number;
+    rentBase?: number;
+    utilityAmount?: number;
+    monetizationRampFollowers?: number;
+  };
+  subs?: {
+    subDailyRate?: number;
+    subChurnRate?: number;
+  };
+  needs?: {
+    drainPerMin?: Partial<Record<"hunger" | "bladder" | "hygiene", number>>;
+    criticalComfortDrainPerBeat?: number;
+    criticalEnergyDrainPerBeat?: number;
+  };
+  recovery?: {
+    sleepEnergy?: number;
+    sleepComfort?: number;
+  };
+  affinity?: {
+    decayPerIdleDay?: Partial<Record<AffinityLevelKey, number>>;
+  };
+};
+
+const DIFFICULTY_PATCHES: Record<Exclude<DifficultyLevel, "normal">, BalancePatch> = {
+  easy: {
+    economy: {
+      tipConstant: 0.09,
+      followerGrowth: 0.2,
+      passiveFollowerRate: 0.016,
+      rentBase: 16,
+      utilityAmount: 14,
+      monetizationRampFollowers: 120,
+    },
+    subs: { subDailyRate: 0.0026, subChurnRate: 0.008 },
+    needs: {
+      drainPerMin: { hunger: 0.06, bladder: 0.17, hygiene: 0.05 },
+      criticalComfortDrainPerBeat: 1.2,
+      criticalEnergyDrainPerBeat: 0.8,
+    },
+    recovery: { sleepEnergy: 80, sleepComfort: 8 },
+    affinity: {
+      decayPerIdleDay: { confidant: 2.4, friend: 1.6, regular: 1.2, familiar: 0.8, stranger: 0.4 },
+    },
+  },
+  hard: {
+    economy: {
+      tipConstant: 0.055,
+      followerGrowth: 0.12,
+      passiveFollowerRate: 0.009,
+      rentBase: 24,
+      utilityAmount: 22,
+      monetizationRampFollowers: 180,
+    },
+    subs: { subDailyRate: 0.0015, subChurnRate: 0.013 },
+    needs: {
+      drainPerMin: { hunger: 0.1, bladder: 0.25, hygiene: 0.07 },
+      criticalComfortDrainPerBeat: 1.8,
+      criticalEnergyDrainPerBeat: 1.2,
+    },
+    recovery: { sleepEnergy: 58, sleepComfort: 3 },
+    affinity: {
+      decayPerIdleDay: { confidant: 3.6, friend: 2.4, regular: 1.8, familiar: 1.2, stranger: 0.6 },
+    },
+  },
+};
+
+const STARTING_METRICS: Record<DifficultyLevel, { cash: number; followers: number }> = {
+  easy: { cash: 550, followers: 80 },
+  normal: { cash: 250, followers: 35 },
+  hard: { cash: 90, followers: 10 },
+};
+
+function mergeBalance(base: BalanceConfig, patch: BalancePatch): BalanceConfig {
+  return {
+    ...base,
+    economy: { ...base.economy, ...patch.economy },
+    subs: { ...base.subs, ...patch.subs },
+    needs: {
+      ...base.needs,
+      ...patch.needs,
+      drainPerMin: { ...base.needs.drainPerMin, ...patch.needs?.drainPerMin },
+    },
+    recovery: { ...base.recovery, ...patch.recovery },
+    affinity: {
+      ...base.affinity,
+      ...patch.affinity,
+      decayPerIdleDay: { ...base.affinity.decayPerIdleDay, ...patch.affinity?.decayPerIdleDay },
+    },
+  } as BalanceConfig;
+}
+
+/** Active balance preset for the chosen difficulty. Normal returns the baseline `BALANCE`. */
+export function getBalance(level: DifficultyLevel = "normal"): BalanceConfig {
+  if (level === "normal") return BALANCE;
+  return mergeBalance(BALANCE, DIFFICULTY_PATCHES[level]);
+}
+
+/** Starting cash and followers for a new game at the given difficulty. */
+export function startingMetrics(level: DifficultyLevel = "normal"): { cash: number; followers: number } {
+  return STARTING_METRICS[level];
+}

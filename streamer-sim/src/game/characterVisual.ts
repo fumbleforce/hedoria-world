@@ -1,4 +1,10 @@
 import type { CharacterVisual } from "./types";
+import { genderTerms } from "./cameras";
+
+/** Drop a trailing period/whitespace so a template's own punctuation doesn't double up. */
+function trimTrailingPeriod(text: string): string {
+  return text.replace(/[.\s]+$/, "");
+}
 
 export const DEFAULT_FACE_DESCRIPTION =
   "Warm brown eyes, light freckles across her nose, soft natural makeup, warm approachable smile.";
@@ -52,12 +58,24 @@ export function imagePromptVars(
   extra: Record<string, string>,
   mode: "portrait" | "body" | "full",
 ): Record<string, string> {
-  const face = c.faceDescription.trim();
-  const body = c.bodyDescription.trim();
-  const combined = combinedLook(c);
+  const face = trimTrailingPeriod(c.faceDescription.trim());
+  const body = trimTrailingPeriod(c.bodyDescription.trim());
+  const combined = [face, body].filter(Boolean).join(" ");
   const description =
     mode === "portrait" ? face
       : mode === "body" ? body
         : combined;
-  return { ...extra, faceDescription: face, bodyDescription: body, description };
+  // Pronoun placeholders ({{subj}}/{{obj}}/{{poss}}) derived from the streamer's
+  // gender so templates don't hardcode "she/her". `extra` may override these.
+  const g = genderTerms(extra.gender);
+  return {
+    subj: g.subj,
+    obj: g.obj,
+    poss: g.poss,
+    subjectNoun: g.subject,
+    ...extra,
+    faceDescription: face,
+    bodyDescription: body,
+    description,
+  };
 }

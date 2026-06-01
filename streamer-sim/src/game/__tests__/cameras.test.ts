@@ -6,11 +6,14 @@ import {
   cameraForZone,
   camFootagePrompt,
   cornerPrompt,
+  hasFixedCameraInZone,
   perspectivePrompt,
   visibleCorners,
   ZONE_VISIBLE,
   placedAngles,
   starterDeskCamera,
+  canPlaceCameraInZone,
+  cameraDisplayLabel,
   type PlacedCamera,
 } from "../cameras";
 import type { ZoneId } from "../studio";
@@ -34,7 +37,7 @@ describe("cameras", () => {
     expect(cameraForZone(cams, "couch")?.id).toBe("couch-cam");
   });
 
-  it("portable cam covers any zone", () => {
+  it("portable cam covers any zone for go-live", () => {
     const portable: PlacedCamera = {
       id: "portable",
       tier: "webcam",
@@ -43,6 +46,18 @@ describe("cameras", () => {
       portable: true,
     };
     expect(cameraForZone([desk, portable], "kitchenette")?.portable).toBe(true);
+  });
+
+  it("hasFixedCameraInZone ignores portable cams", () => {
+    const portable: PlacedCamera = {
+      id: "portable",
+      tier: "webcam",
+      label: "Portable",
+      zone: null,
+      portable: true,
+    };
+    expect(hasFixedCameraInZone([desk, portable], "kitchenette")).toBe(false);
+    expect(hasFixedCameraInZone([desk], "desk")).toBe(true);
   });
 
   it("a fixed camera in the zone wins over a portable (no shadowing)", () => {
@@ -93,6 +108,7 @@ describe("cameras", () => {
     expect(p).not.toMatch(/twitch/i);
     // No live action provided → falls back to the zone resting posture.
     expect(p).toMatch(/sitting in the gaming chair/i);
+    expect(p).toMatch(/waist-up/i);
     // Female gender → she/her pronouns.
     expect(p).toMatch(/young woman/i);
     expect(p).toMatch(/behind her/i);
@@ -134,12 +150,33 @@ describe("cameras", () => {
     // The action wins over the static posture.
     expect(p).toMatch(/dancing to a pop song/i);
     expect(p).not.toMatch(/sitting in the gaming chair/i);
+    expect(p).toMatch(/wide enough to show the full body/i);
+    expect(p).not.toMatch(/waist-up, in a natural relaxed framing/i);
     // With a perspective photo attached, the prompt places her in that room.
     expect(p).toMatch(/room shown in the provided photo/i);
     expect(p).toMatch(/frilly crop top/i);
     // Styling (lighting/mood/DOF) must come from the style line, not be hardcoded.
     expect(p).not.toMatch(/shallow depth of field/i);
     expect(p).not.toMatch(/warm cozy indoor lighting/i);
+  });
+
+  it("activity label drives dynamic framing even without a doing clause", () => {
+    const p = camFootagePrompt({
+      name: "Dante",
+      zoneId: "desk",
+      tier: "hd1080",
+      gender: "male",
+      faceDescription: "Beard, hazel eyes.",
+      bodyDescription: "Muscular build.",
+      equippedLook: "casual default",
+      style: "anime cel-shading",
+      hasBackdropRef: true,
+      activityLabel: "🏋️ Follow-Along Workout",
+      activityHint: "The streamer is leading a follow-along workout — describe the reps and form cues.",
+    });
+    expect(p).toMatch(/Active segment: 🏋️ Follow-Along Workout/i);
+    expect(p).toMatch(/wide enough to show the full body/i);
+    expect(p).not.toMatch(/waist-up, in a natural relaxed framing/i);
   });
 
   it("corner prompt frames the desk as a floor-level section of the provided room image", () => {
@@ -182,6 +219,26 @@ describe("cameras", () => {
     const fromDesk = perspectivePrompt("desk", "cozy neon", true);
     expect(fromDesk).toMatch(/closed bathroom door/i);
     expect(fromDesk).not.toMatch(/sink|tiled/i);
+  });
+
+  it("private zones (bed, bathroom) only accept a camera on No-Limits tiers", () => {
+    expect(canPlaceCameraInZone("bed", false)).toBe(false);
+    expect(canPlaceCameraInZone("bathroom", false)).toBe(false);
+    expect(canPlaceCameraInZone("bed", true)).toBe(true);
+    expect(canPlaceCameraInZone("bathroom", true)).toBe(true);
+    // Non-private zones are always placeable regardless of tier.
+    expect(canPlaceCameraInZone("desk", false)).toBe(true);
+    expect(canPlaceCameraInZone("couch", false)).toBe(true);
+  });
+
+  it("display label combines location and camera type", () => {
+    expect(cameraDisplayLabel({ id: "d", tier: "dslr", label: "DSLR Rig", zone: "bathroom" })).toBe(
+      "Bathroom · DSLR",
+    );
+    expect(cameraDisplayLabel(starterDeskCamera())).toBe("Streaming Desk · Webcam");
+    expect(
+      cameraDisplayLabel({ id: "p", tier: "webcam", label: "Portable", zone: null, portable: true }),
+    ).toBe("Webcam (portable)");
   });
 
   it("ZONE_VISIBLE never lists a zone as visible from itself and desk excludes bed", () => {

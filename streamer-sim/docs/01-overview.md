@@ -58,11 +58,13 @@ See [02 — Zones & token actions](./02-game-loop-and-economy.md#zones--token-ac
 | **Presence** | The system that decides who is online each beat and the segment populations. |
 | **Verdict** | The structured classification of an action (`ActionVerdict`). |
 | **Intensity** | 1–5 scale of how bold/edgy an action is; drives time cost, spawn bias, and content gating. |
-| **Content tier** | The escalation ceiling: wholesome / flirty / risqué / unhinged / custom. |
+| **Content tier** | The escalation ceiling: wholesome / cheeky / risqué / unhinged / custom. |
 | **Arc** | A multi-day story chain (sponsorship, viral, stalker-legal). |
 | **Goal** | A soft one-time objective with a reward (e.g. 100 followers). |
 | **Token action** | A `__name__` prompt handled directly by the controller, bypassing the evaluator. |
 | **Backend** | Which LLM provider serves text: `mock`, `gemini`, or `openrouter`. |
+| **Stream brand** | Public channel identity (`brand` in store): `@handle`, description, community rules, default niche, optional logo, frame accent. Chat and the live overlay use `@handle` only; `settings.streamerName` stays private for narrator/evaluator/DMs. |
+| **Handle** | Public stream username (`brand.handle`). Chat LLM knows the streamer only as `@handle`. |
 
 ## Source file map
 
@@ -87,11 +89,16 @@ See [02 — Zones & token actions](./02-game-loop-and-economy.md#zones--token-ac
 | `arcs.ts` | The 4 multi-day story arcs (sponsorship, viral, stalker-legal, relationship) and their stages. |
 | `goals.ts` | The 7 soft goals and their rewards. |
 | `calendar.ts` | In-world date math and seasonal occasions. |
-| `activities.ts` | Activity catalogue (games + performances), sub-state helpers. |
-| `shop.ts` | Upgrades and their multipliers. |
+| `activities.ts` | Activity catalogue, category labels/order (`ACTIVITY_CATEGORY_*`). |
+| `talents.ts` | Onboarding talent presets (singer, guitarist, …), quick actions, synergy segments. |
+| `shop.ts` | Upgrades, category labels/order (`UPGRADE_*`), `isDecoration`, `decorationUpgrades`. |
 | `time.ts` | Clock constants and time-cost table. |
-| `content.ts` | Content tiers and steering text. |
+| `content.ts` | Content tiers (`CONTENT_TIERS`), steering text, intensity helpers. |
+| `settingsTabs.ts` | Settings modal tab ids + labels (`SETTINGS_TABS`). |
+| `gender.ts` | Gender preset options (`GENDER_OPTIONS`, `genderMode`). |
+| `liveActions.ts` | Live-stream quick actions (`LIVE_ACTIONS`). |
 | `prompts.ts` | Story prompt templates and overrides. |
+| `brand.ts` | Stream brand defaults, handle normalization, frame accent presets. |
 | `types.ts` | Shared domain types (Metrics, Settings, GameEvent, StoryArc, …). |
 
 ### `src/llm/` — model integration
@@ -103,10 +110,10 @@ See [02 — Zones & token actions](./02-game-loop-and-economy.md#zones--token-ac
 `store.ts` — the Zustand store, all state and actions, and the persist config.
 
 ### `src/persist/` — saving
-`saves.ts` (slots), `imageStore.ts` (IndexedDB media), `useStoredImage.ts` (hook).
+`saves.ts` (slots), `imageStore.ts` (IndexedDB media, `IMAGE_KIND_*` gallery labels), `useStoredImage.ts` (hook).
 
 ### `src/render/` & `src/ui/` — presentation
-`render/StudioRoom.tsx` plus the panels/modals listed in [08 — UI map](./08-ui-map.md).
+`render/StudioRoom.tsx`, shared widgets (`GenderPicker.tsx`), plus panels/modals in [08 — UI map](./08-ui-map.md).
 
 ### Entry & infra
 `src/boot.ts` (boot sequence), `src/main.tsx`, `src/diag/log.ts` (diagnostics),

@@ -1,8 +1,13 @@
 import { useEffect, useState } from "react";
-import { useStore, type SettingsTab } from "../state/store";
+import { useStore } from "../state/store";
+import { SETTINGS_TABS } from "../game/settingsTabs";
 import { clearLlmStats } from "../llm/stats";
 import type { GameController } from "../game/controller";
-import type { ContentTier, LogLevel, TextBackend } from "../game/types";
+import type { LogLevel, Metrics, TextBackend } from "../game/types";
+import { isNoLimits } from "../game/content";
+import { formatClock } from "../game/time";
+import { CONTENT_TIERS_SETTINGS } from "../game/content";
+import { DIFFICULTY_LEVELS } from "../game/balance";
 import { PROMPTS, PROMPT_IDS, type PromptId } from "../game/prompts";
 import {
   IMAGE_STYLE_PRESETS,
@@ -12,30 +17,17 @@ import {
   type ImagePromptField,
 } from "../llm/imagePresets";
 import { useStoredImage } from "../persist/useStoredImage";
-import { listImages, loadPortrait, type ImageKind, type StoredImage } from "../persist/imageStore";
+import { listImages, loadPortrait, IMAGE_KIND_LABEL, IMAGE_KIND_ORDER, type StoredImage } from "../persist/imageStore";
+import { GenderPicker } from "./GenderPicker";
+import { OptionPick } from "./OptionPick";
+import { pickClass } from "./pickClass";
 import { relationshipLevel } from "../game/characters";
 import { ZONES, type ZoneId } from "../game/studio";
+import { RoomMapEditor } from "./RoomMapEditor";
+import { BrandTab } from "./BrandFields";
 import { diag } from "../diag/log";
 import { THEMES } from "./themes";
 import { OpenRouterModelField } from "./OpenRouterModelField";
-
-const TIERS: Array<{ id: ContentTier; label: string; blurb: string }> = [
-  { id: "wholesome", label: "Wholesome", blurb: "PG. No flirting, creeps are harmless." },
-  { id: "flirty", label: "Flirty", blurb: "Cheeky innuendo, simps, PG-13." },
-  { id: "risque", label: "Risqué", blurb: "Bold & suggestive; pushy creeps & stalkers. Implied." },
-  { id: "unhinged", label: "No Limits", blurb: "Ceiling removed — anything the player drives can happen. Not forced; just uncapped." },
-  { id: "custom", label: "Custom", blurb: "Use your own steering text below." },
-];
-
-const TABS: Array<{ id: SettingsTab; label: string }> = [
-  { id: "general", label: "General" },
-  { id: "prompts", label: "Prompts" },
-  { id: "room", label: "Room" },
-  { id: "character", label: "Character" },
-  { id: "gallery", label: "Gallery" },
-  { id: "llm", label: "LLM" },
-  { id: "dev", label: "Dev" },
-];
 
 export function SettingsPanel({ controller }: { controller: GameController }) {
   const open = useStore((s) => s.settingsOpen);
@@ -49,8 +41,8 @@ export function SettingsPanel({ controller }: { controller: GameController }) {
         <div className="modal__head">
           <h2>⚙ Settings</h2>
           <div className="tabs">
-            {TABS.map((t) => (
-              <button key={t.id} className={`tab ${tab === t.id ? "tab--on" : ""}`} onClick={() => setTab(t.id)}>
+            {SETTINGS_TABS.map((t) => (
+              <button key={t.id} className={pickClass(tab === t.id, "tab")} onClick={() => setTab(t.id)}>
                 {t.label}
               </button>
             ))}
@@ -61,6 +53,7 @@ export function SettingsPanel({ controller }: { controller: GameController }) {
         {tab === "prompts" && <PromptsTab controller={controller} />}
         {tab === "room" && <RoomTab controller={controller} />}
         {tab === "character" && <CharacterTab controller={controller} />}
+        {tab === "brand" && <BrandTab controller={controller} />}
         {tab === "gallery" && <GalleryTab controller={controller} />}
         {tab === "llm" && <LlmTab />}
         {tab === "dev" && <DevTab controller={controller} />}
@@ -77,11 +70,12 @@ function GeneralTab() {
     <>
       <div className="field">
         <span>Color theme</span>
-        <div className="tierGrid">
+        <div className="pickGrid">
           {THEMES.map((t) => (
-            <button
+            <OptionPick
               key={t.id}
-              className={`tier themeTier ${settings.theme === t.id ? "tier--active" : ""}`}
+              className="themeTier"
+              selected={settings.theme === t.id}
               onClick={() => set({ theme: t.id })}
             >
               <span
@@ -90,7 +84,7 @@ function GeneralTab() {
               />
               <b>{t.label}</b>
               <small>{t.blurb}</small>
-            </button>
+            </OptionPick>
           ))}
         </div>
       </div>
@@ -99,16 +93,16 @@ function GeneralTab() {
 
       <div className="field">
         <span>Content intensity</span>
-        <div className="tierGrid">
-          {TIERS.map((t) => (
-            <button
+        <div className="pickGrid">
+          {CONTENT_TIERS_SETTINGS.map((t) => (
+            <OptionPick
               key={t.id}
-              className={`tier ${settings.contentTier === t.id ? "tier--active" : ""}`}
+              selected={settings.contentTier === t.id}
               onClick={() => set({ contentTier: t.id })}
             >
               <b>{t.label}</b>
               <small>{t.blurb}</small>
-            </button>
+            </OptionPick>
           ))}
         </div>
       </div>
@@ -124,6 +118,27 @@ function GeneralTab() {
           />
         </label>
       )}
+
+      <hr className="rule" />
+
+      <div className="field">
+        <span>Difficulty</span>
+        <div className="pickGrid">
+          {(DIFFICULTY_LEVELS).map((d) => (
+            <OptionPick
+              key={d.id}
+              selected={(settings.difficulty ?? "normal") === d.id}
+              onClick={() => set({ difficulty: d.id })}
+            >
+              <b>{d.label}</b>
+              <small>{d.blurb}</small>
+            </OptionPick>
+          ))}
+        </div>
+        <p className="hint">
+          Applies to economy and survival pressure immediately. Starting cash and followers apply on new games.
+        </p>
+      </div>
 
       <hr className="rule" />
 
@@ -289,17 +304,8 @@ function RoomTab({ controller }: { controller: GameController }) {
   return (
     <>
       <div className="field">
-        <span>Room art (LLM-generated background)</span>
-        {roomImage ? (
-          <button
-            type="button"
-            className="settings__previewbtn"
-            onClick={() => setLightbox({ src: roomImage, label: "Studio room" })}
-            title="Click to enlarge"
-          >
-            <img src={roomImage} alt="generated room" className="settings__preview" />
-          </button>
-        ) : null}
+        <span>Room map</span>
+        <RoomMapEditor roomImage={roomImage} onEnlarge={(src, label) => setLightbox({ src, label })} />
         <div className="charcre__actions">
           <button
             className={`btn btn--primary ${generating ? "is-loading" : ""}`}
@@ -447,13 +453,10 @@ function CharacterTab({ controller }: { controller: GameController }) {
   const body = useStoredImage(character.bodyId);
   const canGen = controller.canGenerateImages;
 
-  const gender = settings.gender ?? "";
-  const genderMode = gender === "male" ? "male" : gender === "female" ? "female" : "custom";
-
   return (
     <>
       <label className="field">
-        <span>Streamer name</span>
+        <span>Character name (private)</span>
         <input value={settings.streamerName} onChange={(e) => set({ streamerName: e.target.value })} />
       </label>
 
@@ -464,28 +467,11 @@ function CharacterTab({ controller }: { controller: GameController }) {
 
       <div className="field">
         <span>Gender</span>
-        <div className="genderRow">
-          <button className={`tier ${genderMode === "female" ? "tier--active" : ""}`} onClick={() => set({ gender: "female" })}>
-            <b>Female</b>
-          </button>
-          <button className={`tier ${genderMode === "male" ? "tier--active" : ""}`} onClick={() => set({ gender: "male" })}>
-            <b>Male</b>
-          </button>
-          <button
-            className={`tier ${genderMode === "custom" ? "tier--active" : ""}`}
-            onClick={() => set({ gender: genderMode === "custom" ? gender : "" })}
-          >
-            <b>Custom</b>
-          </button>
-        </div>
-        {genderMode === "custom" && (
-          <input
-            style={{ marginTop: 8 }}
-            value={gender}
-            placeholder="Type a gender / identity (e.g. nonbinary, androgynous…)"
-            onChange={(e) => set({ gender: e.target.value })}
-          />
-        )}
+        <GenderPicker
+          gender={settings.gender ?? ""}
+          onChange={(gender) => set({ gender })}
+          customPlaceholder="Type a gender / identity (e.g. nonbinary, androgynous…)"
+        />
       </div>
 
       <hr className="rule" />
@@ -554,17 +540,6 @@ function Preview({ label, src }: { label: string; src: string | null | undefined
   );
 }
 
-const KIND_ORDER: ImageKind[] = ["portrait", "body", "presence", "scene", "corner", "backdrop", "room"];
-const KIND_LABEL: Record<ImageKind, string> = {
-  portrait: "Portrait",
-  body: "Body templates",
-  presence: "Locations & presence",
-  scene: "Scenes",
-  corner: "Furniture corners",
-  backdrop: "Room perspectives",
-  room: "Room",
-};
-
 function GalleryTab({ controller }: { controller: GameController }) {
   const busy = useStore((s) => s.imageBusy);
   const character = useStore((s) => s.character);
@@ -578,7 +553,7 @@ function GalleryTab({ controller }: { controller: GameController }) {
   const activeIds = new Set(
     [character.portraitId, character.bodyId, ...Object.values(presenceImages)].filter(Boolean) as string[],
   );
-  const groups = KIND_ORDER.map((kind) => ({ kind, items: images.filter((i) => i.kind === kind) })).filter(
+  const groups = IMAGE_KIND_ORDER.map((kind) => ({ kind, items: images.filter((i) => i.kind === kind) })).filter(
     (g) => g.items.length > 0,
   );
 
@@ -593,10 +568,10 @@ function GalleryTab({ controller }: { controller: GameController }) {
         <div className="gallery2__scroll">
           {groups.map((g) => (
             <div key={g.kind} className="gallery2__group">
-              <div className="gallery2__groupTitle">{KIND_LABEL[g.kind]}</div>
+              <div className="gallery2__groupTitle">{IMAGE_KIND_LABEL[g.kind]}</div>
               <div className="gallery2__grid">
                 {g.items.map((img) => (
-                  <figure key={img.id} className={`gcard ${activeIds.has(img.id) ? "gcard--active" : ""}`}>
+                  <figure key={img.id} className={pickClass(activeIds.has(img.id), "gcard")}>
                     <button className="gcard__imgbtn" onClick={() => setLightbox(img)}>
                       <img src={img.dataUrl} alt={img.label} loading="lazy" />
                     </button>
@@ -655,7 +630,7 @@ function LlmTab() {
             {stats.map((s) => (
               <button
                 key={s.kind}
-                className={`llmStat ${active?.kind === s.kind ? "llmStat--on" : ""} ${s.ok ? "" : "llmStat--err"}`}
+                className={pickClass(active?.kind === s.kind, `llmStat ${s.ok ? "" : "llmStat--err"}`)}
                 onClick={() => setSelected(s.kind)}
               >
                 <b>{KIND_TITLE[s.kind] ?? s.kind}</b>
@@ -723,7 +698,7 @@ function PromptsTab({ controller }: { controller: GameController }) {
       <div className="prompts__group">Story prompts</div>
       <div className="prompts__tabs">
         {PROMPT_IDS.map((id) => (
-          <button key={id} className={`tab ${selected === id ? "tab--on" : ""}`} onClick={() => setSelected(id)}>
+          <button key={id} className={pickClass(selected === id, "tab")} onClick={() => setSelected(id)}>
             {PROMPTS[id].label}
             {overrides[id] !== undefined ? " ✏️" : ""}
           </button>
@@ -769,7 +744,7 @@ function PromptsTab({ controller }: { controller: GameController }) {
             return (
               <div
                 key={p.id}
-                className={`stylePreset ${active ? "stylePreset--active" : ""}`}
+                className={pickClass(active, "stylePreset")}
                 onClick={() => applyPreset(p.id)}
                 role="button"
                 tabIndex={0}
@@ -829,6 +804,49 @@ function PromptsTab({ controller }: { controller: GameController }) {
 
 // --- Dev tools --------------------------------------------------------------
 
+type DevMetricDef = {
+  key: keyof Metrics;
+  label: string;
+  format: (v: number) => string;
+  steps: number[];
+};
+
+const DEV_METRICS: DevMetricDef[] = [
+  { key: "cash", label: "Cash", format: (v) => `$${v.toFixed(0)}`, steps: [-1000, -100, 100, 1000] },
+  { key: "followers", label: "Followers", format: (v) => v.toLocaleString(), steps: [-1000, -100, -10, 10, 100, 1000] },
+  { key: "subscribers", label: "Subs", format: (v) => v.toLocaleString(), steps: [-1000, -100, -10, 10, 100, 1000] },
+  { key: "currentViewers", label: "Viewers", format: (v) => v.toLocaleString(), steps: [-100, -10, 10, 100] },
+  { key: "peakViewers", label: "Peak viewers", format: (v) => v.toLocaleString(), steps: [-100, -10, 10, 100] },
+  { key: "hype", label: "Hype", format: (v) => String(Math.round(v)), steps: [-25, -10, 10, 25] },
+  { key: "energy", label: "Energy", format: (v) => String(Math.round(v)), steps: [-25, -10, 10, 25] },
+  { key: "comfort", label: "Comfort", format: (v) => String(Math.round(v)), steps: [-25, -10, 10, 25] },
+  { key: "hunger", label: "Hunger", format: (v) => String(Math.round(v)), steps: [-25, -10, 10, 25] },
+  { key: "bladder", label: "Bladder", format: (v) => String(Math.round(v)), steps: [-25, -10, 10, 25] },
+  { key: "hygiene", label: "Hygiene", format: (v) => String(Math.round(v)), steps: [-25, -10, 10, 25] },
+  { key: "horny", label: "Horny", format: (v) => String(Math.round(v)), steps: [-25, -10, 10, 25] },
+  { key: "day", label: "Day", format: (v) => String(v), steps: [-1, 1] },
+];
+
+const DEV_CLOCK_STEPS = [-120, -30, 30, 60, 240] as const;
+
+function devStepLabel(delta: number, cash = false): string {
+  const sign = delta < 0 ? "−" : "+";
+  const abs = Math.abs(delta);
+  if (cash) {
+    if (abs >= 1000) return `${sign}$${abs / 1000}k`;
+    return `${sign}$${abs}`;
+  }
+  if (abs >= 1000) return `${sign}${abs / 1000}k`;
+  return `${sign}${abs}`;
+}
+
+function devClockStepLabel(deltaMinutes: number): string {
+  const sign = deltaMinutes < 0 ? "−" : "+";
+  const abs = Math.abs(deltaMinutes);
+  if (abs % 60 === 0) return `${sign}${abs / 60}h`;
+  return `${sign}${abs}m`;
+}
+
 /**
  * Debugging cheats: list every known character and fire the systems (visit,
  * tip, affinity, threat…) directly, so behaviour can be tested without grinding.
@@ -837,6 +855,9 @@ function DevTab({ controller }: { controller: GameController }) {
   const roster = useStore((s) => s.roster);
   const visitor = useStore((s) => s.visitor);
   const isLive = useStore((s) => s.session.isLive);
+  const metrics = useStore((s) => s.metrics);
+  const clock = useStore((s) => s.clock);
+  const contentTier = useStore((s) => s.settings.contentTier);
 
   const chars = Object.values(roster).sort((a, b) => {
     if (a.online !== b.online) return a.online ? -1 : 1;
@@ -845,6 +866,7 @@ function DevTab({ controller }: { controller: GameController }) {
 
   const devMode = useStore((s) => s.settings.devMode);
   const set = useStore((s) => s.setSettings);
+  const metricRows = DEV_METRICS.filter((m) => m.key !== "horny" || isNoLimits(contentTier));
 
   return (
     <div className="dev">
@@ -860,6 +882,49 @@ function DevTab({ controller }: { controller: GameController }) {
         Testing cheats. These fire the real game systems directly — no DM grind required.
         {isLive && <> Some actions (like Visit) need you offline.</>}
       </p>
+
+      <section className="dev__metrics">
+        <h3 className="dev__section-title">Metrics</h3>
+        <div className="dev__metric-list">
+          {metricRows.map((m) => (
+            <div key={m.key} className="dev__metric-row">
+              <div className="dev__metric-label">
+                <span>{m.label}</span>
+                <strong>{m.format(metrics[m.key])}</strong>
+              </div>
+              <div className="dev__btns">
+                {m.steps.map((step) => (
+                  <button
+                    key={step}
+                    className="btn btn--mini"
+                    onClick={() => controller.devAdjustMetric(m.key, step)}
+                  >
+                    {devStepLabel(step, m.key === "cash")}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+          <div className="dev__metric-row">
+            <div className="dev__metric-label">
+              <span>Clock</span>
+              <strong>{formatClock(clock)}</strong>
+            </div>
+            <div className="dev__btns">
+              {DEV_CLOCK_STEPS.map((step) => (
+                <button
+                  key={step}
+                  className="btn btn--mini"
+                  onClick={() => controller.devAdjustClock(step)}
+                >
+                  {devClockStepLabel(step)}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
       <div className="dev__actions">
         <button className="btn" onClick={() => controller.devSpawnViewer()}>＋ Spawn random viewer</button>
         <span className="dev__count">{chars.length} known</span>

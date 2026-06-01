@@ -10,6 +10,7 @@ import { extractJson } from "../llm/json";
 import { clamp } from "../rng/rng";
 import { BALANCE, type MasteryDomain } from "./balance";
 import { steeringForTier } from "./content";
+import { genderTerms } from "./cameras";
 import type { Metrics, Settings } from "./types";
 
 export type EventEffect =
@@ -174,6 +175,7 @@ export async function authorEvent(
     return null;
   }
 
+  const g = genderTerms(ctx.settings.gender);
   const req = {
     system: [
       "You are the Event Director for a streamer life-sim. Read the CURRENT game state and decide whether something noteworthy happens right now.",
@@ -187,8 +189,8 @@ export async function authorEvent(
         : "",
       "Compose ONLY from listed capabilities in effects; never invent operations. Code owns every number — your deltas are suggestions and will be clamped.",
       "BACK YOUR NARRATION WITH CAPABILITIES: if your opening says a DM/message arrived, a tip came in, followers spiked, a gift showed up, or a viewer raided, you MUST include the matching effect (incomingDm, money, followers, grantItem, raid, …). Never narrate a consequence you didn't author as an effect.",
-      "If the beat is fundamentally someone messaging her privately (a DM, an off-stream ask, a troll's message), use mode \"notice\" with an `incomingDm` effect: bind the sender via `charRef` and give the GIST of why they're reaching out in `note`. The sender writes their own line in-voice and decides what to reveal — don't script their exact words or names. A real DM lands in her inbox and she replies in the DM panel, where the DM director takes over. Do NOT open a scene that merely describes a DM.",
-      "Fit THIS state and her trajectory (niche/mastery/recent beats). Do NOT repeat any recent event title.",
+      `If the beat is fundamentally someone messaging ${g.obj} privately (a DM, an off-stream ask, a troll's message), use mode "notice" with an \`incomingDm\` effect: bind the sender via \`charRef\` and give the GIST of why they're reaching out in \`note\`. The sender writes their own line in-voice and decides what to reveal — don't script their exact words or names. A real DM lands in ${g.poss} inbox and ${g.subj} replies in the DM panel, where the DM director takes over. Do NOT open a scene that merely describes a DM.`,
+      `Fit THIS state and ${g.poss} trajectory (niche/mastery/recent beats). Do NOT repeat any recent event title.`,
       "Reference real online viewers by characterRef: \"online:<id>\"; use \"new\" to introduce someone.",
       mustAddress
         ? "IMPORTANT: A must-address signal is active — you SHOULD author an appropriate scene or notice unless truly impossible."

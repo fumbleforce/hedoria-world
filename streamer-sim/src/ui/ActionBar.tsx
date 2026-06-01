@@ -2,27 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useStore } from "../state/store";
 import type { GameController } from "../game/controller";
 import { tierIntensity } from "../game/content";
-import { NICHES, NICHE_IDS, type NicheId } from "../game/niches";
-
-/** Concrete live actions, each a clear thing with an obvious outcome. */
-interface QuickAction {
-  label: string;
-  prompt: string;
-  minIntensity?: number;
-}
-const LIVE_ACTIONS: QuickAction[] = [
-  { label: "😂 Tell a joke", prompt: "tell chat a genuinely funny joke" },
-  { label: "💬 Chat with viewers", prompt: "chat casually with viewers, answering what they're saying" },
-  { label: "❓ Answer questions (Q&A)", prompt: "take and answer questions from chat" },
-  { label: "📖 Tell a story", prompt: "tell chat an entertaining story from your week" },
-  { label: "🎤 Sing a song", prompt: "sing a song for chat" },
-  { label: "💃 Dance", prompt: "put on a song and dance for chat" },
-  { label: "📺 React to a video", prompt: "pull up a trending video and react to it with chat" },
-  { label: "🫧 Open up / get personal", prompt: "get a little vulnerable and share something personal" },
-  { label: "🙏 Thank a supporter", prompt: "give a heartfelt shout-out to a generous viewer by name" },
-  { label: "😏 Flirt with chat", prompt: "flirt and tease chat playfully", minIntensity: 1 },
-  { label: "🔥 Something daring", prompt: "lean into a bold, daring, suggestive moment for the crowd", minIntensity: 2 },
-];
+import { LIVE_ACTIONS, type LiveQuickAction } from "../game/liveActions";
+import { talentQuickActions } from "../game/talents";
 
 /**
  * Persistent bottom bar: a freeform action box, Continue, an Actions dropdown of
@@ -33,6 +14,7 @@ export function ActionBar({ controller }: { controller: GameController }) {
   const resolving = useStore((s) => s.resolving);
   const offCamera = isLive && !controller.isOnCamera();
   const tier = useStore((s) => s.settings.contentTier);
+  const talentId = useStore((s) => s.settings.talent);
   const activity = useStore((s) => s.activity);
   const visitor = useStore((s) => s.visitor);
   const eventScene = useStore((s) => s.eventScene);
@@ -60,12 +42,14 @@ export function ActionBar({ controller }: { controller: GameController }) {
     setText("");
   };
 
-  const doAction = (a: QuickAction) => {
+  const doAction = (a: LiveQuickAction) => {
     setMenuOpen(false);
     void controller.submitAction({ text: a.prompt, source: "menu" });
   };
 
-  const actions = LIVE_ACTIONS.filter((a) => (a.minIntensity ?? 0) <= intensity);
+  const actions = [...LIVE_ACTIONS, ...talentQuickActions(talentId)].filter(
+    (a) => (a.minIntensity ?? 0) <= intensity,
+  );
 
   return (
     <footer className="actionbar">
@@ -83,7 +67,15 @@ export function ActionBar({ controller }: { controller: GameController }) {
       )}
       {activity && isLive && !visitor && !eventScene && (
         <div className="actionbar__meeting">
-          🎬 <b>Activity — {activity.label}</b> Normal beats still work; chat and narration follow this segment.
+          🎬 <b>Activity — {activity.label}</b>
+          <button
+            className="chiplink"
+            disabled={resolving}
+            onClick={() => controller.stopActivity()}
+            title="Stop this activity"
+          >
+            stop
+          </button>
         </div>
       )}
       {offCamera && !visitor && !eventScene && (
@@ -154,11 +146,7 @@ export function ActionBar({ controller }: { controller: GameController }) {
               )}
             </div>
 
-            {activity ? (
-              <span className="actionbar__playing">🎬 {activity.label}
-                <button className="chiplink" onClick={() => controller.stopActivity()}>stop</button>
-              </span>
-            ) : (
+            {!activity && (
               <button className="btn" disabled={resolving} onClick={() => useStore.getState().setActivityPickerOpen(true)}>🎬 Activity</button>
             )}
             <button className="btn" onClick={() => useStore.getState().setGoalsOpen(true)} title="Goals">🎯</button>
@@ -174,7 +162,7 @@ export function ActionBar({ controller }: { controller: GameController }) {
           </>
         ) : (
           <>
-            <NichePicker controller={controller} disabled={resolving} />
+            <button className="btn" disabled={resolving} onClick={() => useStore.getState().setJobPanelOpen(true)} title="Day job & job board">💼 Job</button>
             <button className="btn" onClick={() => useStore.getState().setInventoryOpen(true)} title="Inventory">🎒</button>
             <button className="btn" onClick={() => useStore.getState().setGoalsOpen(true)} title="Goals">🎯</button>
             <button className="btn actionbar__requests-btn" onClick={() => useStore.getState().setRequestsOpen(true)} title="Viewer requests">
@@ -188,25 +176,5 @@ export function ActionBar({ controller }: { controller: GameController }) {
         )}
       </div>
     </footer>
-  );
-}
-
-/** Schedule-board: pick the content niche you'll stream (shapes your audience). */
-function NichePicker({ controller, disabled }: { controller: GameController; disabled: boolean }) {
-  const niche = useStore((s) => s.settings.niche);
-  return (
-    <label className="nichepick" title={NICHES[niche]?.blurb}>
-      <span className="nichepick__icon">🗓</span>
-      <select
-        className="nichepick__select"
-        value={niche}
-        disabled={disabled}
-        onChange={(e) => controller.setNiche(e.target.value as NicheId)}
-      >
-        {NICHE_IDS.map((id) => (
-          <option key={id} value={id}>{NICHES[id].label}</option>
-        ))}
-      </select>
-    </label>
   );
 }

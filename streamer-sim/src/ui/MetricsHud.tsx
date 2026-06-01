@@ -13,7 +13,7 @@ export function MetricsHud() {
   const session = useStore((s) => s.session);
   const clock = useStore((s) => s.clock);
   const contentTier = useStore((s) => s.settings.contentTier);
-  const name = useStore((s) => s.settings.streamerName);
+  const handle = useStore((s) => s.brand.handle);
   const slotName = getActiveSlot().name;
   useFeedbackJanitor();
   const noLimits = isNoLimits(contentTier);
@@ -23,7 +23,7 @@ export function MetricsHud() {
       <div className="hud__brand">
         <span className="hud__logo">◉ Limelight</span>
         <span className="hud__name">
-          {name} · {slotName} ·{" "}
+          @{handle || "streamer"} · {slotName} ·{" "}
           <button
             type="button"
             className="hud__datetime"

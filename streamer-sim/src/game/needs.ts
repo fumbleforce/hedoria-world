@@ -2,7 +2,7 @@
  * Survival needs + horny helpers — pure functions over Metrics + BALANCE.
  */
 
-import { BALANCE } from "./balance";
+import { BALANCE, type BalanceConfig } from "./balance";
 import { isNoLimits } from "./content";
 import type { ContentTier, Metrics } from "./types";
 import type { ActionVerdict } from "./actions";
@@ -48,8 +48,8 @@ export function needsStrain(metrics: Metrics): { factor: number; worst: NeedKey 
 }
 
 /** Extra drains when a need is critical (live beats only). */
-export function needsPenaltyPerBeat(metrics: Metrics): Partial<Metrics> {
-  const { criticalBelow, criticalComfortDrainPerBeat, criticalEnergyDrainPerBeat } = BALANCE.needs;
+export function needsPenaltyPerBeat(metrics: Metrics, balance: BalanceConfig = BALANCE): Partial<Metrics> {
+  const { criticalBelow, criticalComfortDrainPerBeat, criticalEnergyDrainPerBeat } = balance.needs;
   let comfort = 0;
   let energy = 0;
   for (const k of ["hunger", "bladder", "hygiene"] as const) {
@@ -63,8 +63,8 @@ export function needsPenaltyPerBeat(metrics: Metrics): Partial<Metrics> {
 }
 
 /** Drain hunger/bladder/hygiene over elapsed minutes. */
-export function drainNeeds(metrics: Metrics, minutes: number): Partial<Metrics> {
-  const d = BALANCE.needs.drainPerMin;
+export function drainNeeds(metrics: Metrics, minutes: number, balance: BalanceConfig = BALANCE): Partial<Metrics> {
+  const d = balance.needs.drainPerMin;
   return {
     hunger: metrics.hunger - d.hunger * minutes,
     bladder: metrics.bladder - d.bladder * minutes,

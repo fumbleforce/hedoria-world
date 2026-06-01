@@ -4,7 +4,16 @@ import { useStoredImage } from "../persist/useStoredImage";
 import { loadPortrait } from "../persist/imageStore";
 import type { GameController } from "../game/controller";
 import { hasCharacterLook } from "../game/characterVisual";
-import { ZONE_LIST, ZONES, GRID, type ZoneId } from "../game/studio";
+import { cameraDisplayLabel } from "../game/cameras";
+import {
+  ZONE_LIST,
+  ZONES,
+  STUDIO_VB,
+  STUDIO_ZONE_HIT,
+  zoneGridCenter,
+  zoneStandCell,
+  type ZoneId,
+} from "../game/studio";
 
 /**
  * The studio. If the player has generated a room image (LLM), it's rendered as
@@ -12,21 +21,9 @@ import { ZONE_LIST, ZONES, GRID, type ZoneId } from "../game/studio";
  * hand-authored flat SVG room is drawn. Either way the character glides between
  * zones on click.
  */
-const VB = 500;
-// Zones are laid out on the GRID but mapped into an inset "play area" so the
-// outermost zones pull off the room's edges and sit over the furniture instead
-// of jammed into the corners. EDGE is the inset to the outer zone centers; the
-// avatar and the default-SVG furniture share this mapping so everything aligns.
-const EDGE = 110;
-const SPAN = (VB - EDGE * 2) / (GRID - 1);
-const ZONE = 132;
-const center = (cell: [number, number]): [number, number] => [
-  EDGE + cell[0] * SPAN,
-  EDGE + cell[1] * SPAN,
-];
-
 export function StudioRoom({ controller }: { controller: GameController }) {
   const zone = useStore((s) => s.zone);
+  const zoneCells = useStore((s) => s.zoneCells);
   const isLive = useStore((s) => s.session.isLive);
   const activity = useStore((s) => s.activity);
   const visitor = useStore((s) => s.visitor);
@@ -58,11 +55,11 @@ export function StudioRoom({ controller }: { controller: GameController }) {
   const activeCameraId = useStore((s) => s.activeCameraId);
   const hasCharacter = useStore((s) => hasCharacterLook(s.character));
   const canGenImages = controller.canGenerateImages;
-  const [px, py] = center(ZONES[zone].cell);
+  const [px, py] = zoneGridCenter(zoneStandCell(zone, zoneCells));
 
   return (
     <div className="studio">
-      <svg viewBox={`0 0 ${VB} ${VB}`} className="studio__svg" role="img" aria-label="studio apartment">
+      <svg viewBox={`0 0 ${STUDIO_VB} ${STUDIO_VB}`} className="studio__svg" role="img" aria-label="studio apartment">
         <defs>
           <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#3a3350" />
@@ -75,41 +72,40 @@ export function StudioRoom({ controller }: { controller: GameController }) {
             href={roomImage}
             x="0"
             y="0"
-            width={VB}
-            height={VB}
-            preserveAspectRatio="xMidYMid slice"
+            width={STUDIO_VB}
+            height={STUDIO_VB}
+            preserveAspectRatio="xMidYMid meet"
           />
         ) : (
-          <DefaultRoom live={isLive} />
+          <DefaultRoom zoneCells={zoneCells} live={isLive} />
         )}
 
-        {/* clickable zone hotspots + labels (over image or SVG) */}
         {ZONE_LIST.map((z) => {
-          const [cx, cy] = center(z.cell);
+          const [cx, cy] = zoneGridCenter(zoneStandCell(z.id, zoneCells));
           const active = zone === z.id;
+          const half = STUDIO_ZONE_HIT / 2;
           return (
             <g key={z.id} className="studio__zone" onClick={() => controller.openZoneMenu(z.id)} style={{ cursor: "pointer" }}>
               <rect
-                x={cx - ZONE / 2}
-                y={cy - ZONE / 2}
-                width={ZONE}
-                height={ZONE}
+                x={cx - half}
+                y={cy - half}
+                width={STUDIO_ZONE_HIT}
+                height={STUDIO_ZONE_HIT}
                 rx="14"
                 fill={active ? "rgba(255,93,143,0.12)" : "transparent"}
                 stroke={active ? "rgba(255,93,143,0.6)" : "rgba(255,255,255,0.07)"}
                 strokeWidth="2"
               />
               <g>
-                <rect x={cx - 46} y={cy + ZONE / 2 - 26} width="92" height="17" rx="8" fill="rgba(12,10,18,0.66)" />
-                <text x={cx} y={cy + ZONE / 2 - 14} textAnchor="middle" className="studio__label">{z.label}</text>
+                <rect x={cx - 46} y={cy + half - 26} width="92" height="17" rx="8" fill="rgba(12,10,18,0.66)" />
+                <text x={cx} y={cy + half - 14} textAnchor="middle" className="studio__label">{z.label}</text>
               </g>
             </g>
           );
         })}
 
-        {/* the in-person guest, parked by the couch for the duration of a visit */}
         {visitor && (() => {
-          const [gx, gy] = center(ZONES.couch.cell);
+          const [gx, gy] = zoneGridCenter(zoneStandCell("couch", zoneCells));
           return (
             <g style={{ transform: `translate(${gx + 52}px, ${gy + 10}px)` }}>
               <ellipse cx="0" cy="40" rx="22" ry="6" fill="rgba(0,0,0,0.4)" />
@@ -143,7 +139,6 @@ export function StudioRoom({ controller }: { controller: GameController }) {
           );
         })()}
 
-        {/* the streamer — a generated presence image if we have one, else a dot */}
         <g style={{ transform: `translate(${px}px, ${py}px)`, transition: "transform 0.35s cubic-bezier(.4,1.3,.5,1)" }}>
           <ellipse cx="0" cy="42" rx="26" ry="7" fill="rgba(0,0,0,0.4)" />
           {avatarUrl ? (
@@ -153,8 +148,6 @@ export function StudioRoom({ controller }: { controller: GameController }) {
                   <circle cx="0" cy="6" r="34" />
                 </clipPath>
               </defs>
-              {/* Oversize the image past the clip circle so the subject fills
-                  it and we don't see the square's empty edges/background. */}
               <image
                 href={avatarUrl}
                 x={-46}
@@ -187,9 +180,9 @@ export function StudioRoom({ controller }: { controller: GameController }) {
                 type="button"
                 className={`btn btn--mini ${activeCameraId === c.id ? "btn--primary" : ""}`}
                 onClick={() => controller.switchCamera(c.id)}
-                title={c.portable ? "Portable cam" : `Placed at ${c.zone}`}
+                title={c.portable ? "Portable cam" : `Placed at ${ZONES[c.zone!]?.label ?? c.zone}`}
               >
-                📷 {c.label}
+                📷 {cameraDisplayLabel(c)}
               </button>
             ))}
           </div>
@@ -197,16 +190,16 @@ export function StudioRoom({ controller }: { controller: GameController }) {
         {canGenImages && hasCharacter && (
           <>
           <button
-            className={`btn btn--mini ${imageBusy ? "is-loading" : ""}`}
+            className="btn btn--mini"
             disabled={!!imageBusy}
             onClick={() => void controller.generatePresence(zone, !!presenceUrl)}
             title="Generate (and cache) your character at this spot"
           >
-            {imageBusy ? imageBusy + "…" : presenceUrl ? "📸 Redo here" : "📸 Visualize here"}
+            {presenceUrl ? "📸 Redo here" : "📸 Visualize here"}
           </button>
           {isLive && (
             <button
-              className={`btn btn--mini ${imageBusy ? "is-loading" : ""}`}
+              className="btn btn--mini"
               disabled={!!imageBusy}
               onClick={() => void controller.generateCamFootage(zone, true)}
               title="Regenerate the live stream feed (center panel) from this camera"
@@ -221,29 +214,26 @@ export function StudioRoom({ controller }: { controller: GameController }) {
   );
 }
 
-// --- default flat-SVG room (furniture centered in each zone cell) -----------
+function DefaultRoom({ zoneCells, live }: { zoneCells: Record<ZoneId, [number, number]>; live: boolean }) {
+  const at = (zoneId: ZoneId): [number, number] => zoneGridCenter(zoneStandCell(zoneId, zoneCells));
 
-function DefaultRoom({ live }: { live: boolean }) {
   return (
     <>
-      <rect x="0" y="0" width={VB} height={VB} rx="14" fill="url(#floor)" stroke="#4a4366" strokeWidth="3" />
-      {/* rug under the couch */}
-      <ellipse cx={center(ZONES.couch.art)[0]} cy={center(ZONES.couch.art)[1] + 16} rx="64" ry="40" fill="#5b4a7a" opacity="0.45" />
-      <Bed />
-      <Desk live={live} />
-      <Couch />
-      <Kitchenette />
-      <Bathroom />
-      <Door />
+      <rect x="0" y="0" width={STUDIO_VB} height={STUDIO_VB} rx="14" fill="url(#floor)" stroke="#4a4366" strokeWidth="3" />
+      <ellipse cx={at("couch")[0]} cy={at("couch")[1] + 16} rx="64" ry="40" fill="#5b4a7a" opacity="0.45" />
+      <Bed at={at} />
+      <Desk at={at} live={live} />
+      <Couch at={at} />
+      <Kitchenette at={at} />
+      <Bathroom at={at} />
+      <Door at={at} />
     </>
   );
 }
 
-function at(zoneId: ZoneId): [number, number] {
-  return center(ZONES[zoneId].art);
-}
+type AtFn = (zoneId: ZoneId) => [number, number];
 
-function Bed() {
+function Bed({ at }: { at: AtFn }) {
   const [x, y] = at("bed");
   return (
     <g>
@@ -254,7 +244,7 @@ function Bed() {
   );
 }
 
-function Desk({ live }: { live: boolean }) {
+function Desk({ at, live }: { at: AtFn; live: boolean }) {
   const [x, y] = at("desk");
   return (
     <g>
@@ -266,7 +256,7 @@ function Desk({ live }: { live: boolean }) {
   );
 }
 
-function Couch() {
+function Couch({ at }: { at: AtFn }) {
   const [x, y] = at("couch");
   return (
     <g>
@@ -278,7 +268,7 @@ function Couch() {
   );
 }
 
-function Kitchenette() {
+function Kitchenette({ at }: { at: AtFn }) {
   const [x, y] = at("kitchenette");
   return (
     <g>
@@ -290,7 +280,7 @@ function Kitchenette() {
   );
 }
 
-function Bathroom() {
+function Bathroom({ at }: { at: AtFn }) {
   const [x, y] = at("bathroom");
   return (
     <g>
@@ -301,7 +291,7 @@ function Bathroom() {
   );
 }
 
-function Door() {
+function Door({ at }: { at: AtFn }) {
   const [x, y] = at("door");
   return (
     <g>

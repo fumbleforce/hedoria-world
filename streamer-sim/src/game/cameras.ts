@@ -87,6 +87,11 @@ export function cameraForZone(cameras: readonly PlacedCamera[], zone: ZoneId): P
   return cameras.find((c) => c.portable) ?? null;
 }
 
+/** True when a non-portable camera is placed in the zone (portable cams do not count). */
+export function hasFixedCameraInZone(cameras: readonly PlacedCamera[], zone: ZoneId): boolean {
+  return cameras.some((c) => c.zone === zone && !c.portable);
+}
+
 export function activeCamera(
   cameras: readonly PlacedCamera[],
   activeId: string | null,
@@ -169,6 +174,29 @@ export function isPlayerOnActiveCamera(
 export function defaultCameraLabel(tier: CameraTier, zone: ZoneId | null): string {
   if (zone) return `${ZONES[zone]?.label ?? zone} Cam`;
   return `${CAMERA_TIERS[tier].label} Cam`;
+}
+
+/**
+ * Zones that capture private moments. Cameras may only be set up here on a
+ * No-Limits content tier — otherwise the player could film themselves in the
+ * bathroom or in bed even on tame settings.
+ */
+export const PRIVATE_CAM_ZONES: ReadonlySet<ZoneId> = new Set<ZoneId>(["bed", "bathroom"]);
+
+/** Whether a fixed camera may be placed in `zone` given the current tier. */
+export function canPlaceCameraInZone(zone: ZoneId, noLimits: boolean): boolean {
+  return noLimits || !PRIVATE_CAM_ZONES.has(zone);
+}
+
+/**
+ * Display name that combines location + camera type, e.g. "Bathroom · DSLR".
+ * The stored `label` alone (e.g. "DSLR Rig") doesn't say where the angle is.
+ */
+export function cameraDisplayLabel(cam: PlacedCamera): string {
+  const tier = CAMERA_TIERS[cam.tier].label;
+  if (cam.portable) return `${tier} (portable)`;
+  if (cam.zone) return `${ZONES[cam.zone]?.label ?? cam.zone} · ${tier}`;
+  return `${tier} Cam`;
 }
 
 export function migrateLegacyCamUpgrades(
@@ -347,7 +375,7 @@ const ZONE_PLACE: Record<ZoneId, string> = {
 };
 
 export function zonePlace(zone: ZoneId): string {
-  return ZONE_PLACE[zone] ?? "in her apartment";
+  return ZONE_PLACE[zone] ?? "in the apartment";
 }
 
 /**
@@ -368,7 +396,7 @@ const TIER_QUALITY: Record<CameraTier, string> = {
  */
 function stripBroadcastWords(text: string): string {
   return text
-    .replace(/\bon[-\s]?cam(era)?\b/gi, "in her room")
+    .replace(/\bon[-\s]?cam(era)?\b/gi, "in the room")
     .replace(/\b(live[-\s]?stream(ing)?|stream(ing)?|broadcast(ing)?)\b/gi, "")
     .replace(/\bwebcams?\b/gi, "camera")
     .replace(/\btwitch\b/gi, "")
@@ -430,27 +458,43 @@ export function camFootagePrompt(opts: {
   posture?: string;
   /** What the subject is actively doing right now — drives a dynamic pose. */
   doing?: string;
+  /** Active activity segment label (e.g. "🏋️ Follow-Along Workout"). */
+  activityLabel?: string;
+  /** Narration hint for the active activity. */
+  activityHint?: string;
 }): string {
   const g = genderTerms(opts.gender);
   const are = g.plural ? "are" : "is";
   const wearing =
     opts.equippedLook !== "casual default" ? ` ${cap(g.subj)} ${are} wearing ${opts.equippedLook}.` : "";
   const action = opts.doing ? stripBroadcastWords(opts.doing) : "";
+  const activityLabel = opts.activityLabel?.trim();
+  const activityHint = opts.activityHint ? stripBroadcastWords(opts.activityHint.trim()) : "";
+  const hasAction = !!action || !!activityLabel;
+  const activityLine = activityLabel
+    ? `Active segment: ${activityLabel}${activityHint ? ` — ${activityHint}` : ""}.`
+    : "";
   // A live action wins the pose; otherwise rest in the zone's default posture.
   const poseLine = action
     ? `Right now: ${action}. Capture ${g.obj} mid-moment with the matching body language and pose.`
     : `${cap(g.subj)} ${are} ${opts.posture ?? zonePosture(opts.zoneId)}.`;
+  const framingLine = hasAction
+    ? `${cap(g.subj)} ${g.plural ? "face" : "faces"} the camera in a front-on candid framing wide enough to show the full body and movement — not seated or waist-up unless the action requires it.`
+    : `${cap(g.subj)} ${g.plural ? "face" : "faces"} the camera directly, waist-up, in a natural relaxed framing.`;
   const background = opts.hasBackdropRef
     ? `${cap(g.subj)} ${are} in the room shown in the provided photo, which fills the background behind ${g.obj}.`
     : `Behind ${g.obj}: ${zoneBackdropText(opts.zoneId)}.`;
   const quality = TIER_QUALITY[opts.tier] ?? "a candid photo";
   return [
     `An eye-level, front-on candid photo of ${opts.name}, a ${g.subject}, ${zonePlace(opts.zoneId)}; ${quality}.`,
-    `${cap(g.subj)} ${g.plural ? "face" : "faces"} the camera directly, waist-up, in a natural relaxed framing.`,
+    activityLine,
+    framingLine,
     poseLine,
     background,
     `${cap(g.subj)} ${g.plural ? "match" : "matches"} the character reference — face: ${opts.faceDescription}; hair and build: ${opts.bodyDescription}.${wearing}`,
     opts.style,
     "Square composition.",
-  ].join(" ");
+  ]
+    .filter(Boolean)
+    .join(" ");
 }

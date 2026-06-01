@@ -185,7 +185,7 @@ only `type/description/enum/items/properties/required/nullable`, drops the rest)
 Turns a `PlayerAction` into an `ActionVerdict`.
 
 - If `adapter.isMock` → `localEvaluate` (keyword `RULES` table, intensity capped by
-  tier: wholesome 2, flirty 3, risqué 4, unhinged/custom 5).
+  tier: wholesome 2, cheeky 3, risqué 4, unhinged/custom 5).
 - Else: `completeJsonWithRepair` with `jsonMode + jsonSchema = verdictSchema()`, kind
   `story`. On null/exception → `localEvaluate`.
 
@@ -203,6 +203,14 @@ repost." As a hard guarantee, `store.pushChat` drops any incoming message whose
 line), so the chat model can't bounce an earlier reaction (e.g. "here we go") back onto
 screen a beat later.
 
+**Chat context surface.** `chatCtx` (`controller.ts`) feeds `buildRequest` the channel
+identity, the active stream niche (`ChatContext.nicheLabel`, from `activeNiche()`), the
+locked activity block when one is running, and `equippedLook`. The **Channel** block
+always carries `@handle · <niche>` so chat knows the category even with no channel
+description. `equippedLook` is built with `describeEquippedLook(..., { hideCoveredUnderwear: true })`,
+so underwear is only named when no outer layers cover it (a fully-dressed streamer's
+underwear is not leaked into the chat prompt).
+
 **Self-consistency** (setting `selfConsistency`, default **on**): if the first verdict
 `isHighImpact`, sample a second and `reconcileVerdicts`. `isHighImpact` is true when
 intensity ≥4, or `setsBoundary`, or tags include `suggestive/bold/edgy/drama/chaotic`,
@@ -218,9 +226,24 @@ averaged intensity, keep the first narration, OR the boundary flag.
 and fills in `steeringForTier(settings)`.
 
 `steeringForTier` produces the tone paragraph for the active content tier (wholesome →
-unhinged → custom uses `settings.customSteering` verbatim). This is the only "content
-control" — the engine doesn't hard-block actions; the model declines in character at
-low tiers.
+unhinged → custom uses `settings.customSteering` verbatim). The model still declines in
+character at low tiers rather than hard-blocking actions, but steering is **not** the
+only content control — several inputs are now structurally tier-gated so spicy material
+can't leak into a non-spicy stream even if the model is pushed:
+
+- **Evaluator segment guide** — the evaluator's `{{segments}}` placeholder is filled by
+  `segmentGuideForIntensity(intensity)`, listing only segments active at the tier. A
+  wholesome prompt never describes `simps`/`stalkers`.
+- **Character voice block** — `characterVoiceBlock(c, name, intensity)` runs the
+  viewer's personality through `personalityForIntensity` (caps the `horny` axis: 0 at
+  wholesome, ≤1 at cheeky, untouched at risqué+) and strips the `"flirty undertone"`
+  voice tag below risqué. So a whale seeded at `horny +5` is never described as
+  "suggestive" on a wholesome save.
+- **Chat message kinds** — `chatSchema`/`parseChat` build their `kind` enum from
+  `allowedChatKinds(intensity)`: `flirty` only at cheeky+ (≥1), `creepy` only at
+  risqué+ (≥2). Disallowed kinds the model returns are coerced to `normal`.
+- **Activities** — `workout`/`talent-dance` chat hints no longer instruct chat to
+  "flirt" (they were reachable at wholesome).
 
 ## Streaming (`streamReplies`, default on)
 
@@ -252,7 +275,7 @@ fast-tier chat calls.
 | `geminiFastModel` / `openRouterFastModel` | flash-lite | fast model |
 | `selfConsistency` | **true** | double-sample high-impact verdicts |
 | `streamReplies` | **true** | token-stream DMs when supported |
-| `contentTier` | `flirty` | steering + local intensity cap |
+| `contentTier` | `cheeky` | steering + local intensity cap |
 | `customSteering` | `""` | used when tier is custom |
 | `promptOverrides` | per id | replace prompt templates |
 | `consoleLevel` | `debug` | diagnostics verbosity |

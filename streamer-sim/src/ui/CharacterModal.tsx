@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useStore } from "../state/store";
 import type { GameController } from "../game/controller";
 import type { DmLine, ViewerRequest } from "../game/types";
-import { BALANCE } from "../game/balance";
+import { getBalance } from "../game/balance";
 import { ARCHETYPE_BY_ID } from "../game/archetypes";
 import { avatarFor, relationshipLevel, revealedSheet, personalityProse, personalityTable, backstoryLayerLabel, type CharacterSheet, type RevealedSheet } from "../game/characters";
 import { loadPortrait } from "../persist/imageStore";
@@ -270,6 +270,7 @@ function DmMessage({
   controller: GameController;
   viewerRequests: ViewerRequest[];
 }) {
+  const difficulty = useStore((s) => s.settings.difficulty ?? "normal");
   const imageUrl = useStoredImage(line.imageId);
   const who = line.role === "me" ? "You" : handle;
   const linkedReq = line.requestId
@@ -296,7 +297,7 @@ function DmMessage({
     const rewardChip = linkedReq
       ? linkedReq.rewardType === "cash" && linkedReq.rewardAmount
         ? `$${linkedReq.rewardAmount} tip`
-        : `+${BALANCE.affinity.sources.request} bond`
+        : `+${getBalance(difficulty).affinity.sources.request} bond`
       : null;
     const statusChip =
       linkedReq?.status === "fulfilled"

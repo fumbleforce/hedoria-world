@@ -17,9 +17,16 @@ export interface PromptDef {
   base: string;
 }
 
-const SEGMENT_GUIDE = SEGMENT_IDS
-  .map((id) => `  - ${id} (${SEGMENTS[id].label}): ${SEGMENTS[id].blurb}`)
-  .join("\n");
+/** Segment reference list, filtered to the segments active at this intensity. */
+export function segmentGuideForIntensity(intensity: number): string {
+  return SEGMENT_IDS
+    .filter((id) => SEGMENTS[id].minIntensity <= intensity)
+    .map((id) => `  - ${id} (${SEGMENTS[id].label}): ${SEGMENTS[id].blurb}`)
+    .join("\n");
+}
+
+/** Full guide (all segments) — default when no tier is supplied. */
+const SEGMENT_GUIDE = segmentGuideForIntensity(Infinity);
 
 export const PROMPTS: Record<PromptId, PromptDef> = {
   evaluator: {
@@ -29,9 +36,10 @@ export const PROMPTS: Record<PromptId, PromptDef> = {
       "Turns any player action into a structured verdict (tags, intensity, per-segment appeal, stat pressure, narration). The math is applied by code, never by the model.",
     base: [
       "You are the EVALUATOR for a streamer life-sim. The player controls {{name}},",
-      "a young woman in her small studio apartment. SOMETIMES she is live on her",
-      "webcam, sometimes she is offline and just living her life. The current stream",
-      "status and her location in the apartment are given to you in the user message —",
+      "a streamer in {{poss}} small studio apartment. {{name}}'s pronouns are {{pronouns}} —",
+      "use them and never assume a different gender. SOMETIMES {{subj}} is live on the",
+      "webcam, sometimes offline and just living life. The current stream",
+      "status and {{poss}} location in the apartment are given to you in the user message —",
       "ALWAYS trust those over any assumption. The player describes an action (typed",
       "freely or via a menu). Your job: judge it and label it. You do NOT decide",
       "outcomes or numbers — you classify, and the game engine applies the effects.",
@@ -51,13 +59,13 @@ export const PROMPTS: Record<PromptId, PromptDef> = {
       `   ${ACTION_TAGS.join(", ")}`,
       "3. intensity — 1 (subtle) to 5 (extreme/explicit-for-the-tier).",
       "4. appeal — for each viewer segment that cares, a number -3..+3. Segments:",
-      SEGMENT_GUIDE,
+      "{{segments}}",
       "   Omit segments that wouldn't react.",
       "5. pressure — optional nudge on hype, energy, comfort (up, down, none).",
       "   Code owns routine energy/comfort costs from tags + intensity — only flag",
       "   energy/comfort down for an unusually draining/exposing beat, or up for a",
       "   genuinely restful/reassuring one. Hype and comfort still follow your judgment.",
-      "6. setsBoundary — true if she is setting/enforcing a personal boundary.",
+      "6. setsBoundary — true if {{subj}} is setting/enforcing a personal boundary.",
       "7. connection — 0 to 3: how much this action genuinely deepens a ONE-TO-ONE",
       "   bond with a specific viewer, versus generic crowd-pleasing. 0 = generic",
       "   performance/hype/flirting at the room at large. 1 = warm but unspecific.",
@@ -67,21 +75,21 @@ export const PROMPTS: Record<PromptId, PromptDef> = {
       "   Generic flirting or hype is 0-1 even if intense — connection is about",
       "   personal, individual bonding, NOT spectacle.",
       "8. narration — 1-3 sentences, second person ('You ...'), vivid, like a dungeon",
-      "   master. Match the tone steering. Never break the fourth wall. When she is",
-      "   LIVE, keep this to a brief STAGE DIRECTION: describe only her delivery, body",
-      "   language, expression, and the room's energy. Do NOT write out her actual",
+      "   master. Match the tone steering. Never break the fourth wall. When {{subj}} is",
+      "   LIVE, keep this to a brief STAGE DIRECTION: describe only {{poss}} delivery, body",
+      "   language, expression, and the room's energy. Do NOT write out {{poss}} actual",
       "   spoken words (the joke, the answer, the song, the line) and do NOT narrate",
-      "   chat's messages or reaction — her real words and the live chat are shown",
+      "   chat's messages or reaction — {{poss}} real words and the live chat are shown",
       "   separately, so repeating them here reads as a duplicate.",
       "   VARY IT. The user message includes your recent stage directions — never",
       "   recycle their opening, their gesture, or their imagery. Above all, do NOT",
-      "   keep narrating her FACE. Describing her eyes (sparkling, glinting), or a",
-      "   smile/grin/smirk playing on her lips, or her leaning into the camera, are",
+      "   keep narrating {{poss}} FACE. Describing {{poss}} eyes (sparkling, glinting), or a",
+      "   smile/grin/smirk playing on {{poss}} lips, or {{obj}} leaning into the camera, are",
       "   BANNED defaults — they read as filler. Use any of them at most rarely, and",
       "   never two beats in a row. Instead pull a fresh, concrete detail from THIS",
-      "   beat: what her hands are doing, a prop she grabs (mug, mic, headset,",
-      "   plushie, chair), how she moves or shifts in the room, a sound she makes,",
-      "   her tone or breath, the monitor light. Prefer a real small ACTION over an",
+      "   beat: what {{poss}} hands are doing, a prop {{subj}} grabs (mug, mic, headset,",
+      "   plushie, chair), how {{subj}} moves or shifts in the room, a sound {{subj}} makes,",
+      "   {{poss}} tone or breath, the monitor light. Prefer a real small ACTION over an",
       "   expression. Lead with a different subject and verb each time so no two",
       "   beats start the same way.",
       "",
@@ -107,7 +115,7 @@ export const PROMPTS: Record<PromptId, PromptDef> = {
       "{{steering}}",
       "",
       "Write tight, atmospheric second-person prose ('You ...'). 1-3 sentences.",
-      "React to what the player just did and the state of her life and apartment.",
+      "React to what the player just did and the state of {{poss}} life and apartment.",
       "Be evocative but grounded — this is a small apartment, a webcam, a hustle.",
       "Never use asterisks, never break the fourth wall, never mention game mechanics.",
     ].join("\n"),
@@ -117,7 +125,7 @@ export const PROMPTS: Record<PromptId, PromptDef> = {
     id: "performance",
     label: "Streamer Performance (live quote)",
     description:
-      "When live, turns a performance action (tell a joke, sing, answer chat, flirt, tell a story) into the streamer's ACTUAL spoken words — a first-person quote she says on stream, not a description of it.",
+      "When live, turns a performance action (tell a joke, sing, answer chat, flirt, tell a story) into the streamer's ACTUAL spoken words — a first-person quote they say on stream, not a description of it.",
     base: [
       "You ARE {{name}}, a live streamer on webcam, speaking out loud to your chat right now.",
       "PERSONA: {{persona}}",
@@ -130,12 +138,12 @@ export const PROMPTS: Record<PromptId, PromptDef> = {
       "  - If it's answering chat / a Q&A, give the real answer.",
       "  - If it's flirting or being bold, say the actual line.",
       "  - If it's telling a story, tell it in your own words.",
-      "Stay fully in character, in her natural spoken voice, matching the tone steering.",
+      "Stay fully in character, in {{poss}} natural spoken voice, matching the tone steering.",
       "",
       "When ACTIVE ACTIVITY (LOCKED) is in the user message: match that segment's delivery",
       "and voice. Do not announce or imply a segment change.",
       "",
-      "Output ONLY her spoken words — no narration, no stage directions, no asterisks, no",
+      "Output ONLY {{poss}} spoken words — no narration, no stage directions, no asterisks, no",
       "quotation marks, no name prefix. 1-4 sentences, natural spoken cadence.",
     ].join("\n"),
   },
@@ -144,11 +152,16 @@ export const PROMPTS: Record<PromptId, PromptDef> = {
     id: "chat",
     label: "Live Chat",
     description:
-      "Generates the Twitch-style chat burst reacting to what just happened. Flavored by which viewer segments are present and satisfied.",
+      "Generates the Twitch-style chat burst reacting to what just happened. Uses {{handle}}, {{rules}}, and {{description}} for the public channel identity. Flavored by which viewer segments are present and satisfied.",
     base: [
-      "You generate the live Twitch-style chat for streamer {{name}}.",
+      "You generate the live Twitch-style chat for streamer @{{handle}}.",
       "PERSONA: {{persona}}",
       "{{steering}}",
+      "Chat knows this streamer ONLY as @{{handle}}. Never use, guess, or reference their real name.",
+      "@{{handle}}'s pronouns are {{pronouns}} — refer to {{obj}} that way, never assume a different gender.",
+      "",
+      "CHANNEL: {{description}}",
+      "RULES (chat respects these): {{rules}}",
       "",
       "Produce many SHORT, lowercase messages from distinct viewers with varied",
       "personalities. Reflect the audience mix provided. Occasionally a viewer",
@@ -158,9 +171,9 @@ export const PROMPTS: Record<PromptId, PromptDef> = {
       "or leet; never real first names or display names. Use named regulars' handles",
       "where provided; invent a fresh anonymous handle for each new anon line.",
       "",
-      "CRITICAL: React SPECIFICALLY to exactly what {{name}} just said or did (given",
-      "in the user message). Reference the actual content — answer her questions, riff",
-      "on her joke, respond to her exact words. Do NOT produce generic filler that",
+      "CRITICAL: React SPECIFICALLY to exactly what @{{handle}} just said or did (given",
+      "in the user message). Reference the actual content — answer {{poss}} questions, riff",
+      "on {{poss}} joke, respond to {{poss}} exact words. Do NOT produce generic filler that",
       "could apply to any moment. Use the named regulars' handles where provided and",
       "keep them consistent with their personalities.",
       "",
@@ -191,15 +204,63 @@ export const PROMPTS: Record<PromptId, PromptDef> = {
 
 export const PROMPT_IDS = Object.keys(PROMPTS) as PromptId[];
 
-/** Fill {{name}}, {{persona}}, {{steering}} placeholders. */
+/** Fill {{name}}, {{persona}}, {{steering}}, and pronoun placeholders. */
 export function fillPrompt(
   body: string,
-  vars: { name: string; persona: string; steering: string },
+  vars: {
+    name: string;
+    persona: string;
+    steering: string;
+    subj?: string;
+    obj?: string;
+    poss?: string;
+    /** Tier-filtered segment guide for the evaluator; defaults to the full list. */
+    segments?: string;
+  },
 ): string {
+  const subj = vars.subj ?? "they";
+  const obj = vars.obj ?? "them";
+  const poss = vars.poss ?? "their";
   return body
     .replaceAll("{{name}}", vars.name)
     .replaceAll("{{persona}}", vars.persona)
-    .replaceAll("{{steering}}", vars.steering);
+    .replaceAll("{{steering}}", vars.steering)
+    .replaceAll("{{segments}}", vars.segments ?? SEGMENT_GUIDE)
+    .replaceAll("{{subj}}", subj)
+    .replaceAll("{{obj}}", obj)
+    .replaceAll("{{poss}}", poss)
+    .replaceAll("{{pronouns}}", `${subj}/${obj}/${poss}`);
+}
+
+/** Fill chat-specific placeholders (handle, rules, description) plus pronouns. */
+export function fillChatPrompt(
+  body: string,
+  vars: {
+    handle: string;
+    persona: string;
+    steering: string;
+    rules: string;
+    description: string;
+    subj?: string;
+    obj?: string;
+    poss?: string;
+  },
+): string {
+  const subj = vars.subj ?? "they";
+  const obj = vars.obj ?? "them";
+  const poss = vars.poss ?? "their";
+  const rules = vars.rules.trim() || "none set";
+  const description = vars.description.trim() || "a variety live stream";
+  return body
+    .replaceAll("{{handle}}", vars.handle)
+    .replaceAll("{{persona}}", vars.persona)
+    .replaceAll("{{steering}}", vars.steering)
+    .replaceAll("{{rules}}", rules)
+    .replaceAll("{{description}}", description)
+    .replaceAll("{{subj}}", subj)
+    .replaceAll("{{obj}}", obj)
+    .replaceAll("{{poss}}", poss)
+    .replaceAll("{{pronouns}}", `${subj}/${obj}/${poss}`);
 }
 
 /** Structured user-message blocks so context sections don't bleed together. */

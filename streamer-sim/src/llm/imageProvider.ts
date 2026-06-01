@@ -15,14 +15,18 @@ import {
 
 const PROXY = "/__openrouter/chat";
 
+/** Supported output aspect ratios. Scenes use widescreen; everything else square. */
+export type ImageAspect = "1:1" | "16:9";
+
 export interface ImageBackend {
   readonly id: string;
   /**
    * Generate an image from a prompt; returns a data URL. Optional `refs` are
    * data-URL images fed to the model for image-to-image templating (e.g. the
-   * character's T-pose body so they stay consistent across scenes).
+   * character's T-pose body so they stay consistent across scenes). `aspect`
+   * controls the output shape (default square; scenes request 16:9).
    */
-  generate(prompt: string, refs?: string[]): Promise<string>;
+  generate(prompt: string, refs?: string[], aspect?: ImageAspect): Promise<string>;
 }
 
 /** Split a `data:<mime>;base64,<data>` URL into its parts. */
@@ -35,7 +39,7 @@ function splitDataUrl(url: string): { mimeType: string; data: string } | null {
 class GeminiImageBackend implements ImageBackend {
   readonly id = "gemini-image";
   constructor(private readonly apiKey: string) {}
-  async generate(prompt: string, refs: string[] = []): Promise<string> {
+  async generate(prompt: string, refs: string[] = [], aspect: ImageAspect = "1:1"): Promise<string> {
     const model = useStore.getState().settings.geminiImageModel || "gemini-2.5-flash-image";
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
       model,
@@ -51,7 +55,7 @@ class GeminiImageBackend implements ImageBackend {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{ role: "user", parts }],
-        generationConfig: { responseModalities: ["IMAGE"], imageConfig: { aspectRatio: "1:1" } },
+        generationConfig: { responseModalities: ["IMAGE"], imageConfig: { aspectRatio: aspect } },
       }),
     });
     if (!res.ok) throw new Error(`Gemini image HTTP ${res.status}: ${(await res.text()).slice(0, 160)}`);
@@ -68,14 +72,14 @@ class GeminiImageBackend implements ImageBackend {
 class OpenRouterImageBackend implements ImageBackend {
   readonly id = "openrouter-image";
 
-  async generate(prompt: string, refs: string[] = []): Promise<string> {
+  async generate(prompt: string, refs: string[] = [], aspect: ImageAspect = "1:1"): Promise<string> {
     const model = useStore.getState().settings.openRouterImageModel || "google/gemini-2.5-flash-image";
     await loadOpenRouterCatalog();
     const tries = imageRequestModalitiesFallbacks(model);
     let lastErr = "OpenRouter image: request failed";
     for (const modalities of tries) {
       try {
-        return await this.request(model, prompt, refs, modalities);
+        return await this.request(model, prompt, refs, modalities, aspect);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         lastErr = msg;
@@ -91,6 +95,7 @@ class OpenRouterImageBackend implements ImageBackend {
     prompt: string,
     refs: string[],
     modalities: ("image" | "text")[],
+    aspect: ImageAspect,
   ): Promise<string> {
     const content: Array<Record<string, unknown>> = [{ type: "text", text: prompt }];
     for (const ref of refs) content.push({ type: "image_url", image_url: { url: ref } });
@@ -101,7 +106,7 @@ class OpenRouterImageBackend implements ImageBackend {
         model,
         messages: [{ role: "user", content: refs.length ? content : prompt }],
         modalities,
-        image_config: { aspect_ratio: "1:1" },
+        image_config: { aspect_ratio: aspect },
       }),
     });
     const raw = await res.text();
@@ -154,6 +159,7 @@ export const DEFAULT_ROOM_PROMPT = [
   "hot plate and kettle (bottom-left), a front door (bottom-center), and a tiny",
   "bathroom nook with a bathroom door (bottom-right). No people, no text, no UI. Square composition,",
   "viewed slightly from above like a life-sim. {{upgrades}}",
+  "When reference images of décor are provided, place those exact objects naturally in the room.",
 ].join(" ");
 
 export const DEFAULT_PORTRAIT_PROMPT = [
@@ -177,10 +183,10 @@ export const DEFAULT_BODY_PROMPT = [
 ].join(" ");
 
 export const DEFAULT_PRESENCE_PROMPT = [
-  `Show this exact character, {{name}}, at the "{{zone}}" of her studio apartment.`,
+  `Show this exact character, {{name}}, at the "{{zone}}" of {{poss}} studio apartment.`,
   "The spot: {{zoneDesc}}",
   "Face: {{faceDescription}}. Body: {{bodyDescription}}.",
-  "Keep her appearance consistent with the reference image.",
+  "Keep {{poss}} appearance consistent with the reference image.",
   "Natural pose appropriate for that spot, full scene, warm cozy night lighting,",
   "no text, no watermark, no UI. Square composition, slight high angle like a life-sim.",
   "{{style}}",

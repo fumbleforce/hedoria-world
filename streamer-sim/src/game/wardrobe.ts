@@ -2,6 +2,11 @@ import type { SegmentId } from "./segments";
 import { OUTFITS, type OutfitId, type VibeId } from "./outfits";
 import type { Item } from "./items";
 import { isClothingItem, makeClothingItem } from "./items";
+import { isNoLimits } from "./content";
+import type { ContentTier } from "./types";
+import { genderMode, type GenderPreset } from "./gender";
+
+export const STARTER_WARDROBE_META = "starterWardrobe";
 
 export type ClothingSlot =
   | "underwear"
@@ -24,6 +29,20 @@ export const CLOTHING_SLOTS: ClothingSlot[] = [
   "accessory",
   "full",
 ];
+
+/**
+ * Whether a clothing slot may be *removed* (taken off, leaving that layer bare)
+ * at the current content tier. Changing into a different piece is always allowed;
+ * this only gates stripping a layer off.
+ * - underwear: only at No-Limits tiers (unhinged / custom).
+ * - top / bottom: not at wholesome (clothes can only be swapped there).
+ * - everything else (outer, feet, head, accessory, full): always removable.
+ */
+export function canRemoveClothingSlot(slot: ClothingSlot, tier: ContentTier): boolean {
+  if (slot === "underwear") return isNoLimits(tier);
+  if (slot === "top" || slot === "bottom") return tier !== "wholesome";
+  return true;
+}
 
 const SLOT_LABEL: Record<ClothingSlot, string> = {
   underwear: "Underwear",
@@ -92,12 +111,120 @@ export function wardrobeAppeal(
   return out;
 }
 
+const VIBE_PRIORITY: OutfitId[] = ["casual", "cozy", "cute", "bold"];
+
+/**
+ * Dominant vibe from equipped clothing (sum of item vibe weights). Used for UI
+ * labels and preset matching — not stored on settings.
+ */
+export function dominantOutfitVibe(
+  equipped: Partial<Record<ClothingSlot, string>>,
+  inventory: readonly Item[],
+): OutfitId {
+  const vibeTotals: Partial<Record<VibeId, number>> = {};
+  const byId = new Map(inventory.map((i) => [i.id, i]));
+
+  for (const itemId of Object.values(equipped)) {
+    if (!itemId) continue;
+    const item = byId.get(itemId);
+    if (!item || !isClothingItem(item)) continue;
+    for (const [vibe, amt] of Object.entries(item.vibes) as [VibeId, number][]) {
+      vibeTotals[vibe] = (vibeTotals[vibe] ?? 0) + amt;
+    }
+  }
+
+  let best: OutfitId = "casual";
+  let bestScore = -1;
+  for (const id of VIBE_PRIORITY) {
+    const score = vibeTotals[id] ?? 0;
+    if (score > bestScore) {
+      bestScore = score;
+      best = id;
+    }
+  }
+  return best;
+}
+
 type StarterPiece = {
   name: string;
   description: string;
   slot: ClothingSlot;
   vibes: Partial<Record<VibeId, number>>;
 };
+
+/** Default three-piece starter sets (underwear + top + bottom) per gender mode. */
+const STARTER_GENDER_SETS: Record<GenderPreset, StarterPiece[]> = {
+  female: [
+    { name: "Cotton Bra & Briefs", description: "Plain, comfortable everyday underwear.", slot: "underwear", vibes: { casual: 0.5 } },
+    { name: "Everyday Tee", description: "Simple, comfortable, nothing fancy.", slot: "top", vibes: { casual: 1 } },
+    { name: "Blue Jeans", description: "Reliable default.", slot: "bottom", vibes: { casual: 0.5 } },
+  ],
+  male: [
+    { name: "Cotton Boxer Briefs", description: "Plain, comfortable everyday underwear.", slot: "underwear", vibes: { casual: 0.5 } },
+    { name: "Crew Neck Tee", description: "Simple, comfortable, nothing fancy.", slot: "top", vibes: { casual: 1 } },
+    { name: "Relaxed Jeans", description: "Reliable default.", slot: "bottom", vibes: { casual: 0.5 } },
+  ],
+  custom: [
+    { name: "Neutral Boxer Briefs", description: "Comfortable unisex underwear.", slot: "underwear", vibes: { casual: 0.5 } },
+    { name: "Oversized Tee", description: "Relaxed fit, easy on cam.", slot: "top", vibes: { casual: 1 } },
+    { name: "Cargo Joggers", description: "Easy movement, neutral silhouette.", slot: "bottom", vibes: { casual: 0.5 } },
+  ],
+};
+
+function buildStarterSet(
+  pieces: StarterPiece[],
+  tagStarter = false,
+): {
+  items: import("./items").ClothingItem[];
+  equipped: Partial<Record<ClothingSlot, string>>;
+} {
+  const items = pieces.map((p) =>
+    makeClothingItem({
+      name: p.name,
+      description: p.description,
+      slot: p.slot,
+      vibes: { ...p.vibes },
+      ...(tagStarter ? { meta: { [STARTER_WARDROBE_META]: "1" } } : {}),
+    }),
+  );
+  const equipped: Partial<Record<ClothingSlot, string>> = {};
+  for (const item of items) equipped[item.slot] = item.id;
+  return { items, equipped };
+}
+
+/** Starter three-piece set for a vibe, with gender-appropriate underwear names. */
+export function starterClothingFor(
+  outfit: OutfitId,
+  gender: string,
+): {
+  items: import("./items").ClothingItem[];
+  equipped: Partial<Record<ClothingSlot, string>>;
+} {
+  const pieces = [...(STARTER_SETS[outfit] ?? STARTER_SETS.casual)];
+  const mode = genderMode(gender);
+  if (mode !== "female") {
+    const genderUnderwear = (STARTER_GENDER_SETS[mode] ?? STARTER_GENDER_SETS.female).find(
+      (p) => p.slot === "underwear",
+    );
+    const idx = pieces.findIndex((p) => p.slot === "underwear");
+    if (genderUnderwear && idx >= 0) {
+      pieces[idx] = { ...genderUnderwear, vibes: { ...pieces[idx].vibes } };
+    }
+  }
+  return buildStarterSet(pieces, true);
+}
+
+/** Casual starter keyed off gender only (save migration). */
+export function starterClothingForGender(gender: string): {
+  items: import("./items").ClothingItem[];
+  equipped: Partial<Record<ClothingSlot, string>>;
+} {
+  return starterClothingFor("casual", gender);
+}
+
+export function isStarterWardrobeItem(item: Item): boolean {
+  return item.meta?.[STARTER_WARDROBE_META] === "1";
+}
 
 /** Concrete three-piece starter sets (underwear + top + bottom) per vibe. */
 const STARTER_SETS: Record<OutfitId, StarterPiece[]> = {
@@ -123,23 +250,12 @@ const STARTER_SETS: Record<OutfitId, StarterPiece[]> = {
   ],
 };
 
-/** Starter clothing — a real three-piece set keyed off the legacy outfit vibe. */
+/** @deprecated Prefer `starterClothingFor(outfit, gender)` — female underwear names. */
 export function starterClothingForOutfit(outfit: OutfitId): {
   items: import("./items").ClothingItem[];
   equipped: Partial<Record<ClothingSlot, string>>;
 } {
-  const set = STARTER_SETS[outfit] ?? STARTER_SETS.casual;
-  const items = set.map((p) =>
-    makeClothingItem({
-      name: p.name,
-      description: p.description,
-      slot: p.slot,
-      vibes: { ...p.vibes },
-    }),
-  );
-  const equipped: Partial<Record<ClothingSlot, string>> = {};
-  for (const item of items) equipped[item.slot] = item.id;
-  return { items, equipped };
+  return starterClothingFor(outfit, "female");
 }
 
 /** True if a save's clothing is the obsolete single "full outfit" starter placeholder. */
@@ -163,13 +279,26 @@ function outfitSlotDescription(
   return `${slot}: ${item?.name ?? "nothing"}`;
 }
 
+function hasVisibleOuterLayers(
+  equipped: Partial<Record<ClothingSlot, string>>,
+  byId: Map<string, Item>,
+): boolean {
+  if (equipped.full && byId.get(equipped.full)) return true;
+  return !!(equipped.top && byId.get(equipped.top) && equipped.bottom && byId.get(equipped.bottom));
+}
+
 /** Human-readable summary of equipped clothing for prompts and UI. */
 export function describeEquippedLook(
   equipped: Partial<Record<ClothingSlot, string>>,
   inventory: readonly Item[],
+  opts?: { hideCoveredUnderwear?: boolean },
 ): string {
   const byId = new Map(inventory.map((i) => [i.id, i]));
-  const parts = CORE_OUTFIT_SLOTS.map((slot) => outfitSlotDescription(slot, equipped, byId));
+  const coreSlots =
+    opts?.hideCoveredUnderwear && hasVisibleOuterLayers(equipped, byId)
+      ? CORE_OUTFIT_SLOTS.filter((slot) => slot !== "underwear")
+      : CORE_OUTFIT_SLOTS;
+  const parts = coreSlots.map((slot) => outfitSlotDescription(slot, equipped, byId));
   for (const slot of CLOTHING_SLOTS) {
     if (CORE_OUTFIT_SLOTS.includes(slot)) continue;
     const id = equipped[slot];

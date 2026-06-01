@@ -1,10 +1,10 @@
 /**
- * Content niches. The niche you stream shapes WHO shows up (spawn-weight bias in
- * presence) and the baseline appeal of your content (resolver), so a cozy niche
- * pulls the cozy/lonely crowd while a spicy niche pulls simps/whales (and pushes
- * the cozy crowd away). Switching costs a little — see BALANCE.niche. Pure data.
+ * Content niches. Chosen at the desk before each go-live; shapes WHO shows up
+ * (spawn-weight bias in presence) and baseline appeal in the resolver.
  */
 
+import { tierIntensity } from "./content";
+import type { ContentTier } from "./types";
 import type { SegmentId } from "./segments";
 import { BALANCE } from "./balance";
 
@@ -59,6 +59,17 @@ export const NICHES: Record<NicheId, NicheDef> = {
 };
 
 export const NICHE_IDS = Object.keys(NICHES) as NicheId[];
+
+/** Niches offered in the go-live picker for the current content tier. */
+export function nichesForTier(tier: ContentTier): NicheId[] {
+  const spicyOk = tierIntensity(tier) >= tierIntensity("risque");
+  return NICHE_IDS.filter((id) => id !== "spicy" || spicyOk);
+}
+
+/** Clamp a niche choice when the content tier doesn't allow it (e.g. Spicy). */
+export function sanitizeNicheForTier(niche: NicheId, tier: ContentTier): NicheId {
+  return nichesForTier(tier).includes(niche) ? niche : "variety";
+}
 
 /** Segment spawn-weight bias for a niche, scaled by the global spawnShift. */
 export function nicheSpawnBias(id: NicheId): Partial<Record<SegmentId, number>> {

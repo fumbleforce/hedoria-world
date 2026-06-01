@@ -2,6 +2,8 @@ import type { LlmAdapter } from "../llm/adapter";
 import { completeJsonWithRepair } from "../llm/adapter";
 import { diag } from "../diag/log";
 import type { ChatMessage, ChatMessageKind, Metrics, Settings } from "./types";
+import type { StreamBrand } from "./brand";
+import { NICHES } from "./niches";
 import { tierIntensity } from "./content";
 import { LINES } from "./personas";
 import { ARCHETYPE_BY_ID } from "./archetypes";
@@ -15,6 +17,7 @@ import type { ActivityCategory } from "./types";
 
 export interface ChatContext {
   settings: Settings;
+  brand: StreamBrand;
   metrics: Metrics;
   audience: AudienceState;
   roster: Roster;
@@ -37,6 +40,8 @@ export interface ChatContext {
   playerOnCamera?: boolean;
   /** Short description of what she's wearing. */
   equippedLook?: string;
+  /** Label of the niche/category the stream is currently running under. */
+  nicheLabel?: string;
   /** Active stream activity — steers backseat/scream/vote chat. */
   activity?: { label: string; narrationHint: string; chatHint: string; category?: ActivityCategory };
   count: number;
@@ -79,17 +84,33 @@ export function chatAmbientPlan(hype: number, viewers: number): {
   return { ticks, gapMs, perTick };
 }
 
+/**
+ * Chat message kinds permitted at this content intensity. Spicy kinds are
+ * structurally withheld below their tier so a low-tier stream can't surface
+ * flirty/creepy lines even if the model proposes them: flirty needs cheeky (≥1),
+ * creepy needs risqué (≥2).
+ */
+function allowedChatKinds(intensity: number): ChatMessageKind[] {
+  const kinds: ChatMessageKind[] = [
+    "normal", "hype", "question", "troll", "donation", "follow", "sub", "raid", "mod",
+  ];
+  if (intensity >= 1) kinds.push("flirty");
+  if (intensity >= 2) kinds.push("creepy");
+  return kinds;
+}
+
 export async function generateChatBurst(
   adapter: LlmAdapter,
   ctx: ChatContext,
 ): Promise<ChatMessage[]> {
   if (adapter.isMock) return mockBurst(ctx);
+  const intensity = tierIntensity(ctx.settings.contentTier);
   try {
     const parsed = await completeJsonWithRepair(
       adapter,
       buildRequest(ctx),
       (text) => {
-        const msgs = parseChat(text, ctx.roster);
+        const msgs = parseChat(text, ctx.roster, intensity);
         return msgs.length > 0 ? msgs : null;
       },
       "chat",
@@ -154,6 +175,13 @@ function buildRequest(ctx: ChatContext) {
         .map((v) => `- ${v.handle}: ${v.lines.slice(-3).map((l) => `"${l}"`).join(" ")}`)
         .join("\n")
     : "";
+  const handle = ctx.brand.handle || "streamer";
+  const nicheLabel = ctx.nicheLabel ?? NICHES[ctx.brand.defaultNiche]?.label ?? "Variety";
+  const channelHeader = `@${handle} · ${nicheLabel}`;
+  const channelBody = ctx.brand.description.trim()
+    ? `${channelHeader}\n${ctx.brand.description.trim()}`
+    : channelHeader;
+  const intensity = tierIntensity(ctx.settings.contentTier);
   const user = promptSections([
     { heading: "Audience mix", body: audienceSummary(ctx.audience) },
     {
@@ -170,9 +198,13 @@ function buildRequest(ctx: ChatContext) {
       body: voices || undefined,
     },
     {
+      heading: "Channel",
+      body: channelBody,
+    },
+    {
       heading: "Stream setup",
       body: ctx.onScreenZoneLabel
-        ? `On-screen camera shows: ${ctx.onScreenZoneLabel}. Streamer is at: ${ctx.playerZoneLabel ?? ctx.onScreenZoneLabel}${ctx.playerOnCamera === false ? " (OFF CAMERA — chat can't see her right now)" : ""}.${ctx.equippedLook ? ` Wearing: ${ctx.equippedLook}.` : ""}`
+        ? `On-screen camera shows: ${ctx.onScreenZoneLabel}. Streamer is at: ${ctx.playerZoneLabel ?? ctx.onScreenZoneLabel}${ctx.playerOnCamera === false ? " (OFF CAMERA — chat can't see the streamer right now)" : ""}.${ctx.equippedLook ? ` Wearing: ${ctx.equippedLook}.` : ""}`
         : undefined,
     },
     {
@@ -197,7 +229,7 @@ function buildRequest(ctx: ChatContext) {
     },
     {
       heading: "React to this",
-      body: `${ctx.settings.streamerName} just did/said: ${ctx.actionContext}`,
+      body: `@${handle} just did/said: ${ctx.actionContext}`,
     },
     {
       heading: "Output",
@@ -208,11 +240,11 @@ function buildRequest(ctx: ChatContext) {
     system: ctx.systemPrompt,
     messages: [{ role: "user" as const, content: user }],
     jsonMode: true,
-    jsonSchema: chatSchema(),
+    jsonSchema: chatSchema(intensity),
   };
 }
 
-function chatSchema(): Record<string, unknown> {
+function chatSchema(intensity: number): Record<string, unknown> {
   return {
     type: "object",
     properties: {
@@ -225,10 +257,7 @@ function chatSchema(): Record<string, unknown> {
             text: { type: "string" },
             kind: {
               type: "string",
-              enum: [
-                "normal", "hype", "question", "troll", "flirty", "creepy",
-                "donation", "follow", "sub", "raid", "mod",
-              ],
+              enum: allowedChatKinds(intensity),
             },
             amount: { type: "number" },
           },
@@ -260,16 +289,13 @@ function describeDynamics(chars: CharacterSheet[]): string {
   return lines.length ? `Chat dynamics: ${lines.join(" ")}` : "";
 }
 
-function parseChat(text: string, roster: Roster): ChatMessage[] {
+function parseChat(text: string, roster: Roster, intensity: number): ChatMessage[] {
   const json = extractJson<{ messages?: unknown } | unknown[]>(text);
   if (!json) return [];
   // Accept either { messages: [...] } or a bare [...] array.
   const arr = Array.isArray(json) ? json : (json as { messages?: unknown }).messages;
   if (!Array.isArray(arr)) return [];
-  const valid: ChatMessageKind[] = [
-    "normal", "hype", "question", "troll", "flirty", "creepy",
-    "donation", "follow", "sub", "raid", "mod",
-  ];
+  const valid: ChatMessageKind[] = allowedChatKinds(intensity);
   const byHandle = new Map(Object.values(roster).map((c) => [c.handle.toLowerCase(), c.id]));
   const out: ChatMessage[] = [];
   for (const raw of arr) {

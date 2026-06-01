@@ -48,6 +48,11 @@ before you choose. *(`arcs.ts`)*
 The reward text says "without going broke," but the goal only checks `day ≥ 30`.
 *(`goals.ts`)*
 
+### ✅ A6c — Chat used the private character name *(resolved — stream brand)*
+Live chat prompts and the stream overlay previously used `settings.streamerName` everywhere.
+**Stream brand** (`brand.handle`) is now the public identity: chat LLM, HUD, and `StreamView`
+show `@handle` only; narrator/evaluator/DMs keep the private character name.
+
 ### ✅ A6b — Raid chat promised viewers that never appeared *(resolved)*
 The director `raid` effect posted `🎉 Raid! ~N viewers pour in!` and bumped channel
 followers, but never touched live `currentViewers` — the anon floor was recalculated
@@ -91,11 +96,13 @@ never applied. Now `viewerRequests[]` persists open/fulfilled/dismissed state,
 
 ### 🟡 B2 — Stalker arc isn't the documented chat→DM→door→IRL ladder
 It's a daily **threat counter** (1→2→3, ≤1 step/day, gated only by `comfort < 75`)
-plus *overlapping* random events: the `door-knock` event turns creepy at threat ≥1, and
-the `dm` event turns creepy the same way but now arrives as a **real DM** (no modal —
-see [04](./04-events-arcs-goals.md)). There's no strict ordered state machine, and "fed" is only
-the comfort threshold (not the oversharing/ignored-creepy-chat the comment describes).
-*(`relationships.ts`, `events.ts`)*
+plus *overlapping* random events: the `door-knock` event turns creepy at threat ≥1
+**and intensity ≥2**, and the `dm` event turns creepy the same way but now arrives as a
+**real DM** (no modal — see [04](./04-events-arcs-goals.md)). (The intensity ≥2 gate
+matches the `creep`/`stalker` archetypes, which only spawn at risqué+, so creepy beats
+can't surface below that tier.) There's no strict ordered state machine, and "fed" is
+only the comfort threshold (not the oversharing/ignored-creepy-chat the comment
+describes). *(`relationships.ts`, `events.ts`)*
 
 ### ✅ B3 — (resolved) Event Director replaces thin modal events
 Hardcoded modal events and ambient `rollEvent` are retired. The Event Director authors
@@ -151,6 +158,18 @@ The evaluator's JSON schema is sent to OpenRouter with `strict:false` (to dodge 
 so it's advisory there; only Gemini gets a real enforced `responseSchema`.
 *(`openRouterTextProvider.ts`)*
 
+### ✅ C5 — Spicy material could leak into non-spicy tiers via prompts *(fixed: content-tier hardening)*
+Steering used to be the only guard, so spicy hints could slip into wholesome/cheeky
+streams through static prompt content. Now structurally gated by intensity:
+`segmentGuideForIntensity` filters the evaluator's segment list; `characterVoiceBlock`
+caps the viewer `horny` axis and drops the "flirty undertone" voice tag below risqué
+(so a whale seeded `horny +5` reads clean at wholesome); `allowedChatKinds` removes
+`flirty` (<cheeky) / `creepy` (<risqué) from the chat schema + parser; the creepy
+`door-knock`/`dm` branches require intensity ≥2; the `stalkers` segment and offline
+persona suggestions are tier-gated; and the `workout`/`talent-dance` chat hints no
+longer say "flirt". *(`prompts.ts`, `characters.ts`, `chatEngine.ts`, `events.ts`,
+`segments.ts`, `activities.ts`, `controller.ts`)*
+
 ---
 
 ## D. Presentation / persistence seams
@@ -172,9 +191,16 @@ avatar or preview. *(`imageProvider.ts`, `imageStore.ts`)*
 There's no separate image-provider setting; image routing follows `textBackend`.
 *(`imageProvider.ts`)*
 
-### ⚪ D5 — Default image prompts assume "her"
-Presence/room prompts say "her studio apartment" regardless of `settings.gender`.
-*(`imageProvider.ts`, `imagePresets.ts`)*
+### ✅ D5 — Default image prompts assume "her" *(fixed: pronoun pass)*
+Presence/scene templates no longer hardcode "she/her". `imagePromptVars` now derives
+`{{subj}}/{{obj}}/{{poss}}` from `settings.gender` (via `genderTerms`) and the templates
+use `{{poss}}` / `{{name}}`. The same pass also fixed the doubled period after
+face/body descriptions: `imagePromptVars` strips a trailing period so the template's
+own punctuation isn't duplicated. Gendered phrasing was also neutralized (actual
+pronouns or gender-neutral text) across the LLM system/context prompts in
+`prompts.ts`, `content.ts` (`steeringForTier`), `evaluator.ts`, `eventDirector.ts`,
+`activities.ts`, `chatEngine.ts`, and the `cameras.ts` fallbacks.
+*(`characterVisual.ts`, `imageProvider.ts`, `imagePresets.ts`, `controller.ts`)*
 
 ### ✅ D6 — `backendChip` now reactive *(fixed: auth-gated LLM overhaul)*
 `App.tsx` now uses `useStore` selectors for `textBackend` and `hasSession`, so the
@@ -210,6 +236,15 @@ no longer strips online flags, and `controller.resumeLive()` only restores inter
 counters: it does not touch presence, fabricates no "joined"/welcome-back chat, and the
 ambient loop resumes on the player's next action.
 *(`store.ts`, `boot.ts`, `controller.resumeLive`)*
+
+### ✅ D8 — Explicit NSFW options dev-gated *(fixed)*
+The **No Limits** tier selector, **Masturbate on Cam** activity, and **`__relieve__`**
+private action now require both No Limits tier **and** a dev build
+(`NSFW_BUILD = import.meta.env.DEV`). Prod Settings use `CONTENT_TIERS_SETTINGS`
+(no unhinged option); ActivityPicker filters `devOnly` activities; zone menus and
+`activityGate` use `nsfwUnlocked`. Custom tier and risqué quick actions (Flirt /
+Something daring) remain in prod. Horny mechanics via `isNoLimits` are unchanged.
+*(`content.ts`, `activities.ts`, `ActivityPicker.tsx`, `SettingsPanel.tsx`, `controller.ts`)*
 
 ---
 

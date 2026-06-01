@@ -50,9 +50,9 @@ import {
   type EventEffect,
   type EventSpec,
 } from "./eventDirector";
-import { multipliersFor, UPGRADES } from "./shop";
-import { fillPrompt, PROMPTS, promptSections, activityLockBlock, type PromptId, type ActivityPromptContext } from "./prompts";
-import { isNoLimits, steeringForTier, tierIntensity } from "./content";
+import { multipliersFor, UPGRADES, isDecoration } from "./shop";
+import { fillPrompt, fillChatPrompt, PROMPTS, promptSections, activityLockBlock, segmentGuideForIntensity, type PromptId, type ActivityPromptContext } from "./prompts";
+import { isNoLimits, NSFW_BUILD, nsfwUnlocked, steeringForTier, tierIntensity } from "./content";
 import {
   clampHornyForTier,
   drainNeeds,
@@ -69,6 +69,7 @@ import { initialAudience, SEGMENT_IDS } from "./segments";
 import { ZONE_MENUS, ZONES, type ZoneId } from "./studio";
 import {
   ACTIVITY_BY_ID,
+  activityCameraLockReason,
   activityStateFrom,
   customActivityState,
   type Activity,
@@ -102,15 +103,18 @@ import {
   type MilestoneOutcome,
 } from "./relationships";
 import { extractMentions } from "./mentions";
-import { BALANCE, type AffinitySource } from "./balance";
+import { getBalance, type AffinitySource } from "./balance";
 import { masteryXpForAction, masteryLevel } from "./mastery";
-import { NICHES, nicheBaselineAppeal, nicheSpawnBias, type NicheId } from "./niches";
+import { NICHES, nicheBaselineAppeal, nicheSpawnBias, sanitizeNicheForTier, type NicheId } from "./niches";
+import { logoPresetById } from "./brand";
+import { talentById } from "./talents";
 import {
   activeCameraMults,
   angleProductionBump,
   cameraForZone,
   camFootagePrompt,
   cornerPrompt,
+  hasFixedCameraInZone,
   perspectivePrompt,
   visibleCorners,
   zonePosture,
@@ -122,11 +126,16 @@ import {
   onScreenZone,
   placedAngles,
   unplacedCameras,
+  canPlaceCameraInZone,
+  cameraDisplayLabel,
+  formatCameraTier,
   type PlacedCamera,
 } from "./cameras";
 import {
   CLOTHING_SHOP_BY_ID,
   clothingFromShop,
+  clothingShopLockReason,
+  clothingShopUnlocked,
   isClothingItem,
   makeClothingItem,
   makeItem,
@@ -135,11 +144,14 @@ import {
 } from "./items";
 import {
   CLOTHING_SLOTS,
+  canRemoveClothingSlot,
   clothingSlotLabel,
   describeEquippedLook,
+  dominantOutfitVibe,
   wardrobeAppeal,
   type ClothingSlot,
 } from "./wardrobe";
+import { outfitVibeLabel } from "./outfits";
 import type { SegmentId } from "./segments";
 import {
   WAKE_TIME,
@@ -152,6 +164,22 @@ import {
   streamElapsed,
   type TimeWeight,
 } from "./time";
+import {
+  LATE_WAGE_FACTOR,
+  MAX_STRIKES,
+  WORK_FLAVOR_FALLBACKS,
+  customJob,
+  jobFromPreset,
+  randomApplyMinutes,
+  shiftStatus,
+  shiftWindowLabel,
+  workMinutesRemaining,
+  workedToday,
+  type JobPreset,
+  type JobState,
+  type ShiftSlotId,
+  type WorkSession,
+} from "./jobs";
 import { clamp, pick, uid } from "../rng/rng";
 
 /** Days after an in-person visit before the same viewer can arrange another. */
@@ -177,6 +205,8 @@ export class GameController {
   private beatsSinceNeedNag = 999;
   /** Fractional subs accrued this stream — rolls into chat pings at 1.0. */
   private subAccrual = 0;
+  /** Guards the lazy work-scene image/flavor generation from double-running. */
+  private workSceneBusy = false;
 
   constructor(
     private readonly llm: LlmAdapter,
@@ -199,17 +229,35 @@ export class GameController {
     s.setGeneratingRoom(true);
     s.setToast("Generating room art… (this can take a while)");
     try {
-      const upgrades = s.ownedUpgrades
-        .map((id) => UPGRADES.find((u) => u.id === id)?.name)
-        .filter(Boolean) as string[];
-      const upgradesClause = upgrades.length ? `Nice touches: ${upgrades.join(", ")}.` : "";
+      const ownedDecor = s.ownedUpgrades
+        .map((id) => UPGRADES.find((u) => u.id === id))
+        .filter((u): u is NonNullable<typeof u> => !!u && isDecoration(u));
+      const decorNames = ownedDecor.map((u) => u.name);
+      const upgradesClause = decorNames.length
+        ? `Place these owned décor pieces naturally in the room (match the reference images): ${decorNames.join(", ")}.`
+        : "Bare starter apartment — no decorative extras yet, just the essentials.";
       const prompt = fillImagePrompt(effectiveImagePrompt(s.settings, "roomPrompt"), {
         upgrades: upgradesClause,
         persona: s.settings.streamerPersona,
         name: s.settings.streamerName,
         style: this.imageStyle(),
       });
-      const url = await this.runImage("room", prompt, []);
+      const refs: string[] = [];
+      for (const decor of ownedDecor) {
+        const imageId = s.decorationImages[decor.id];
+        if (!imageId) continue;
+        const cached = s.imageCache[imageId];
+        if (cached) {
+          refs.push(cached);
+          continue;
+        }
+        const rec = await getImage(imageId);
+        if (rec) {
+          s.cacheImage(rec.id, rec.dataUrl);
+          refs.push(rec.dataUrl);
+        }
+      }
+      const url = await this.runImage("room", prompt, refs);
       s.setRoomImage(url);
       // Also register it in the media library so it appears in the Gallery.
       const rec: Omit<StoredImage, "slotId"> = {
@@ -262,10 +310,12 @@ export class GameController {
   private async runImage(kind: ImageKind | "preview", prompt: string, refs: string[]): Promise<string> {
     if (!this.imageBackend) throw new Error("no image backend configured");
     const model = this.imageBackend.id;
+    // Scenes are cinematic widescreen; the map/room/portrait/presence stay square.
+    const aspect = kind === "scene" || kind === "work" ? "16:9" : "1:1";
     const startedAt = performance.now();
-    diag.info("world", "image request", { kind, model, refs: refs.length, prompt });
+    diag.info("world", "image request", { kind, model, refs: refs.length, aspect, prompt });
     try {
-      const url = await this.imageBackend.generate(prompt, refs);
+      const url = await this.imageBackend.generate(prompt, refs, aspect);
       const durationMs = Math.round(performance.now() - startedAt);
       const meta = describeDataUrl(url);
       diag.info("world", "image response", { kind, model, durationMs, mime: meta.mime, bytes: meta.bytes });
@@ -324,7 +374,7 @@ export class GameController {
       const hit = await getByCacheKey(cacheKey);
       if (hit) {
         s.cacheImage(hit.id, hit.dataUrl);
-        if (opts.kind !== "body" && opts.kind !== "backdrop" && opts.kind !== "corner") s.setLastImage(hit.id);
+        if (opts.kind !== "body" && opts.kind !== "backdrop" && opts.kind !== "corner" && opts.kind !== "decoration") s.setLastImage(hit.id);
         diag.info("world", "image cache hit", { kind: opts.kind, label: opts.label });
         return hit;
       }
@@ -333,8 +383,16 @@ export class GameController {
       s.setToast("An image is already generating…");
       return null;
     }
-    s.setImageBusy(opts.busyLabel);
-    s.setToast(`${opts.busyLabel}… (this can take a while)`);
+    // Body/corner/backdrop/decoration are prerequisites or previews the player
+    // isn't waiting on center-stage — show only a subtle background indicator
+    // and skip the "this can take a while" toast for them.
+    const background =
+      opts.kind === "body" ||
+      opts.kind === "corner" ||
+      opts.kind === "backdrop" ||
+      opts.kind === "decoration";
+    s.setImageBusy(opts.busyLabel, background);
+    if (!background) s.setToast(`${opts.busyLabel}… (this can take a while)`);
     try {
       const url = await this.runImage(opts.kind, opts.prompt, opts.refs ?? []);
       const rec: Omit<StoredImage, "slotId"> = {
@@ -352,7 +410,7 @@ export class GameController {
       const stored = await putImage(rec);
       s.cacheImage(stored.id, url);
       // The body T-pose and room backdrops are templates, not centerpiece art.
-      if (opts.kind !== "body" && opts.kind !== "backdrop" && opts.kind !== "corner") s.setLastImage(stored.id);
+      if (opts.kind !== "body" && opts.kind !== "backdrop" && opts.kind !== "corner" && opts.kind !== "decoration") s.setLastImage(stored.id);
       diag.info("world", "image generated", { kind: opts.kind, bytes: url.length });
       return stored;
     } catch (err) {
@@ -483,16 +541,25 @@ export class GameController {
     name: string,
     hint: string,
   ): { persona: string; faceDescription: string; bodyDescription: string } {
-    const vibe =
-      hint ||
-      pick(["cozy night-owl", "high-energy gremlin", "chill variety host", "bold and flirty", "wholesome sweetheart"]);
-    const traits = pick([
+    // Below risqué, keep the auto-suggested persona free of flirty/teasing framing
+    // so it can't seed spicy tone into every prompt on a non-spicy save.
+    const spicyOk = this.intensity() >= 2;
+    const vibePool = [
+      "cozy night-owl",
+      "high-energy gremlin",
+      "chill variety host",
+      "wholesome sweetheart",
+      ...(spicyOk ? ["bold and flirty"] : []),
+    ];
+    const traitPool = [
       "quick-witted and a little shy, but warms up fast",
       "loud, competitive, and meme-fluent",
       "soft-spoken, thoughtful, and great with regulars",
-      "confident, teasing, and camera-savvy",
       "earnest, dorky, and endlessly enthusiastic",
-    ]);
+      ...(spicyOk ? ["confident, teasing, and camera-savvy"] : []),
+    ];
+    const vibe = hint || pick(vibePool);
+    const traits = pick(traitPool);
     const goal = pick([
       "trying to make rent and go full-time",
       "building a tight-knit community from scratch",
@@ -539,7 +606,7 @@ export class GameController {
           name,
           style,
           gender,
-          outfit: describeEquippedLook(s.equippedClothing, s.inventory),
+          outfit: describeEquippedLook(s.equippedClothing, s.inventory, { hideCoveredUnderwear: true }),
           ...(portraitRef ? { match: "Match the face and hair of the reference portrait exactly." } : {}),
         }, "body"),
       ),
@@ -581,6 +648,7 @@ export class GameController {
         effectiveImagePrompt(s.settings, "presencePrompt"),
         imagePromptVars(s.character, {
           name: s.settings.streamerName,
+          gender: (s.settings.gender ?? "").trim(),
           zone: zone.label,
           zoneDesc: zone.description,
           style: this.imageStyle(),
@@ -594,6 +662,24 @@ export class GameController {
       force,
     });
     if (rec) s.setPresenceImage(zoneId, rec.id);
+  }
+
+  /**
+   * First-run exit: write the opening narration beat, then visualize it. The
+   * onboarding overlay stays up until this finishes so the main UI opens with
+   * story + scene already in place.
+   */
+  async finishOnboarding(onPhase?: (label: string) => void): Promise<void> {
+    onPhase?.("Packing your starter kit…");
+    await this.generateStarterKit();
+    this.s.setStreamNicheDraft(this.s.brand.defaultNiche);
+    onPhase?.("Writing your opening scene…");
+    await this.narrateOpeningBeat();
+    const s = this.s;
+    if (hasCharacterLook(s.character) && this.imageBackend) {
+      onPhase?.("Painting the moment…");
+      await this.generateScene(true);
+    }
   }
 
   /** Generate an image of the current narrative beat and drop it in the feed. */
@@ -614,13 +700,14 @@ export class GameController {
     // doesn't produce a stray ".." in the prompt.
     const positionLabel = zone
       ? `${zone.label} — ${zone.description.replace(/[.\s]+$/, "")}`
-      : "her studio";
+      : "the studio";
     const refs: string[] = ref ? [ref.url] : [];
     const name = s.settings.streamerName;
     let prompt = fillImagePrompt(
       effectiveImagePrompt(s.settings, "scenePrompt"),
       imagePromptVars(s.character, {
         name,
+        gender: (s.settings.gender ?? "").trim(),
         position: positionLabel,
         narrative,
         style: this.imageStyle(),
@@ -870,7 +957,7 @@ export class GameController {
       s.setToast("An image is already generating…");
       return;
     }
-    s.setImageBusy(`Preview: ${preset.label}`);
+    s.setImageBusy(`Preview: ${preset.label}`, true);
     try {
       const url = await this.runImage("preview", this.previewPrompt(preset), []);
       await saveStylePreview(key, url);
@@ -907,8 +994,9 @@ export class GameController {
   private get s() {
     return useStore.getState();
   }
+  private balance = () => getBalance(this.s.settings.difficulty ?? "normal");
   private mults() {
-    const base = multipliersFor(this.s.ownedUpgrades);
+    const base = multipliersFor(this.s.ownedUpgrades, this.balance());
     const cam = activeCameraMults(this.s.cameras, this.s.activeCameraId);
     const angleBump = angleProductionBump(placedAngles(this.s.cameras).length);
     return {
@@ -926,12 +1014,18 @@ export class GameController {
 
   // ----------------------------------------------------------- niche / novelty
 
-  /** The current content key novelty is tracked against (the active niche). */
+  /** The current content key novelty is tracked against (active stream niche). */
   private contentKey(): string {
-    return this.s.settings.niche;
+    return this.activeNiche();
   }
 
-  /** Current content freshness (1 = fresh, floored by BALANCE.novelty.floor). */
+  /** Niche governing this stream (live) or the desk draft (planning). */
+  private activeNiche(): NicheId {
+    if (this.s.session.isLive && this.s.session.niche) return this.s.session.niche;
+    return this.s.streamNicheDraft;
+  }
+
+  /** Current content freshness (1 = fresh, floored by balance.novelty.floor). */
   private currentNovelty(): number {
     return this.s.contentNovelty[this.contentKey()] ?? 1;
   }
@@ -946,16 +1040,16 @@ export class GameController {
     const out: Partial<Record<SegmentId, number>> = {};
     const add = (seg: SegmentId, v: number) => { out[seg] = (out[seg] ?? 0) + v; };
     for (const [seg, v] of Object.entries(mult.segmentAppeal) as [SegmentId, number][]) add(seg, v);
-    for (const [seg, v] of Object.entries(nicheBaselineAppeal(this.s.settings.niche)) as [SegmentId, number][]) add(seg, v);
+    for (const [seg, v] of Object.entries(nicheBaselineAppeal(this.activeNiche())) as [SegmentId, number][]) add(seg, v);
     for (const [seg, v] of Object.entries(wardrobeAppeal(this.s.equippedClothing, this.s.inventory)) as [SegmentId, number][]) add(seg, v);
-    const global = mult.productionQuality * BALANCE.gear.productionQualityToAppeal;
+    const global = mult.productionQuality * this.balance().gear.productionQualityToAppeal;
     if (global) for (const seg of SEGMENT_IDS) add(seg, global);
     return out;
   }
 
   /** Combined spawn-weight bias: niche pull + targeted gear décor. */
   private spawnBias(): Partial<Record<SegmentId, number>> {
-    const out: Partial<Record<SegmentId, number>> = { ...nicheSpawnBias(this.s.settings.niche) };
+    const out: Partial<Record<SegmentId, number>> = { ...nicheSpawnBias(this.activeNiche()) };
     const gear = this.mults().segmentAppeal;
     for (const [seg, v] of Object.entries(gear) as [SegmentId, number][]) {
       // Décor appeal also nudges who shows up, at a gentler rate than the niche.
@@ -968,7 +1062,7 @@ export class GameController {
   private drainNovelty(): void {
     const key = this.contentKey();
     const cur = this.s.contentNovelty[key] ?? 1;
-    const next = Math.max(BALANCE.novelty.floor, cur - BALANCE.novelty.drainPerRepeat);
+    const next = Math.max(this.balance().novelty.floor, cur - this.balance().novelty.drainPerRepeat);
     if (next !== cur) this.s.setNovelty(key, next);
   }
 
@@ -976,29 +1070,13 @@ export class GameController {
   private recoverNovelty(): void {
     for (const key of Object.keys(this.s.contentNovelty)) {
       const cur = this.s.contentNovelty[key];
-      if (cur < 1) this.s.setNovelty(key, Math.min(1, cur + BALANCE.novelty.recoverPerRest));
+      if (cur < 1) this.s.setNovelty(key, Math.min(1, cur + this.balance().novelty.recoverPerRest));
     }
   }
 
-  /**
-   * Switch content niche. Shifts who shows up + baseline appeal going forward;
-   * costs a small follower + freshness hit (you reset audience expectations).
-   */
-  setNiche(niche: NicheId): void {
-    const s = this.s;
-    if (s.settings.niche === niche) return;
-    const prev = NICHES[s.settings.niche]?.label ?? s.settings.niche;
-    s.setSettings({ niche });
-    const followerCost = Math.round(s.metrics.followers * BALANCE.niche.switchFollowerCost);
-    if (followerCost > 0) {
-      setFeedbackContext(`switched from ${prev}`, "warn");
-      s.patchMetrics({ followers: s.metrics.followers - followerCost });
-      clearFeedbackContext();
-    }
-    // The new niche starts a little stale (you're rebuilding the format).
-    s.setNovelty(niche, Math.max(BALANCE.novelty.floor, 1 - BALANCE.niche.switchNoveltyHit));
-    s.logEvent(`Switched niche to ${NICHES[niche]?.label ?? niche}${followerCost > 0 ? ` (−${followerCost} followers)` : ""}.`);
-    s.setToast(`Now streaming: ${NICHES[niche]?.label ?? niche}.`);
+  /** Pick the stream type for the next go-live (desk menu). */
+  setStreamNicheDraft(niche: NicheId): void {
+    this.s.setStreamNicheDraft(niche);
   }
 
   // ----------------------------------------------------------- prompts / DM log
@@ -1006,11 +1084,39 @@ export class GameController {
   resolvePrompt(id: PromptId): string {
     const s = this.s;
     const body = s.promptOverrides[id] ?? PROMPTS[id].base;
+    const g = genderTerms(s.settings.gender);
     return fillPrompt(body, {
       name: s.settings.streamerName,
       persona: s.settings.streamerPersona,
       steering: steeringForTier(s.settings),
+      segments: segmentGuideForIntensity(this.intensity()),
+      subj: g.subj,
+      obj: g.obj,
+      poss: g.poss,
     });
+  }
+
+  /** Chat system prompt — uses public @handle, rules, and channel description. */
+  resolveChatPrompt(): string {
+    const s = this.s;
+    const body = s.promptOverrides.chat ?? PROMPTS.chat.base;
+    const g = genderTerms(s.settings.gender);
+    const b = s.brand;
+    return fillChatPrompt(body, {
+      handle: b.handle || "streamer",
+      persona: s.settings.streamerPersona,
+      steering: steeringForTier(s.settings),
+      rules: b.rules,
+      description: b.description,
+      subj: g.subj,
+      obj: g.obj,
+      poss: g.poss,
+    });
+  }
+
+  /** Public @handle for chat-facing strings. */
+  private streamHandle(): string {
+    return this.s.brand.handle || "streamer";
   }
 
   private dm(text: string) {
@@ -1146,7 +1252,7 @@ export class GameController {
   private intensity(): number {
     return this.s.settings.contentTier === "wholesome"
       ? 0
-      : this.s.settings.contentTier === "flirty"
+      : this.s.settings.contentTier === "cheeky"
         ? 1
         : this.s.settings.contentTier === "risque"
           ? 2
@@ -1173,13 +1279,15 @@ export class GameController {
       s.setToast("No camera here — set up at the desk (or grab a portable cam).");
       return;
     }
+    const niche = sanitizeNicheForTier(s.streamNicheDraft, s.settings.contentTier);
+    s.setStreamNicheDraft(niche);
     diag.group("round", "GO LIVE", () => {
       s.setActiveCamera(cam.id);
       s.clearChat();
       s.resetSession();
       s.setRoster(clearPresence(s.roster));
       s.setAudience(initialAudience());
-      s.setSession({ isLive: true, round: 1, streamStartClock: s.clock });
+      s.setSession({ isLive: true, round: 1, streamStartClock: s.clock, niche });
       s.setActivity(null);
     });
     this.lastNotifiedViewers = 0;
@@ -1187,8 +1295,8 @@ export class GameController {
     this.beatsSinceSummary = 0;
     this.subAccrual = 0;
     this.presenceTick();
-    this.sysStory(`Day ${s.metrics.day} — you go live at ${formatClock(s.clock)}.`);
-    s.logEvent(`Day ${s.metrics.day}: went live.`);
+    this.sysStory(`Day ${s.metrics.day} — you go live at ${formatClock(s.clock)} (${NICHES[niche]?.label ?? niche}).`);
+    s.logEvent(`Day ${s.metrics.day}: went live · ${NICHES[niche]?.label ?? niche}.`);
     this.applySeasonalBeat();
     this.dm("The 'LIVE' dot blinks red. Regulars filter in, saying hi as the numbers tick up.");
     // Open the live "Twitch view" with a fresh shot from the active camera.
@@ -1228,7 +1336,7 @@ export class GameController {
     this.beatsSinceSummary = 0;
     this.subAccrual = 0;
     const { earnings, newFollowers, peak, round } = s.session;
-    s.setSession({ isLive: false });
+    s.setSession({ isLive: false, niche: null });
     s.setActivity(null);
     s.patchMetrics({ currentViewers: 0 });
     s.setRoster(clearPresence(s.roster));
@@ -1276,11 +1384,12 @@ export class GameController {
     const onScreenId = onScreenZone(s.cameras, s.activeCameraId, s.zone);
     return {
       settings: s.settings,
+      brand: s.brand,
       metrics: s.metrics,
       audience: s.audience,
       roster: s.roster,
       online: this.onlineIds(),
-      systemPrompt: this.resolvePrompt("chat"),
+      systemPrompt: this.resolveChatPrompt(),
       actionContext,
       recentChat: this.recentChatLines(),
       streamMemory: this.streamMemory,
@@ -1289,7 +1398,8 @@ export class GameController {
       onScreenZoneLabel: ZONES[onScreenId]?.label ?? "the studio",
       playerZoneLabel: ZONES[s.zone]?.label ?? "the studio",
       playerOnCamera: this.isOnCamera(),
-      equippedLook: describeEquippedLook(s.equippedClothing, s.inventory),
+      equippedLook: describeEquippedLook(s.equippedClothing, s.inventory, { hideCoveredUnderwear: true }),
+      nicheLabel: NICHES[this.activeNiche()]?.label,
       activity: act
         ? { label: act.label, narrationHint: act.narrationHint, chatHint: act.chatHint, category: act.category }
         : undefined,
@@ -1376,7 +1486,7 @@ export class GameController {
       const res = await this.llm.complete(
         {
           system:
-            "You maintain a terse memory log for a livestream sim. Given the running summary and the latest beats, return an updated summary in 2-4 short sentences. Track running jokes, callbacks, recurring viewers, promises she made, and the current bit — drop stale detail. Plain prose only, no preamble.",
+            `You maintain a terse memory log for a livestream sim. Given the running summary and the latest beats, return an updated summary in 2-4 short sentences. Track running jokes, callbacks, recurring viewers, promises ${genderTerms(s.settings.gender).subj} made, and the current bit — drop stale detail. Plain prose only, no preamble.`,
           messages: [
             {
               role: "user",
@@ -1418,8 +1528,10 @@ export class GameController {
       case "__bathroom__": return this.coded("Quick bathroom break. Much better.", { bladder: 100 }, "🚽 Bathroom", 5);
       case "__eat__": return this.coded("You sit down to a proper meal. Warm food, full stomach.", { hunger: 90, energy: 12, comfort: 5 }, "🍽 Ate well", 25);
       case "__scroll__": return this.coded("You scroll fan mail in bed. Sweet messages, a couple of weird ones.", { comfort: 2 }, "📱 Read fan mail", 15);
-      case "__relieve__": return this.coded("You take care of yourself in private. The heat eases.", { horny: -BALANCE.horny.reliefMasturbation, comfort: 4, energy: -6 }, "💫 Relieved", 20);
+      case "__relieve__": return this.coded("You take care of yourself in private. The heat eases.", { horny: -this.balance().horny.reliefMasturbation, comfort: 4, energy: -6 }, "💫 Relieved", 20);
       case "__order_food__": return this.orderFood();
+      case "__work__": return this.goToWork();
+      case "__job_board__": this.s.setJobPanelOpen(true); return;
       case "__door__": void this.answerDoor(); return;
       case "__open_shop__": this.s.setShopOpen(true); return;
       case "__wardrobe__": return this.openWardrobeMenu();
@@ -1427,6 +1539,10 @@ export class GameController {
         if (opt.prompt.startsWith("__place_cam__:")) {
           const camId = opt.prompt.slice("__place_cam__:".length);
           return this.placeCameraAtZone(camId);
+        }
+        if (opt.prompt.startsWith("__remove_cam__:")) {
+          const camId = opt.prompt.slice("__remove_cam__:".length);
+          return this.unplaceCamera(camId);
         }
         if (opt.prompt.startsWith("__equip__:")) {
           const itemId = opt.prompt.slice("__equip__:".length);
@@ -1497,6 +1613,65 @@ export class GameController {
     });
   }
 
+  /** Opening narration beat when a new save leaves onboarding. */
+  private async narrateOpeningBeat(): Promise<void> {
+    const s = this.s;
+    const zone = ZONES[s.zone];
+    const name = s.settings.streamerName;
+    const persona = s.settings.streamerPersona?.trim();
+    const place = zone?.label ?? "the studio";
+    const g = genderTerms(s.settings.gender);
+    const fallback = () =>
+      pick([
+        `The apartment settles around you — ${name} takes a breath at the ${place}, checks the camera, and lets the first beat of the story begin.`,
+        `${name} lingers in the ${place}, lights catching the room just right, and the streamer's night starts with a small, deliberate choice.`,
+        `Quiet hum of the PC, soft light in the ${place} — ${name} rolls ${g.poss} shoulders and steps into the moment like ${g.subj}'${g.plural ? "ve" : "s"} done this a hundred times.`,
+      ]);
+    if (this.llm.isMock) {
+      this.dm(fallback());
+      return;
+    }
+    try {
+      const res = await this.llm.complete(
+        {
+          system: this.resolvePrompt("narrator"),
+          messages: [
+            {
+              role: "user",
+              content: promptSections([
+                {
+                  heading: "Scene",
+                  body: `Off-camera in the ${place} — not live yet, settling in before streaming.`,
+                },
+                {
+                  heading: "Streamer",
+                  body: persona ? `${name}. ${persona}` : name,
+                },
+                {
+                  heading: "Current vibe",
+                  body: `${this.vibeSummary()}.${this.bodyContext() ? ` Body: ${this.bodyContext()}.` : ""}`,
+                },
+                {
+                  heading: "Instructions",
+                  body:
+                    "OPENING beat — the very first moment of this save. Establish mood, place, and energy in 1-3 vivid second-person sentences. No chat, no recap — this is where the story begins.",
+                },
+              ]),
+            },
+          ],
+        },
+        { kind: "story" },
+      );
+      const text = res.text.trim().replace(/\*+/g, "").trim();
+      this.dm(text || fallback());
+    } catch (err) {
+      diag.warn("action", "opening beat failed; using fallback", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      this.dm(fallback());
+    }
+  }
+
   /**
    * Generate the next narrative beat when the player hits Continue: pick up from
    * the most recent story beats and actually advance the moment (follow through
@@ -1549,7 +1724,7 @@ export class GameController {
                   heading: "Instructions",
                   body: act
                     ? "CONTINUE within the locked activity segment. Move the moment forward with a fresh beat INSIDE this format — never transition, wrap up, or pivot stream type. 1-3 vivid second-person sentences."
-                    : "CONTINUE the scene from exactly here and MOVE IT FORWARD. If the most recent beat only set something up, she now ACTUALLY does it. Never reset, never repeat the previous beat. 1-3 vivid second-person sentences.",
+                    : `CONTINUE the scene from exactly here and MOVE IT FORWARD. If the most recent beat only set something up, ${genderTerms(this.s.settings.gender).subj} now ACTUALLY does it. Never reset, never repeat the previous beat. 1-3 vivid second-person sentences.`,
                 },
               ]),
             },
@@ -1628,6 +1803,15 @@ export class GameController {
           for (const seg of s.activity.pleases) {
             verdict.appeal[seg] = (verdict.appeal[seg] ?? 0) + 1;
           }
+          const talent = talentById(s.settings.talent);
+          if (talent && s.activity.activityId === talent.activityId) {
+            for (const seg of talent.pleases) {
+              verdict.appeal[seg] = (verdict.appeal[seg] ?? 0) + 1;
+            }
+            if (!verdict.pressure.hype || verdict.pressure.hype === "none") {
+              verdict.pressure.hype = "up";
+            }
+          }
         }
 
         const onCam = s.session.isLive && this.isOnCamera();
@@ -1641,6 +1825,7 @@ export class GameController {
           mastery: s.mastery,
           baselineAppeal: this.baselineAppeal(),
           novelty: this.currentNovelty(),
+          balance: this.balance(),
         });
         s.patchMetrics(result.metricsPatch);
         s.setAudience(result.audience);
@@ -1677,9 +1862,9 @@ export class GameController {
           const count = chatBurstCount(s.metrics.hype, totalViewers(result.audience), "action");
           // React to her ACTUAL words when we have them, else fall back to prose.
           const reactTo = say
-            ? `${s.settings.streamerName} just said on stream: "${say}"`
+            ? `@${this.streamHandle()} just said on stream: "${say}"`
             : action.source === "freeform"
-              ? `${s.settings.streamerName} did/said: "${action.text}". (In the moment: ${verdict.narration})`
+              ? `@${this.streamHandle()} did/said: "${action.text}". (In the moment: ${verdict.narration})`
               : verdict.narration;
           const msgs = await generateChatBurst(this.llm, this.chatCtx(reactTo, count));
           this.s.pushChat(msgs);
@@ -1799,17 +1984,17 @@ export class GameController {
     const s = this.s;
     const prev = { ...s.metrics };
     s.setClock(s.clock + minutes);
-    const needDrain = drainNeeds(s.metrics, minutes);
+    const needDrain = drainNeeds(s.metrics, minutes, this.balance());
     const patch: Partial<Metrics> = { ...needDrain };
     if (s.session.isLive) {
       patch.energy = s.metrics.energy - minutes * 0.12;
       patch.hype = s.metrics.hype - minutes * 0.1;
-      Object.assign(patch, needsPenaltyPerBeat({ ...s.metrics, ...needDrain }));
+      Object.assign(patch, needsPenaltyPerBeat({ ...s.metrics, ...needDrain }, this.balance()));
     }
     s.patchMetrics(patch);
     if (s.session.isLive) {
       const nag = nagForNeed(s.metrics, prev);
-      if (nag && this.beatsSinceNeedNag >= BALANCE.needs.nagCooldownBeats) {
+      if (nag && this.beatsSinceNeedNag >= this.balance().needs.nagCooldownBeats) {
         this.beatsSinceNeedNag = 0;
         this.dm(nagMessage(nag));
       } else {
@@ -1836,7 +2021,7 @@ export class GameController {
 
     this.presenceTick();
 
-    const growth = growthProjection(s.metrics, s.audience, s.metrics.currentViewers);
+    const growth = growthProjection(s.metrics, s.audience, s.metrics.currentViewers, this.balance());
     if (growth.passiveFollowersPerBeat > 0) {
       const online = this.onlineIds();
       const followPings = Array.from({ length: growth.passiveFollowersPerBeat }, () =>
@@ -1846,7 +2031,7 @@ export class GameController {
       this.applyChatEffects(followPings);
     }
 
-    this.subAccrual += liveSubFractionPerBeat(s.metrics, s.roster, s.audience);
+    this.subAccrual += liveSubFractionPerBeat(s.metrics, s.roster, s.audience, this.balance());
     const subPings: ChatMessage[] = [];
     while (this.subAccrual >= 1) {
       subPings.push(growthPing(s.roster, this.onlineIds(), "sub"));
@@ -2034,14 +2219,23 @@ export class GameController {
   private activityGate(def: Activity): string | null {
     const s = this.s;
     const intensity = tierIntensity(s.settings.contentTier);
+    if (def.devOnly && !NSFW_BUILD) {
+      return "That activity is not available.";
+    }
     if (def.noLimitsOnly && !isNoLimits(s.settings.contentTier)) {
       return "That activity needs No Limits or custom content tier.";
     }
     if (def.minIntensity != null && intensity < def.minIntensity) {
       return "Your content tier isn't high enough for that activity yet.";
     }
-    if (def.cost != null && def.cost > 0 && !s.ownedActivities.includes(def.id)) {
+    if (def.talent && def.talent !== s.settings.talent) {
+      return "That activity matches a different talent.";
+    }
+    if (def.cost != null && def.cost > 0 && !def.talent && !s.ownedActivities.includes(def.id)) {
       return "Buy that in the shop first.";
+    }
+    if (def.requiredZone && !hasFixedCameraInZone(s.cameras, def.requiredZone)) {
+      return activityCameraLockReason(def) ?? "Place a camera in the right spot first.";
     }
     return null;
   }
@@ -2054,7 +2248,12 @@ export class GameController {
     if (!def) return;
     const patch: Partial<Metrics> = {};
     if (def.hypePerRound) {
-      patch.hype = Math.min(100, s.metrics.hype + def.hypePerRound * this.mults().hype);
+      let hypeGain = def.hypePerRound * this.mults().hype;
+      const talent = talentById(s.settings.talent);
+      if (talent && act.activityId === talent.activityId) {
+        hypeGain += 2 * this.mults().hype;
+      }
+      patch.hype = Math.min(100, s.metrics.hype + hypeGain);
     }
     if (def.energyPerRound) {
       patch.energy = Math.max(0, s.metrics.energy - def.energyPerRound);
@@ -2173,7 +2372,7 @@ export class GameController {
     const friend = seedCharacter(arch, s.clock, rosterHandles(s.roster));
     friend.referredBy = referrerId;
     // Arrives a touch warmer thanks to the friend who vouched for the channel.
-    friend.affinity = clamp(friend.affinity + BALANCE.affinity.sources.referral, 0, 100);
+    friend.affinity = clamp(friend.affinity + this.balance().affinity.sources.referral, 0, 100);
     friend.lastInteractionDay = s.metrics.day;
     s.upsertCharacter(friend);
     const who = referrer.displayName || referrer.handle;
@@ -2197,7 +2396,7 @@ export class GameController {
     const c = s.roster[charId];
     if (!c) return 0;
     const prevAffinity = c.affinity;
-    const { patch, applied, reason } = applyAffinity(c, rawDelta, source, s.metrics.day);
+    const { patch, applied, reason } = applyAffinity(c, rawDelta, source, s.metrics.day, this.balance());
     setFeedbackContext(applied !== 0 ? reason : undefined, applied >= 0 ? "good" : "warn");
     s.patchCharacter(charId, { ...patch, ...extra });
     clearFeedbackContext();
@@ -2216,10 +2415,10 @@ export class GameController {
    */
   private payRecurringSubs(day: number): void {
     const s = this.s;
-    if (day % BALANCE.subs.cadenceDays !== 0) return;
+    if (day % this.balance().subs.cadenceDays !== 0) return;
     const subs = s.metrics.subscribers;
     if (subs <= 0) return;
-    const gross = subs * BALANCE.subs.monthlyValue * this.mults().income;
+    const gross = subs * this.balance().subs.monthlyValue * this.mults().income;
     if (gross <= 0) return;
     setFeedbackContext(`monthly sub payout · ${subs} sub${subs > 1 ? "s" : ""}`, "good");
     s.patchMetrics({ cash: s.metrics.cash + gross });
@@ -2231,7 +2430,7 @@ export class GameController {
 
   /** Affinity earned from a tip, scaled by amount (reciprocal: bypasses the cap). */
   private tipAffinity(amount: number): number {
-    return Math.min(amount * BALANCE.affinity.sources.tip.perDollar, BALANCE.affinity.sources.tip.max);
+    return Math.min(amount * this.balance().affinity.sources.tip.perDollar, this.balance().affinity.sources.tip.max);
   }
 
   /**
@@ -2278,7 +2477,7 @@ export class GameController {
     // @mentions: targeted, short-circuits appeal weighting (lands on THEM).
     const mentioned = new Set(extractMentions(action.text, s.roster, true));
     for (const id of mentioned) {
-      this.bumpAffinity(id, BALANCE.affinity.sources.mention, "mention", { lastSeenClock: s.clock });
+      this.bumpAffinity(id, this.balance().affinity.sources.mention, "mention", { lastSeenClock: s.clock });
     }
 
     const connection = verdict.connection ?? 0;
@@ -2289,7 +2488,7 @@ export class GameController {
       const n = counts[tag] ?? 0;
       counts[tag] = n + 1;
       s.setSession({ connectionTagCounts: counts });
-      const repeatMult = Math.pow(BALANCE.affinity.repeatTagDecay, n);
+      const repeatMult = Math.pow(this.balance().affinity.repeatTagDecay, n);
 
       for (const c of online) {
         if (mentioned.has(c.id)) continue; // already got the stronger mention bump
@@ -2297,7 +2496,7 @@ export class GameController {
         const appeal = verdict.appeal[seg] ?? 0;
         if (appeal <= 0) continue; // only viewers who liked the beat bond from it
         const appealWeight = clamp(appeal / 3, 0, 1);
-        const raw = BALANCE.affinity.sources.action * connection * appealWeight * repeatMult;
+        const raw = this.balance().affinity.sources.action * connection * appealWeight * repeatMult;
         if (raw <= 0.001) continue;
         this.bumpAffinity(c.id, raw, "action", { lastSeenClock: s.clock });
       }
@@ -2317,7 +2516,7 @@ export class GameController {
     const before = s.mastery;
     s.addMasteryXp(gained);
     const after = this.s.mastery;
-    for (const d of BALANCE.mastery.domains) {
+    for (const d of this.balance().mastery.domains) {
       if (masteryLevel(after[d]) <= masteryLevel(before[d])) continue;
       const lvl = masteryLevel(after[d]);
       const label = d === "showmanship" ? "Showmanship" : "Composure";
@@ -2378,7 +2577,7 @@ export class GameController {
         } else {
           // Just being in chat barely moves the needle (ledger-weighted +0.05,
           // soft-capped per day) — presence isn't intimacy.
-          this.bumpAffinity(msg.characterId, BALANCE.affinity.sources.chat, "chat", {
+          this.bumpAffinity(msg.characterId, this.balance().affinity.sources.chat, "chat", {
             messageCount: cur.messageCount + 1,
             lastSeenClock: s.clock,
           });
@@ -2437,28 +2636,57 @@ export class GameController {
     if (!zone || !menu) return;
     const live = this.s.session.isLive;
     let options = menu.options.filter((o) => o.liveOnly === undefined || o.liveOnly === live);
-    if (!isNoLimits(this.s.settings.contentTier)) {
+    if (!nsfwUnlocked(this.s.settings.contentTier)) {
       options = options.filter((o) => o.prompt !== "__relieve__");
     }
     const bagged = unplacedCameras(this.s.cameras);
-    if (bagged.length && zoneId !== "door") {
-      for (const cam of bagged.slice(0, 4)) {
-        options.unshift({
-          id: `place-${cam.id}`,
-          label: `📷 Place ${cam.label} here`,
-          prompt: `__place_cam__:${cam.id}`,
+    if (zoneId !== "door") {
+      const existing = this.s.cameras.find((c) => c.zone === zoneId && !c.portable);
+      const canPlace = canPlaceCameraInZone(zoneId, isNoLimits(this.s.settings.contentTier));
+      const camOptions: ActionOption[] = [];
+      // Placing/swapping a fresh angle is gated by tier for private zones; removal
+      // is always available so an existing camera can be cleared anywhere.
+      if (canPlace) {
+        for (const cam of bagged.slice(0, 4)) {
+          camOptions.push({
+            id: `place-${cam.id}`,
+            label: existing
+              ? `🔄 Swap in ${formatCameraTier(cam.tier)} camera`
+              : `📷 Place ${cam.label} here`,
+            prompt: `__place_cam__:${cam.id}`,
+          });
+        }
+      }
+      if (existing) {
+        camOptions.push({
+          id: `remove-${existing.id}`,
+          label: `🗑 Remove ${cameraDisplayLabel(existing)}`,
+          prompt: `__remove_cam__:${existing.id}`,
         });
       }
+      options.unshift(...camOptions);
     }
     if (options.length === 0) {
       this.s.setToast(live ? "Nothing to do there mid-stream." : "End the stream to use that.");
       return;
+    }
+    let showStreamNichePicker = false;
+    let goLiveOption: ActionOption | undefined;
+    if (zoneId === "desk" && !live) {
+      const goLive = menu.options.find((o) => o.prompt === "__toggle_live__");
+      if (goLive) {
+        goLiveOption = { ...goLive, label: "● Go live" };
+        options = options.filter((o) => o.prompt !== "__toggle_live__");
+        showStreamNichePicker = true;
+      }
     }
     const am: ActionMenu = {
       title: `${zone.label}`,
       subtitle: zone.description,
       options,
       allowFreeform: menu.allowFreeform,
+      showStreamNichePicker,
+      goLiveOption,
     };
     this.s.setActionMenu(am);
   }
@@ -2474,35 +2702,37 @@ export class GameController {
     const newDay = m.day + 1;
     // Recurring utility bill on a calendar cadence — standing still loses money.
     const utilityDue =
-      newDay % BALANCE.economy.utilityEveryDays === 0 ? BALANCE.economy.utilityAmount : 0;
+      newDay % this.balance().economy.utilityEveryDays === 0 ? this.balance().economy.utilityAmount : 0;
+
+    this.resolveJobDay(m.day);
 
     const tier = s.settings.contentTier;
     const hornyAfter = isNoLimits(tier)
-      ? Math.round(m.horny * BALANCE.horny.sleepHalve)
+      ? Math.round(m.horny * this.balance().horny.sleepHalve)
       : 0;
 
     const sleepMin = sleepDurationMinutes(s.clock);
-    const overnightNeeds = drainNeeds(m, sleepMin);
+    const overnightNeeds = drainNeeds(m, sleepMin, this.balance());
 
     // Restorative overnight changes — surfaced as their own bubbles, no money "why".
     s.patchMetrics({
       day: newDay,
-      energy: Math.min(100, m.energy + BALANCE.recovery.sleepEnergy),
+      energy: Math.min(100, m.energy + this.balance().recovery.sleepEnergy),
       hype: Math.max(15, m.hype * 0.6),
-      comfort: m.comfort + BALANCE.recovery.sleepComfort + mult.comfortPerDay,
+      comfort: m.comfort + this.balance().recovery.sleepComfort + mult.comfortPerDay,
       bladder: overnightNeeds.bladder ?? m.bladder,
       hygiene: Math.min(
         100,
-        Math.max(0, (overnightNeeds.hygiene ?? m.hygiene) + BALANCE.recovery.sleepHygiene),
+        Math.max(0, (overnightNeeds.hygiene ?? m.hygiene) + this.balance().recovery.sleepHygiene),
       ),
       hunger: Math.min(
         100,
-        Math.max(0, (overnightNeeds.hunger ?? m.hunger) + BALANCE.recovery.sleepHunger),
+        Math.max(0, (overnightNeeds.hunger ?? m.hunger) + this.balance().recovery.sleepHunger),
       ),
       horny: hornyAfter,
     });
 
-    const subProj = subProjection(s.metrics, s.roster);
+    const subProj = subProjection(s.metrics, s.roster, this.balance());
     if (subProj.estimatedChurn > 0) {
       setFeedbackContext("sub churn overnight", "warn");
       s.patchMetrics({
@@ -2525,7 +2755,7 @@ export class GameController {
 
     // Cool neglected bonds: anyone not interacted with past the grace window
     // loses affinity scaled by how close they were. Surfaced as cooling feedback.
-    const decays = decayAffinities(s.roster, newDay);
+    const decays = decayAffinities(s.roster, newDay, this.balance());
     for (const d of decays) {
       setFeedbackContext(d.reason, "warn");
       s.patchCharacter(d.id, d.patch);
@@ -2553,6 +2783,260 @@ export class GameController {
     const s = this.s;
     if (s.metrics.cash < 15) return s.setToast("Not enough cash to order out.");
     this.coded("You order delivery. Twenty minutes later: a hot meal.", { cash: -15, energy: 18, comfort: 6, hunger: 50 }, "🛵 Ordered delivery (-$15)", 25);
+  }
+
+  /** Clock in for today's shift — offline only. Enters the Work screen overlay. */
+  goToWork(): void {
+    const s = this.s;
+    if (s.workSession) return;
+    if (s.session.isLive) return s.setToast("End the stream before your day job.");
+    if (s.visitor) return s.setToast("You can't leave — someone's over right now.");
+    if (s.eventScene) return s.setToast("Finish what you're in first.");
+    const job = s.job;
+    if (!job) return s.setToast("No job — open the job board to apply.");
+
+    const day = s.metrics.day;
+    if (workedToday(job, day)) return s.setToast("You already worked today.");
+
+    const status = shiftStatus(job, s.clock);
+    if (status === "early") {
+      return s.setToast(`Your shift starts at ${formatClock(job.shiftStart)}.`);
+    }
+    if (status === "over") {
+      return s.setToast("Today's shift is over — you'll get a strike at bedtime if you skip it.");
+    }
+
+    const onTime = status === "ontime";
+    const pay = Math.round(job.wage * (onTime ? 1 : LATE_WAGE_FACTOR));
+    const minutes = workMinutesRemaining(job, s.clock);
+
+    s.setJobPanelOpen(false);
+    s.setWorkSession({
+      jobId: job.id,
+      title: job.title,
+      day,
+      onTime,
+      pay,
+      minutes,
+      energyCost: job.energyCost,
+      hygieneCost: job.hygieneCost,
+      comfortCost: job.comfortCost,
+      imageId: null,
+      flavor: "",
+    });
+    diag.info("economy", "day job clock-in", { job: job.id, pay, onTime, minutes });
+    void this.ensureWorkScene();
+  }
+
+  /** Lazily generate the workplace image + flavor for the active shift (idempotent). */
+  async ensureWorkScene(): Promise<void> {
+    const s = this.s;
+    const ws = s.workSession;
+    if (!ws) return;
+    if (this.workSceneBusy) return;
+    if (ws.flavor && (ws.imageId || !this.imageBackend)) return;
+    this.workSceneBusy = true;
+    try {
+      if (!ws.flavor) {
+        const flavor = await this.narrateWorkShift(ws);
+        s.patchWorkSession({ flavor });
+      }
+      if (!s.workSession?.imageId && this.imageBackend) {
+        const rec = await this.generateWorkImage(ws);
+        if (rec) s.patchWorkSession({ imageId: rec.id });
+      }
+    } finally {
+      this.workSceneBusy = false;
+    }
+  }
+
+  private async narrateWorkShift(ws: WorkSession): Promise<string> {
+    const fallback = () => pick(WORK_FLAVOR_FALLBACKS);
+    if (this.llm.isMock) return fallback();
+    try {
+      const res = await this.llm.complete(
+        {
+          system: this.resolvePrompt("narrator"),
+          messages: [
+            {
+              role: "user",
+              content: promptSections([
+                {
+                  heading: "Scene",
+                  body: `${this.s.settings.streamerName} is working a day-job shift as a ${ws.title}${ws.onTime ? "" : " (showed up late today)"}. This is their side income, separate from streaming.`,
+                },
+                {
+                  heading: "Instructions",
+                  body: "Write 2-3 vivid second-person sentences capturing the texture of this shift — the tasks, the mood, a small concrete detail. Keep it grounded and a little wry. No dialogue, no stream references.",
+                },
+              ]),
+            },
+          ],
+        },
+        { kind: "story" },
+      );
+      const text = res.text.trim().replace(/\*+/g, "").trim();
+      return text || fallback();
+    } catch (err) {
+      diag.warn("economy", "work flavor failed; using fallback", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return fallback();
+    }
+  }
+
+  /** Workplace image — cached per job so it only generates once. */
+  private async generateWorkImage(ws: WorkSession): Promise<StoredImage | null> {
+    const s = this.s;
+    if (!this.imageBackend) return null;
+    const ref = await this.bodyRef();
+    const name = s.settings.streamerName;
+    const positionLabel = `at work — on shift as a ${ws.title}`;
+    const narrative = `${name} working a shift as a ${ws.title}, in the appropriate workplace setting, in uniform or work-appropriate clothing, mid-task.`;
+    const prompt = fillImagePrompt(
+      effectiveImagePrompt(s.settings, "scenePrompt"),
+      imagePromptVars(s.character, {
+        name,
+        gender: (s.settings.gender ?? "").trim(),
+        position: positionLabel,
+        narrative,
+        style: this.imageStyle(),
+      }, "full"),
+    );
+    return this.genImage({
+      kind: "work",
+      prompt,
+      label: `${name} — ${ws.title}`,
+      refs: ref ? [ref.url] : undefined,
+      sourceImageId: ref?.id,
+      busyLabel: "Picturing the workplace",
+    });
+  }
+
+  /** Head home from the Work screen: apply pay/time/costs and exit. */
+  leaveWork(): void {
+    const s = this.s;
+    const ws = s.workSession;
+    if (!ws) return;
+    const job = s.job;
+
+    const patch: Partial<Metrics> = {
+      cash: ws.pay,
+      energy: -ws.energyCost,
+    };
+    if (ws.hygieneCost) patch.hygiene = -ws.hygieneCost;
+    if (ws.comfortCost) patch.comfort = ws.comfortCost;
+
+    setFeedbackContext("day job", "good");
+    s.patchMetrics(patch);
+    clearFeedbackContext();
+
+    if (job && job.id === ws.jobId) {
+      s.setJob({ ...job, lastClockInDay: ws.day, lastClockInOnTime: ws.onTime });
+    }
+
+    const narr = ws.onTime
+      ? `You wrap up your shift as a ${ws.title} and head home. The pay's in your account.`
+      : `You finish the shift you rolled into late. Reduced pay, and your boss noticed.`;
+    this.dm(narr);
+    this.outcome(`💼 ${ws.title}${ws.onTime ? "" : " (late)"} (+$${ws.pay})`);
+    s.logEvent(`${ws.title}: +$${ws.pay}${ws.onTime ? "" : " (late)"}`);
+    diag.info("economy", "day job shift done", { job: ws.jobId, pay: ws.pay, minutes: ws.minutes });
+
+    s.setWorkSession(null);
+    this.advanceTime(ws.minutes);
+  }
+
+  /** Apply for a preset or custom job — uncertain time, offline only. */
+  applyForJob(preset: JobPreset): void {
+    this.takeJob(jobFromPreset(preset), preset.title);
+  }
+
+  applyForCustomJob(title: string, wage: number, slot: ShiftSlotId): void {
+    this.takeJob(customJob(title, wage, slot), title.trim() || "Side gig");
+  }
+
+  private takeJob(next: JobState, label: string): void {
+    const s = this.s;
+    if (s.session.isLive) return s.setToast("End the stream before job hunting.");
+    if (s.visitor) return s.setToast("You can't job-hunt with a guest here.");
+    if (s.eventScene) return s.setToast("Finish what you're in first.");
+
+    const previous = s.job;
+    const minutes = randomApplyMinutes();
+    s.setJob(next);
+    s.setJobPanelOpen(false);
+    const quitLine = previous ? `You leave ${previous.title} behind. ` : "";
+    this.dm(`${quitLine}After applications, waiting, and an interview, you land a spot as ${label}. Shift: ${shiftWindowLabel(next)}.`);
+    this.outcome(`📋 Hired: ${label}`);
+    s.logEvent(`New job: ${label}${previous ? ` (left ${previous.title})` : ""}`);
+    this.advanceTime(minutes);
+    s.setToast(`You're now working as ${label}.`);
+  }
+
+  quitJob(): void {
+    const s = this.s;
+    if (!s.job) return;
+    const title = s.job.title;
+    s.setJob(null);
+    s.setJobPanelOpen(false);
+    s.setToast(`You quit ${title}.`);
+    s.logEvent(`Quit job: ${title}`);
+    this.dm(`You put in your notice at ${title}. The paycheck stops — streaming is the plan now.`);
+  }
+
+  /** End-of-day strike / firing check for the day that just ended. */
+  private resolveJobDay(endedDay: number): void {
+    const s = this.s;
+    const job = s.job;
+    if (!job) return;
+
+    let strikes = job.strikes;
+    let fired = false;
+    let reason = "";
+
+    if (job.lastClockInDay === endedDay) {
+      if (job.lastClockInOnTime) {
+        strikes = 0;
+      } else {
+        strikes += 1;
+        reason = "late shift";
+      }
+    } else {
+      strikes += 1;
+      reason = "missed shift";
+    }
+
+    if (strikes >= MAX_STRIKES) {
+      fired = true;
+      s.setJob(null);
+      const msg = `Fired from ${job.title} — three bad days in a row.`;
+      s.pushFeedback([
+        {
+          id: uid("fb"),
+          channel: "alert",
+          key: "job",
+          text: msg,
+          tone: "bad",
+          reason: "day job",
+          ts: Date.now(),
+        },
+      ]);
+      this.sysStory(msg);
+      s.logEvent(msg);
+      s.setToast(msg);
+      diag.info("economy", "day job fired", { job: job.id, strikes });
+      return;
+    }
+
+    const next: JobState = { ...job, strikes };
+    s.setJob(next);
+    if (reason) {
+      s.logEvent(`${job.title}: strike (${reason}) — ${strikes}/${MAX_STRIKES}`);
+      if (strikes >= 2) {
+        s.setToast(`${job.title}: ${strikes}/${MAX_STRIKES} strikes — one more bad day and you're out.`);
+      }
+    }
   }
 
   private async answerDoor(): Promise<void> {
@@ -2695,7 +3179,7 @@ export class GameController {
     const req = {
       system: [
         `You are writing an unprompted private DM from ${name} (@${c.handle}) to ${streamerName}, the streamer ${p.subj} watches. Write ONLY ${name}'s side; never speak as ${streamerName}.`,
-        characterVoiceBlock(c, streamerName),
+        characterVoiceBlock(c, streamerName, this.intensity()),
         `Relationship with ${streamerName}: ${relationshipLevel(c.affinity)}.`,
         c.memory ? `What ${name} recalls of past chats with ${streamerName}: ${c.memory}` : "",
         ownPublic ? `${name}'s own recent public-chat messages (stay consistent): ${ownPublic}` : "",
@@ -2821,8 +3305,8 @@ export class GameController {
         showmanship: masteryLevel(s.mastery.showmanship),
         composure: masteryLevel(s.mastery.composure),
       },
-      niche: s.settings.niche ?? "variety",
-      outfit: s.settings.outfit ?? "cozy",
+      niche: this.activeNiche(),
+      outfit: outfitVibeLabel(dominantOutfitVibe(s.equippedClothing, s.inventory)),
       productionQuality: mults.productionQuality,
       segmentAppealSummary: segParts.join(", "),
       pendingFollowups: s.pendingEventSeeds.map((p) => ({ day: p.day, seed: p.seed, charId: p.charId })),
@@ -2843,7 +3327,7 @@ export class GameController {
     const s = this.s;
     if (s.eventScene || s.visitor || s.pendingEvent) return false;
     if (mustAddress) return true;
-    const E = BALANCE.events;
+    const E = this.balance().events;
     if (s.session.isLive) return this.beatsSinceLastEvent >= E.minBeatsBetweenLive;
     return s.metrics.day - this.lastEventDay >= E.minDaysBetweenOffline;
   }
@@ -2983,7 +3467,7 @@ export class GameController {
       }
       // Time drifts during a scene, but far slower than a normal turn so the
       // moment can breathe without burning the whole night.
-      this.advanceTime(BALANCE.events.beatMinutes);
+      this.advanceTime(this.balance().events.beatMinutes);
       const transcriptLine = playerText ? `You: ${playerText}` : "You: (waited and watched)";
       s.patchEventScene({
         beats: scene.beats + 1,
@@ -3110,13 +3594,14 @@ export class GameController {
       const zone = ZONES[s.zone];
       const positionLabel = zone
         ? `${zone.label} — ${zone.description.replace(/[.\s]+$/, "")}`
-        : "her studio";
+        : "the studio";
       const rec = await this.genImage({
         kind: "scene",
         prompt: fillImagePrompt(
           effectiveImagePrompt(s.settings, "scenePrompt"),
           imagePromptVars(s.character, {
             name: s.settings.streamerName,
+            gender: (s.settings.gender ?? "").trim(),
             position: positionLabel,
             narrative: opening.slice(0, 360),
             style: this.imageStyle(),
@@ -3135,7 +3620,7 @@ export class GameController {
 
   async applyEventEffects(effects: EventEffect[]): Promise<void> {
     const s = this.s;
-    const E = BALANCE.events;
+    const E = this.balance().events;
     const alert = (key: string, reason: string, tone: "good" | "warn" | "neutral" | "bad" = "good", delta?: number) => {
       s.pushFeedback([{ id: uid("fb"), channel: "alert", key, delta, tone, reason, ts: Date.now() }]);
     };
@@ -3327,7 +3812,7 @@ export class GameController {
 
   private spawnEventViewer(archetypeHint?: string): void {
     const s = this.s;
-    if (Object.values(s.roster).filter((c) => c.online).length >= BALANCE.events.onlineCap) return;
+    if (Object.values(s.roster).filter((c) => c.online).length >= this.balance().events.onlineCap) return;
     const arch = rollArchetypeForTime(this.intensity(), s.clock);
     const c = seedCharacter(arch, s.clock, rosterHandles(s.roster));
     if (archetypeHint) {
@@ -3618,7 +4103,7 @@ export class GameController {
     if (!c) return;
     if (c.threat >= 2) return;
     if (c.relationship !== "none" || c.affinity >= 60) {
-      if (s.pendingEventSeeds.length >= BALANCE.events.maxPendingFollowups) return;
+      if (s.pendingEventSeeds.length >= this.balance().events.maxPendingFollowups) return;
       s.addPendingEventSeed({
         id: uid("seed"),
         day: s.metrics.day + 2,
@@ -3668,7 +4153,7 @@ export class GameController {
         {
           role: "user" as const,
           content: [
-            characterVoiceBlock(c, this.s.settings.streamerName),
+            characterVoiceBlock(c, this.s.settings.streamerName, this.intensity()),
             `Relationship: ${c.relationship}, affinity ${Math.round(c.affinity)}, threat ${c.threat}.`,
             c.memory ? `What ${c.realName || c.handle} remembers: ${c.memory}` : "",
             `Transcript so far:\n${transcript.slice(-1400)}`,
@@ -3774,7 +4259,7 @@ export class GameController {
               content: [
                 `Write ONE new backstory fragment for viewer ${c.realName || c.handle} (@${c.handle}, ${arch?.label}, ${c.gender}).`,
                 `Trigger: ${trigger}. Prior layers: ${prior || "(none)"}.`,
-                characterVoiceBlock(c, streamerName),
+                characterVoiceBlock(c, streamerName, this.intensity()),
                 c.memory ? `Shared history: ${c.memory}` : "",
                 trigger.startsWith("threat-")
                   ? `Reveal something darker or more specific about ${c.realName || c.handle}'s fixation. Escalate, don't contradict prior layers.`
@@ -3925,6 +4410,22 @@ export class GameController {
   // Settings → Dev tab. Each routes through the normal pipelines so behaviour
   // matches the real thing.
 
+  /** Dev: nudge a metric by `delta` (store clamps and records feedback). */
+  devAdjustMetric(key: keyof Metrics, delta: number): void {
+    const s = this.s;
+    const cur = s.metrics[key];
+    if (typeof cur !== "number") return;
+    s.patchMetrics({ [key]: cur + delta });
+    s.logEvent(`[dev] ${key} ${delta >= 0 ? "+" : ""}${delta}`);
+  }
+
+  /** Dev: advance or rewind the in-world clock. */
+  devAdjustClock(deltaMinutes: number): void {
+    const s = this.s;
+    s.setClock(s.clock + deltaMinutes);
+    s.logEvent(`[dev] clock ${deltaMinutes >= 0 ? "+" : ""}${deltaMinutes}m`);
+  }
+
   /** Dev: drop a viewer on your doorstep right now, skipping the DM/meetup flow. */
   devStartVisit(charId: string): void {
     const s = this.s;
@@ -4020,7 +4521,7 @@ export class GameController {
       const firstToday = c.lastDmAffinityDay !== day;
       this.bumpAffinity(
         id,
-        firstToday ? BALANCE.affinity.sources.dmDaily : BALANCE.affinity.sources.dmRepeat,
+        firstToday ? this.balance().affinity.sources.dmDaily : this.balance().affinity.sources.dmRepeat,
         firstToday ? "dm" : "dmRepeat",
         { memory, known: true, lastSeenClock: s.clock, lastDmAffinityDay: day },
       );
@@ -4060,7 +4561,7 @@ export class GameController {
     return {
       system: [
         `You are writing the private DM replies of ${name} (@${c.handle}) to ${streamerName}, the streamer ${p.subj} watches. Write ONLY ${name}'s side; never speak as ${streamerName}.`,
-        characterVoiceBlock(c, streamerName),
+        characterVoiceBlock(c, streamerName, this.intensity()),
         `Relationship with ${streamerName}: ${relationshipLevel(c.affinity)}.`,
         c.memory ? `What ${name} recalls of past chats with ${streamerName}: ${c.memory}` : "",
         ownPublic ? `${name}'s own recent messages in ${streamerName}'s public chat (stay consistent with them): ${ownPublic}` : "",
@@ -4199,7 +4700,7 @@ export class GameController {
         const rewardLabel =
           r.rewardType === "cash" && r.rewardAmount
             ? `$${r.rewardAmount} tip`
-            : `+${BALANCE.affinity.sources.request} bond`;
+            : `+${this.balance().affinity.sources.request} bond`;
         return { index: i + 1, ask: r.ask, handle, rewardLabel };
       });
 
@@ -4238,13 +4739,13 @@ export class GameController {
         if (req.rewardType === "cash" && req.rewardAmount) {
           this.recordTip(req.charId, req.rewardAmount, { hype: 1 });
         } else {
-          this.bumpAffinity(req.charId, BALANCE.affinity.sources.request, "request");
+          this.bumpAffinity(req.charId, this.balance().affinity.sources.request, "request");
         }
 
         if (entry.bonusAffinity && entry.bonusAffinity > 0) {
           this.bumpAffinity(
             req.charId,
-            clamp(entry.bonusAffinity, 0, BALANCE.request.fulfillmentBonusMax),
+            clamp(entry.bonusAffinity, 0, this.balance().request.fulfillmentBonusMax),
             "request",
           );
         }
@@ -4303,7 +4804,7 @@ export class GameController {
           s.pushDm(charId, { role: "them", kind: "gift", text: `sent a gift: ${item.name}` });
           s.logEvent(`DM: ${c.displayName || c.handle} sent a gift (${item.name}).`);
           // A gift is genuine reciprocal investment — strong, cap-exempt.
-          this.bumpAffinity(charId, BALANCE.affinity.sources.gift, "gift");
+          this.bumpAffinity(charId, this.balance().affinity.sources.gift, "gift");
           break;
         }
         case "image":
@@ -4488,6 +4989,10 @@ export class GameController {
     const s = this.s;
     const entry = CLOTHING_SHOP_BY_ID[shopId];
     if (!entry) return;
+    if (!clothingShopUnlocked(entry, s.settings.contentTier)) {
+      const reason = clothingShopLockReason(entry);
+      return s.setToast(reason ?? "Higher content tier required for that.");
+    }
     if (s.metrics.cash < entry.cost) return s.setToast("Not enough cash for that yet.");
     s.patchMetrics({ cash: s.metrics.cash - entry.cost });
     const piece = clothingFromShop(entry);
@@ -4500,9 +5005,23 @@ export class GameController {
     const s = this.s;
     const cam = s.cameras.find((c) => c.id === camId);
     if (!cam || cam.portable) return;
+    if (!canPlaceCameraInZone(s.zone, isNoLimits(s.settings.contentTier))) {
+      return s.setToast("You can't set up a camera here on this content setting.");
+    }
+    const zoneLabel = ZONES[s.zone]?.label ?? s.zone;
     s.placeCamera(camId, s.zone);
-    s.setToast(`${cam.label} placed at ${ZONES[s.zone]?.label ?? s.zone}.`);
-    s.logEvent(`Placed ${cam.label} at ${ZONES[s.zone]?.label ?? s.zone}.`);
+    s.setToast(`${cam.label} placed at ${zoneLabel}.`);
+    s.logEvent(`Placed ${cam.label} at ${zoneLabel}.`);
+  }
+
+  unplaceCamera(camId: string): void {
+    const s = this.s;
+    const cam = s.cameras.find((c) => c.id === camId);
+    if (!cam || cam.portable || !cam.zone) return;
+    const zoneLabel = ZONES[cam.zone]?.label ?? cam.zone;
+    s.unplaceCamera(camId);
+    s.setToast(`${cam.label} removed from ${zoneLabel} — back in your bag.`);
+    s.logEvent(`Removed ${cam.label} from ${zoneLabel}.`);
   }
 
   switchCamera(camId: string): void {
@@ -4511,7 +5030,7 @@ export class GameController {
     if (!cam) return;
     s.setActiveCamera(camId);
     if (cam.zone && !cam.portable) s.setZone(cam.zone);
-    s.setToast(`On-screen: ${cam.label}.`);
+    s.setToast(`On-screen: ${cameraDisplayLabel(cam)}.`);
     this.refreshStreamFootage();
   }
 
@@ -4532,7 +5051,7 @@ export class GameController {
       });
     }
     for (const slot of CLOTHING_SLOTS) {
-      if (s.equippedClothing[slot]) {
+      if (s.equippedClothing[slot] && canRemoveClothingSlot(slot, s.settings.contentTier)) {
         const item = s.inventory.find((i) => i.id === s.equippedClothing[slot]);
         options.push({
           id: `off-${slot}`,
@@ -4574,6 +5093,10 @@ export class GameController {
     const s = this.s;
     const itemId = s.equippedClothing[slot];
     if (!itemId) return;
+    if (!canRemoveClothingSlot(slot, s.settings.contentTier)) {
+      s.setToast(`Can't take that off at this content level — change into something else instead.`);
+      return;
+    }
     const item = s.inventory.find((i) => i.id === itemId);
     s.equipClothing(slot, null);
     const line = s.session.isLive
@@ -4662,6 +5185,245 @@ export class GameController {
       return item;
     } catch {
       return this.grantItemToInventory(seed, category);
+    }
+  }
+
+  /**
+   * One-time onboarding grant: a few themed props derived from persona, talent,
+   * and niche. Works offline via templated fallbacks.
+   */
+  async generateStarterKit(): Promise<void> {
+    const s = this.s;
+    if (s.starterKitGranted) return;
+
+    const settings = s.settings;
+    const talent = talentById(settings.talent);
+
+    const grant = (name: string, description: string, category: ItemCategory = "prop") => {
+      s.addItem(makeItem({ name, description, category, generated: true, meta: { starterKit: "1" } }));
+    };
+
+    if (this.llm.isMock) {
+      this.offlineStarterKit(talent?.id ?? null);
+      s.setStarterKitGranted(true);
+      s.logEvent("Starter kit packed.");
+      return;
+    }
+
+    const system = [
+      "You invent a small starter kit of 3 personal items for a streamer life-sim.",
+      "Items should fit the character's background and be usable on stream or in daily life.",
+      "Reply with ONLY a JSON array of objects: { \"name\": string, \"description\": string, \"category\": \"prop\" | \"gift\" | \"misc\" }.",
+      "Keep names short and descriptions one sentence each.",
+    ].join(" ");
+    const user = [
+      `Name: ${settings.streamerName}`,
+      `Persona: ${settings.streamerPersona}`,
+      talent ? `Talent: ${talent.label} — ${talent.personaTag}` : "",
+      `Gender: ${settings.gender || "unspecified"}`,
+      "",
+      "Return exactly 3 items as a JSON array.",
+    ].filter(Boolean).join("\n");
+
+    try {
+      const out = await completeJsonWithRepair(
+        this.llm,
+        { system, messages: [{ role: "user", content: user }], jsonMode: true },
+        (text) => {
+          const json = extractJson<Array<{ name?: string; description?: string; category?: string }>>(text);
+          if (!Array.isArray(json) || !json.length) return null;
+          return json.slice(0, 3).map((row) => ({
+            name: (row.name ?? "Keepsake").trim().slice(0, 60),
+            description: (row.description ?? "Something personal.").trim().slice(0, 160),
+            category: (["prop", "gift", "misc"].includes(row.category ?? "")
+              ? row.category
+              : "prop") as ItemCategory,
+          }));
+        },
+        "other",
+      );
+      if (out?.length) {
+        for (const row of out) grant(row.name, row.description, row.category);
+      } else {
+        this.offlineStarterKit(talent?.id ?? null);
+      }
+    } catch (err) {
+      diag.warn("world", "generateStarterKit failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      this.offlineStarterKit(talent?.id ?? null);
+    }
+
+    s.setStarterKitGranted(true);
+    s.logEvent("Starter kit packed.");
+  }
+
+  /** Key-free starter kit when LLM is unavailable. */
+  private offlineStarterKit(talentId: string | null): void {
+    const kits: Record<string, Array<{ name: string; description: string; category: ItemCategory }>> = {
+      singer: [
+        { name: "Worn Lyrics Notebook", description: "Dog-eared pages of covers and originals.", category: "prop" },
+        { name: "USB Mic Pop Filter", description: "Saved you from a thousand plosives.", category: "prop" },
+        { name: "Throat Tea Sampler", description: "Honey-lemon bags for long vocal nights.", category: "misc" },
+      ],
+      guitarist: [
+        { name: "Capo & Picks Tin", description: "A little metal box that never leaves the desk.", category: "prop" },
+        { name: "Coiled Instrument Cable", description: "Reliable, slightly frayed at one end.", category: "prop" },
+        { name: "Handwritten Chord Chart", description: "Your go-to progressions in pencil.", category: "misc" },
+      ],
+      comedian: [
+        { name: "Pocket Joke Journal", description: "Bits, tags, and half-finished punchlines.", category: "prop" },
+        { name: "Open-Mic Wristband", description: "A faded souvenir from your first set.", category: "gift" },
+        { name: "Index Card Deck", description: "Crowd-work prompts when chat goes quiet.", category: "misc" },
+      ],
+      analyst: [
+        { name: "Second Monitor Stand", description: "Charts on one screen, chat on the other.", category: "prop" },
+        { name: "Marked-Up Printout", description: "Your favorite macro cheat sheet.", category: "misc" },
+        { name: "Desk Calculator", description: "For when chat asks you to do math live.", category: "prop" },
+      ],
+      dancer: [
+        { name: "Resistance Bands", description: "Warm-up kit tucked by the couch.", category: "prop" },
+        { name: "Sweat Towel", description: "Embroidered with your handle.", category: "misc" },
+        { name: "Bluetooth Speaker", description: "Punchy enough for freestyle breaks.", category: "prop" },
+      ],
+      artist: [
+        { name: "Sketchbook Stack", description: "Half-filled pages of WIPs and doodles.", category: "prop" },
+        { name: "Tablet Stylus", description: "Chewed grip, still precise.", category: "prop" },
+        { name: "Paint-Stained Apron", description: "Proof you've actually made things.", category: "misc" },
+      ],
+      chef: [
+        { name: "Chef's Knife Roll", description: "Your sharpened blades in a canvas wrap.", category: "prop" },
+        { name: "Cast-Iron Skillet", description: "Seasoned black and ready for cam.", category: "prop" },
+        { name: "Spice Rack Caddy", description: "Tidy little jars within arm's reach.", category: "misc" },
+      ],
+      fitness: [
+        { name: "Adjustable Dumbbells", description: "Quick-swap plates for any set.", category: "prop" },
+        { name: "Yoga Mat", description: "Grippy, rolled by the couch.", category: "prop" },
+        { name: "Shaker Bottle", description: "Dented from a thousand sessions.", category: "misc" },
+      ],
+      dj: [
+        { name: "USB DJ Controller", description: "Two decks and a crossfader, well-loved.", category: "prop" },
+        { name: "Studio Headphones", description: "Closed-back, cushions worn soft.", category: "prop" },
+        { name: "Sample Pack Drive", description: "A thumb drive crammed with loops.", category: "misc" },
+      ],
+      magician: [
+        { name: "Marked Card Deck", description: "Your trusty close-up workhorse.", category: "prop" },
+        { name: "Coin Set", description: "Palming coins worn smooth.", category: "prop" },
+        { name: "Close-Up Mat", description: "Soft pad for clean reveals.", category: "misc" },
+      ],
+      voiceactor: [
+        { name: "Pop-Filtered Mic", description: "Your character-voice workhorse.", category: "prop" },
+        { name: "Accent Notebook", description: "Phonetic notes for a dozen voices.", category: "misc" },
+        { name: "Warm-Up Reed", description: "A little kazoo for vocal warmups.", category: "misc" },
+      ],
+      cosplayer: [
+        { name: "EVA Foam Roll", description: "The build material that never runs out.", category: "prop" },
+        { name: "Hot Glue Gun", description: "Strings everywhere, always plugged in.", category: "prop" },
+        { name: "Wig Styling Kit", description: "Combs, clips, and heat-resistant spray.", category: "misc" },
+      ],
+      chess: [
+        { name: "Weighted Chess Set", description: "Tournament pieces with a felt base.", category: "prop" },
+        { name: "Game Clock", description: "Old-school analog with a satisfying slap.", category: "prop" },
+        { name: "Opening Theory Binder", description: "Annotated lines in your own scrawl.", category: "misc" },
+      ],
+    };
+    const generic = [
+      { name: "Streaming Checklist", description: "Mic test, lights, water — the pre-show ritual.", category: "prop" as ItemCategory },
+      { name: "Desk Plant", description: "A hardy little succulent for the background.", category: "prop" as ItemCategory },
+      { name: "Snack Stash", description: "Emergency fuel for long sessions.", category: "misc" as ItemCategory },
+    ];
+    const nicheExtras: Partial<Record<NicheId, { name: string; description: string; category: ItemCategory }>> = {
+      gaming: { name: "Energy Drink Stash", description: "A six-pack under the desk for long grinds.", category: "misc" },
+      cozy: { name: "Weighted Blanket", description: "For post-stream cooldown on the couch.", category: "misc" },
+      spicy: { name: "Ring Light Diffuser", description: "Softens the glow for flattering angles.", category: "prop" },
+      justchatting: { name: "Talking-Points Notepad", description: "Hot takes and story beats at the ready.", category: "misc" },
+      variety: { name: "Random Challenge Jar", description: "Paper slips of weird stream ideas.", category: "prop" },
+    };
+    const base = talentId && kits[talentId] ? kits[talentId] : generic;
+    const s = this.s;
+    for (const item of base) {
+      s.addItem(makeItem({ ...item, generated: true, meta: { starterKit: "1" } }));
+    }
+    const extra = nicheExtras.variety;
+    if (extra) {
+      s.addItem(makeItem({ ...extra, generated: true, meta: { starterKit: "1" } }));
+    }
+  }
+
+  /** Generate a product-shot reference for a shop décor upgrade. */
+  async visualizeDecoration(upgradeId: string, force = false): Promise<void> {
+    const s = this.s;
+    const up = UPGRADES.find((u) => u.id === upgradeId);
+    if (!up || !isDecoration(up)) {
+      s.setToast("That item isn't visualizable décor.");
+      return;
+    }
+    if (!force && s.decorationImages[upgradeId]) {
+      s.setToast(`${up.name} already has a preview — regenerate from the shop.`);
+      return;
+    }
+    const subject = up.decorPrompt ?? up.description;
+    const prompt = [
+      subject,
+      "Single décor object, centered product shot on a plain soft background.",
+      "Clean readable silhouette, warm cozy lighting, no people, no text, no watermark, no UI.",
+      this.imageStyle(),
+      "Square composition.",
+    ].join(" ");
+    const rec = await this.genImage({
+      kind: "decoration",
+      prompt,
+      label: `${up.name} — décor`,
+      meta: { upgradeId },
+      force,
+      busyLabel: "Visualizing décor",
+    });
+    if (rec) {
+      s.setDecorationImage(upgradeId, rec.id);
+      s.setToast(`${up.name} preview ready!`);
+      s.logEvent(`Visualized ${up.name} for the shop.`);
+    }
+  }
+
+  /** Generate a square channel logo emblem for the stream brand. */
+  async generateBrandLogo(force = false): Promise<void> {
+    const s = this.s;
+    const b = s.brand;
+    if (!force && b.logoId) {
+      s.setToast("Logo already exists — regenerate from Brand settings.");
+      return;
+    }
+    const nicheLabel = NICHES[b.defaultNiche]?.label ?? "Variety";
+    const preset = logoPresetById(b.logoPreset);
+    // The player's own brief is the SUBJECT; fall back to a niche motif. The
+    // channel description only nudges the mood.
+    const subject = b.logoBrief.trim() || `an iconic symbol that represents a ${nicheLabel.toLowerCase()} stream`;
+    const mood = b.description.trim();
+    // NOTE: the global art style (this.imageStyle()) is deliberately NOT used here —
+    // it's written for character/scene art and makes the model render a person into
+    // the logo. A logo is pure graphic design, so the preset prompt owns the look.
+    const prompt = [
+      "Graphic design logo artwork: a flat vector brand emblem built from shapes, symbols, and iconography.",
+      `Subject of the logo: ${subject}.`,
+      preset.prompt,
+      mood ? `Mood inspiration: ${mood}.` : "",
+      "It is an abstract graphic mark, not a portrait or photo of a person.",
+      "Centered on a simple square backdrop, square composition.",
+    ]
+      .filter(Boolean)
+      .join(" ");
+    const rec = await this.genImage({
+      kind: "logo",
+      prompt,
+      label: `@${b.handle || "streamer"} — ${preset.label} logo`,
+      meta: { handle: b.handle, logoPreset: preset.id },
+      force,
+      busyLabel: "Designing channel logo",
+    });
+    if (rec) {
+      s.setBrand({ logoId: rec.id });
+      s.setToast("Channel logo ready!");
+      s.logEvent(`Generated channel logo for @${b.handle}.`);
     }
   }
 
@@ -4822,7 +5584,7 @@ export class GameController {
     // Ensure the eye-level room backdrop exists first, then reference it for the shot.
     const backdrop = await this.ensureZoneBackdrop(zoneId);
     const ref = await this.bodyRef();
-    const look = describeEquippedLook(s.equippedClothing, s.inventory);
+    const look = describeEquippedLook(s.equippedClothing, s.inventory, { hideCoveredUnderwear: true });
     const char = s.character;
     // References: her body template (likeness) + the room backdrop plate (space).
     const refs: string[] = [];
@@ -4831,6 +5593,7 @@ export class GameController {
     // Posture: LLM converts live context into a photo-ready visual moment; mock/offline
     // falls back to the zone's static resting posture.
     const doing = await this.camVisualMoment(zoneId);
+    const act = s.activity;
     const prompt = camFootagePrompt({
       name: s.settings.streamerName,
       zoneId,
@@ -4843,6 +5606,8 @@ export class GameController {
       hasBackdropRef: !!backdrop,
       posture: zonePosture(zoneId),
       doing,
+      activityLabel: act?.label,
+      activityHint: act?.narrationHint,
     });
     const rec = await this.genImage({
       kind: "scene",

@@ -387,7 +387,7 @@ const AXIS_PROSE: Record<PersonalityAxis, AxisProse> = {
     label: "Horny",
     pos: ["faintly flirty", "flirty", "forward", "suggestive", "explicitly horny"],
     neg: ["platonic", "strictly platonic", "sex-averse", "prudish", "repulsed by it"],
-    posEffect: "lets flirtation creep in when she invites it",
+    posEffect: "lets flirtation creep in when the streamer invites it",
     negEffect: "keeps things clean; flirting backfires",
   },
 };
@@ -986,17 +986,43 @@ function reflexive(subj: string): string {
  * The character knows everything about themselves and decides what to share; we
  * never censor — if something wouldn't come up yet, they simply don't mention it.
  */
-export function characterVoiceBlock(c: CharacterSheet, streamerName: string): string {
+/**
+ * Cap the `horny` axis to what the content intensity permits so a viewer who was
+ * seeded spicier (e.g. a whale at horny +5) is never described as suggestive in a
+ * non-spicy stream. risqué+ (intensity ≥ 2) leaves personality untouched; cheeky
+ * allows only faint flirtiness; wholesome strips it entirely.
+ */
+export function personalityForIntensity(p: Personality, intensity: number): Personality {
+  if (intensity >= 2) return p;
+  const hornyCap = intensity >= 1 ? 1 : 0;
+  return p.horny > hornyCap ? { ...p, horny: hornyCap } : p;
+}
+
+/** Drop the "flirty undertone" voice tag below risqué (it would contradict the tier). */
+function voiceProfileForIntensity(v: string, intensity: number): string {
+  if (intensity >= 2) return v;
+  return v
+    .split(" · ")
+    .filter((t) => t !== "flirty undertone")
+    .join(" · ");
+}
+
+export function characterVoiceBlock(
+  c: CharacterSheet,
+  streamerName: string,
+  intensity: number,
+): string {
   const arch = ARCHETYPE_BY_ID[c.archetypeId];
   const p = pronouns(c.gender);
   const name = c.realName || c.handle;
   const Subj = p.subj.charAt(0).toUpperCase() + p.subj.slice(1);
   const refl = reflexive(p.subj);
+  const personality = personalityForIntensity(c.personality, intensity);
   const lines = [
     `Voice this character: ${name} (@${c.handle}) — a ${arch?.label ?? "viewer"}, ${c.age}yo ${c.occupation} from ${c.origin}, ${p.subj}/${p.obj}. ${Subj} is a fan who watches the streamer ${streamerName}; ${p.subj} is the fan, never ${streamerName}.`,
-    `Personality: ${personalityProse(c.personality)}.`,
+    `Personality: ${personalityProse(personality)}.`,
     c.personality.fixation ? `Fixation: ${c.personality.fixation}.` : "",
-    `Typing style (guidance, not a script): ${c.voiceProfile}.`,
+    `Typing style (guidance, not a script): ${voiceProfileForIntensity(c.voiceProfile, intensity)}.`,
     `What ${p.subj} wants from ${streamerName}: ${c.motive.surface}. Deeper need: ${c.motive.need}.`,
     `Fear: ${c.motive.fear}. Boundary: ${c.motive.boundary}.`,
     c.backstory ? `Background (${p.subj} lives this, never recites it): ${c.backstory}` : "",

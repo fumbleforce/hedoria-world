@@ -13,16 +13,20 @@ export function VisualizationPanel({ controller }: { controller: GameController 
   const lastImageId = useStore((s) => s.lastImageId);
   const url = useStoredImage(lastImageId);
   const busy = useStore((s) => s.imageBusy);
+  const bgBusy = useStore((s) => s.imageBusyBackground);
   const isLive = useStore((s) => s.session.isLive);
   const [lightbox, setLightbox] = useState(false);
+  // Foreground jobs (the image the player is waiting for) get the pulsing label
+  // + image treatment; background prerequisites get only a subtle quiet label.
+  const fgBusy = !!busy && !bgBusy;
+  const busyLabel = busy && (
+    <span className={`viz__busy ${fgBusy ? "is-loading" : "viz__busy--bg"}`}>{busy}…</span>
+  );
 
   if (isLive) {
     return (
       <section className="viz viz--live">
-        <div className="viz__head">
-          <span>📺 Stream view</span>
-          {busy && <span className="viz__busy is-loading">{busy}…</span>}
-        </div>
+        {busyLabel}
         <StreamView controller={controller} />
       </section>
     );
@@ -30,16 +34,13 @@ export function VisualizationPanel({ controller }: { controller: GameController 
 
   return (
     <section className="viz">
-      <div className="viz__head">
-        <span>🎞 Visualization</span>
-        {busy && <span className="viz__busy is-loading">{busy}…</span>}
-      </div>
+      {busyLabel}
       {url ? (
         <button className="viz__imgbtn" onClick={() => setLightbox(true)} title="Click to enlarge">
-          <img src={url} alt="latest visualization" className={busy ? "is-loading" : ""} />
+          <img src={url} alt="latest visualization" className={fgBusy ? "is-loading" : ""} />
         </button>
       ) : (
-        <div className={`viz__placeholder ${busy ? "is-loading" : ""}`}>
+        <div className={`viz__placeholder ${fgBusy ? "is-loading" : ""}`}>
           {busy
             ? busy + "…"
             : "No visualization yet. Create your character (🎭), then “Visualize here” in the room or “Visualize scene” in the narrator."}

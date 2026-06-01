@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useStore } from "../state/store";
 import type { GameController } from "../game/controller";
+import { StreamNicheSelect } from "./StreamNicheSelect";
 
 /** Contextual menu raised by interacting with furniture: options + freeform. */
 export function ActionMenuModal({ controller }: { controller: GameController }) {
@@ -19,6 +20,19 @@ export function ActionMenuModal({ controller }: { controller: GameController }) 
           <button className="modal__close" onClick={close}>✕</button>
         </div>
         {menu.subtitle && <p className="menu__subtitle">{menu.subtitle}</p>}
+
+        {menu.showStreamNichePicker && menu.goLiveOption && (
+          <div className="menu__golive">
+            <StreamNicheSelect controller={controller} disabled={resolving} />
+            <button
+              className="btn btn--primary menu__golive-btn"
+              disabled={resolving}
+              onClick={() => controller.chooseOption(menu.goLiveOption!)}
+            >
+              {menu.goLiveOption.label}
+            </button>
+          </div>
+        )}
 
         <div className="menu__options">
           {menu.options.map((o) => (

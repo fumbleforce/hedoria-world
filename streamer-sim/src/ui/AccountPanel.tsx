@@ -14,6 +14,7 @@ import {
   setActiveSlot,
   type SaveSlotMeta,
 } from "../persist/saves";
+import { pickClass } from "./pickClass";
 
 type Tab = "saves" | "account";
 
@@ -31,10 +32,10 @@ export function AccountPanel() {
         <div className="modal__head">
           <h2>💾 Saves &amp; Account</h2>
           <div className="tabs">
-            <button className={`tab ${tab === "saves" ? "tab--on" : ""}`} onClick={() => setTab("saves")}>
+            <button className={pickClass(tab === "saves", "tab")} onClick={() => setTab("saves")}>
               Saves
             </button>
-            <button className={`tab ${tab === "account" ? "tab--on" : ""}`} onClick={() => setTab("account")}>
+            <button className={pickClass(tab === "account", "tab")} onClick={() => setTab("account")}>
               Account
             </button>
           </div>
@@ -94,7 +95,7 @@ function SavesContent() {
       </div>
       <div className="saves__grid">
         {slots.map((slot) => (
-          <div key={slot.id} className={`saveCard ${slot.id === active.id ? "saveCard--active" : ""}`}>
+          <div key={slot.id} className={pickClass(slot.id === active.id, "saveCard")}>
             <SavePortrait slot={slot} />
             <div className="saveCard__meta">
               <div className="saveCard__title">{slot.name}</div>

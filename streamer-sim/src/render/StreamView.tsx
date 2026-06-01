@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useStore } from "../state/store";
 import { useStoredImage } from "../persist/useStoredImage";
-import { activeCamera } from "../game/cameras";
+import { activeCamera, cameraDisplayLabel } from "../game/cameras";
 import { NICHES } from "../game/niches";
 import type { GameController } from "../game/controller";
 
@@ -16,13 +16,18 @@ export function StreamView({ controller }: { controller: GameController }) {
   const url = useStoredImage(footageId);
   const viewers = useStore((s) => s.metrics.currentViewers);
   const hype = useStore((s) => s.metrics.hype);
-  const name = useStore((s) => s.settings.streamerName);
-  const niche = useStore((s) => s.settings.niche);
+  const handle = useStore((s) => s.brand.handle);
+  const frameAccent = useStore((s) => s.brand.frameAccent);
+  const logoId = useStore((s) => s.brand.logoId);
+  const logoUrl = useStoredImage(logoId);
+  const niche = useStore((s) => s.session.niche ?? "variety");
   const clock = useStore((s) => s.clock);
   const startClock = useStore((s) => s.session.streamStartClock);
   const cameras = useStore((s) => s.cameras);
   const activeCameraId = useStore((s) => s.activeCameraId);
   const imageBusy = useStore((s) => s.imageBusy);
+  const bgBusy = useStore((s) => s.imageBusyBackground);
+  const fgBusy = !!imageBusy && !bgBusy;
   const cam = activeCamera(cameras, activeCameraId);
   const onCamera = controller.isOnCamera();
   const canGen = controller.canGenerateImages;
@@ -33,25 +38,25 @@ export function StreamView({ controller }: { controller: GameController }) {
 
   return (
     <div className="streamview">
-      <div className="streamview__feed">
+      <div className="streamview__feed" data-frame-accent={frameAccent}>
         {canGen && (
           <button
             type="button"
-            className={`streamview__refresh btn btn--mini ${imageBusy ? "is-loading" : ""}`}
+            className="streamview__refresh btn btn--mini"
             disabled={!!imageBusy}
             onClick={() => void controller.generateCamFootage(undefined, true)}
             title="Regenerate the live stream feed from the active camera"
           >
-            {imageBusy ? "Generating…" : url ? "📹 Refresh feed" : "📹 Capture feed"}
+            {url ? "📹 Refresh feed" : "📹 Capture feed"}
           </button>
         )}
 
         {!url && (
           <div className="streamview__noimg">
             {imageBusy ? (
-              <span className="is-loading">{imageBusy}…</span>
+              <span className={fgBusy ? "is-loading" : "viz__busy--bg"}>{imageBusy}…</span>
             ) : !canGen ? (
-              <span>📷 {cam?.label ?? "Camera"} is rolling — enable image generation to see the feed.</span>
+              <span>📷 {cam ? cameraDisplayLabel(cam) : "Camera"} is rolling — enable image generation to see the feed.</span>
             ) : (
               <span>No camera feed yet — hit Refresh feed.</span>
             )}
@@ -62,7 +67,7 @@ export function StreamView({ controller }: { controller: GameController }) {
           <img
             src={url}
             alt="live stream feed"
-            className={imageBusy ? "is-loading" : ""}
+            className={fgBusy ? "is-loading" : ""}
             onClick={() => setLightbox(true)}
             title="Click to enlarge"
           />
@@ -76,16 +81,17 @@ export function StreamView({ controller }: { controller: GameController }) {
         )}
 
         <div className="streamview__top">
+          {logoUrl && <img src={logoUrl} alt="" className="streamview__logo" />}
           <span className="streamview__live">● LIVE</span>
           <span className="streamview__uptime">{uptimeLabel}</span>
           <span className="streamview__viewers">👁 {Math.round(viewers).toLocaleString()}</span>
         </div>
 
         <div className="streamview__bottom">
-          <div className="streamview__title">{name || "Streamer"}</div>
+          <div className="streamview__title">@{handle || "streamer"}</div>
           <div className="streamview__sub">
             {NICHES[niche]?.label ?? "Just Chatting"} · 🔥 {Math.round(hype)}
-            {cam && <> · 📷 {cam.label}</>}
+            {cam && <> · 📷 {cameraDisplayLabel(cam)}</>}
           </div>
         </div>
       </div>

@@ -1,34 +1,69 @@
 import { useEffect, useState } from "react";
-import { useStore } from "../state/store";
+import { useStore, applyStartingMetricsIfFresh } from "../state/store";
+import { dominantOutfitVibe } from "../game/wardrobe";
 import type { GameController } from "../game/controller";
-import type { ContentTier } from "../game/types";
+import { CONTENT_TIERS_ONBOARDING } from "../game/content";
+import { DIFFICULTY_LEVELS } from "../game/balance";
 import { IMAGE_STYLE_PRESETS } from "../llm/imagePresets";
 import { clearImagePromptOverrides, type ImageStylePresetId } from "../llm/imagePresets";
-import { CHARACTER_PRESETS, type CharacterPreset } from "../game/characterPresets";
+import {
+  CHARACTER_PRESETS,
+  matchingCharacterPresetId,
+  presetCardRole,
+  presetGenderDot,
+  type CharacterPreset,
+} from "../game/characterPresets";
 import { useStoredImage } from "../persist/useStoredImage";
+import { GenderPicker } from "./GenderPicker";
+import { OptionPick } from "./OptionPick";
+import { pickClass } from "./pickClass";
+import { NO_TALENT_ID, TALENTS, randomTalent } from "../game/talents";
+import { RoomMapEditor } from "./RoomMapEditor";
+import { BrandFields } from "./BrandFields";
+import {
+  JOB_PRESETS,
+  SHIFT_SLOT_ORDER,
+  SHIFT_SLOTS,
+  customJob,
+  isCustomJobId,
+  jobFromPreset,
+  randomJobPreset,
+  type ShiftSlotId,
+} from "../game/jobs";
 
-const TIERS: Array<{ id: ContentTier; label: string; blurb: string }> = [
-  { id: "wholesome", label: "Wholesome", blurb: "PG. No flirting, creeps are harmless." },
-  { id: "flirty", label: "Flirty", blurb: "Cheeky innuendo, simps, PG-13." },
-  { id: "risque", label: "Risqué", blurb: "Bold & suggestive; pushy creeps & stalkers. Implied." },
-  { id: "unhinged", label: "No Limits", blurb: "Ceiling removed — anything the player drives can happen. Not forced; just uncapped." },
-  { id: "custom", label: "Custom", blurb: "Use your own steering text below." },
-];
-
-const STEP_LABELS = ["Intensity", "Art style", "Character", "Room"] as const;
+const STEP_LABELS = ["Intensity", "Art style", "Character", "Brand", "Skills", "Room"] as const;
 
 /**
  * First-run start-up flow for a brand-new save. Forces the player through the
- * four setup choices (intensity → art style → character → room) before the game
+ * four setup choices (intensity → art style → character → brand → skills → room) before the game
  * proper is reachable. Every step has a default so it can be completed without an
  * API key; image generation is offered but never required. Mounts as a full-page
  * overlay below the Settings modal so "Advanced — edit prompts" can layer on top.
  */
 export function Onboarding({ controller }: { controller: GameController }) {
   const [step, setStep] = useState(0);
+  const [launchPhase, setLaunchPhase] = useState<string | null>(null);
+  const imageBusy = useStore((s) => s.imageBusy);
+  const generatingRoom = useStore((s) => s.generatingRoom);
+  const starting = !!launchPhase;
+  const busy = starting || !!imageBusy || generatingRoom;
   const last = STEP_LABELS.length - 1;
 
-  const finish = () => useStore.getState().setOnboarded(true);
+  const finish = async () => {
+    applyStartingMetricsIfFresh();
+    setLaunchPhase("Writing your opening scene…");
+    try {
+      await controller.finishOnboarding((label) => setLaunchPhase(label));
+      useStore.getState().setOnboarded(true);
+    } catch {
+      setLaunchPhase(null);
+      useStore.getState().setToast("Couldn't start the game — try again.");
+    }
+  };
+
+  if (launchPhase) {
+    return <OnboardingLaunch phase={launchPhase} />;
+  }
 
   return (
     <div className="onboard">
@@ -54,7 +89,9 @@ export function Onboarding({ controller }: { controller: GameController }) {
           {step === 0 && <IntensityStep />}
           {step === 1 && <ArtStyleStep controller={controller} />}
           {step === 2 && <CharacterStep controller={controller} />}
-          {step === 3 && <RoomStep controller={controller} />}
+          {step === 3 && <BrandStep controller={controller} />}
+          {step === 4 && <SkillsStep />}
+          {step === 5 && <RoomStep controller={controller} />}
         </div>
 
         <div className="onboard__foot">
@@ -66,16 +103,20 @@ export function Onboarding({ controller }: { controller: GameController }) {
             ⚙ Advanced — edit prompts
           </button>
           <div className="onboard__nav">
-            <button className="btn" disabled={step === 0} onClick={() => setStep((s) => Math.max(0, s - 1))}>
+            <button className="btn" disabled={step === 0 || busy} onClick={() => setStep((s) => Math.max(0, s - 1))}>
               ← Back
             </button>
             {step < last ? (
-              <button className="btn btn--primary" onClick={() => setStep((s) => Math.min(last, s + 1))}>
+              <button className="btn btn--primary" disabled={busy} onClick={() => setStep((s) => Math.min(last, s + 1))}>
                 Next →
               </button>
             ) : (
-              <button className="btn btn--primary" onClick={finish}>
-                Start streaming →
+              <button
+                className={`btn btn--primary ${starting ? "is-loading" : ""}`}
+                disabled={busy}
+                onClick={() => void finish()}
+              >
+                {starting ? "Starting…" : "Start streaming →"}
               </button>
             )}
           </div>
@@ -87,35 +128,35 @@ export function Onboarding({ controller }: { controller: GameController }) {
 
 function IntensityStep() {
   const tier = useStore((s) => s.settings.contentTier);
-  const steering = useStore((s) => s.settings.customSteering);
+  const difficulty = useStore((s) => s.settings.difficulty ?? "normal");
   const set = useStore((s) => s.setSettings);
   return (
     <div className="onboard__pane">
       <h2>Pick your content intensity</h2>
       <p className="hint">Sets the ceiling on how far things can escalate — not a floor. You can change it later in Settings.</p>
-      <div className="tierGrid">
-        {TIERS.map((t) => (
-          <button
-            key={t.id}
-            className={`tier ${tier === t.id ? "tier--active" : ""}`}
-            onClick={() => set({ contentTier: t.id })}
-          >
+      <div className="pickGrid">
+        {CONTENT_TIERS_ONBOARDING.map((t) => (
+          <OptionPick key={t.id} selected={tier === t.id} onClick={() => set({ contentTier: t.id })}>
             <b>{t.label}</b>
             <small>{t.blurb}</small>
-          </button>
+          </OptionPick>
         ))}
       </div>
-      {tier === "custom" && (
-        <label className="field">
-          <span>Custom steering (injected verbatim into chat/story prompts)</span>
-          <textarea
-            rows={4}
-            value={steering}
-            placeholder="Describe the tone and direction you want…"
-            onChange={(e) => set({ customSteering: e.target.value })}
-          />
-        </label>
-      )}
+
+      <hr className="rule" />
+
+      <div className="field">
+        <span>Difficulty</span>
+        <div className="pickGrid">
+          {DIFFICULTY_LEVELS.map((d) => (
+            <OptionPick key={d.id} selected={difficulty === d.id} onClick={() => set({ difficulty: d.id })}>
+              <b>{d.label}</b>
+              <small>{d.blurb}</small>
+            </OptionPick>
+          ))}
+        </div>
+      </div>
+      <p className="hint">Tunes economy, bills, and survival pressure. Change anytime in Settings.</p>
     </div>
   );
 }
@@ -161,7 +202,7 @@ function ArtStyleStep({ controller }: { controller: GameController }) {
           return (
             <div
               key={p.id}
-              className={`stylePreset ${active ? "stylePreset--active" : ""}`}
+              className={pickClass(active, "stylePreset")}
               onClick={() => applyPreset(p.id)}
               role="button"
               tabIndex={0}
@@ -204,6 +245,9 @@ function CharacterStep({ controller }: { controller: GameController }) {
   const character = useStore((s) => s.character);
   const set = useStore((s) => s.setSettings);
   const setCharacter = useStore((s) => s.setCharacter);
+  const setStarterWardrobe = useStore((s) => s.setStarterWardrobe);
+  const equippedClothing = useStore((s) => s.equippedClothing);
+  const inventory = useStore((s) => s.inventory);
   const busy = useStore((s) => s.imageBusy);
   const portrait = useStoredImage(character.portraitId);
   const body = useStoredImage(character.bodyId);
@@ -212,12 +256,17 @@ function CharacterStep({ controller }: { controller: GameController }) {
   const [hint, setHint] = useState("");
   const [suggesting, setSuggesting] = useState(false);
 
-  const gender = settings.gender ?? "";
-  const genderMode = gender === "male" ? "male" : gender === "female" ? "female" : "custom";
+  const activePresetId = matchingCharacterPresetId(settings, character, equippedClothing, inventory);
 
   const applyPreset = (p: CharacterPreset) => {
-    set({ streamerName: p.name, gender: p.gender, streamerPersona: p.persona, niche: p.niche, outfit: p.outfit });
+    set({
+      streamerName: p.name,
+      gender: p.gender,
+      streamerPersona: p.persona,
+      talent: p.talent,
+    });
     setCharacter({ faceDescription: p.faceDescription, bodyDescription: p.bodyDescription });
+    setStarterWardrobe(p.outfit, p.gender);
   };
 
   const suggest = async () => {
@@ -244,10 +293,24 @@ function CharacterStep({ controller }: { controller: GameController }) {
         <span>Quick-start presets</span>
         <div className="onboard__presets">
           {CHARACTER_PRESETS.map((p) => (
-            <button key={p.id} className="tier" onClick={() => applyPreset(p)} title={p.persona}>
-              <b>{p.label}</b>
-              <small>{p.blurb}</small>
-            </button>
+            <OptionPick
+              key={p.id}
+              className="characterPresetPick"
+              selected={activePresetId === p.id}
+              onClick={() => applyPreset(p)}
+              title={p.persona}
+            >
+              <span className="presetPick__title">
+                <span
+                  className={`presetGenderDot presetGenderDot--${presetGenderDot(p.gender)}`}
+                  aria-hidden
+                />
+                <span className="presetPick__text">
+                  <b>{p.name}</b>
+                  <span className="presetPick__role">{presetCardRole(p)}</span>
+                </span>
+              </span>
+            </OptionPick>
           ))}
         </div>
       </div>
@@ -256,33 +319,19 @@ function CharacterStep({ controller }: { controller: GameController }) {
 
       <div className="field2">
         <label className="field">
-          <span>Streamer name</span>
+          <span>Character name (private)</span>
           <input value={settings.streamerName} onChange={(e) => set({ streamerName: e.target.value })} />
         </label>
         <div className="field">
           <span>Gender</span>
-          <div className="genderRow">
-            <button className={`tier ${genderMode === "female" ? "tier--active" : ""}`} onClick={() => set({ gender: "female" })}>
-              <b>Female</b>
-            </button>
-            <button className={`tier ${genderMode === "male" ? "tier--active" : ""}`} onClick={() => set({ gender: "male" })}>
-              <b>Male</b>
-            </button>
-            <button
-              className={`tier ${genderMode === "custom" ? "tier--active" : ""}`}
-              onClick={() => set({ gender: genderMode === "custom" ? gender : "" })}
-            >
-              <b>Custom</b>
-            </button>
-          </div>
-          {genderMode === "custom" && (
-            <input
-              style={{ marginTop: 8 }}
-              value={gender}
-              placeholder="e.g. nonbinary, androgynous…"
-              onChange={(e) => set({ gender: e.target.value })}
-            />
-          )}
+          <GenderPicker
+            gender={settings.gender ?? ""}
+            onChange={(gender) => {
+              const vibe = dominantOutfitVibe(equippedClothing, inventory);
+              set({ gender });
+              setStarterWardrobe(vibe, gender);
+            }}
+          />
         </div>
       </div>
 
@@ -348,6 +397,183 @@ function CharacterStep({ controller }: { controller: GameController }) {
   );
 }
 
+function BrandStep({ controller }: { controller: GameController }) {
+  return (
+    <div className="onboard__pane">
+      <h2>Build your brand</h2>
+      <p className="hint">This is your public channel identity — what chat sees on stream. Your character name stays private.</p>
+      <BrandFields controller={controller} />
+    </div>
+  );
+}
+
+function SkillsStep() {
+  const settings = useStore((s) => s.settings);
+  const job = useStore((s) => s.job);
+  const set = useStore((s) => s.setSettings);
+  const setJob = useStore((s) => s.setJob);
+
+  const [jobMode, setJobMode] = useState<"unemployed" | "preset" | "custom">(() => {
+    if (!job) return "unemployed";
+    if (isCustomJobId(job.id)) return "custom";
+    return "preset";
+  });
+  const [customTitle, setCustomTitle] = useState(() => (job && isCustomJobId(job.id) ? job.title : ""));
+  const [customWage, setCustomWage] = useState(() => (job && isCustomJobId(job.id) ? String(job.wage) : "65"));
+  const [customSlot, setCustomSlot] = useState<ShiftSlotId>(() => {
+    if (!job) return "afternoon";
+    const match = SHIFT_SLOT_ORDER.find(
+      (id) => SHIFT_SLOTS[id].shiftStart === job.shiftStart && SHIFT_SLOTS[id].shiftEnd === job.shiftEnd,
+    );
+    return match ?? "afternoon";
+  });
+
+  const applyCustomJob = (title: string, wage: string, slot: ShiftSlotId) => {
+    const parsed = Number.parseInt(wage, 10);
+    setJob(customJob(title, Number.isFinite(parsed) ? parsed : 65, slot));
+  };
+
+  return (
+    <div className="onboard__pane">
+      <h2>Skills</h2>
+
+      <div className="skillsSection">
+        <span className="skillsSection__title">Streamer skill</span>
+        <p className="hint skillsSection__desc">
+          Something you&apos;re already good at on cam — unlocks a free stream mode and quick actions, or skip it.
+        </p>
+        <div className="pickGrid">
+          <OptionPick
+            selected={!settings.talent}
+            onClick={() => set({ talent: NO_TALENT_ID })}
+          >
+            <b>— No skill</b>
+            <small>No free stream mode — you&apos;ll lean on purchased activities.</small>
+          </OptionPick>
+          {TALENTS.map((t) => (
+            <OptionPick
+              key={t.id}
+              selected={settings.talent === t.id}
+              onClick={() => set({ talent: t.id })}
+              title={t.blurb}
+            >
+              <b>{t.emoji} {t.label}</b>
+              <small>{t.blurb}</small>
+            </OptionPick>
+          ))}
+          <OptionPick
+            selected={false}
+            onClick={() => set({ talent: randomTalent().id })}
+          >
+            <b>🎲 Random skill</b>
+            <small>Roll the dice — surprise yourself.</small>
+          </OptionPick>
+        </div>
+      </div>
+
+      <hr className="rule" />
+
+      <div className="skillsSection">
+        <span className="skillsSection__title">Day job</span>
+        <p className="hint skillsSection__desc">
+          Clock in once per day during your shift window to earn a paycheck and cover rent. Show up late too often and you&apos;ll get strikes — three and you&apos;re fired. Or stay unemployed and rely on stream income alone.
+        </p>
+        <div className="pickGrid">
+          <OptionPick
+            selected={jobMode === "unemployed"}
+            onClick={() => { setJobMode("unemployed"); setJob(null); }}
+          >
+            <b>Unemployed</b>
+            <small>No day job — rent comes from tips and subs only.</small>
+          </OptionPick>
+          {JOB_PRESETS.map((p) => (
+            <OptionPick
+              key={p.id}
+              selected={jobMode === "preset" && job?.id === p.id}
+              onClick={() => { setJobMode("preset"); setJob(jobFromPreset(p)); }}
+              title={p.blurb}
+            >
+              <b>{p.title}</b>
+              <small>${p.wage}/shift · {p.blurb}</small>
+            </OptionPick>
+          ))}
+          <OptionPick
+            selected={false}
+            onClick={() => {
+              const p = randomJobPreset();
+              setJobMode("preset");
+              setJob(jobFromPreset(p));
+            }}
+          >
+            <b>🎲 Random job</b>
+            <small>Deal you a preset gig from the board.</small>
+          </OptionPick>
+          <OptionPick
+            selected={jobMode === "custom"}
+            onClick={() => {
+              setJobMode("custom");
+              applyCustomJob(customTitle, customWage, customSlot);
+            }}
+          >
+            <b>✏️ Custom job</b>
+            <small>Invent your own title, wage, and shift.</small>
+          </OptionPick>
+        </div>
+      </div>
+
+      {jobMode === "custom" && (
+        <>
+          <hr className="rule" />
+          <div className="field">
+            <span>Custom job details</span>
+            <div className="field2">
+              <label className="field">
+                <span>Title</span>
+                <input
+                  value={customTitle}
+                  placeholder="e.g. Night receptionist"
+                  onChange={(e) => {
+                    setCustomTitle(e.target.value);
+                    applyCustomJob(e.target.value, customWage, customSlot);
+                  }}
+                />
+              </label>
+              <label className="field">
+                <span>Salary per shift ($)</span>
+                <input
+                  type="number"
+                  min={40}
+                  max={120}
+                  value={customWage}
+                  onChange={(e) => {
+                    setCustomWage(e.target.value);
+                    applyCustomJob(customTitle, e.target.value, customSlot);
+                  }}
+                />
+              </label>
+            </div>
+            <label className="field">
+              <span>Shift hours</span>
+              <select
+                value={customSlot}
+                onChange={(e) => {
+                  const slot = e.target.value as ShiftSlotId;
+                  setCustomSlot(slot);
+                  applyCustomJob(customTitle, customWage, slot);
+                }}
+              >
+                {SHIFT_SLOT_ORDER.map((id) => (
+                  <option key={id} value={id}>{SHIFT_SLOTS[id].label}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function RoomStep({ controller }: { controller: GameController }) {
   const generating = useStore((s) => s.generatingRoom);
   const roomImage = useStore((s) => s.roomImage);
@@ -358,13 +584,9 @@ function RoomStep({ controller }: { controller: GameController }) {
   return (
     <div className="onboard__pane">
       <h2>Set the scene</h2>
-      <p className="hint">Generate art for your studio apartment, or start with the built-in default room.</p>
+      <p className="hint">Generate art for your studio apartment, or start with the built-in default room. If the zones don't line up with the generated room, drag them onto the matching furniture.</p>
 
-      {roomImage ? (
-        <img src={roomImage} alt="generated room" className="onboard__room" />
-      ) : (
-        <div className="onboard__room onboard__room--empty">Default studio room</div>
-      )}
+      <RoomMapEditor roomImage={roomImage} />
 
       <div className="charcre__actions">
         <button
@@ -382,6 +604,22 @@ function RoomStep({ controller }: { controller: GameController }) {
         <span className="hint">Set a Gemini or OpenRouter key (Settings → General) to generate room art. The default room works fine without it.</span>
       )}
       <p className="hint" style={{ marginTop: 14 }}>That's everything — hit <b>Start streaming</b> to go live whenever you're ready.</p>
+    </div>
+  );
+}
+
+/** Full-screen gate while the opening beat + first scene image generate. */
+function OnboardingLaunch({ phase }: { phase: string }) {
+  return (
+    <div className="onboard onboard--launch" aria-busy="true" aria-live="polite">
+      <div className="onboardLaunch">
+        <div className="onboardLaunch__ring" aria-hidden="true">
+          <span className="onboardLaunch__dot" />
+        </div>
+        <h1 className="onboardLaunch__title">◉ Limelight</h1>
+        <p className="onboardLaunch__phase is-loading">{phase}</p>
+        <p className="onboardLaunch__hint">Setting the stage for your first stream…</p>
+      </div>
     </div>
   );
 }

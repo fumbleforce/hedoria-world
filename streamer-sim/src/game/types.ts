@@ -41,20 +41,20 @@ export interface ChatMessage {
  * drive escalation as far as they choose. `custom` layers the author's own
  * steering on top (see game/content.ts).
  */
-export type ContentTier = "wholesome" | "flirty" | "risque" | "unhinged" | "custom";
+export type ContentTier = "wholesome" | "cheeky" | "risque" | "unhinged" | "custom";
 
 export type TextBackend = "mock" | "gemini" | "openrouter";
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
 /** UI color scheme. */
-export type ThemeId = "limelight" | "ocean" | "ember";
+export type ThemeId = "deck" | "limelight" | "ocean" | "ember";
 
 export type { ImageStylePresetId } from "../llm/imagePresets";
 import type { ImageStylePresetId } from "../llm/imagePresets";
 import type { SegmentId } from "./segments";
 import type { NicheId } from "./niches";
-import type { OutfitId } from "./outfits";
+import type { DifficultyLevel } from "./balance";
 
 export interface Settings {
   streamerName: string;
@@ -67,10 +67,10 @@ export interface Settings {
   contentTier: ContentTier;
   /** Author-supplied steering appended verbatim when contentTier === "custom". */
   customSteering: string;
-  /** Content niche — shapes who shows up + baseline appeal (see game/niches.ts). */
-  niche: NicheId;
-  /** Currently-worn outfit — a passive live appeal nudge (see game/outfits.ts). */
-  outfit: OutfitId;
+  /** Economy / survival tuning — see game/balance.ts getBalance(). */
+  difficulty: DifficultyLevel;
+  /** Chosen talent — unlocks a free stream mode + quick actions (see game/talents.ts). */
+  talent: string;
   textBackend: TextBackend;
   geminiModel: string;
   openRouterModel: string;
@@ -204,6 +204,8 @@ export interface ChangeLogEntry {
 
 export interface StreamSession {
   isLive: boolean;
+  /** Content niche for this stream only (set at go-live). */
+  niche: NicheId | null;
   /** Turn counter for the current stream. */
   round: number;
   /** Minutes elapsed this stream (derived from clock − streamStartClock). */
@@ -377,6 +379,8 @@ export interface Upgrade {
   category: UpgradeCategory;
   cost: number;
   description: string;
+  /** Subject line for the décor product-shot image (furniture with segment appeal). */
+  decorPrompt?: string;
   /** Multiplier/flat effects folded into the live model (see game/shop.ts). */
   effects: {
     viewerMult?: number;

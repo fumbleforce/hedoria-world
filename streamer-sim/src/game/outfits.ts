@@ -1,9 +1,7 @@
 /**
- * Wardrobe. The outfit you're wearing applies a passive baseline-appeal nudge
- * while live — a cheaper, faster lever than gear for shaping who likes your
- * content (cute → hype, bold → simps/whales, cozy → cozy crowd). The one-off
- * "change outfit" actions equip these; the effect then rides every live beat
- * through the resolver's baseline appeal (game/controller.baselineAppeal).
+ * Clothing vibe tags (casual / cozy / cute / bold) and their segment-appeal
+ * weights. Equipped items stack vibes via `wardrobeAppeal()` in `wardrobe.ts`;
+ * `dominantOutfitVibe()` picks the label shown in UI from what is actually worn.
  */
 
 import type { SegmentId } from "./segments";
@@ -26,6 +24,6 @@ export const OUTFITS: Record<OutfitId, OutfitDef> = {
   bold: { id: "bold", label: "Bold", appeal: { simps: 1.5, whales: 0.5, cozy: -0.5 } },
 };
 
-export function outfitAppeal(id: OutfitId | undefined): Partial<Record<SegmentId, number>> {
-  return OUTFITS[id ?? "casual"]?.appeal ?? {};
+export function outfitVibeLabel(id: OutfitId): string {
+  return OUTFITS[id]?.label ?? id;
 }

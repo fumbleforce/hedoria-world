@@ -4,22 +4,15 @@ import type { GameController } from "../game/controller";
 import {
   ACTIVITIES,
   ACTIVITY_CATEGORY_LABEL,
+  ACTIVITY_CATEGORY_ORDER,
+  activityVisible,
   type Activity,
-  type ActivityCategory,
 } from "../game/activities";
 import { SEGMENTS } from "../game/segments";
-import { isNoLimits, tierIntensity } from "../game/content";
-
-const CATEGORY_ORDER: ActivityCategory[] = ["game", "performance", "creative", "chill", "intimate"];
 
 function activityLocked(a: Activity, owned: string[]): boolean {
+  if (a.talent) return false;
   return a.cost != null && a.cost > 0 && !owned.includes(a.id);
-}
-
-function activityBlocked(a: Activity, tier: ReturnType<typeof useStore.getState>["settings"]["contentTier"]): string | null {
-  if (a.noLimitsOnly && !isNoLimits(tier)) return "No Limits tier required";
-  if (a.minIntensity != null && tierIntensity(tier) < a.minIntensity) return "Higher content tier required";
-  return null;
 }
 
 /** Modal to pick a stream activity (games, performances, or custom). */
@@ -27,6 +20,8 @@ export function ActivityPicker({ controller }: { controller: GameController }) {
   const open = useStore((s) => s.activityPickerOpen);
   const owned = useStore((s) => s.ownedActivities);
   const tier = useStore((s) => s.settings.contentTier);
+  const cameras = useStore((s) => s.cameras);
+  const talentId = useStore((s) => s.settings.talent);
   const [custom, setCustom] = useState("");
   if (!open) return null;
   const close = () => useStore.getState().setActivityPickerOpen(false);
@@ -46,8 +41,13 @@ export function ActivityPicker({ controller }: { controller: GameController }) {
           <button className="modal__close" onClick={close}>✕</button>
         </div>
 
-        {CATEGORY_ORDER.map((cat) => {
-          const items = ACTIVITIES.filter((a) => a.category === cat);
+        {ACTIVITY_CATEGORY_ORDER.map((cat) => {
+          const items = ACTIVITIES.filter(
+            (a) =>
+              a.category === cat
+              && (a.talent == null || a.talent === talentId)
+              && activityVisible(a, tier, cameras),
+          );
           if (!items.length) return null;
           return (
             <div key={cat} className="shop__group">
@@ -55,15 +55,13 @@ export function ActivityPicker({ controller }: { controller: GameController }) {
               <div className="games">
                 {items.map((a) => {
                   const locked = activityLocked(a, owned);
-                  const blocked = activityBlocked(a, tier);
-                  const disabled = !!locked || !!blocked;
                   return (
                     <button
                       key={a.id}
-                      className={`gamecard ${disabled ? "gamecard--locked" : ""}`}
-                      disabled={disabled}
+                      className={`gamecard ${locked ? "gamecard--locked" : ""}`}
+                      disabled={locked}
                       onClick={() => controller.startActivity(a.id)}
-                      title={blocked ?? (locked ? "Buy in shop" : a.blurb)}
+                      title={locked ? "Buy in shop" : a.blurb}
                     >
                       <span className="gamecard__emoji">{a.emoji}</span>
                       <span className="gamecard__name">{a.name}</span>
@@ -72,7 +70,6 @@ export function ActivityPicker({ controller }: { controller: GameController }) {
                         loves it: {a.pleases.map((p) => SEGMENTS[p].label).join(", ") || "—"}
                       </span>
                       {locked && <span className="gamecard__lock">🔒 Buy in shop · ${a.cost}</span>}
-                      {blocked && !locked && <span className="gamecard__lock">{blocked}</span>}
                     </button>
                   );
                 })}

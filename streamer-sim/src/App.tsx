@@ -24,6 +24,8 @@ import { EventModal } from "./ui/EventModal";
 import { GoalsPanel } from "./ui/GoalsPanel";
 import { CalendarPanel } from "./ui/CalendarPanel";
 import { RequestsPanel } from "./ui/RequestsPanel";
+import { JobPanel } from "./ui/JobPanel";
+import { WorkScreen } from "./ui/WorkScreen";
 import { Onboarding } from "./ui/Onboarding";
 
 export function App() {
@@ -98,6 +100,8 @@ export function App() {
       <GoalsPanel />
       <CalendarPanel />
       <RequestsPanel controller={controller} />
+      <JobPanel controller={controller} />
+      <WorkScreen controller={controller} />
 
       {toast && <div className="toast">{toast}</div>}
       <div className="backendChip">{chipLabel}</div>

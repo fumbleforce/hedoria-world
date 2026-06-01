@@ -29,7 +29,7 @@ fixed 1:1.
 | `generateCharacterBodyOnly()` | body | Regenerates only the T-pose body template — reuses the existing portrait as a likeness reference and the current equipped clothing. Gallery "regen" on a body image calls this instead of redoing the portrait. |
 | `generatePresence(zone)` | presence | The character placed in a specific zone; uses the body as a reference. |
 | `generateScene()` | scene | A "stream cam" moment; pushed into the narrator feed. References: the streamer's body T-pose (likeness) + the **room art** (`roomImage`, for apartment layout/style) + — during an in-person **visit** — the guest's own full-body T-pose. The guest body is generated on demand by `ensureCharacterBody()` (using their portrait as a likeness reference when one exists), stored under a `cbody:<id>` KV key, and reused thereafter; it falls back to the portrait, then a text description. The prompt names each reference. |
-| `generateCamFootage(zone?)` | scene | Live **cam shot** from the active camera tier + zone (StudioRoom **📹 Cam shot**). Includes equipped look in the prompt. Bathroom/bed angles require no-limits content tier. The result id is stored as `streamFootageId` and becomes the live **Stream view** feed. `meta: { zone, cameraTier }`. |
+| `generateCamFootage(zone?)` | scene | Live **cam shot** from the active camera tier + zone (StreamView **📹 Refresh feed**). Includes equipped look in the prompt. When live, an LLM step (`camVisual`) turns recent story + the active **activity** into a `doing` pose line; `camFootagePrompt` also receives the activity label/hint. With an active action or activity, framing widens to show full-body movement instead of the idle waist-up seated shot. Bathroom/bed angles require no-limits content tier. The result id is stored as `streamFootageId` and becomes the live **Stream view** feed. `meta: { zone, cameraTier }`. |
 | `generatePortrait(charId)` | (KV only) | A **viewer** avatar (hardcoded semi-real style); stored in a global KV key, not the gallery. |
 | `generateStylePreview(presetId)` | preview (logged only) | A fixed common subject per style preset, for the Settings comparison grid; stored in a global KV key. |
 | `regenerateImage(rec)` | varies | New id, same prompt/cache key. |
@@ -40,7 +40,10 @@ frame with a LIVE badge, uptime, viewer count, and a title bar (name · niche ·
 camera). The studio map (left) and stream chat (right `ChatPanel`) stay in place, so the
 three together read as a broadcast layout. `generateCamFootage` is auto-refreshed on
 go-live, camera switch, and zone moves (via `controller.refreshStreamFootage`, which
-no-ops when off-camera, busy, or without an image backend). Stepping off-camera dims the
+no-ops when off-camera, busy, or without an image backend). Manual **Refresh feed**
+(`force=true`, bypasses cache) is the way to regenerate the shot mid-stream so it
+reflects the current activity and recent beats. While live, use Refresh feed — not
+Narrator **Visualize scene** (that button is offline-only). Stepping off-camera dims the
 feed with an overlay; clicking the feed enlarges it in the lightbox.
 
 Presence/scene reuse the body T-pose as a reference image for consistency; scenes also
@@ -111,8 +114,10 @@ moves the avatar (CSS transform glide) and opens the zone menu.
   camera), **📸 Visualize here / Redo here**, and **📹 Cam shot** (live) when image
   generation is available and a character exists.
 
-> The default presence/room prompts say "her studio apartment" regardless of
-> `settings.gender`. See [09](./09-expectation-vs-reality.md).
+> Presence/scene prompts are pronoun-aware: `imagePromptVars` derives
+> `{{subj}}/{{obj}}/{{poss}}` from `settings.gender` (`genderTerms`) and strips a
+> trailing period off face/body descriptions so the template's own punctuation
+> isn't doubled. See [09](./09-expectation-vs-reality.md) (D5).
 
 ## UI themes (`ui/themes.ts`, `index.css`)
 

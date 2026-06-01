@@ -11,7 +11,7 @@ import { tierIntensity } from "./content";
 import { hornyComfortEase } from "./needs";
 import type { Multipliers } from "./shop";
 import { clamp } from "../rng/rng";
-import { BALANCE } from "./balance";
+import { BALANCE, type BalanceConfig } from "./balance";
 import { masteryCostMult, type MasteryState } from "./mastery";
 
 /**
@@ -38,6 +38,8 @@ export interface ResolveInput {
   baselineAppeal?: Partial<Record<string, number>>;
   /** Content freshness 0..1 — repeats drain it, dulling hype/appeal/follower gain. */
   novelty?: number;
+  /** Active balance preset (defaults to Normal). */
+  balance?: BalanceConfig;
 }
 
 export interface ResolveResult {
@@ -59,6 +61,7 @@ function pressureDelta(p: StatPressure | undefined, base: number, intensity: num
 
 export function resolveAction(input: ResolveInput): ResolveResult {
   const { verdict, metrics, mult, isLive } = input;
+  const bal = input.balance ?? BALANCE;
   const intensity = verdict.intensity;
   const audience = cloneAudience(input.audience);
   const tierMax = tierIntensity(input.contentTier);
@@ -69,7 +72,7 @@ export function resolveAction(input: ResolveInput): ResolveResult {
   const showmanshipMult = input.mastery ? masteryCostMult(input.mastery.showmanship) : 1;
   const composureMult = input.mastery ? masteryCostMult(input.mastery.composure) : 1;
 
-  const cost = BALANCE.cost;
+  const cost = bal.cost;
   const tags = verdict.tags;
 
   // ENERGY — code owns the sign; performing spends, resting restores.
@@ -95,11 +98,11 @@ export function resolveAction(input: ResolveInput): ResolveResult {
     verdict.pressure.comfort === "down";
   let comfortDelta = 0;
   if (boundary) {
-    comfortDelta = BALANCE.recovery.boundaryComfort;
+    comfortDelta = bal.recovery.boundaryComfort;
   } else if (exposes) {
     let c = cost.comfortPerIntensity * intensity;
-    if (intensity >= BALANCE.readiness.comfortGateFrom) {
-      c *= 1 + (BALANCE.readiness.comfortCostAmplifyLow - 1) * (1 - metrics.comfort / 100);
+    if (intensity >= bal.readiness.comfortGateFrom) {
+      c *= 1 + (bal.readiness.comfortCostAmplifyLow - 1) * (1 - metrics.comfort / 100);
     }
     if (verdict.pressure.comfort === "up") c *= cost.pressureRelief;
     else if (verdict.pressure.comfort === "down") c *= cost.pressureAmplify;
@@ -147,7 +150,7 @@ export function resolveAction(input: ResolveInput): ResolveResult {
           ((seg.satisfaction - 55) / 45) *
           def.tipFactor *
           seg.population *
-          BALANCE.economy.tipConstant *
+          bal.economy.tipConstant *
           mult.income;
       }
 
@@ -174,13 +177,13 @@ export function resolveAction(input: ResolveInput): ResolveResult {
 
     // Readiness gates the positive payoff: how well the action fit the room,
     // plus escalation gates (comfort/energy/hype) for higher-intensity beats.
-    const readiness = readinessFactor(verdict, metrics, fitNumerator, popSum);
+    const readiness = readinessFactor(verdict, metrics, fitNumerator, popSum, bal);
     earned *= readiness;
     satWeightedHappy *= readiness;
 
     // Early monetization ramp: a tiny new audience barely tips, so the first
     // streams are lean and whales/subs are the real lever out of precarity.
-    const monetizationRamp = Math.min(1, metrics.followers / BALANCE.economy.monetizationRampFollowers);
+    const monetizationRamp = Math.min(1, metrics.followers / bal.economy.monetizationRampFollowers);
     earned *= monetizationRamp;
 
     // Stale content also dulls tips + follower growth.
@@ -188,11 +191,11 @@ export function resolveAction(input: ResolveInput): ResolveResult {
     satWeightedHappy *= novelty;
 
     const reach =
-      BALANCE.economy.reachBase +
-      Math.min(BALANCE.economy.reachCap, metrics.followers * BALANCE.economy.reachPerFollower);
+      bal.economy.reachBase +
+      Math.min(bal.economy.reachCap, metrics.followers * bal.economy.reachPerFollower);
     const gainedFollowers = Math.max(
       0,
-      Math.round(satWeightedHappy * BALANCE.economy.followerGrowth * reach),
+      Math.round(satWeightedHappy * bal.economy.followerGrowth * reach),
     );
 
     metricsPatch.cash = metrics.cash + earned;
@@ -227,8 +230,9 @@ function readinessFactor(
   metrics: Metrics,
   fitNumerator: number,
   popSum: number,
+  bal: BalanceConfig = BALANCE,
 ): number {
-  const cfg = BALANCE.readiness;
+  const cfg = bal.readiness;
   const intensity = verdict.intensity;
 
   // fit ~ average positive appeal across the present audience (0..3); normalize

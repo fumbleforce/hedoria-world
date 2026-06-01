@@ -100,7 +100,7 @@ export const EVENT_TRIGGERS: EventTrigger[] = [
     weight: (c) => (c.intensity >= 1 ? 0.9 : 0.4),
     bindsCharacter: true,
     build: (c, who) => {
-      const creepy = c.intensity >= 1 && (who?.threat ?? 0) >= 1;
+      const creepy = c.intensity >= 2 && (who?.threat ?? 0) >= 1;
       if (creepy) {
         return ev("🚪 Someone's at the door", `Through the peephole: a stranger with flowers and a printout of your schedule.`, "creepy", [
           choice("Don't open — wait them out", "They leave the flowers and go. You feel watched.", { comfort: -12 }),
@@ -120,7 +120,7 @@ export const EVENT_TRIGGERS: EventTrigger[] = [
     bindsCharacter: true,
     build: (c, who) => {
       const name = who?.handle ?? "someone";
-      const creepy = (who?.threat ?? 0) >= 1 && c.intensity >= 1;
+      const creepy = (who?.threat ?? 0) >= 1 && c.intensity >= 2;
       // A DM has an in-game answer: an actual reply. So instead of a modal with
       // canned choices, this lands as a real message in the sender's DM thread
       // and notifies the player. `deliverAsDm` seeds the opener's intent; the
@@ -135,7 +135,7 @@ export const EVENT_TRIGGERS: EventTrigger[] = [
         who,
       );
       e.deliverAsDm = creepy
-        ? "an unsettling, overly-specific out-of-the-blue message that hints you've been watching her day a little too closely"
+        ? "an unsettling, overly-specific out-of-the-blue message that hints you've been watching the streamer's day a little too closely"
         : "a warm, heartfelt out-of-the-blue message";
       return e;
     },

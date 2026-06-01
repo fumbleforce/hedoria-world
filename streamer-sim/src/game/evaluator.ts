@@ -6,6 +6,7 @@ import { SEGMENT_IDS, type SegmentId } from "./segments";
 import { fillPrompt, promptSections, activityLockBlock, type ActivityPromptContext } from "./prompts";
 import type { Settings } from "./types";
 import { steeringForTier } from "./content";
+import { genderTerms } from "./cameras";
 import { extractJson } from "../llm/json";
 import { clamp } from "../rng/rng";
 
@@ -47,6 +48,9 @@ export async function evaluateAction(
     return v;
   }
   try {
+    const g = genderTerms(ctx.settings.gender);
+    const isAre = g.plural ? "are" : "is";
+    const subjCap = g.subj.charAt(0).toUpperCase() + g.subj.slice(1);
     const req = {
       system: ctx.evaluatorPrompt,
       messages: [
@@ -57,7 +61,7 @@ export async function evaluateAction(
               heading: "Stream status",
               body: ctx.isLive
                 ? "LIVE — broadcasting on webcam right now."
-                : "OFFLINE — not broadcasting; she is just at home.",
+                : `OFFLINE — not broadcasting; ${g.subj} ${isAre} just at home.`,
             },
             { heading: "Location", body: ctx.zoneLabel },
             {
@@ -103,9 +107,9 @@ export async function evaluateAction(
               heading: "Instructions",
               body: ctx.isLive
                 ? ctx.activity
-                  ? "Classify audience reaction. Stage direction must show her doing this action INSIDE the locked activity segment — never transitioning out. Ground in THIS moment; open differently from last directions; lead with a concrete action, not her expression."
-                  : "Classify how the live audience reacts. Ground narration in THIS moment so it reads fresh. Open differently from last stage directions; lead with a concrete ACTION, not her expression."
-                : "She is OFFLINE — set every segment appeal to 0 / omit appeal. Judge plausibility and narrate only.",
+                  ? `Classify audience reaction. Stage direction must show ${g.obj} doing this action INSIDE the locked activity segment — never transitioning out. Ground in THIS moment; open differently from last directions; lead with a concrete action, not ${g.poss} expression.`
+                  : `Classify how the live audience reacts. Ground narration in THIS moment so it reads fresh. Open differently from last stage directions; lead with a concrete ACTION, not ${g.poss} expression.`
+                : `${subjCap} ${isAre} OFFLINE — set every segment appeal to 0 / omit appeal. Judge plausibility and narrate only.`,
             },
           ]),
         },
@@ -391,7 +395,7 @@ function tierCap(s: Settings): number {
   switch (s.contentTier) {
     case "wholesome":
       return 2;
-    case "flirty":
+    case "cheeky":
       return 3;
     case "risque":
       return 4;

@@ -41,7 +41,9 @@ into `partialize` or restored in `boot` / `resumeLive()`.
   carries over technical/LLM config (provider, models, prompts, theme, dev flags)
   but resets the character identity (`streamerName`, `streamerPersona`, `gender`,
   `streamerBirthday`) to defaults — otherwise the new game would clone the previous
-  save's streamer.
+  save's streamer. **`settings.difficulty`** carries over like theme; starting
+  cash/followers are seeded from `startingMetrics(difficulty)` on first boot (and again
+  when onboarding finishes on a still-fresh save via `applyStartingMetricsIfFresh()`).
 - `setActiveSlot(id)` updates the index only; the Saves tab triggers a full
   `window.location.reload()` to rebind.
 - `updateActiveMeta` syncs the slot's `characterName/day/portraitId` (called on day
@@ -57,11 +59,14 @@ Persist name is `limelight-save-v3` by default but is **retargeted at boot** to
 `merge` deep-merges `settings` so new settings fields get defaults on old saves.
 
 **Persisted:**
-`onboarded` (first-run setup flag — see below), `metrics`, `session`, `activity` (while live), `audience`, `settings`, `ownedUpgrades`, `ownedActivities`, `promptOverrides`,
+`onboarded` (first-run setup flag — see below), `metrics`, `session`, `activity` (while live), `audience`, `settings` (includes **`talent`**), **`brand`** (public `@handle`, channel description/rules, default niche, logo id, frame accent), **`streamNicheDraft`** (desk picker for the next go-live), `ownedUpgrades`, `ownedActivities`, **`starterKitGranted`**, **`decorationImages`** (upgrade id → image id), `promptOverrides`,
 `cameras`, `activeCameraId`, `inventory`, `equippedClothing`,
-`eventLog`, `recentEvents`, `arcs`, `completedGoals`, `roomImage`, `dmThreads`, `chat`,
+`eventLog`, `recentEvents`, `arcs`, `completedGoals`, `roomImage`, `zoneCells` (draggable zone layout on the room map), `dmThreads`, `chat`,
 `story`, `clock`, `zone`, `character` (ids only), `presenceImages` (ids), `lastImageId`,
-`roster` (verbatim, **including** online flags), `pendingVisits`, `viewerRequests`, and the active
+`roster` (verbatim, **including** online flags), `pendingVisits`, `viewerRequests`, **`job`**
+(day-job title, wage, shift window, strikes, last clock-in day/on-time flag), **`workSession`**
+(active "at work" shift overlay — deferred pay/time/costs + generated image id & flavor, so a
+mid-shift reload resumes the Work screen), and the active
 `visitor` guest scene (so an in-progress visit survives a reload).
 
 > `chat`, `story`, `clock`, and `zone` were **recently added** to fix history being
@@ -80,14 +85,16 @@ Persist name is `limelight-save-v3` by default but is **retargeted at boot** to
 > key keep the offline default (the persist `merge` only spreads keys present in the
 > saved blob).
 
-> **`onboarded`** gates the first-run setup flow (intensity → art style → character →
+> **`onboarded`** gates the first-run setup flow (intensity + difficulty → art style → character → brand → skills →
 > room; see [08](./08-ui-map.md)). A brand-new slot (created by "New game") persists
 > only its seed settings, so on first load the `merge` computes `onboarded = false` and
 > the wizard is forced. Existing saves are migrated to `true` by a `hasProgress`
 > heuristic in `merge` — true when the save already has a generated character
 > (`character.portraitId`/`bodyId`), a `roomImage`, `day > 1`, any `story`, or is mid-
 > stream — so returning players are never interrupted. The wizard sets `onboarded = true`
-> on finish.
+> on finish. **`brand`** is migrated on old saves: `handle = suggestHandle(settings.streamerName)`,
+> `defaultNiche` from `streamNicheDraft` or legacy `settings.niche`, other fields default empty.
+> `finishOnboarding` sets `streamNicheDraft = brand.defaultNiche`.
 
 **Not persisted (reset/rebuilt on reload):**
 `booted`, `pendingEvent`, `resolving`, all UI modal flags, `toast`, busy
@@ -102,8 +109,8 @@ Database `limelight-media` v2, two object stores:
 - `images` — `StoredImage` records, indexed by `cacheKey`, `kind`, `createdAt`.
 
 `StoredImage = { id, slotId, cacheKey, kind, label, prompt, dataUrl, characterName,
-meta?, sourceImageId?, createdAt }`. `ImageKind = room | portrait | body | presence |
-scene`.
+meta?, sourceImageId?, createdAt }`. `ImageKind = logo | room | portrait | body | presence |
+scene | corner | backdrop | decoration | work`.
 
 | KV key | Scope | Purpose |
 |--------|-------|---------|

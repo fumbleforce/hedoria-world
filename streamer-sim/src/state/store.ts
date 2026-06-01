@@ -21,23 +21,44 @@ import type {
   ChangeLogEntry,
 } from "../game/types";
 import { uid } from "../rng/rng";
-import { SPAWN_ZONE, type ZoneId } from "../game/studio";
+import {
+  SPAWN_ZONE,
+  clampZoneCell,
+  defaultZoneCells,
+  normalizeZoneCells,
+  type ZoneId,
+} from "../game/studio";
 import { starterDeskCamera, migrateLegacyCamUpgrades, type PlacedCamera } from "../game/cameras";
 import type { Item } from "../game/items";
 import type { ClothingSlot } from "../game/wardrobe";
-import { starterClothingForOutfit, isLegacyStarterWardrobe } from "../game/wardrobe";
+import {
+  starterClothingFor,
+  starterClothingForGender,
+  isLegacyStarterWardrobe,
+  isStarterWardrobeItem,
+} from "../game/wardrobe";
+import type { OutfitId } from "../game/outfits";
+import type { NicheId } from "../game/niches";
+import { sanitizeNicheForTier } from "../game/niches";
+import { initialBrand, normalizeBrand, normalizeHandle, logoPresetById, type StreamBrand } from "../game/brand";
 
-const STARTER_WARDROBE = starterClothingForOutfit("casual");
+const STARTER_WARDROBE = starterClothingFor("casual", "female");
 import { saveRoomImage } from "../persist/imageStore";
 import { getActiveSlotId, updateActiveMeta } from "../persist/saves";
 import { applyTheme } from "../ui/themes";
 import { initialAudience, type AudienceState } from "../game/segments";
+import { startingMetrics, type DifficultyLevel } from "../game/balance";
 import { defaultCharacterVisual, normalizeCharacterVisual } from "../game/characterVisual";
+import { DEFAULT_TALENT_ID } from "../game/talents";
 import type { CharacterSheet, Roster } from "../game/characters";
 import { normalizeCharacter, normalizeRoster } from "../game/characters";
 import { initialMastery, normalizeMastery, type MasteryState } from "../game/mastery";
 import type { PromptId } from "../game/prompts";
 import type { ActionOption } from "../game/actions";
+import type { SettingsTab } from "../game/settingsTabs";
+import type { JobState, WorkSession } from "../game/jobs";
+
+export type { SettingsTab } from "../game/settingsTabs";
 import { WAKE_TIME } from "../game/time";
 import type { LlmCallStat } from "../llm/types";
 
@@ -110,24 +131,28 @@ function toneForMetric(key: FeedbackMetricKey, delta: number): FeedbackTone {
   return "bad";
 }
 
-const initialMetrics = (): Metrics => ({
-  cash: 250,
-  followers: 35,
-  subscribers: 1,
-  currentViewers: 0,
-  peakViewers: 0,
-  hype: 20,
-  energy: 100,
-  comfort: 90,
-  hunger: 100,
-  bladder: 100,
-  hygiene: 100,
-  horny: 0,
-  day: 1,
-});
+const initialMetrics = (difficulty: DifficultyLevel = "normal"): Metrics => {
+  const start = startingMetrics(difficulty);
+  return {
+    cash: start.cash,
+    followers: start.followers,
+    subscribers: 1,
+    currentViewers: 0,
+    peakViewers: 0,
+    hype: 20,
+    energy: 100,
+    comfort: 90,
+    hunger: 100,
+    bladder: 100,
+    hygiene: 100,
+    horny: 0,
+    day: 1,
+  };
+};
 
 const initialSession = (): StreamSession => ({
   isLive: false,
+  niche: null,
   round: 0,
   seconds: 0,
   streamStartClock: 0,
@@ -143,11 +168,11 @@ const initialSettings = (): Settings => ({
   streamerPersona:
     "A bubbly variety streamer in her early 20s trying to make rent and go full-time. Quick-witted, a little shy, warms up to chat.",
   gender: "female",
-  theme: "limelight",
-  contentTier: "flirty",
+  theme: "deck",
+  contentTier: "cheeky",
   customSteering: "",
-  niche: "variety",
-  outfit: "casual",
+  difficulty: "normal",
+  talent: DEFAULT_TALENT_ID,
   textBackend: "mock",
   geminiModel: "gemini-2.5-flash",
   openRouterModel: "google/gemini-2.5-flash",
@@ -185,7 +210,13 @@ export function freshGameSettings(current: Settings): Settings {
     streamerPersona: defaults.streamerPersona,
     gender: defaults.gender,
     streamerBirthday: defaults.streamerBirthday,
+    talent: defaults.talent,
   };
+}
+
+/** Brand defaults for a brand-new save slot. */
+export function freshGameBrand(): StreamBrand {
+  return initialBrand();
 }
 
 export interface ActionMenu {
@@ -193,22 +224,26 @@ export interface ActionMenu {
   subtitle?: string;
   options: ActionOption[];
   allowFreeform: boolean;
+  /** Desk go-live row: stream-type picker beside the Go live button. */
+  showStreamNichePicker?: boolean;
+  goLiveOption?: ActionOption;
 }
-
-/** Tabs in the unified Settings modal. */
-export type SettingsTab = "general" | "prompts" | "room" | "character" | "gallery" | "llm" | "dev";
 
 export interface StoreState {
   booted: boolean;
   /**
    * False on a brand-new save until the player completes the start-up flow
-   * (intensity → art style → character → room). Existing saves with progress are
+   * (intensity → art style → character → brand → skills → room). Existing saves with progress are
    * migrated to `true` so they're never interrupted (see merge below).
    */
   onboarded: boolean;
   metrics: Metrics;
   session: StreamSession;
   settings: Settings;
+  /** Niche picked at the desk before the next go-live (not tied to character). */
+  streamNicheDraft: NicheId;
+  /** Public channel identity — handle, rules, logo, default niche. */
+  brand: StreamBrand;
   audience: AudienceState;
   /** All named characters known to the game (persisted). */
   roster: Roster;
@@ -223,6 +258,8 @@ export interface StoreState {
   activity: ActivityState | null;
   /** Character zone position. */
   zone: ZoneId;
+  /** Draggable stand positions on the room map (grid cells, may be fractional). */
+  zoneCells: Record<ZoneId, [number, number]>;
   /** Owned cameras — placed in zones, unplaced in bag, or portable. */
   cameras: PlacedCamera[];
   /** Which camera angle is currently live (on-screen). */
@@ -254,6 +291,12 @@ export interface StoreState {
   streamFootageId: string | null;
   /** Label of the image job currently running (null = idle). */
   imageBusy: string | null;
+  /**
+   * True when the running image job is a background prerequisite (body/corner/
+   * backdrop/decoration/preview) the player isn't directly waiting on. Drives a
+   * subtle indicator instead of the full foreground loading treatment.
+   */
+  imageBusyBackground: boolean;
 
   // transient UI
   activityPickerOpen: boolean;
@@ -277,6 +320,10 @@ export interface StoreState {
   ownedUpgrades: string[];
   /** Purchased activity/game ids from the shop library. */
   ownedActivities: string[];
+  /** True once the onboarding starter kit has been granted (one-time). */
+  starterKitGranted: boolean;
+  /** Shop décor upgrade id → StoredImage id (product-shot references for room gen). */
+  decorationImages: Record<string, string>;
   promptOverrides: Partial<Record<PromptId, string>>;
   toast: string | null;
   /** Persisted experience/mastery XP per skill domain (personal progression). */
@@ -302,6 +349,12 @@ export interface StoreState {
   viewerRequests: ViewerRequest[];
   /** Whether the viewer-requests panel is open. */
   requestsOpen: boolean;
+  /** Active day job (wage shifts, strikes) — persisted. */
+  job: JobState | null;
+  /** Job board / shift panel (transient). */
+  jobPanelOpen: boolean;
+  /** Active "at work" shift overlay — persisted so a mid-shift reload resumes it. */
+  workSession: WorkSession | null;
   /** True while the fulfillment judge is running. */
   requestsBusy: boolean;
   /** Active in-person guest scene, if one is currently playing out. */
@@ -338,10 +391,14 @@ export interface StoreState {
   addCamera: (cam: PlacedCamera) => void;
   removeCamera: (id: string) => void;
   placeCamera: (id: string, zone: ZoneId) => void;
+  /** Send a placed camera back to the bag (clears its zone), keeping it owned. */
+  unplaceCamera: (id: string) => void;
   setActiveCamera: (id: string | null) => void;
   addItem: (item: Item) => void;
   removeItem: (id: string) => void;
   equipClothing: (slot: ClothingSlot, itemId: string | null) => void;
+  /** Replace gender-default starter garments; keeps shop/gift/starter-kit items. */
+  setStarterWardrobe: (outfit: OutfitId, gender: string) => void;
   setRoomImage: (url: string | null) => void;
   setGeneratingRoom: (b: boolean) => void;
 
@@ -349,6 +406,8 @@ export interface StoreState {
   setPresenceImage: (zone: ZoneId, imageId: string | null) => void;
   clearPresenceImages: () => void;
   setZoneBackdrop: (zone: ZoneId, imageId: string | null) => void;
+  setZoneCell: (zone: ZoneId, cell: [number, number]) => void;
+  resetZoneCells: () => void;
   clearZoneBackdrops: () => void;
   setCornerImage: (zone: ZoneId, imageId: string | null) => void;
   clearCornerImages: () => void;
@@ -357,7 +416,7 @@ export interface StoreState {
   setStylePreview: (presetId: string, dataUrl: string) => void;
   setLastImage: (id: string | null) => void;
   setStreamFootage: (id: string | null) => void;
-  setImageBusy: (label: string | null) => void;
+  setImageBusy: (label: string | null, background?: boolean) => void;
 
   upsertCharacter: (c: CharacterSheet) => void;
   patchCharacter: (id: string, patch: Partial<CharacterSheet>) => void;
@@ -382,10 +441,14 @@ export interface StoreState {
   /** Open the Settings modal directly on a given tab. */
   openSettings: (tab?: SettingsTab) => void;
   setSettings: (patch: Partial<Settings>) => void;
+  setStreamNicheDraft: (niche: NicheId) => void;
+  setBrand: (patch: Partial<StreamBrand>) => void;
   setPromptOverride: (id: PromptId, body: string | null) => void;
   logEvent: (line: string) => void;
   addUpgrade: (id: string) => void;
   addOwnedActivity: (id: string) => void;
+  setStarterKitGranted: (b: boolean) => void;
+  setDecorationImage: (upgradeId: string, imageId: string | null) => void;
   setToast: (t: string | null) => void;
   /** Add XP to one or more mastery domains. */
   addMasteryXp: (delta: Partial<MasteryState>) => void;
@@ -406,6 +469,10 @@ export interface StoreState {
   patchViewerRequest: (id: string, patch: Partial<ViewerRequest>) => void;
   setRequestsOpen: (b: boolean) => void;
   setRequestsBusy: (b: boolean) => void;
+  setJob: (job: JobState | null) => void;
+  setJobPanelOpen: (b: boolean) => void;
+  setWorkSession: (w: WorkSession | null) => void;
+  patchWorkSession: (patch: Partial<WorkSession>) => void;
   startVisitor: (scene: VisitorScene) => void;
   pushVisitorLine: (line: VisitorScene["lines"][number]) => void;
   patchVisitor: (patch: Partial<VisitorScene>) => void;
@@ -494,6 +561,8 @@ export const useStore = create<StoreState>()(
       metrics: initialMetrics(),
       session: initialSession(),
       settings: initialSettings(),
+      streamNicheDraft: "variety",
+      brand: initialBrand(),
       audience: initialAudience(),
       roster: {},
       clock: WAKE_TIME,
@@ -504,6 +573,7 @@ export const useStore = create<StoreState>()(
       resolving: false,
       activity: null,
       zone: SPAWN_ZONE,
+      zoneCells: defaultZoneCells(),
       cameras: [starterDeskCamera()],
       activeCameraId: starterDeskCamera().id,
       inventory: [...STARTER_WARDROBE.items],
@@ -520,6 +590,7 @@ export const useStore = create<StoreState>()(
       lastImageId: null,
       streamFootageId: null,
       imageBusy: null,
+      imageBusyBackground: false,
 
       activityPickerOpen: false,
       openCharId: null,
@@ -536,6 +607,8 @@ export const useStore = create<StoreState>()(
       eventLog: [],
       ownedUpgrades: [],
       ownedActivities: [],
+      starterKitGranted: false,
+      decorationImages: {},
       promptOverrides: {},
       toast: null,
       mastery: initialMastery(),
@@ -551,6 +624,9 @@ export const useStore = create<StoreState>()(
       viewerRequests: [],
       requestsOpen: false,
       requestsBusy: false,
+      job: null,
+      jobPanelOpen: false,
+      workSession: null,
       visitor: null,
       eventScene: null,
       pendingEventSeeds: [],
@@ -645,6 +721,11 @@ export const useStore = create<StoreState>()(
             return c;
           }),
         })),
+      unplaceCamera: (id) =>
+        set((s) => ({
+          cameras: s.cameras.map((c) => (c.id === id ? { ...c, zone: null } : c)),
+          activeCameraId: s.activeCameraId === id ? null : s.activeCameraId,
+        })),
       setActiveCamera: (activeCameraId) => set({ activeCameraId }),
       addItem: (item) => set((s) => ({ inventory: [...s.inventory, item] })),
       removeItem: (id) =>
@@ -660,6 +741,25 @@ export const useStore = create<StoreState>()(
           if (itemId) next[slot] = itemId;
           else delete next[slot];
           return { equippedClothing: next };
+        }),
+      setStarterWardrobe: (outfit, gender) =>
+        set((s) => {
+          const removedIds = new Set(
+            s.inventory.filter(isStarterWardrobeItem).map((i) => i.id),
+          );
+          const keptInventory = s.inventory.filter((i) => !removedIds.has(i.id));
+          const starter = starterClothingFor(outfit, gender);
+          const nextEquipped = { ...s.equippedClothing };
+          for (const slot of Object.keys(nextEquipped) as ClothingSlot[]) {
+            if (removedIds.has(nextEquipped[slot]!)) delete nextEquipped[slot];
+          }
+          for (const [slot, id] of Object.entries(starter.equipped) as [ClothingSlot, string][]) {
+            nextEquipped[slot] = id;
+          }
+          return {
+            inventory: [...keptInventory, ...starter.items],
+            equippedClothing: nextEquipped,
+          };
         }),
       setRoomImage: (roomImage) => {
         set({ roomImage });
@@ -687,6 +787,11 @@ export const useStore = create<StoreState>()(
           else delete next[zone];
           return { zoneBackdrops: next };
         }),
+      setZoneCell: (zone, cell) =>
+        set((s) => ({
+          zoneCells: { ...s.zoneCells, [zone]: clampZoneCell(cell) },
+        })),
+      resetZoneCells: () => set({ zoneCells: defaultZoneCells() }),
       clearZoneBackdrops: () => set({ zoneBackdrops: {} }),
       setCornerImage: (zone, imageId) =>
         set((s) => {
@@ -725,7 +830,8 @@ export const useStore = create<StoreState>()(
         }),
       setLastImage: (lastImageId) => set({ lastImageId }),
       setStreamFootage: (streamFootageId) => set({ streamFootageId }),
-      setImageBusy: (imageBusy) => set({ imageBusy }),
+      setImageBusy: (imageBusy, background = false) =>
+        set({ imageBusy, imageBusyBackground: imageBusy ? background : false }),
 
       upsertCharacter: (c) => set((s) => ({ roster: { ...s.roster, [c.id]: normalizeCharacter(c) } })),
       patchCharacter: (id, patch) =>
@@ -803,10 +909,36 @@ export const useStore = create<StoreState>()(
       setSettingsTab: (settingsTab) => set({ settingsTab }),
       openSettings: (tab) => set(tab ? { settingsOpen: true, settingsTab: tab } : { settingsOpen: true }),
       setSettings: (patch) => {
-        set((s) => ({ settings: { ...s.settings, ...patch } }));
+        set((s) => {
+          const settings = { ...s.settings, ...patch };
+          const next: Partial<StoreState> = { settings };
+          if (patch.contentTier !== undefined) {
+            next.streamNicheDraft = sanitizeNicheForTier(s.streamNicheDraft, settings.contentTier);
+          }
+          return next;
+        });
         if (patch.theme) applyTheme(patch.theme);
         if (patch.streamerName !== undefined) updateActiveMeta({ characterName: patch.streamerName });
       },
+      setStreamNicheDraft: (streamNicheDraft) =>
+        set((s) => ({
+          streamNicheDraft: sanitizeNicheForTier(streamNicheDraft, s.settings.contentTier),
+        })),
+      setBrand: (patch) =>
+        set((s) => {
+          const next = { ...s.brand, ...patch };
+          if (patch.handle !== undefined) next.handle = normalizeHandle(patch.handle);
+          if (patch.description !== undefined) next.description = patch.description.slice(0, 280);
+          if (patch.rules !== undefined) next.rules = patch.rules.slice(0, 500);
+          if (patch.defaultNiche !== undefined) {
+            next.defaultNiche = sanitizeNicheForTier(patch.defaultNiche, s.settings.contentTier);
+          }
+          if (patch.logoPreset !== undefined) {
+            next.logoPreset = logoPresetById(patch.logoPreset).id;
+          }
+          if (patch.logoBrief !== undefined) next.logoBrief = patch.logoBrief.slice(0, 200);
+          return { brand: next };
+        }),
       setPromptOverride: (id, body) =>
         set((s) => {
           const next = { ...s.promptOverrides };
@@ -819,6 +951,14 @@ export const useStore = create<StoreState>()(
         set((s) => (s.ownedUpgrades.includes(id) ? s : { ownedUpgrades: [...s.ownedUpgrades, id] })),
       addOwnedActivity: (id) =>
         set((s) => (s.ownedActivities.includes(id) ? s : { ownedActivities: [...s.ownedActivities, id] })),
+      setStarterKitGranted: (starterKitGranted) => set({ starterKitGranted }),
+      setDecorationImage: (upgradeId, imageId) =>
+        set((s) => {
+          const next = { ...s.decorationImages };
+          if (imageId) next[upgradeId] = imageId;
+          else delete next[upgradeId];
+          return { decorationImages: next };
+        }),
       setToast: (toast) => set({ toast }),
       addMasteryXp: (delta) =>
         set((s) => {
@@ -885,6 +1025,11 @@ export const useStore = create<StoreState>()(
         })),
       setRequestsOpen: (requestsOpen) => set({ requestsOpen }),
       setRequestsBusy: (requestsBusy) => set({ requestsBusy }),
+      setJob: (job) => set({ job }),
+      setJobPanelOpen: (jobPanelOpen) => set({ jobPanelOpen }),
+      setWorkSession: (workSession) => set({ workSession }),
+      patchWorkSession: (patch) =>
+        set((s) => (s.workSession ? { workSession: { ...s.workSession, ...patch } } : s)),
       startVisitor: (visitor) => set({ visitor }),
       pushVisitorLine: (line) =>
         set((s) =>
@@ -924,11 +1069,31 @@ export const useStore = create<StoreState>()(
         const roster = p.roster ? normalizeRoster(p.roster) : current.roster;
         const rawMetrics = (p.metrics ?? {}) as Partial<Metrics> & { mood?: number };
         const { mood: _legacyMood, ...restMetrics } = rawMetrics;
-        const metrics: Metrics = { ...initialMetrics(), ...restMetrics };
+        const rawSettings = (p.settings ?? {}) as Partial<Settings> & { niche?: NicheId };
+        const { niche: legacyNiche, outfit: _legacyOutfit, ...restSettings } = rawSettings;
+        const settings = { ...current.settings, ...restSettings };
+        const streamNicheDraft = sanitizeNicheForTier(
+          p.streamNicheDraft ?? legacyNiche ?? "variety",
+          settings.contentTier ?? "cheeky",
+        );
+        const brand = normalizeBrand(p.brand, {
+          streamerName: settings.streamerName ?? "Abby",
+          nicheDraft: streamNicheDraft,
+        });
+        const sessionBase = { ...current.session, ...(p.session ?? {}) };
+        const session: StreamSession = {
+          ...sessionBase,
+          niche: sessionBase.isLive
+            ? sanitizeNicheForTier(sessionBase.niche ?? legacyNiche ?? "variety", settings.contentTier ?? "cheeky")
+            : null,
+        };
+        const metrics: Metrics = {
+          ...initialMetrics(settings.difficulty ?? "normal"),
+          ...restMetrics,
+        };
         if (rawMetrics.comfort === undefined && _legacyMood !== undefined) {
           metrics.comfort = Math.min(100, metrics.comfort + _legacyMood * 0.15);
         }
-        const settings = { ...current.settings, ...(p.settings ?? {}) };
         const camMigration = migrateLegacyCamUpgrades(p.cameras, p.ownedUpgrades ?? []);
         // Give a real starter set when the save has no clothing at all, or only
         // the obsolete single "full outfit" placeholder (legacy migration).
@@ -936,7 +1101,7 @@ export const useStore = create<StoreState>()(
         const needsWardrobeMigrate =
           savedInventory.length === 0 || isLegacyStarterWardrobe(savedInventory);
         const wardrobeStarter = needsWardrobeMigrate
-          ? starterClothingForOutfit(settings.outfit ?? "casual")
+          ? starterClothingForGender(settings.gender ?? "female")
           : null;
         // Strip any obsolete "full outfit" starter placeholder, keep real items/gifts.
         const keptInventory = wardrobeStarter
@@ -962,11 +1127,16 @@ export const useStore = create<StoreState>()(
           onboarded: p.onboarded ?? hasProgress,
           metrics,
           settings,
+          streamNicheDraft,
+          brand,
+          session,
           mastery: normalizeMastery(p.mastery),
           contentNovelty: p.contentNovelty ?? {},
           story,
           roster,
           ownedActivities: p.ownedActivities ?? [],
+          starterKitGranted: p.starterKitGranted ?? false,
+          decorationImages: p.decorationImages ?? {},
           cameras: camMigration.cameras,
           activeCameraId: p.activeCameraId ?? camMigration.activeCameraId,
           inventory: wardrobeStarter ? [...keptInventory, ...wardrobeStarter.items] : savedInventory,
@@ -974,8 +1144,11 @@ export const useStore = create<StoreState>()(
           character: normalizeCharacterVisual(p.character),
           zoneBackdrops: p.zoneBackdrops ?? {},
           cornerImages: p.cornerImages ?? {},
+          zoneCells: normalizeZoneCells(p.zoneCells),
           activity: p.session?.isLive ? (p.activity ?? null) : null,
           viewerRequests: migrateDmRequests(p.viewerRequests, p.dmThreads, metrics.day),
+          job: p.job ?? null,
+          workSession: p.workSession ?? null,
         };
       },
       partialize: (s) => ({
@@ -990,8 +1163,12 @@ export const useStore = create<StoreState>()(
         activity: s.session.isLive ? s.activity : null,
         audience: s.audience,
         settings: s.settings,
+        streamNicheDraft: s.streamNicheDraft,
+        brand: s.brand,
         ownedUpgrades: s.ownedUpgrades,
         ownedActivities: s.ownedActivities,
+        starterKitGranted: s.starterKitGranted,
+        decorationImages: s.decorationImages,
         promptOverrides: s.promptOverrides,
         mastery: s.mastery,
         contentNovelty: s.contentNovelty,
@@ -1000,6 +1177,8 @@ export const useStore = create<StoreState>()(
         completedGoals: s.completedGoals,
         pendingVisits: s.pendingVisits,
         viewerRequests: s.viewerRequests,
+        job: s.job,
+        workSession: s.workSession,
         visitor: s.visitor,
         eventScene: s.eventScene,
         pendingEventSeeds: s.pendingEventSeeds,
@@ -1012,6 +1191,7 @@ export const useStore = create<StoreState>()(
         story: s.story,
         clock: s.clock,
         zone: s.zone,
+        zoneCells: s.zoneCells,
         cameras: s.cameras,
         activeCameraId: s.activeCameraId,
         inventory: s.inventory,
@@ -1034,6 +1214,19 @@ export const useStore = create<StoreState>()(
     },
   ),
 );
+
+/** Seed starting cash/followers when onboarding finishes on a still-fresh save. */
+export function applyStartingMetricsIfFresh(): void {
+  const s = useStore.getState();
+  if (s.metrics.day !== 1) return;
+  if (s.story.length > 0) return;
+  if (s.character?.portraitId || s.character?.bodyId) return;
+  if (s.session.isLive) return;
+  const start = startingMetrics(s.settings.difficulty ?? "normal");
+  useStore.setState((state) => ({
+    metrics: { ...state.metrics, cash: start.cash, followers: start.followers },
+  }));
+}
 
 function clamp(v: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, v));

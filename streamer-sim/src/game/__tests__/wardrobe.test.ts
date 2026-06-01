@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { makeClothingItem } from "../items";
-import { wardrobeAppeal, starterClothingForOutfit, isLegacyStarterWardrobe, describeEquippedLook } from "../wardrobe";
+import {
+  wardrobeAppeal,
+  dominantOutfitVibe,
+  starterClothingFor,
+  starterClothingForOutfit,
+  starterClothingForGender,
+  isLegacyStarterWardrobe,
+  describeEquippedLook,
+} from "../wardrobe";
+import { genderMode } from "../gender";
 
 describe("wardrobe", () => {
   it("starter set is real garments: underwear + top + bottom", () => {
@@ -33,6 +42,38 @@ describe("wardrobe", () => {
     expect(look).toMatch(/underwear: Cotton Bra & Briefs/);
     expect(look).toMatch(/top: Everyday Tee/);
     expect(look).toMatch(/bottom: Blue Jeans/);
+  });
+
+  it("describeEquippedLook omits covered underwear when top and bottom are worn", () => {
+    const set = starterClothingForOutfit("casual");
+    expect(describeEquippedLook(set.equipped, set.items, { hideCoveredUnderwear: true })).toBe(
+      "top: Everyday Tee, bottom: Blue Jeans",
+    );
+  });
+
+  it("starterClothingFor applies outfit vibe with gender-appropriate underwear", () => {
+    const boldMale = starterClothingFor("bold", "male");
+    expect(boldMale.items.map((i) => i.name)).toContain("Cotton Boxer Briefs");
+    expect(boldMale.items.map((i) => i.name)).toContain("Cropped Tank");
+    expect(dominantOutfitVibe(boldMale.equipped, boldMale.items)).toBe("bold");
+  });
+
+  it("dominantOutfitVibe follows equipped item vibes", () => {
+    const set = starterClothingFor("cozy", "female");
+    expect(dominantOutfitVibe(set.equipped, set.items)).toBe("cozy");
+    const casual = starterClothingForGender("male");
+    expect(dominantOutfitVibe(casual.equipped, casual.items)).toBe("casual");
+  });
+
+  it("gender starter sets differ by mode", () => {
+    const female = starterClothingForGender("female");
+    const male = starterClothingForGender("male");
+    const custom = starterClothingForGender("nonbinary");
+    expect(female.items.map((i) => i.name)).toContain("Cotton Bra & Briefs");
+    expect(male.items.map((i) => i.name)).toContain("Cotton Boxer Briefs");
+    expect(custom.items.map((i) => i.name)).toContain("Neutral Boxer Briefs");
+    expect(genderMode("nonbinary")).toBe("custom");
+    expect(female.items.every((i) => i.meta?.starterWardrobe === "1")).toBe(true);
   });
 
   it("stacks vibe tags with diminishing returns", () => {

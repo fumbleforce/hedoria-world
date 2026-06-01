@@ -110,7 +110,9 @@ export const SEGMENTS: Record<SegmentId, SegmentDef> = {
     dislikes: ["boundary-setting", "blocked"],
     tipFactor: 1.2,
     growthFactor: 0.5,
-    minIntensity: 1,
+    // Risqué+ only — matches the creep/stalker archetype gate (archetypes.ts) so
+    // creepy content can't surface at the cheeky tier.
+    minIntensity: 2,
     comfortFactor: -0.18,
   },
 };

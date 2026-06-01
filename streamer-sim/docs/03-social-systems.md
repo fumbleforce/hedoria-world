@@ -26,7 +26,7 @@ populations, plus an anonymous floor.
 | trolls | Trolls | 0.2 | 0.6 | −0.05 | 0 |
 | cozy | Cozy Crowd | 0.9 | 1.0 | +0.02 | 0 |
 | whales | Whales | **5.0** | 0.4 | −0.02 | 0 |
-| stalkers | Stalkers | 1.2 | 0.5 | **−0.18** | 1 |
+| stalkers | Stalkers | 1.2 | 0.5 | **−0.18** | 2 |
 
 Each segment also has `likes`/`dislikes` tag lists used to infer appeal when the
 verdict doesn't specify it.
@@ -35,9 +35,14 @@ verdict doesn't specify it.
 trolls 1, cozy 4, whales 0, stalkers 0 (total 10) — but the first `presenceTick`
 immediately recomputes populations, so these values barely matter.
 
-\* `minIntensity` is documented as "the segment is only active at/above this tier"
-but is **never enforced** when building populations or the anonymous spread. Only the
-**archetype** `minIntensity` gates spawning. See [09](./09-expectation-vs-reality.md).
+\* `minIntensity` is **not** enforced when building populations or the anonymous
+spread — that gating comes from the **archetype** `minIntensity` (so `simps`/`flirt`
+need cheeky, `creep`/`stalker` need risqué). It **is** used to filter the evaluator's
+segment guide: `segmentGuideForIntensity(intensity)` (`prompts.ts`) only lists
+segments with `minIntensity ≤ intensity`, so a wholesome stream's prompt never
+describes simps ("reward flirtation") or stalkers ("ignores boundaries"). `stalkers`
+is `2` (matching its archetypes) so the segment and its creepy events stay out of the
+cheeky tier. See [09](./09-expectation-vs-reality.md).
 
 ## Archetypes (`archetypes.ts`) — 20 templates
 

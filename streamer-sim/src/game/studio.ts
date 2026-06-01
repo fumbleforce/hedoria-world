@@ -55,6 +55,75 @@ export const ZONE_LIST = Object.values(ZONES);
 export const GRID = 5;
 export const SPAWN_ZONE: ZoneId = "couch";
 
+/** Square studio map coordinate system (matches `StudioRoom` SVG). */
+export const STUDIO_VB = 500;
+export const STUDIO_EDGE = 110;
+export const STUDIO_ZONE_HIT = 132;
+
+const STUDIO_SPAN = (STUDIO_VB - STUDIO_EDGE * 2) / (GRID - 1);
+
+/** Default stand positions — copied from each zone's `cell`. */
+export function defaultZoneCells(): Record<ZoneId, [number, number]> {
+  return Object.fromEntries(ZONE_LIST.map((z) => [z.id, [...z.cell] as [number, number]])) as Record<
+    ZoneId,
+    [number, number]
+  >;
+}
+
+export function zoneStandCell(
+  zoneId: ZoneId,
+  layout: Record<ZoneId, [number, number]>,
+): [number, number] {
+  return layout[zoneId] ?? ZONES[zoneId].cell;
+}
+
+/** Grid cell → SVG center (supports fractional cells for custom layouts). */
+export function zoneGridCenter(cell: [number, number]): [number, number] {
+  return [STUDIO_EDGE + cell[0] * STUDIO_SPAN, STUDIO_EDGE + cell[1] * STUDIO_SPAN];
+}
+
+// Zones may be dragged past the inset grid so a box can sit flush against any
+// edge of the square map. The bound keeps the box fully inside the viewbox
+// (center stays at least half a box from each edge), expressed in cell units.
+const ZONE_CELL_MIN = (STUDIO_ZONE_HIT / 2 - STUDIO_EDGE) / STUDIO_SPAN;
+const ZONE_CELL_MAX = (STUDIO_VB - STUDIO_ZONE_HIT / 2 - STUDIO_EDGE) / STUDIO_SPAN;
+
+export function clampZoneCell(cell: [number, number]): [number, number] {
+  return [
+    Math.max(ZONE_CELL_MIN, Math.min(ZONE_CELL_MAX, cell[0])),
+    Math.max(ZONE_CELL_MIN, Math.min(ZONE_CELL_MAX, cell[1])),
+  ];
+}
+
+/** Merge persisted layout with defaults for any missing zones. */
+export function normalizeZoneCells(
+  raw: Partial<Record<ZoneId, [number, number]>> | null | undefined,
+): Record<ZoneId, [number, number]> {
+  const base = defaultZoneCells();
+  if (!raw) return base;
+  for (const z of ZONE_LIST) {
+    const c = raw[z.id];
+    if (c && c.length === 2 && Number.isFinite(c[0]) && Number.isFinite(c[1])) {
+      base[z.id] = clampZoneCell([c[0], c[1]]);
+    }
+  }
+  return base;
+}
+
+/** Pointer position → grid cell on the studio map SVG. */
+export function pointerToZoneCell(svg: SVGSVGElement, clientX: number, clientY: number): [number, number] {
+  const pt = svg.createSVGPoint();
+  pt.x = clientX;
+  pt.y = clientY;
+  const ctm = svg.getScreenCTM();
+  if (!ctm) return [2, 2];
+  const { x, y } = pt.matrixTransform(ctm.inverse());
+  return clampZoneCell([
+    (x - STUDIO_EDGE) / STUDIO_SPAN,
+    (y - STUDIO_EDGE) / STUDIO_SPAN,
+  ]);
+}
+
 /**
  * Concrete contextual actions per zone. No vague filler — each option is a
  * specific thing with a clear outcome. `__token__` prompts are handled directly
@@ -112,6 +181,8 @@ export const ZONE_MENUS: Record<ZoneId, { allowFreeform: boolean; options: Actio
   door: {
     allowFreeform: false,
     options: [
+      { id: "work", label: "💼 Go to work", prompt: "__work__", liveOnly: false },
+      { id: "job-board", label: "📋 Job board", prompt: "__job_board__", liveOnly: false },
       { id: "shop", label: "📦 Shop (upgrades & games)", prompt: "__open_shop__", liveOnly: false },
       { id: "check-door", label: "🚪 See who's there", prompt: "__door__", liveOnly: false },
       { id: "order-food", label: "🛵 Order delivery", prompt: "__order_food__", liveOnly: false },

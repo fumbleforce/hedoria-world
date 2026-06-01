@@ -1,12 +1,12 @@
 import { useMemo, type ReactNode } from "react";
 import { useStore } from "../state/store";
 import type { GameController } from "../game/controller";
-import { BALANCE } from "../game/balance";
+import { getBalance } from "../game/balance";
 import type { ViewerRequest } from "../game/types";
 
-function rewardLabel(req: ViewerRequest): string {
+function rewardLabel(req: ViewerRequest, difficulty: ReturnType<typeof useStore.getState>["settings"]["difficulty"]): string {
   if (req.rewardType === "cash" && req.rewardAmount) return `$${req.rewardAmount} tip`;
-  return `+${BALANCE.affinity.sources.request} bond`;
+  return `+${getBalance(difficulty ?? "normal").affinity.sources.request} bond`;
 }
 
 /** Modal listing viewer content requests and fulfillment controls. */
@@ -148,13 +148,14 @@ function RequestRow({
   fulfilled?: boolean;
   dismissed?: boolean;
 }) {
+  const difficulty = useStore((s) => s.settings.difficulty ?? "normal");
   return (
     <div className={`goal requests__row ${fulfilled ? "requests__row--done" : ""} ${dismissed ? "requests__row--muted" : ""}`}>
       <div className="goal__top">
         <button type="button" className="requests__handle chiplink" onClick={onOpenChar}>
           @{handle}
         </button>
-        <span className="requests__reward">{rewardLabel(req)}</span>
+        <span className="requests__reward">{rewardLabel(req, difficulty)}</span>
         <span className="goal__value">Day {req.createdDay}</span>
       </div>
       <p className="requests__ask">{req.ask}</p>

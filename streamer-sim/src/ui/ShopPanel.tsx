@@ -1,22 +1,35 @@
+import { useState } from "react";
 import { useStore } from "../state/store";
 import type { GameController } from "../game/controller";
-import { UPGRADES } from "../game/shop";
-import { purchasableActivities } from "../game/activities";
+import { UPGRADES, UPGRADE_CATEGORIES, UPGRADE_CATEGORY_LABEL, isDecoration } from "../game/shop";
+import { activityVisible, purchasableActivities } from "../game/activities";
 import { NICHES } from "../game/niches";
 import { SEGMENTS } from "../game/segments";
 import { CAMERA_SHOP, CAMERA_TIERS } from "../game/cameras";
-import { CLOTHING_SHOP } from "../game/items";
-import { clothingSlotLabel } from "../game/wardrobe";
-import type { Upgrade, UpgradeCategory } from "../game/types";
-
-const CATEGORY_LABEL: Record<UpgradeCategory, string> = {
-  gear: "Gear",
-  furniture: "Furniture",
-  apartment: "Apartment",
-};
+import {
+  CLOTHING_SHOP,
+  filterClothingShop,
+  type ClothingGenderFilter,
+  type ClothingSlotFilter,
+} from "../game/items";
+import { CLOTHING_SLOTS, clothingSlotLabel, type ClothingSlot } from "../game/wardrobe";
+import { useStoredImage } from "../persist/useStoredImage";
+import type { Upgrade } from "../game/types";
 
 const pct = (mult: number) => `${mult >= 1 ? "+" : ""}${Math.round((mult - 1) * 100)}%`;
 const signed = (n: number) => `${n >= 0 ? "+" : ""}${n}`;
+
+const GENDER_FILTERS: { id: ClothingGenderFilter; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "female", label: "Women's" },
+  { id: "male", label: "Men's" },
+  { id: "unisex", label: "Unisex" },
+];
+
+const SLOT_FILTERS: { id: ClothingSlotFilter; label: string }[] = [
+  { id: "all", label: "All slots" },
+  ...CLOTHING_SLOTS.map((slot) => ({ id: slot as ClothingSlotFilter, label: clothingSlotLabel(slot) })),
+];
 
 /** Human-readable stat chips for a gear/furniture/apartment upgrade. */
 function upgradeStats(u: Upgrade): string[] {
@@ -36,17 +49,83 @@ function upgradeStats(u: Upgrade): string[] {
   return out;
 }
 
+function UpgradeShopCard({
+  u,
+  have,
+  afford,
+  controller,
+}: {
+  u: Upgrade;
+  have: boolean;
+  afford: boolean;
+  controller: GameController;
+}) {
+  const decor = isDecoration(u);
+  const previewId = useStore((s) => (decor ? s.decorationImages[u.id] : undefined));
+  const preview = useStoredImage(previewId);
+  const imageBusy = useStore((s) => s.imageBusy);
+  const canGen = controller.canGenerateImages;
+  const stats = upgradeStats(u);
+
+  return (
+    <div className={`shop__item ${have ? "shop__item--owned" : ""}`}>
+      {decor && (
+        <div className="shop__decorThumb">
+          {preview ? (
+            <img src={preview} alt={`${u.name} preview`} />
+          ) : (
+            <span className="shop__decorPlaceholder">no preview yet</span>
+          )}
+        </div>
+      )}
+      <div className="shop__name">{u.name}</div>
+      <div className="shop__desc">{u.description}</div>
+      {stats.length > 0 && (
+        <div className="shop__stats">
+          {stats.map((s, i) => (
+            <span key={i} className="shop__stat">{s}</span>
+          ))}
+        </div>
+      )}
+      {decor && canGen && (
+        <button
+          className={`btn btn--mini ${imageBusy ? "is-loading" : ""}`}
+          disabled={!!imageBusy}
+          onClick={() => void controller.visualizeDecoration(u.id, !!preview)}
+        >
+          {preview ? "↻ Regenerate preview" : "👁 Visualize"}
+        </button>
+      )}
+      <button
+        className="btn btn--primary"
+        disabled={have || !afford}
+        onClick={() => controller.buyUpgrade(u.id)}
+      >
+        {have ? "Owned" : `Buy · $${u.cost}`}
+      </button>
+    </div>
+  );
+}
+
 export function ShopPanel({ controller }: { controller: GameController }) {
   const open = useStore((s) => s.shopOpen);
   const owned = useStore((s) => s.ownedUpgrades);
   const ownedActivities = useStore((s) => s.ownedActivities);
   const cameras = useStore((s) => s.cameras);
   const cash = useStore((s) => s.metrics.cash);
+  const contentTier = useStore((s) => s.settings.contentTier);
+  const [genderFilter, setGenderFilter] = useState<ClothingGenderFilter>("all");
+  const [slotFilter, setSlotFilter] = useState<ClothingSlotFilter>("all");
   if (!open) return null;
 
-  const cats: UpgradeCategory[] = ["gear", "furniture", "apartment"];
-  const library = purchasableActivities();
+  const cats = UPGRADE_CATEGORIES;
+  const library = purchasableActivities().filter((a) => activityVisible(a, contentTier, cameras));
   const hasPortable = cameras.some((c) => c.portable);
+  const clothingItems = filterClothingShop(CLOTHING_SHOP, {
+    gender: genderFilter,
+    slot: slotFilter,
+    tier: contentTier,
+  });
 
   return (
     <div className="modal" onClick={() => useStore.getState().setShopOpen(false)}>
@@ -93,34 +172,75 @@ export function ShopPanel({ controller }: { controller: GameController }) {
           </div>
         </div>
 
-        <div className="shop__group">
+        <div className="shop__group shop__group--clothing">
           <h3>👗 Clothing</h3>
-          <div className="shop__grid">
-            {CLOTHING_SHOP.map((c) => {
-              const afford = cash >= c.cost;
-              return (
-                <div key={c.id} className="shop__item">
-                  <div className="shop__name">{c.name}</div>
-                  <div className="shop__desc">{c.description}</div>
-                  <div className="shop__stats">
-                    <span className="shop__stat">{clothingSlotLabel(c.slot)}</span>
-                    {Object.entries(c.vibes).map(([v, n]) => (
-                      <span key={v} className="shop__stat shop__stat--vibe">
-                        {v} {signed(n as number)}
-                      </span>
-                    ))}
-                  </div>
+          <div className="shop__filters">
+            <div className="shop__filterRow">
+              <span className="shop__filterLabel">Style</span>
+              <div className="shop__filterTabs">
+                {GENDER_FILTERS.map((f) => (
                   <button
-                    className="btn btn--primary"
-                    disabled={!afford}
-                    onClick={() => controller.buyClothing(c.id)}
+                    key={f.id}
+                    type="button"
+                    className={`tab pick ${genderFilter === f.id ? "pick--selected" : ""}`}
+                    onClick={() => setGenderFilter(f.id)}
                   >
-                    Buy · ${c.cost}
+                    {f.label}
                   </button>
-                </div>
-              );
-            })}
+                ))}
+              </div>
+            </div>
+            <div className="shop__filterRow">
+              <span className="shop__filterLabel">Slot</span>
+              <div className="shop__filterTabs shop__filterTabs--wrap">
+                {SLOT_FILTERS.map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    className={`tab pick ${slotFilter === f.id ? "pick--selected" : ""}`}
+                    onClick={() => setSlotFilter(f.id)}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
+          {clothingItems.length === 0 ? (
+            <p className="hint shop__hint">No pieces match these filters.</p>
+          ) : (
+            <div className="shop__grid">
+              {clothingItems.map((c) => {
+                const afford = cash >= c.cost;
+                return (
+                  <div key={c.id} className="shop__item">
+                    <div className="shop__name">{c.name}</div>
+                    <div className="shop__desc">{c.description}</div>
+                    <div className="shop__stats">
+                      <span className="shop__stat">{clothingSlotLabel(c.slot)}</span>
+                      {c.gender !== "unisex" && (
+                        <span className="shop__stat">
+                          {c.gender === "female" ? "Women's" : "Men's"}
+                        </span>
+                      )}
+                      {Object.entries(c.vibes).map(([v, n]) => (
+                        <span key={v} className="shop__stat shop__stat--vibe">
+                          {v} {signed(n as number)}
+                        </span>
+                      ))}
+                    </div>
+                    <button
+                      className="btn btn--primary"
+                      disabled={!afford}
+                      onClick={() => controller.buyClothing(c.id)}
+                    >
+                      Buy · ${c.cost}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {library.length > 0 && (
@@ -154,33 +274,22 @@ export function ShopPanel({ controller }: { controller: GameController }) {
 
         {cats.map((cat) => (
           <div key={cat} className="shop__group">
-            <h3>{CATEGORY_LABEL[cat]}</h3>
+            <h3>{UPGRADE_CATEGORY_LABEL[cat]}</h3>
+            {cat === "furniture" && (
+              <p className="hint shop__hint">
+                Décor builds audience appeal over time. Visualize items before buying — owned previews appear in generated room art.
+              </p>
+            )}
             <div className="shop__grid">
-              {UPGRADES.filter((u) => u.category === cat).map((u) => {
-                const have = owned.includes(u.id);
-                const afford = cash >= u.cost;
-                const stats = upgradeStats(u);
-                return (
-                  <div key={u.id} className={`shop__item ${have ? "shop__item--owned" : ""}`}>
-                    <div className="shop__name">{u.name}</div>
-                    <div className="shop__desc">{u.description}</div>
-                    {stats.length > 0 && (
-                      <div className="shop__stats">
-                        {stats.map((s, i) => (
-                          <span key={i} className="shop__stat">{s}</span>
-                        ))}
-                      </div>
-                    )}
-                    <button
-                      className="btn btn--primary"
-                      disabled={have || !afford}
-                      onClick={() => controller.buyUpgrade(u.id)}
-                    >
-                      {have ? "Owned" : `Buy · $${u.cost}`}
-                    </button>
-                  </div>
-                );
-              })}
+              {UPGRADES.filter((u) => u.category === cat).map((u) => (
+                <UpgradeShopCard
+                  key={u.id}
+                  u={u}
+                  have={owned.includes(u.id)}
+                  afford={cash >= u.cost}
+                  controller={controller}
+                />
+              ))}
             </div>
           </div>
         ))}

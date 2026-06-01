@@ -10,8 +10,8 @@ Persistent player stats (`Metrics`, initialized in `store.ts`):
 
 | Metric | Range | Initial | Role |
 |--------|-------|---------|------|
-| `cash` | unbounded (2 dp) | **$250** | Spendable money. |
-| `followers` | ≥ 0 int | **35** | Reach; scales presence target & follower gain; goal targets. |
+| `cash` | unbounded (2 dp) | **$250** (Normal; Easy **$550**, Hard **$90**) | Spendable money. |
+| `followers` | ≥ 0 int | **35** (Normal; Easy **80**, Hard **10**) | Reach; scales presence target & follower gain; goal targets. |
 | `subscribers` | ≥ 0 int | **1** | Tracked & goal-rewarded. Pays **recurring monthly income** (see Recurring sub income). |
 | `currentViewers` | ≥ 0 int | **0** | Live viewer count (display). |
 | `peakViewers` | ≥ 0 int | **0** | **Lifetime** peak (used by the 100-viewers goal). |
@@ -48,6 +48,16 @@ Every tunable constant in the sections below lives in one exported `BALANCE` obj
 (affinity weights/caps/decay, economy curves, subs, novelty, niches, readiness, gear,
 mastery). `resolver.ts`, `controller.ts`, `presence.ts`, `relationships.ts`, and
 `shop.ts` read from it, so the whole rebalance is tuned in one place.
+
+**Difficulty** (`settings.difficulty`: `easy` | `normal` | `hard`; default **normal**):
+Normal is the baseline `BALANCE` object. Easy and Hard are patch presets merged at
+runtime via `getBalance(level)`. Patches tune **economy** (tips, follower growth,
+passive discovery, rent, utilities, monetization ramp), **subs** (daily conversion,
+churn), **needs** (drain rates, critical beat drains), **recovery** (sleep energy/
+comfort), and **affinity decay per idle day**. Starting cash/followers for new games:
+Easy **$550 / 80**, Normal **$250 / 35**, Hard **$90 / 10** (`startingMetrics()`).
+Changing difficulty mid-save applies new balance rules immediately; cash/followers/day
+progress are preserved.
 
 **Event director** (`BALANCE.events`): throttle gaps (`minBeatsBetweenLive`,
 `minDaysBetweenOffline`), follow-up caps, and per-capability clamp bands for
@@ -114,6 +124,7 @@ currentViewers = max(segment population sum, distinct recent chatters)
 - Builds on live beats with intimate tags × intensity + spicy chat (`flirty`/`creepy`).
 - Sleep: `horny × 0.5` (else forced to 0).
 - Relief: `__relieve__` token (−**65**), sexual visit outcomes (`hornySceneRelief` by intensity).
+  **`__relieve__` is dev-only** (`nsfwUnlocked` = `NSFW_BUILD && isNoLimits` in `content.ts`); prod builds hide the menu option even at Custom tier.
 - High horny slightly eases intimate **comfort** costs (`comfortEaseMax` **0.2** at horny 100).
 
 ### Viewer watch windows (`characters.ts` + `presence.ts`)
@@ -211,7 +222,7 @@ their `messageCount`. Tips route through `recordTip`/`bumpAffinity`.
 | Shower | — | hygiene +95, comfort +8, energy +4 | 20 |
 | Freshen (quick) | — | hygiene +25, comfort +5, energy +4 | 12 |
 | Read fan mail | — | comfort +2 | 15 |
-| Relieve (No Limits) | — | horny −65, comfort +4, energy −6 | 20 |
+| Relieve (No Limits, dev only) | — | horny −65, comfort +4, energy −6 | 20 |
 | Cozy outfit | — | comfort +7 | 10 |
 | Cute outfit | — | comfort +3, hype +4 | 10 |
 | Bold outfit | — | hype +6, comfort −3 | 10 |
@@ -219,6 +230,52 @@ their `messageCount`. Tips route through `recordTip`/`bumpAffinity`.
 > **Legacy:** preset outfit tokens (`__outfit_*__`) were replaced by the **item wardrobe**
 > (bathroom → 👗 Change clothes). Appeal now comes from equipped clothing items with
 > stackable vibe tags (see **Cameras & wardrobe** below).
+
+### Day jobs (`jobs.ts`, `controller.ts`)
+
+Early-game survival lever: a **scheduled offline shift** that pays a fixed wage.
+State lives in `store.job` (`JobState | null`, persisted) — not in `settings`.
+
+| Constant | Value |
+|----------|-------|
+| `EARLY_WINDOW` | 60 min before shift start (can't clock in yet) |
+| `ON_TIME_GRACE` | 30 min after shift start (full wage) |
+| `LATE_WAGE_FACTOR` | 0.6 (late still pays, counts as a bad day) |
+| `MAX_STRIKES` | 3 consecutive bad days → fired |
+| `APPLY_MINUTES_MIN/MAX` | 45–300, **randomized** per application (`randomApplyMinutes`) |
+
+**Shift slots** (same-day only, no midnight wrap): morning 8:00–14:00, afternoon
+13:00–19:00, evening 17:00–23:00.
+
+**Presets** (`JOB_PRESETS` in `jobs.ts`): barista ($62), warehouse ($78), rideshare
+($70), dog walker ($55), call center ($68), freelance designer ($88) — each with
+`energyCost` and optional hygiene/comfort drains.
+
+**Clock in** (`goToWork`, token `__work__`, door zone + Job panel): offline only,
+once per day. Status from `shiftStatus(job, clock)`:
+
+- **early** — toast, no time/pay
+- **ontime** — full `wage`, strikes reset at sleep
+- **late** — `wage × 0.6`, strike at sleep
+- **over** — missed; strike at sleep if never worked
+
+Clocking in (ontime/late) opens the **Work screen** overlay (`store.workSession`,
+persisted) instead of resolving instantly: a generated workplace image (kind
+`"work"`, cached per job so it renders once) plus LLM/offline shift flavor
+(`WORK_FLAVOR_FALLBACKS`). Pay, time, and stat costs are **deferred** — `leaveWork`
+("Head home") applies `cash`/energy/hygiene/comfort, sets the job's
+`lastClockInDay`/`lastClockInOnTime`, then advances the clock to `shiftEnd` (via
+`workMinutesRemaining`, min 15 min). The whole shift survives a mid-shift reload.
+
+**Strikes** (`resolveJobDay` at `sleep()`, before `day` increments): if worked on
+time → strikes = 0; if worked late or absent → strikes += 1; at 3 → job cleared +
+alert.
+
+**Job board** (`__job_board__`, `JobPanel`): apply preset or custom (title, wage
+$40–120, slot). Applying takes a **random** 45–300 min and **replaces any current
+job** — the panel shows a confirmation ("quit & apply") warning the hire time is
+unpredictable. Onboarding step **Day job** sets `job` via `setJob` with no apply
+time cost.
 
 ## The resolver, in detail (`resolver.ts`)
 
@@ -313,10 +370,12 @@ the full evaluate→resolve pipeline. **Token** prompts bypass the evaluator:
 | `__shower__` | hygiene +95, comfort +8, 20 min |
 | `__freshen__` | hygiene +25, comfort +5, 12 min |
 | `__scroll__` | comfort +2, 15 min |
-| `__relieve__` | horny −65, comfort +4, 20 min (No Limits; bed/couch) |
+| `__relieve__` | horny −65, comfort +4, 20 min (No Limits + dev build; bed/couch) |
 | `__order_food__` | −$15, energy +18, comfort +6, hunger +50, 25 min (toast if broke) |
 | `__door__` | offline event roll or "empty hallway", 5 min |
 | `__outfit_cozy__` / `__outfit_cute__` / `__outfit_bold__` | outfit effects (see table above) |
+| `__work__` | day-job shift (offline; see Day jobs) |
+| `__job_board__` | open Job panel |
 | `__open_shop__` | open shop (door zone menu) |
 
 ## Activities (`activities.ts`)
@@ -328,7 +387,11 @@ flavor layer — not a blocking scene loop). Started from **ActivityPicker** (Ac
 plus a custom freeform option.
 
 While `activity` is set and live, **each action adds +1 appeal to every segment in
-`activity.pleases`**, on top of the normal verdict. Per beat (action or Continue):
+`activity.pleases`**, on top of the normal verdict. When the active activity is the
+player's chosen **talent** stream mode (`settings.talent` → free catalogue entry in
+`activities.ts`), each action adds **another +1 appeal** to that talent's
+`pleases` segments and nudges verdict hype pressure up; per-beat **`hypePerRound`**
+also gets **+2** (× `mult.hype`). Per beat (action or Continue):
 
 - **`narrateActivityBeat`** — a dedicated LLM narration line in the story feed,
   steered by `activity.narrationHint`.
@@ -344,13 +407,33 @@ While `activity` is set and live, **each action adds +1 appeal to every segment 
 
 | Category | Examples | Shop |
 |----------|----------|------|
-| game | horror, fps, cozy-farm, rhythm, dating-sim, variety-party | $40–$80 each |
-| performance | read-aloud, ASMR, karaoke, workout | free |
-| creative | cook-on-cam, body-paint | free |
-| intimate | masturbate-on-cam | free (No Limits only) |
+| game | horror, fps, cozy-farm, rhythm, dating-sim (Risqué+), variety-party | $40–$80 each |
+| performance | read-aloud, ASMR (Risqué+), karaoke, workout, **talent modes** (singer, guitarist, …) | free |
+| creative | cook-on-cam, body-paint (No Limits+) | free |
+| intimate | masturbate-on-cam (No Limits+; dev build only) | free |
 
 Games in the shop **Game Library** section unlock via `ownedActivities[]` (persisted).
+Each activity may declare `requiredZone` — a **fixed** (non-portable) camera must be
+placed in that zone or the activity is hidden from the picker and shop (portable cams
+do not count). Examples: games and desk streams → `desk`; Cook on Cam / Chef's Table →
+`kitchenette`; workouts and couch streams → `couch`; body painting → `bathroom`;
+masturbate-on-cam → `bed`.
 Custom activities use neutral `pleases` and LLM-built hints from the typed text.
+
+### Talents (`talents.ts`)
+
+Chosen during onboarding (`settings.talent`, default `singer`). Six presets each
+define: a free **activity** (`talent-*` ids in `activities.ts`, gated by
+`activity.talent`), **quick actions** merged into the live Actions menu
+(`ActionBar`), and **pleases** segments for the synergy bonus above. Character
+presets in `characterPresets.ts` include a matching default talent.
+
+### Starter kit (`controller.generateStarterKit`)
+
+Runs once when onboarding finishes (`finishOnboarding`, before the opening beat).
+Guarded by `starterKitGranted`. LLM returns ~3 themed props/gifts from persona +
+talent + niche; offline/mock uses templated kits in `offlineStarterKit`. Items land
+in `inventory` with `meta.starterKit = "1"` (flavor only — no mechanical effects).
 
 | Game | Pleases | hypePerRound | energyPerRound |
 |------|---------|--------------|----------------|
@@ -376,6 +459,9 @@ Custom activities use neutral `pleases` and LLM-built hints from the typed text.
 | lava-lamp | $110 | **segmentAppeal {cozy+2, lonely+1}** |
 | neon-arcade | $160 | **segmentAppeal {hype+2, trolls+1}** |
 | premium-backdrop | $420 | **segmentAppeal {whales+2}**, income ×1.05 |
+| rgb-led-strip | $95 | **segmentAppeal {hype+2}** |
+| velvet-throw | $85 | **segmentAppeal {simps+2, cozy+1}** |
+| gold-framed-art | $280 | **segmentAppeal {whales+1, cozy+1}** |
 | gaming-chair | $200 | comfortPerDay +4 |
 | plant-wall | $130 | comfortPerDay +3, viewer ×1.05 |
 | soundproofing | $180 | comfortPerDay +3 |
@@ -390,6 +476,14 @@ grows → more recurring income):
   segments **and** nudging presence spawn weights, so you literally attract the crowd you
   invest in (lavalamp → cozy, neon → hype, premium backdrop → whales).
 
+**Décor visualization:** furniture with `segmentAppeal` is décor (`isDecoration`).
+Shop cards show a **Visualize / Regenerate** button (when an image backend is
+configured) that calls `controller.visualizeDecoration` → `ImageKind` `"decoration"`
+stored in `decorationImages[upgradeId]`. **`generateRoom`** passes owned décor preview
+URLs as image refs and names them in the `{{upgrades}}` room prompt so generated room
+art includes purchased pieces. New saves start with **`ownedUpgrades = []`** (bare
+room — only functional zone furniture in the default SVG / base prompt).
+
 > **`mult.viewer` is now wired**: `presenceTick` scales the named-cast target and the
 > anonymous floor by it, so camera/gear upgrades finally grow the audience. (Closes a
 > [09](./09-expectation-vs-reality.md) mismatch.)
@@ -398,7 +492,11 @@ grows → more recurring income):
 Clothing is **item-based**: pieces live in `store.inventory`, equip into
 `store.equippedClothing` slots (head/top/bottom/feet/outer/accessory/full), and stack
 **vibe tags** (casual/cozy/cute/bold) into segment appeal via `wardrobeAppeal()` with
-diminishing returns. Shop → **Clothing** tab; bathroom → **Change clothes**. Baseline
+diminishing returns. Shop → **Clothing** section with **Style** (All / Women's / Men's /
+Unisex) and **Slot** filters — gender tags are **filter-only** (anyone can buy any piece).
+**Underwear** shop entries require **Risqué** tier or higher; explicit pieces (sheer,
+harness, micro, etc.) require **No Limits** (`minTier: "unhinged"`, Custom tier counts).
+`buyClothing` enforces the same gates. Bathroom → **Change clothes**. Baseline
 appeal clamp in the resolver is **±5** (raised from ±3 so stacking matters).
 
 ### Cameras & streaming zones (`cameras.ts`)
@@ -406,16 +504,25 @@ appeal clamp in the resolver is **±5** (raised from ±3 so stacking matters).
 - **Go live** requires `cameraForZone(cameras, zone)` — couch/kitchen/etc. need a placed
   cam or a **Portable Streaming Cam** ($180, lower quality, any zone).
 - Purchased kits land **unplaced** in inventory; place via zone menu **📷 Place … here**.
+  **Private zones** (`PRIVATE_CAM_ZONES` = bed, bathroom) only offer placement on a
+  **No-Limits** tier (`canPlaceCameraInZone`) — both the menu option and
+  `placeCameraAtZone` enforce it, so tame tiers can never film those spots.
+- A zone with a fixed camera no longer stacks more: the menu shows **🔄 Swap in <tier>**
+  (moves the old cam back to the bag) and **🗑 Remove** (`unplaceCamera`, always available
+  even on tame tiers so a previously-placed private cam can be cleared).
 - **Active camera** (`activeCameraId`) sets the on-screen angle; StudioRoom cam switcher
-  while live. Multi-angle production bump: +4% viewers per extra placed zone (cap +12%).
+  while live. Switcher, StreamView title, and inventory all label angles via
+  `cameraDisplayLabel` → `<Location> · <Tier>` (e.g. "Bathroom · DSLR"), not the bare tier.
+  Multi-angle production bump: +4% viewers per extra placed zone (cap +12%).
 - **Active camera quality** feeds `productionQuality` (replaces global 1080p/dslr gear
   multipliers; legacy owned upgrades migrate to unplaced cams on load).
 - **Off-camera:** live actions in a zone without the active angle skip chat/audience
   payoff (`isLive` false in resolver for that beat); ActionBar shows 🎥 Off camera.
 
-### Legacy outfit presets (`outfits.ts`)
-`settings.outfit` remains on saves for migration; appeal uses equipped clothing. Vibe→segment
-table still lives in `OUTFITS`.
+### Outfit vibe (`outfits.ts`, `wardrobe.ts`)
+No `settings.outfit` field — vibe is derived from equipped clothing via
+`dominantOutfitVibe()`. Item tags stack through `wardrobeAppeal()`; segment weights live in
+`OUTFITS`. Presets grant `starterClothingFor(preset.outfit, preset.gender)` at onboarding.
 
 ## Mastery — personal progression (`mastery.ts`, `BALANCE.mastery`)
 Live actions earn XP in skill **domains** keyed off the verdict's *tags* (uniform,
@@ -430,12 +537,13 @@ never per-action-id):
 level-ups surface as a prominent alert. **HUD chips always show both domains from Lv 0**
 with progress % to the next level.
 
-## Niches & schedule board (`niches.ts`, `BALANCE.niche`)
-`settings.niche` (variety / cozy / gaming / just-chatting / spicy) shifts presence
-**spawn weights** and adds **baseline appeal** per segment, so a cozy niche pulls the
-cozy/lonely crowd while spicy pulls simps/whales (and pushes cozy away). Switching costs
-a small follower hit + a freshness reset. Picked from the offline ActionBar
-"🗓 schedule board".
+## Niches & go-live stream type (`niches.ts`, `store.streamNicheDraft`, `session.niche`)
+The stream type (variety / cozy / gaming / just-chatting / spicy) is picked at the
+**desk zone menu** beside **Go live**, stored in `streamNicheDraft`, and copied into
+`session.niche` when the stream starts. It shifts presence **spawn weights** and adds
+**baseline appeal** per segment. **Spicy** only appears when content tier is **Risqué**
+or higher (`nichesForTier`). Freshness (`contentNovelty`) is keyed by niche id.
+Mid-stream niche changes and follower switch costs are gone — pick again next stream.
 
 ## Novelty & burnout (`BALANCE.novelty`, `events.ts`)
 Per-content **freshness** (`store.contentNovelty`, keyed by niche) drains
@@ -448,7 +556,7 @@ arms a **burnout event** (offline) that forces a rest choice.
 | Tier | `tierIntensity()` (chat/stalker gate/ActionBar, local-eval cap) | `controller.intensity()` (presence spawn bias) |
 |------|---|---|
 | wholesome | 0 (cap 2) | 0 |
-| flirty | 1 (cap 3) | 1 |
+| cheeky | 1 (cap 3) | 1 |
 | risqué | 2 (cap 4) | 2 |
 | unhinged | 4 (cap 5) | 3 |
 | custom | 4 (cap 5) | 3 |
@@ -459,6 +567,19 @@ LLM declines in-character at low tiers via the steering text.
 
 > Mismatch: `unhinged`/`custom` map to **4** in the content/chat path but **3** in
 > the presence path. See [09](./09-expectation-vs-reality.md).
+
+### NSFW dev gate (`content.ts`)
+
+Explicit NSFW UI is stripped in prod builds (`NSFW_BUILD = import.meta.env.DEV`):
+
+| Feature | Dev | Prod |
+|---------|-----|------|
+| **No Limits** tier in Settings | shown (`CONTENT_TIERS_SETTINGS`) | hidden (Custom remains) |
+| **Masturbate on Cam** activity | shown at No Limits/Custom | never shown (`devOnly` on activity) |
+| **`__relieve__`** zone menu option | shown at No Limits/Custom | never shown (`nsfwUnlocked`) |
+
+`isNoLimits` (horny resource, wardrobe underwear strip, etc.) still applies in prod when
+Custom is selected; only the three explicit options above are dev-gated.
 
 ## One live action, end to end (worked example)
 

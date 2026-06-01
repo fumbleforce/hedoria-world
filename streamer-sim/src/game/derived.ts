@@ -2,7 +2,7 @@
  * Legible derived formulas — shared by controller and Stats panel.
  */
 
-import { BALANCE } from "./balance";
+import { BALANCE, type BalanceConfig } from "./balance";
 import { needsStrain } from "./needs";
 import { relationshipLevel, type Roster } from "./characters";
 import type { AudienceState } from "./segments";
@@ -42,8 +42,8 @@ export function reach(metrics: Metrics): number {
   );
 }
 
-export function monetizationRamp(metrics: Metrics): number {
-  return Math.min(1, metrics.followers / BALANCE.economy.monetizationRampFollowers);
+export function monetizationRamp(metrics: Metrics, balance: BalanceConfig = BALANCE): number {
+  return Math.min(1, metrics.followers / balance.economy.monetizationRampFollowers);
 }
 
 /** Average satisfaction-weighted happiness 0..1 over populated segments. */
@@ -86,13 +86,14 @@ export function growthProjection(
   metrics: Metrics,
   audience: AudienceState,
   currentViewers: number,
+  balance: BalanceConfig = BALANCE,
 ): GrowthProjection {
   const r = reach(metrics);
-  const ramp = monetizationRamp(metrics);
+  const ramp = monetizationRamp(metrics, balance);
   const hn = happyNorm(audience);
   const passive = Math.max(
     0,
-    Math.round(currentViewers * hn * BALANCE.economy.passiveFollowerRate * r),
+    Math.round(currentViewers * hn * balance.economy.passiveFollowerRate * r),
   );
   return {
     reach: r,
@@ -119,14 +120,14 @@ export function countFriendPlusRegulars(roster: Roster): number {
   return n;
 }
 
-export function subProjection(metrics: Metrics, roster: Roster): SubProjection {
+export function subProjection(metrics: Metrics, roster: Roster, balance: BalanceConfig = BALANCE): SubProjection {
   const regulars = countFriendPlusRegulars(roster);
   const gain = Math.round(
-    metrics.followers * BALANCE.subs.subDailyRate + regulars * BALANCE.subs.subRegularBonus,
+    metrics.followers * balance.subs.subDailyRate + regulars * balance.subs.subRegularBonus,
   );
-  const churn = Math.round(metrics.subscribers * BALANCE.subs.subChurnRate);
+  const churn = Math.round(metrics.subscribers * balance.subs.subChurnRate);
   return {
-    subDailyRate: BALANCE.subs.subDailyRate,
+    subDailyRate: balance.subs.subDailyRate,
     regularCount: regulars,
     estimatedGain: gain,
     estimatedChurn: churn,
@@ -139,11 +140,12 @@ export function liveSubFractionPerBeat(
   metrics: Metrics,
   roster: Roster,
   audience: AudienceState,
+  balance: BalanceConfig = BALANCE,
 ): number {
-  const { estimatedGain } = subProjection(metrics, roster);
+  const { estimatedGain } = subProjection(metrics, roster, balance);
   if (estimatedGain <= 0) return 0;
   const hn = happyNorm(audience);
-  const perBeat = estimatedGain / BALANCE.subs.liveBeatsPerDay;
+  const perBeat = estimatedGain / balance.subs.liveBeatsPerDay;
   const mood = 0.45 + hn * 0.55;
   const hypeBoost = 0.65 + metrics.hype / 200;
   return perBeat * mood * hypeBoost;

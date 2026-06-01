@@ -13,6 +13,7 @@ export function NarratorPanel({ controller }: { controller: GameController }) {
   const imageBusy = useStore((s) => s.imageBusy);
   const hasStory = useStore((s) => s.story.length > 0);
   const hasCharacter = useStore((s) => hasCharacterLook(s.character));
+  const isLive = useStore((s) => s.session.isLive);
   const canGen = controller.canGenerateImages;
   const ref = useRef<HTMLDivElement>(null);
   const [lightbox, setLightbox] = useState<{ src: string; cap: string } | null>(null);
@@ -26,14 +27,14 @@ export function NarratorPanel({ controller }: { controller: GameController }) {
     <section className="narrator">
       <div className="narrator__head">
         <span>📖 Narrator</span>
-        {canGen && hasCharacter && hasStory && (
+        {canGen && hasCharacter && hasStory && !isLive && (
           <button
-            className={`btn btn--mini ${imageBusy ? "is-loading" : ""}`}
+            className="btn btn--mini"
             disabled={!!imageBusy}
             onClick={() => void controller.generateScene()}
             title="Generate an image of the current moment"
           >
-            {imageBusy ? imageBusy + "…" : "📸 Visualize scene"}
+            📸 Visualize scene
           </button>
         )}
       </div>

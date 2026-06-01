@@ -12,7 +12,7 @@ import { relationshipLevel, pickName } from "./characters";
 import { ARCHETYPE_BY_ID } from "./archetypes";
 import { ev, choice } from "./events";
 import { pick, clamp } from "../rng/rng";
-import { BALANCE, type AffinitySource } from "./balance";
+import { BALANCE, type AffinitySource, type BalanceConfig } from "./balance";
 
 // --------------------------------------------------------------- affinity ledger
 
@@ -33,8 +33,9 @@ export function applyAffinity(
   rawDelta: number,
   source: AffinitySource,
   day: number,
+  balance: BalanceConfig = BALANCE,
 ): { patch: Partial<CharacterSheet>; applied: number; reason: string } {
-  const cfg = BALANCE.affinity;
+  const cfg = balance.affinity;
   // Reset the daily budget when the day rolls over.
   const budgetUsed = c.affinityDay === day ? c.affinityGainedToday : 0;
 
@@ -110,8 +111,9 @@ export interface AffinityDecay {
 export function decayAffinities(
   roster: Record<string, CharacterSheet>,
   day: number,
+  balance: BalanceConfig = BALANCE,
 ): AffinityDecay[] {
-  const cfg = BALANCE.affinity;
+  const cfg = balance.affinity;
   const out: AffinityDecay[] = [];
   for (const c of Object.values(roster)) {
     if (c.affinity <= 0) continue;

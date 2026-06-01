@@ -10,7 +10,34 @@
  */
 import { getActiveSlotId } from "./saves";
 
-export type ImageKind = "room" | "portrait" | "body" | "presence" | "scene" | "corner" | "backdrop";
+export type ImageKind = "room" | "portrait" | "body" | "presence" | "scene" | "corner" | "backdrop" | "decoration" | "work" | "logo";
+
+/** Gallery section order (Settings → Gallery). */
+export const IMAGE_KIND_ORDER: ImageKind[] = [
+  "logo",
+  "portrait",
+  "body",
+  "presence",
+  "scene",
+  "work",
+  "corner",
+  "backdrop",
+  "decoration",
+  "room",
+];
+
+export const IMAGE_KIND_LABEL: Record<ImageKind, string> = {
+  logo: "Channel logo",
+  portrait: "Portrait",
+  body: "Body templates",
+  presence: "Locations & presence",
+  scene: "Scenes",
+  work: "Day job",
+  corner: "Furniture corners",
+  backdrop: "Room perspectives",
+  decoration: "Décor previews",
+  room: "Room",
+};
 
 export interface StoredImage {
   id: string;

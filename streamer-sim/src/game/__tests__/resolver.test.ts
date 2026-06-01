@@ -54,7 +54,7 @@ describe("resolveAction — economy", () => {
       metrics: metrics(),
       audience: audience({ hype: 20 }, 80),
       mult,
-      contentTier: "flirty",
+      contentTier: "cheeky",
       isLive: true,
     });
     expect(res.earned).toBeGreaterThan(0);
@@ -69,7 +69,7 @@ describe("resolveAction — economy", () => {
       metrics: metrics(),
       audience: audience({ whales: 5 }, 90),
       mult,
-      contentTier: "flirty",
+      contentTier: "cheeky",
       isLive: true,
     });
     // whales tipFactor 5, sat 90 → (35/45)*5*5*tipConstant*1, gated by readiness.
@@ -83,7 +83,7 @@ describe("resolveAction — economy", () => {
       metrics: metrics(),
       audience: audience({ hype: 20 }),
       mult,
-      contentTier: "flirty",
+      contentTier: "cheeky",
       isLive: false,
     });
     expect(res.earned).toBe(0);
@@ -161,7 +161,7 @@ describe("resolveAction — personal stat costs", () => {
     metrics: metrics({ energy: 80, comfort: 80 }),
     audience: audience({ cozy: 5 }),
     mult,
-    contentTier: "flirty" as const,
+    contentTier: "cheeky" as const,
     isLive: true,
   };
 
