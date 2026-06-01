@@ -186,6 +186,22 @@ in `pick()`. The real probe (`probeOpenRouterStatus`) fires after session confir
 in `useCloudSync` and can toast a failure rather than silently routing to a 401.
 *(`App.tsx`, `providers.ts`, `boot.ts`, `llm/openRouterStatus.ts`, `auth/useCloudSync.ts`)*
 
+### ✅ D6b — OpenRouter catalog + profile/CORS seams in prod *(fixed)*
+Four prod-only seams uncovered once Discord login + per-user keys shipped:
+- **Catalog hit the dev proxy in prod.** `openRouterCatalog.ts` was hardcoded to
+  `/__openrouter/models` (Vite-only); now targets the edge function `/models`
+  with a Bearer JWT when `supabaseConfigured`.
+- **CORS rejected `x-request-id`.** The dev-only request id header tripped the
+  edge function preflight; it's no longer sent in prod, and `x-request-id` was
+  added to the function's `Access-Control-Allow-Headers`.
+- **Missing `profiles` rows.** Users predating the `handle_new_user` trigger had
+  no profile, so the tier read 406'd and saves/key-minting hit FK violations.
+  Migration `004` backfills profiles from `auth.users` and re-asserts the trigger;
+  `useAuth.fetchTier` uses `.maybeSingle()` so a gap degrades to `free`, not a 406.
+- **`/__diag-log` 405 spam.** The diag server sink (`toServer`) now only mirrors in
+  `import.meta.env.DEV`, silencing the per-log 405 in prod.
+*(`llm/openRouterCatalog.ts`, `openrouter-proxy/index.ts`, `migrations/004`, `auth/useAuth.ts`, `diag/log.ts`)*
+
 ### ✅ D7 — Live state now survives a reload *exactly* (fixed)
 `session`, the roster's `online` flags and the `audience` snapshot are all persisted, so
 a mid-stream refresh/load reproduces the **exact** room it was saved in — same cast
