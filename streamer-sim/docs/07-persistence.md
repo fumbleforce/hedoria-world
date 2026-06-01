@@ -126,7 +126,15 @@ and Discord OAuth via Supabase Auth. Subscription tier (`free | pro`) is fetched
 **Payments** — `src/lib/lemonSqueezy.ts` opens the LemonSqueezy checkout with the
 Supabase `user_id` embedded as `checkout[custom][user_id]`. The edge function
 `supabase/functions/lemon-webhook` verifies the HMAC-SHA256 signature and updates
-`profiles.subscription_status` / `subscription_tier` on subscription events.
+`profiles.subscription_status` / `subscription_tier` on subscription events. On a
+tier change it also `PATCH`es the user's OpenRouter runtime-key spend cap.
+
+**Per-user OpenRouter keys** (migration `003`) — `public.user_openrouter_keys`,
+one row per user (`user_id` PK, `key_hash`, `encrypted_key`). RLS is on with **no
+policies**, so only the service-role edge functions can read/write it; end-user
+JWTs are denied entirely. The `openrouter-proxy` function mints a per-user runtime
+key on first LLM use and stores it here (tagged `enc:v1:` or `plain:` — see
+`docs/05-llm-stack.md`). Nothing in this table is ever sent to the client.
 
 ## Boot sequence (`boot.ts`)
 

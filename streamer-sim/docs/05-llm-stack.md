@@ -107,9 +107,26 @@ with the Bearer JWT and interprets the response:
 | Dev (`VITE_SUPABASE_URL` absent) | `/__openrouter/chat` (Vite middleware) | none — server-side key in `.env` |
 | Prod (`VITE_SUPABASE_URL` set) | `{SUPABASE_URL}/functions/v1/openrouter-proxy` | Supabase JWT injected per request |
 
-The edge function `supabase/functions/openrouter-proxy/index.ts` holds the
-`OPENROUTER_API_KEY` secret server-side and verifies the caller's JWT before
-forwarding to OpenRouter.
+The edge function `supabase/functions/openrouter-proxy/index.ts` verifies the
+caller's JWT (`config.toml: verify_jwt = true`) before forwarding to OpenRouter.
+
+**Per-user keys (provisioning).** Inference is billed per user, not from one
+shared key. On a signed-in user's first `POST`, the proxy mints a runtime
+OpenRouter key from `OPENROUTER_PROVISIONING_KEY` via the provisioning API
+(`POST /api/v1/keys`), with a monthly spend cap from their `subscription_tier`
+(`OPENROUTER_LIMIT_FREE` / `_PRO`, default $1 / $20, `limit_reset: monthly`).
+The runtime key is stored in `public.user_openrouter_keys` (one row per user,
+RLS-locked to the service role) and reused on later requests; completions are
+forwarded with that key so usage is metered and capped per user. Helpers live in
+`supabase/functions/_shared/openrouter.ts`. The legacy `OPENROUTER_API_KEY` is
+now optional — it only fronts the public `/models` catalog. If no provisioning
+key is set, the proxy falls back to that single shared key for everyone.
+
+**At-rest crypto.** Stored keys are tagged: `enc:v1:<base64>` (AES-GCM, key
+derived from `KEY_ENCRYPTION_SECRET`) when that secret is set, else `plain:…`
+(RLS-protected only). Tagging lets you enable encryption later without breaking
+existing rows. **Tier changes** (`lemon-webhook`) `PATCH` the existing key's
+limit to match the new tier; best-effort and only if a key has been minted.
 
 ### Mock (`mockProvider.ts`)
 `id = "mock-local"`; returns `"{}"` in JSON mode, `""` otherwise. Real offline
@@ -240,9 +257,11 @@ fast-tier chat calls.
 | `promptOverrides` | per id | replace prompt templates |
 | `consoleLevel` | `debug` | diagnostics verbosity |
 
-Env: `VITE_GEMINI_API_KEY` (Gemini), `OPENROUTER_API_KEY` (read server-side by the
-Vite proxy or the edge function, not VITE-prefixed). `VITE_SUPABASE_URL` /
-`VITE_SUPABASE_ANON_KEY` gate the `supabaseConfigured` flag that selects the prod
+Env: `VITE_GEMINI_API_KEY` (Gemini), `OPENROUTER_API_KEY` (server-side, dev Vite
+proxy / catalog only). Prod inference uses `OPENROUTER_PROVISIONING_KEY` to mint
+per-user keys (optional `KEY_ENCRYPTION_SECRET`, `OPENROUTER_LIMIT_FREE` / `_PRO`)
+— all read server-side in the edge function, never VITE-prefixed. `VITE_SUPABASE_URL`
+/ `VITE_SUPABASE_ANON_KEY` gate the `supabaseConfigured` flag that selects the prod
 routing path.
 
 ### Transient store fields
