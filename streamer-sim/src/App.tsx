@@ -50,7 +50,18 @@ export function App() {
     : "offline engine";
 
   if (!services) {
-    return <div className="boot"><div className="boot__card">◉ Limelight — booting…</div></div>;
+    return (
+      <div className="boot">
+        <div className="boot__card">◉ Limelight — booting…</div>
+        {supabaseConfigured && !auth.loading && !auth.user && (
+          <button className="signInCta" onClick={() => setShowAuth(true)}>
+            Sign in with Discord
+            <span className="signInCta__note">AI responses require signing in</span>
+          </button>
+        )}
+        {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
+      </div>
+    );
   }
 
   const { controller } = services;
