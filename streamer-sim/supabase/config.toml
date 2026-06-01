@@ -1,6 +1,8 @@
 # Supabase local dev config. Run `supabase start` to spin up a local instance.
 # Docs: https://supabase.com/docs/reference/cli/config
 
+project_id = "jljvshjstlpwmobhkxeu"
+
 [api]
 enabled = true
 port = 54321
