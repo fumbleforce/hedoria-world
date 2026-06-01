@@ -3,7 +3,8 @@
   // Deployed via Workers Builds: `npx wrangler deploy` (prod) /
   // `npx wrangler versions upload` (preview). Root directory is streamer-sim,
   // so paths here are relative to that.
-  "name": "limelight",
+  // Must match the Cloudflare Worker name (derived from the repo).
+  "name": "hedoria-world",
   "compatibility_date": "2026-06-01",
   "assets": {
     // Vite build output.
