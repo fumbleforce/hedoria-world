@@ -283,8 +283,9 @@ export interface StoreState {
   cornerImages: Partial<Record<ZoneId, string>>;
   /** In-memory cache of image id -> data URL, hydrated from IndexedDB. */
   imageCache: Record<string, string>;
-  /** In-memory style-preset preview thumbnails (presetId -> data URL). */
-  stylePreviews: Record<string, string>;
+  /** Generated preview for the active custom style (invalid when description changes). */
+  customStylePreview: string | null;
+  customStylePreviewFor: string;
   /** Most recently generated/seen image id — shown center-stage. */
   lastImageId: string | null;
   /** Latest live cam-footage image id — the "what viewers see" stream feed. */
@@ -413,7 +414,7 @@ export interface StoreState {
   clearCornerImages: () => void;
   cacheImage: (id: string, dataUrl: string) => void;
   uncacheImage: (id: string) => void;
-  setStylePreview: (presetId: string, dataUrl: string) => void;
+  setCustomStylePreview: (styleText: string, dataUrl: string | null) => void;
   setLastImage: (id: string | null) => void;
   setStreamFootage: (id: string | null) => void;
   setImageBusy: (label: string | null, background?: boolean) => void;
@@ -586,7 +587,8 @@ export const useStore = create<StoreState>()(
       zoneBackdrops: {},
       cornerImages: {},
       imageCache: {},
-      stylePreviews: {},
+      customStylePreview: null,
+      customStylePreviewFor: "",
       lastImageId: null,
       streamFootageId: null,
       imageBusy: null,
@@ -802,8 +804,8 @@ export const useStore = create<StoreState>()(
         }),
       clearCornerImages: () => set({ cornerImages: {} }),
       cacheImage: (id, dataUrl) => set((s) => ({ imageCache: { ...s.imageCache, [id]: dataUrl } })),
-      setStylePreview: (presetId, dataUrl) =>
-        set((s) => ({ stylePreviews: { ...s.stylePreviews, [presetId]: dataUrl } })),
+      setCustomStylePreview: (styleText, dataUrl) =>
+        set({ customStylePreview: dataUrl, customStylePreviewFor: styleText }),
       uncacheImage: (id) =>
         set((s) => {
           const patch: Partial<StoreState> = {};

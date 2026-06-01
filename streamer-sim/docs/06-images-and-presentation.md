@@ -31,7 +31,6 @@ fixed 1:1.
 | `generateScene()` | scene | A "stream cam" moment; pushed into the narrator feed. References: the streamer's body T-pose (likeness) + the **room art** (`roomImage`, for apartment layout/style) + — during an in-person **visit** — the guest's own full-body T-pose. The guest body is generated on demand by `ensureCharacterBody()` (using their portrait as a likeness reference when one exists), stored under a `cbody:<id>` KV key, and reused thereafter; it falls back to the portrait, then a text description. The prompt names each reference. |
 | `generateCamFootage(zone?)` | scene | Live **cam shot** from the active camera tier + zone (StreamView **📹 Refresh feed**). Includes equipped look in the prompt. When live, an LLM step (`camVisual`) turns recent story + the active **activity** into a `doing` pose line; `camFootagePrompt` also receives the activity label/hint. With an active action or activity, framing widens to show full-body movement instead of the idle waist-up seated shot. Bathroom/bed angles require no-limits content tier. The result id is stored as `streamFootageId` and becomes the live **Stream view** feed. `meta: { zone, cameraTier }`. |
 | `generatePortrait(charId)` | (KV only) | A **viewer** avatar (hardcoded semi-real style); stored in a global KV key, not the gallery. |
-| `generateStylePreview(presetId)` | preview (logged only) | A fixed common subject per style preset, for the Settings comparison grid; stored in a global KV key. |
 | `regenerateImage(rec)` | varies | New id, same prompt/cache key. |
 
 **Stream view.** While live, the center **Visualization** window becomes a Twitch-style
@@ -91,13 +90,12 @@ Each `ImagePromptSet` defines `imageStyle` + all five prompt variants
 | `papercraft` | Papercraft | Layered cut-paper diorama |
 
 ### In-game style previews
-Settings → Prompts shows a thumbnail grid. The **game** generates a preview per
-preset (fixed common subject so styles differ only by art style) via
-`generateStylePreview`, cached in IndexedDB under
-`style-preview:{presetId}:{hash(styleText)}` — **global** (shared across save slots),
-not in the per-slot gallery, and auto-invalidated if a preset's style text changes.
-Buttons: per-preset (re)generate, plus a bulk "Generate previews" / "Regenerate all".
-Previews use each preset's **built-in** style, not the universal-style override.
+Onboarding and Settings → Prompts show a thumbnail grid backed by static assets in
+`public/style-previews/<presetId>.png` (served at `/style-previews/…` in dev and prod).
+A **Custom** tile sets `imageStylePreset: "custom"` and exposes a textarea for the
+player's own `{{style}}` description. Custom previews are generated on demand via
+`generateCustomStylePreview()` (same fixed subject as the baked thumbnails); built-in
+presets are not regenerated per user.
 
 ## StudioRoom render (`render/StudioRoom.tsx`)
 

@@ -6,6 +6,7 @@
  */
 
 import { useStore } from "../state/store";
+import { supabase, supabaseConfigured } from "../lib/supabase";
 import { diag } from "../diag/log";
 import {
   imageRequestModalitiesFallbacks,
@@ -13,7 +14,11 @@ import {
   loadOpenRouterCatalog,
 } from "./openRouterCatalog";
 
-const PROXY = "/__openrouter/chat";
+// Dev: Vite middleware proxy. Prod: Supabase edge function (JWT required).
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const PROXY = SUPABASE_URL
+  ? `${SUPABASE_URL}/functions/v1/openrouter-proxy`
+  : "/__openrouter/chat";
 
 /** Supported output aspect ratios. Scenes use widescreen; everything else square. */
 export type ImageAspect = "1:1" | "16:9";
@@ -99,9 +104,16 @@ class OpenRouterImageBackend implements ImageBackend {
   ): Promise<string> {
     const content: Array<Record<string, unknown>> = [{ type: "text", text: prompt }];
     for (const ref of refs) content.push({ type: "image_url", image_url: { url: ref } });
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (supabaseConfigured) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        headers["Authorization"] = `Bearer ${session.access_token}`;
+      }
+    }
     const res = await fetch(PROXY, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({
         model,
         messages: [{ role: "user", content: refs.length ? content : prompt }],

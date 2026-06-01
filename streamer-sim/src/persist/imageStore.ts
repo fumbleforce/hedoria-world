@@ -338,32 +338,7 @@ export async function loadPortrait(charId: string): Promise<string | null> {
   }
 }
 
-// --- Style-preset preview thumbnails (global, not slot-scoped) ---------------
-
-/**
- * Previews illustrate an art-style preset with a fixed common subject, so they
- * are identical across saves. Keyed by preset id + a hash of the style text so
- * editing a preset's style invalidates its stale preview.
- */
-export function stylePreviewKey(presetId: string, styleText: string): string {
-  return `style-preview:${presetId}:${cyrb53(styleText)}`;
-}
-
-export async function saveStylePreview(key: string, dataUrl: string): Promise<void> {
-  try {
-    await kvPut(key, dataUrl);
-  } catch {
-    /* best-effort */
-  }
-}
-
-export async function loadStylePreview(key: string): Promise<string | null> {
-  try {
-    return await kvGet(key);
-  } catch {
-    return null;
-  }
-}
+// --- Style-preset preview thumbnails (removed — baked assets in public/style-previews/) ---
 
 export async function deletePortrait(charId: string): Promise<void> {
   try {

@@ -98,7 +98,7 @@ mid-shift reload resumes the Work screen), and the active
 
 **Not persisted (reset/rebuilt on reload):**
 `booted`, `pendingEvent`, `resolving`, all UI modal flags, `toast`, busy
-flags, and the in-memory `imageCache` / `stylePreviews` (rebuilt from IndexedDB). The
+flags, and the in-memory `imageCache` (rebuilt from IndexedDB). The
 ambient-chat loop isn't a state field — it isn't restarted on load and resumes on the
 player's next action.
 

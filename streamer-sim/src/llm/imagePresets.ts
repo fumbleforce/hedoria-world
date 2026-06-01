@@ -23,7 +23,11 @@ export type ImageStylePresetId =
   | "storybook"
   | "synthwave"
   | "claymation"
-  | "papercraft";
+  | "papercraft"
+  | "custom";
+
+/** Built-in presets shown in the art-style picker (excludes custom). */
+export type BuiltinImageStylePresetId = Exclude<ImageStylePresetId, "custom">;
 
 export interface ImagePromptSet {
   id: ImageStylePresetId;
@@ -568,12 +572,43 @@ export const IMAGE_STYLE_PRESETS: ImagePromptSet[] = [
   PAPERCRAFT,
 ];
 
+/** Custom style uses cozy-neon prompt templates; the player supplies `imageStyle`. */
+const CUSTOM_STYLE: ImagePromptSet = {
+  ...COZY_NEON,
+  id: "custom",
+  label: "Custom",
+  blurb: "Describe your own art direction.",
+  swatch: ["#868e96", "#495057"],
+  imageStyle: "",
+};
+
 const PRESET_BY_ID = Object.fromEntries(IMAGE_STYLE_PRESETS.map((p) => [p.id, p])) as Record<
-  ImageStylePresetId,
+  BuiltinImageStylePresetId,
   ImagePromptSet
 >;
 
+/** Static thumbnail shipped in `public/style-previews/<id>.png`. */
+export function bakedStylePreviewUrl(presetId: BuiltinImageStylePresetId): string {
+  return `/style-previews/${presetId}.png`;
+}
+
+export function isCustomArtStyle(presetId: ImageStylePresetId | undefined): boolean {
+  return presetId === "custom";
+}
+
+/** Fixed subject for custom-style preview — same framing as the baked preset thumbnails. */
+export function customStylePreviewPrompt(styleText: string): string {
+  return [
+    "Upper-body character art of a friendly young woman video-game streamer with headphones,",
+    "sitting at a glowing streaming desk with dual monitors and a webcam in a cozy studio apartment.",
+    "Looking toward the camera with a warm expression.",
+    "No text, no watermark, no UI. Square composition.",
+    styleText.trim(),
+  ].join(" ");
+}
+
 export function getImagePreset(id: ImageStylePresetId | undefined): ImagePromptSet {
+  if (id === "custom") return CUSTOM_STYLE;
   return PRESET_BY_ID[id ?? "cozy-neon"] ?? COZY_NEON;
 }
 

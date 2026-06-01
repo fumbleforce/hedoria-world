@@ -630,6 +630,8 @@ input:focus, textarea:focus, select:focus { outline: 1px solid var(--accent-2); 
 .stylePreset__gen { position: absolute; bottom: 5px; right: 5px; width: 26px; height: 26px; border-radius: 50%; border: none; background: rgba(12,10,18,0.72); color: #fff; font-size: 0.9em; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .stylePreset__gen:hover:not(:disabled) { background: var(--accent); }
 .stylePreset__gen:disabled { opacity: 0.4; cursor: default; }
+.customStyle__preview { max-width: 280px; margin-top: 10px; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); }
+.customStyle__preview img { width: 100%; display: block; aspect-ratio: 1 / 1; object-fit: cover; }
 .rule { border: none; border-top: 1px solid var(--line); margin: 6px 0 16px; }
 .hint { font-size: 0.8em; color: var(--fg-2); line-height: 1.4; }
 .hint code { background: #ffffff14; padding: 1px 5px; border-radius: 4px; }

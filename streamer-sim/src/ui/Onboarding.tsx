@@ -4,8 +4,7 @@ import { dominantOutfitVibe } from "../game/wardrobe";
 import type { GameController } from "../game/controller";
 import { CONTENT_TIERS_ONBOARDING } from "../game/content";
 import { DIFFICULTY_LEVELS } from "../game/balance";
-import { IMAGE_STYLE_PRESETS } from "../llm/imagePresets";
-import { clearImagePromptOverrides, type ImageStylePresetId } from "../llm/imagePresets";
+import { ArtStylePicker } from "./ArtStylePicker";
 import {
   CHARACTER_PRESETS,
   matchingCharacterPresetId,
@@ -162,80 +161,11 @@ function IntensityStep() {
 }
 
 function ArtStyleStep({ controller }: { controller: GameController }) {
-  const presetId = useStore((s) => s.settings.imageStylePreset);
-  const set = useStore((s) => s.setSettings);
-  const previews = useStore((s) => s.stylePreviews);
-  const imageBusy = useStore((s) => s.imageBusy);
-  const canGen = controller.canGenerateImages;
-  const missingPreviews = IMAGE_STYLE_PRESETS.some((p) => !previews[p.id]);
-
-  useEffect(() => {
-    void controller.hydrateStylePreviews();
-  }, [controller]);
-
-  const applyPreset = (id: ImageStylePresetId) => {
-    set({ imageStylePreset: id, ...clearImagePromptOverrides() });
-  };
-
   return (
     <div className="onboard__pane">
       <h2>Choose an art style</h2>
       <p className="hint">Every generated image — your portrait, room, and scenes — uses this look.</p>
-      {canGen ? (
-        <div className="stylePreset__bar">
-          <button
-            className="btn btn--mini"
-            disabled={!!imageBusy}
-            onClick={() => void controller.generateAllStylePreviews(!missingPreviews)}
-          >
-            {imageBusy ? `${imageBusy}…` : missingPreviews ? "🖼 Generate previews" : "↻ Regenerate previews"}
-          </button>
-          <span className="hint">Renders each style with the same subject so you can compare them.</span>
-        </div>
-      ) : (
-        <p className="hint">Add a Gemini or OpenRouter key (Settings → General) to generate visual previews.</p>
-      )}
-      <div className="stylePresetGrid">
-        {IMAGE_STYLE_PRESETS.map((p) => {
-          const active = presetId === p.id;
-          const preview = previews[p.id];
-          return (
-            <div
-              key={p.id}
-              className={pickClass(active, "stylePreset")}
-              onClick={() => applyPreset(p.id)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") applyPreset(p.id); }}
-            >
-              <div className="stylePreset__thumb">
-                {preview ? (
-                  <img src={preview} alt={`${p.label} style preview`} />
-                ) : (
-                  <span
-                    className="stylePreset__placeholder"
-                    style={{ background: `linear-gradient(135deg, ${p.swatch[0]}, ${p.swatch[1]})` }}
-                  >
-                    no preview
-                  </span>
-                )}
-                {canGen && (
-                  <button
-                    className="stylePreset__gen"
-                    disabled={!!imageBusy}
-                    title={preview ? "Regenerate this preview" : "Generate this preview"}
-                    onClick={(e) => { e.stopPropagation(); void controller.generateStylePreview(p.id, !!preview); }}
-                  >
-                    {preview ? "↻" : "👁"}
-                  </button>
-                )}
-              </div>
-              <b>{p.label}</b>
-              <small>{p.blurb}</small>
-            </div>
-          );
-        })}
-      </div>
+      <ArtStylePicker controller={controller} />
     </div>
   );
 }
@@ -347,7 +277,7 @@ function CharacterStep({ controller }: { controller: GameController }) {
             {suggesting ? "Dreaming…" : "✨ Suggest backstory"}
           </button>
         </div>
-        <span className="hint">Fills the persona &amp; look below — edit anything you like afterwards. Works without an API key.</span>
+        <span className="hint">Fills the persona &amp; look below — you can still edit anything you like afterwards.</span>
       </div>
 
       <label className="field">

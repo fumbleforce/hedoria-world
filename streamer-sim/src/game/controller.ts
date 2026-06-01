@@ -9,10 +9,7 @@ import {
 } from "../llm/imageProvider";
 import {
   effectiveImagePrompt,
-  getImagePreset,
-  IMAGE_STYLE_PRESETS,
-  type ImagePromptSet,
-  type ImageStylePresetId,
+  customStylePreviewPrompt,
 } from "../llm/imagePresets";
 import {
   type StoredImage,
@@ -26,9 +23,6 @@ import {
   loadPortrait,
   saveCharacterBody,
   loadCharacterBody,
-  stylePreviewKey,
-  saveStylePreview,
-  loadStylePreview,
 } from "../persist/imageStore";
 import { diag } from "../diag/log";
 import { useStore, type ActionMenu, setFeedbackContext, clearFeedbackContext } from "../state/store";
@@ -929,73 +923,33 @@ export class GameController {
     }
   }
 
-  // ------------------------------------------------------ style-preset previews
-
-  /**
-   * A fixed common subject so every style preview differs ONLY by art style,
-   * making the presets directly comparable at a glance.
-   */
-  private previewPrompt(preset: ImagePromptSet): string {
-    return [
-      "Upper-body character art of a friendly young woman video-game streamer with headphones,",
-      "sitting at a glowing streaming desk with dual monitors and a webcam in a cozy studio apartment.",
-      "Looking toward the camera with a warm expression.",
-      "No text, no watermark, no UI. Square composition.",
-      preset.imageStyle,
-    ].join(" ");
-  }
-
-  /** Generate (or fetch cached) a preview thumbnail for one art-style preset. */
-  async generateStylePreview(presetId: ImageStylePresetId, force = false): Promise<void> {
+  /** Generate a preview thumbnail for the player's custom style description. */
+  async generateCustomStylePreview(): Promise<void> {
     const s = this.s;
-    if (!this.imageBackend) {
-      s.setToast("Set a Gemini or OpenRouter key to generate style previews.");
+    const styleText = s.settings.imageStyle.trim();
+    if (!styleText) {
+      s.setToast("Write a style description first.");
       return;
     }
-    const preset = getImagePreset(presetId);
-    const key = stylePreviewKey(preset.id, preset.imageStyle);
-    if (!force) {
-      const existing = await loadStylePreview(key);
-      if (existing) {
-        s.setStylePreview(preset.id, existing);
-        return;
-      }
+    if (!this.imageBackend) {
+      s.setToast("Set a Gemini or OpenRouter key to generate a style preview.");
+      return;
     }
     if (s.imageBusy) {
       s.setToast("An image is already generating…");
       return;
     }
-    s.setImageBusy(`Preview: ${preset.label}`, true);
+    s.setImageBusy("Custom style preview", true);
     try {
-      const url = await this.runImage("preview", this.previewPrompt(preset), []);
-      await saveStylePreview(key, url);
-      s.setStylePreview(preset.id, url);
+      const url = await this.runImage("preview", customStylePreviewPrompt(styleText), []);
+      s.setCustomStylePreview(styleText, url);
     } catch (err) {
-      diag.error("world", "style preview failed", {
-        preset: preset.id,
+      diag.error("world", "custom style preview failed", {
         error: err instanceof Error ? err.message : String(err),
       });
       s.setToast(`Preview failed: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       s.setImageBusy(null);
-    }
-  }
-
-  /** Generate previews for every preset (sequential; skips ones already cached). */
-  async generateAllStylePreviews(force = false): Promise<void> {
-    for (const p of IMAGE_STYLE_PRESETS) {
-      await this.generateStylePreview(p.id, force);
-    }
-    this.s.setToast("Style previews ready.");
-  }
-
-  /** Load any already-generated previews into memory for the Settings UI. */
-  async hydrateStylePreviews(): Promise<void> {
-    const s = this.s;
-    for (const p of IMAGE_STYLE_PRESETS) {
-      if (s.stylePreviews[p.id]) continue;
-      const url = await loadStylePreview(stylePreviewKey(p.id, p.imageStyle));
-      if (url) s.setStylePreview(p.id, url);
     }
   }
 

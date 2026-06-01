@@ -10,12 +10,13 @@ import { CONTENT_TIERS_SETTINGS } from "../game/content";
 import { DIFFICULTY_LEVELS } from "../game/balance";
 import { PROMPTS, PROMPT_IDS, type PromptId } from "../game/prompts";
 import {
-  IMAGE_STYLE_PRESETS,
   clearImagePromptOverrides,
   getImagePreset,
   hasImagePromptOverrides,
+  isCustomArtStyle,
   type ImagePromptField,
 } from "../llm/imagePresets";
+import { ArtStylePicker } from "./ArtStylePicker";
 import { useStoredImage } from "../persist/useStoredImage";
 import { listImages, loadPortrait, IMAGE_KIND_LABEL, IMAGE_KIND_ORDER, type StoredImage } from "../persist/imageStore";
 import { GenderPicker } from "./GenderPicker";
@@ -663,28 +664,17 @@ function PromptsTab({ controller }: { controller: GameController }) {
   const setOverride = useStore((s) => s.setPromptOverride);
   const settings = useStore((s) => s.settings);
   const set = useStore((s) => s.setSettings);
-  const previews = useStore((s) => s.stylePreviews);
-  const imageBusy = useStore((s) => s.imageBusy);
   const [selected, setSelected] = useState<PromptId>(PROMPT_IDS[0]);
   const def = PROMPTS[selected];
   const value = overrides[selected] ?? def.base;
   const isOverridden = overrides[selected] !== undefined;
   const preset = getImagePreset(settings.imageStylePreset);
   const imageOverrides = hasImagePromptOverrides(settings);
-  const canGen = controller.canGenerateImages;
-  const missingPreviews = IMAGE_STYLE_PRESETS.some((p) => !previews[p.id]);
-
-  useEffect(() => {
-    void controller.hydrateStylePreviews();
-  }, [controller]);
+  const isCustom = isCustomArtStyle(settings.imageStylePreset);
 
   const resetAll = () => {
     for (const id of PROMPT_IDS) setOverride(id, null);
     set({ imageStylePreset: "cozy-neon", ...clearImagePromptOverrides() });
-  };
-
-  const applyPreset = (id: typeof preset.id) => {
-    set({ imageStylePreset: id, ...clearImagePromptOverrides() });
   };
 
   const presetFallback = (field: ImagePromptField) => getImagePreset(settings.imageStylePreset)[field];
@@ -720,64 +710,13 @@ function PromptsTab({ controller }: { controller: GameController }) {
       <div className="prompts__group">Image prompts</div>
       <div className="field">
         <span>Art style preset</span>
-        {imageOverrides && (
+        {imageOverrides && !isCustom && (
           <p className="hint">Custom edits active on top of <b>{preset.label}</b>. Pick a preset to replace them.</p>
         )}
-        {canGen ? (
-          <div className="stylePreset__bar">
-            <button
-              className="btn btn--mini"
-              disabled={!!imageBusy}
-              onClick={() => void controller.generateAllStylePreviews(!missingPreviews)}
-            >
-              {imageBusy ? `${imageBusy}…` : missingPreviews ? "🖼 Generate previews" : "↻ Regenerate all previews"}
-            </button>
-            <span className="hint">Renders each style with the same subject so you can compare them.</span>
-          </div>
-        ) : (
-          <p className="hint">Add a Gemini or OpenRouter key to generate visual style previews.</p>
+        {isCustom && (
+          <p className="hint">Using your custom style description for all generated images.</p>
         )}
-        <div className="stylePresetGrid">
-          {IMAGE_STYLE_PRESETS.map((p) => {
-            const active = settings.imageStylePreset === p.id;
-            const preview = previews[p.id];
-            return (
-              <div
-                key={p.id}
-                className={pickClass(active, "stylePreset")}
-                onClick={() => applyPreset(p.id)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") applyPreset(p.id); }}
-              >
-                <div className="stylePreset__thumb">
-                  {preview ? (
-                    <img src={preview} alt={`${p.label} style preview`} />
-                  ) : (
-                    <span
-                      className="stylePreset__placeholder"
-                      style={{ background: `linear-gradient(135deg, ${p.swatch[0]}, ${p.swatch[1]})` }}
-                    >
-                      no preview
-                    </span>
-                  )}
-                  {canGen && (
-                    <button
-                      className="stylePreset__gen"
-                      disabled={!!imageBusy}
-                      title={preview ? "Regenerate this preview" : "Generate this preview"}
-                      onClick={(e) => { e.stopPropagation(); void controller.generateStylePreview(p.id, !!preview); }}
-                    >
-                      {preview ? "↻" : "👁"}
-                    </button>
-                  )}
-                </div>
-                <b>{p.label}</b>
-                <small>{p.blurb}</small>
-              </div>
-            );
-          })}
-        </div>
+        <ArtStylePicker controller={controller} showCustomHint={false} />
       </div>
 
       <p className="hint">
@@ -787,12 +726,14 @@ function PromptsTab({ controller }: { controller: GameController }) {
         <code>{"{{narrative}}"}</code>, <code>{"{{upgrades}}"}</code> fill at runtime per image.
         Expand any prompt below to tweak it — overrides stack on the preset above.
       </p>
-      <PromptEditor
-        label="Universal style (shared by all images)"
-        value={settings.imageStyle}
-        fallback={presetFallback("imageStyle")}
-        onChange={(v) => set({ imageStyle: v })}
-      />
+      {!isCustom && (
+        <PromptEditor
+          label="Universal style (shared by all images)"
+          value={settings.imageStyle}
+          fallback={presetFallback("imageStyle")}
+          onChange={(v) => set({ imageStyle: v })}
+        />
+      )}
       <PromptEditor label="Room" value={settings.roomPrompt} fallback={presetFallback("roomPrompt")} onChange={(v) => set({ roomPrompt: v })} />
       <PromptEditor label="Portrait" value={settings.portraitPrompt} fallback={presetFallback("portraitPrompt")} onChange={(v) => set({ portraitPrompt: v })} />
       <PromptEditor label="Body template" value={settings.bodyPrompt} fallback={presetFallback("bodyPrompt")} onChange={(v) => set({ bodyPrompt: v })} />
