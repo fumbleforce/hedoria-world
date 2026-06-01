@@ -80,14 +80,20 @@ minmax(280px,340px)`, capped at 1340px. Until `boot()` resolves, a
   Shows `"openrouter"` only when `textBackend === "openrouter"` and the session is
   live (or Supabase isn't configured, i.e., dev mode). Otherwise `"offline engine"`.
   Flips instantly on login/logout without a reload.
-- **Login affordance** — bottom-right overlay:
-  - *Supabase configured + not loading + no user:* prominent **"Sign in with Discord"**
-    button (`.signInCta`) with a `"AI responses require signing in"` sub-label.
-  - *Otherwise (signed in, Supabase not configured, or still loading):* compact `☁`
-    account chip (`.accountChip`) that opens `AuthModal`.
+- **LoginScreen** (`ui/LoginScreen.tsx`) — a **full-screen auth gate** rendered by
+  `App` *instead of* the game whenever Supabase is configured and no user is signed
+  in (`supabaseConfigured && !auth.user`). Shows the Limelight logo, a **"Sign in
+  with Discord"** button, and a "Sign in to play" note. **There is no guest/offline
+  bypass in the deployed build** — login is required to reach the game. While the
+  initial session check is in flight it shows "Checking your session…". When Supabase
+  is **not** configured (local dev), the gate is skipped entirely and the game boots
+  straight into the offline engine, so dev/keyless play stays possible.
+- **accountChip** (`☁`, in-game, bottom-right) — only reachable once past the gate;
+  opens `AuthModal` for account management / sign-out.
 - **AuthModal** — Discord-only by default; Google sign-in is behind a
-  `const SHOW_GOOGLE = false` flag in `AuthModal.tsx` (code kept, button hidden).
-  Logged-out copy includes "AI chat & narration require signing in."
+  `const SHOW_GOOGLE = false` flag in `AuthModal.tsx` (code kept, button hidden). In
+  the deployed build it's only used for the **signed-in** state (account/sign-out),
+  since the LoginScreen owns the signed-out path.
 
 ## Feedback layer (where the +/− bubbles come from)
 
