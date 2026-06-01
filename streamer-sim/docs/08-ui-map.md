@@ -19,6 +19,7 @@ Files: `src/App.tsx`, `src/render/StudioRoom.tsx`, `src/ui/*`, `src/index.css`.
 
 Overlays (modals): ActionMenuModal · CharacterModal · ActivityPicker ·
 ShopPanel · InventoryPanel · SettingsPanel · EventModal · GoalsPanel · CalendarPanel · RequestsPanel
+Full-page: Onboarding (first run, `!onboarded`)
 Floating: toast (bottom) · backendChip (bottom-right)
 ```
 
@@ -60,6 +61,26 @@ minmax(280px,340px)`, capped at 1340px. Until `boot()` resolves, a
 > guest by the couch (visits only), the `ActionBar` shows a "🏠 In person" or "⚡ In the moment" banner + meeting/scene controls
 > (Say/Do, Continue, 📸 Visualize, 🚪 See them out / ✓ See it through), and
 > beats stream into the `NarratorPanel`. Event consequences use the feedback/ChangeLog layer (see below). See [03](./03-social-systems.md)/[04](./04-events-arcs-goals.md).
+
+## Onboarding (first-run setup)
+
+`ui/Onboarding.tsx` — a **forced full-page wizard** (`<div class="onboard">`, `z-index: 45`)
+rendered by `App` whenever `!store.onboarded`. It sits **below** the Settings modal
+(`z-index: 50`) so its "⚙ Advanced — edit prompts" button can `openSettings("prompts")`
+to layer the real prompt editors on top. Four steps with free Back/Next navigation
+(completed steps in the header rail are clickable):
+
+| Step | Sets | Notes |
+|------|------|-------|
+| 1 Intensity | `settings.contentTier` (+ `customSteering`) | Same tier grid as Settings → General. |
+| 2 Art style | `settings.imageStylePreset` (clears per-field prompt overrides) | Same preset grid + on-demand previews as Settings → Prompts. |
+| 3 Character | `streamerName`, `gender`, `streamerPersona`, `niche`, `outfit`, `character.face/bodyDescription` | Fixed presets (`game/characterPresets.ts`); a **✨ Suggest backstory** helper (`controller.suggestCharacter`, LLM with an offline template fallback); optional **Generate portrait + body**. |
+| 4 Room | `roomImage` | Optional **Generate room** / **Use default art**. |
+
+Every step has a working default, so the flow completes **without an API key** —
+image generation is offered but never required. "Start streaming" on the last step sets
+`onboarded = true` (persisted; see [07](./07-persistence.md)). Existing saves skip the
+wizard via the `hasProgress` migration in `merge`.
 
 ### SettingsPanel tabs
 | Tab | Contents |

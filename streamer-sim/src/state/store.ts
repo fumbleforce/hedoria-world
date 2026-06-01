@@ -200,6 +200,12 @@ export type SettingsTab = "general" | "prompts" | "room" | "character" | "galler
 
 export interface StoreState {
   booted: boolean;
+  /**
+   * False on a brand-new save until the player completes the start-up flow
+   * (intensity → art style → character → room). Existing saves with progress are
+   * migrated to `true` so they're never interrupted (see merge below).
+   */
+  onboarded: boolean;
   metrics: Metrics;
   session: StreamSession;
   settings: Settings;
@@ -313,6 +319,7 @@ export interface StoreState {
   openRouterAvailable: boolean;
 
   setBooted: (b: boolean) => void;
+  setOnboarded: (b: boolean) => void;
   patchMetrics: (patch: Partial<Metrics>) => void;
   setAudience: (a: AudienceState) => void;
   setClock: (minutes: number) => void;
@@ -483,6 +490,7 @@ export const useStore = create<StoreState>()(
   persist(
     (set) => ({
       booted: false,
+      onboarded: false,
       metrics: initialMetrics(),
       session: initialSession(),
       settings: initialSettings(),
@@ -551,6 +559,7 @@ export const useStore = create<StoreState>()(
       openRouterAvailable: false,
 
       setBooted: (booted) => set({ booted }),
+      setOnboarded: (onboarded) => set({ onboarded }),
       patchMetrics: (patch) =>
         set((s) => {
           const m = { ...s.metrics, ...patch };
@@ -935,9 +944,22 @@ export const useStore = create<StoreState>()(
               (i) => !((i as { slot?: string }).slot === "full" && / Starter$/.test(i.name)),
             )
           : savedInventory;
+        // A truly fresh slot (created by "New game") persists only its seed
+        // settings, so it has none of these. Any save that already has a
+        // generated character/room, has advanced past day 1, has story history,
+        // or is mid-stream is considered already started and skips onboarding.
+        const hasProgress = !!(
+          p.character?.portraitId ||
+          p.character?.bodyId ||
+          p.roomImage ||
+          (metrics.day ?? 1) > 1 ||
+          (story.length ?? 0) > 0 ||
+          p.session?.isLive
+        );
         return {
           ...current,
           ...p,
+          onboarded: p.onboarded ?? hasProgress,
           metrics,
           settings,
           mastery: normalizeMastery(p.mastery),
@@ -957,6 +979,7 @@ export const useStore = create<StoreState>()(
         };
       },
       partialize: (s) => ({
+        onboarded: s.onboarded,
         metrics: s.metrics,
         // The live session (isLive flag + round/earnings/peak totals) must
         // survive a reload. The audience snapshot (segment populations +

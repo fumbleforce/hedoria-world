@@ -981,3 +981,46 @@ input:focus, textarea:focus, select:focus { outline: 1px solid var(--accent-2); 
   .fb-bubble { animation: fb-fade 1.7s linear forwards; }
   @keyframes fb-fade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
 }
+
+/* ---------------------------------------------------------------- onboarding */
+/* Full-page first-run setup overlay. Sits below the Settings modal (z 50) so the
+   "Advanced — edit prompts" button can open Settings on top of it. */
+.onboard {
+  position: fixed; inset: 0; z-index: 45; padding: 20px;
+  display: grid; place-items: center;
+  background: radial-gradient(120% 120% at 50% 0%, var(--bg-glow), var(--bg) 70%);
+  overflow: auto;
+}
+.onboard__card {
+  background: var(--panel-solid); border: 1px solid var(--line); border-radius: 18px;
+  width: 760px; max-width: 100%; max-height: 92vh; display: flex; flex-direction: column;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.6);
+}
+.onboard__head { padding: 22px 24px 14px; border-bottom: 1px solid var(--line); }
+.onboard__head h1 { margin: 0 0 4px; font-size: 1.35em; }
+.onboard__steps { list-style: none; display: flex; gap: 8px; margin: 14px 0 0; padding: 0; flex-wrap: wrap; }
+.onboard__step {
+  display: flex; align-items: center; gap: 7px; font-size: 0.84em; color: var(--fg-2);
+  padding: 5px 11px; border: 1px solid var(--line); border-radius: 999px; cursor: default;
+}
+.onboard__step.is-done { cursor: pointer; color: var(--fg); }
+.onboard__step.is-active { color: var(--fg); border-color: var(--accent); background: var(--accent-soft); }
+.onboard__stepNum {
+  display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%;
+  background: #ffffff14; font-size: 0.82em; font-weight: 700;
+}
+.onboard__step.is-active .onboard__stepNum { background: var(--accent); color: var(--btn-on-accent); }
+.onboard__step.is-done .onboard__stepNum { background: var(--good); color: var(--btn-on-accent); }
+.onboard__body { padding: 18px 24px; overflow: auto; flex: 1; }
+.onboard__pane h2 { margin: 0 0 4px; font-size: 1.08em; }
+.onboard__pane > .hint { margin-top: 0; }
+.onboard__presets { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.onboard__suggest { display: flex; gap: 8px; }
+.onboard__suggest input { flex: 1; }
+.onboard__room { width: 100%; aspect-ratio: 1; max-height: 320px; object-fit: cover; border-radius: 12px; border: 1px solid var(--line); margin-bottom: 12px; }
+.onboard__room--empty { display: grid; place-items: center; border-style: dashed; color: var(--fg-2); }
+.onboard__foot {
+  display: flex; align-items: center; gap: 10px; padding: 16px 24px;
+  border-top: 1px solid var(--line);
+}
+.onboard__nav { display: flex; gap: 8px; margin-left: auto; }
