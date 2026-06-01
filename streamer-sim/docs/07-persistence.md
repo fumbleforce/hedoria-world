@@ -57,7 +57,7 @@ Persist name is `limelight-save-v3` by default but is **retargeted at boot** to
 `merge` deep-merges `settings` so new settings fields get defaults on old saves.
 
 **Persisted:**
-`metrics`, `session`, `activity` (while live), `audience`, `settings`, `ownedUpgrades`, `ownedActivities`, `promptOverrides`,
+`onboarded` (first-run setup flag — see below), `metrics`, `session`, `activity` (while live), `audience`, `settings`, `ownedUpgrades`, `ownedActivities`, `promptOverrides`,
 `cameras`, `activeCameraId`, `inventory`, `equippedClothing`,
 `eventLog`, `recentEvents`, `arcs`, `completedGoals`, `roomImage`, `dmThreads`, `chat`,
 `story`, `clock`, `zone`, `character` (ids only), `presenceImages` (ids), `lastImageId`,
@@ -79,6 +79,15 @@ Persist name is `limelight-save-v3` by default but is **retargeted at boot** to
 > touch presence and does **not** fabricate chat. Old saves without a stored `session`
 > key keep the offline default (the persist `merge` only spreads keys present in the
 > saved blob).
+
+> **`onboarded`** gates the first-run setup flow (intensity → art style → character →
+> room; see [08](./08-ui-map.md)). A brand-new slot (created by "New game") persists
+> only its seed settings, so on first load the `merge` computes `onboarded = false` and
+> the wizard is forced. Existing saves are migrated to `true` by a `hasProgress`
+> heuristic in `merge` — true when the save already has a generated character
+> (`character.portraitId`/`bodyId`), a `roomImage`, `day > 1`, any `story`, or is mid-
+> stream — so returning players are never interrupted. The wizard sets `onboarded = true`
+> on finish.
 
 **Not persisted (reset/rebuilt on reload):**
 `booted`, `pendingEvent`, `resolving`, all UI modal flags, `toast`, busy

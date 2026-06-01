@@ -421,6 +421,94 @@ export class GameController {
     }
   }
 
+  /**
+   * Onboarding helper: flesh out a streamer's backstory + look from a name and a
+   * one-line vibe hint. Returns a persona bio plus face/body descriptions ready
+   * to drop into Settings. Works offline (mock) via a local template so the
+   * start-up flow never hard-depends on an API key.
+   */
+  async suggestCharacter(
+    name: string,
+    hint: string,
+  ): Promise<{ persona: string; faceDescription: string; bodyDescription: string } | null> {
+    const who = name.trim() || "the streamer";
+    const vibe = hint.trim();
+    if (this.llm.isMock) return this.offlineSuggestCharacter(who, vibe);
+    const system = [
+      "You invent concise, vivid character concepts for a streamer life-sim.",
+      "Given a name and an optional vibe hint, write a believable streamer persona",
+      "and two short visual descriptions for image generation. Keep it grounded and",
+      "PG in this step (the player sets content intensity separately). Reply with",
+      "ONLY a JSON object, no prose or markdown.",
+    ].join(" ");
+    const user = [
+      `Name: ${who}`,
+      vibe ? `Vibe hint: ${vibe}` : "Vibe hint: (none — pick something fun and distinct)",
+      "",
+      "Return JSON shaped exactly like:",
+      '{ "persona": "2-3 sentence first-impression bio of who they are as a streamer",',
+      '  "faceDescription": "one sentence: eyes, makeup, expression",',
+      '  "bodyDescription": "one sentence: age range, hair, build, overall energy" }',
+    ].join("\n");
+    try {
+      const out = await completeJsonWithRepair(
+        this.llm,
+        { system, messages: [{ role: "user", content: user }], jsonMode: true },
+        (text) => {
+          const json = extractJson(text) as Partial<{
+            persona: string;
+            faceDescription: string;
+            bodyDescription: string;
+          }> | null;
+          if (!json || typeof json.persona !== "string") return null;
+          return {
+            persona: json.persona.trim(),
+            faceDescription: (json.faceDescription ?? "").trim(),
+            bodyDescription: (json.bodyDescription ?? "").trim(),
+          };
+        },
+        "other",
+      );
+      if (out?.persona) return out;
+    } catch (err) {
+      diag.warn("world", "suggestCharacter failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+    return this.offlineSuggestCharacter(who, vibe);
+  }
+
+  /** Local, key-free fallback for suggestCharacter — mixes templated fragments. */
+  private offlineSuggestCharacter(
+    name: string,
+    hint: string,
+  ): { persona: string; faceDescription: string; bodyDescription: string } {
+    const vibe =
+      hint ||
+      pick(["cozy night-owl", "high-energy gremlin", "chill variety host", "bold and flirty", "wholesome sweetheart"]);
+    const traits = pick([
+      "quick-witted and a little shy, but warms up fast",
+      "loud, competitive, and meme-fluent",
+      "soft-spoken, thoughtful, and great with regulars",
+      "confident, teasing, and camera-savvy",
+      "earnest, dorky, and endlessly enthusiastic",
+    ]);
+    const goal = pick([
+      "trying to make rent and go full-time",
+      "building a tight-knit community from scratch",
+      "chasing that first big breakout clip",
+      "just here to have fun and see where it goes",
+    ]);
+    const eyes = pick(["warm brown", "sharp green", "calm hazel", "bright blue", "dark expressive"]);
+    const hair = pick(["shoulder-length pink", "long wavy chestnut", "teal undercut", "short tousled dark", "sleek black"]);
+    const build = pick(["petite", "average", "athletic", "tall and lanky", "soft and curvy"]);
+    return {
+      persona: `${name} is a ${vibe} streamer in their early 20s, ${traits}. They're ${goal}.`,
+      faceDescription: `${eyes.charAt(0).toUpperCase()}${eyes.slice(1)} eyes, soft natural makeup, an easy expressive smile.`,
+      bodyDescription: `Early 20s, ${hair} hair, ${build} build, ${vibe} streamer energy.`,
+    };
+  }
+
   private async portraitRef(): Promise<{ url: string; id: string } | null> {
     const portraitId = this.s.character.portraitId;
     if (!portraitId) return null;

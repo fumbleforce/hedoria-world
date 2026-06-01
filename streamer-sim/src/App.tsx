@@ -24,11 +24,13 @@ import { EventModal } from "./ui/EventModal";
 import { GoalsPanel } from "./ui/GoalsPanel";
 import { CalendarPanel } from "./ui/CalendarPanel";
 import { RequestsPanel } from "./ui/RequestsPanel";
+import { Onboarding } from "./ui/Onboarding";
 
 export function App() {
   const [services, setServices] = useState<BootResult | null>(null);
   const toast = useStore((s) => s.toast);
   const textBackend = useStore((s) => s.settings.textBackend);
+  const onboarded = useStore((s) => s.onboarded);
   const hasSession = useStore((s) => s.hasSession);
   const auth = useCloudSync();
 
@@ -100,6 +102,8 @@ export function App() {
       {toast && <div className="toast">{toast}</div>}
       <div className="backendChip">{chipLabel}</div>
       <AccountPanel />
+
+      {!onboarded && <Onboarding controller={controller} />}
     </div>
   );
 }
