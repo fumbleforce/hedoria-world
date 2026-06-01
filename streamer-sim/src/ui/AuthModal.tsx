@@ -3,6 +3,8 @@ import { useAuth } from "../auth/useAuth";
 import { supabaseConfigured } from "../lib/supabase";
 import { openCheckout, openBillingPortal, lemonSqueezyConfigured } from "../lib/lemonSqueezy";
 
+const SHOW_GOOGLE = false;
+
 interface Props {
   onClose: () => void;
 }
@@ -58,7 +60,7 @@ export function AuthModal({ onClose }: Props) {
           ) : (
             <LoggedOut
               busy={busy}
-              onGoogle={() => handle(signInWithGoogle)}
+              onGoogle={SHOW_GOOGLE ? () => handle(signInWithGoogle) : null}
               onDiscord={() => handle(signInWithDiscord)}
             />
           )}
@@ -70,7 +72,7 @@ export function AuthModal({ onClose }: Props) {
 
 function LoggedOut({ busy, onGoogle, onDiscord }: {
   busy: boolean;
-  onGoogle: () => void;
+  onGoogle: (() => void) | null;
   onDiscord: () => void;
 }) {
   return (
@@ -78,22 +80,27 @@ function LoggedOut({ busy, onGoogle, onDiscord }: {
       <p style={{ color: "var(--color-muted)", marginBottom: "0.5rem" }}>
         Sign in to back up your saves across devices.
       </p>
+      <p style={{ color: "var(--color-muted)", fontSize: "0.85em", marginTop: "-0.25rem", marginBottom: "0.25rem" }}>
+        AI chat &amp; narration require signing in.
+      </p>
       <button
         className="btn btn--primary"
-        onClick={onGoogle}
-        disabled={busy}
-        style={{ justifyContent: "center" }}
-      >
-        Sign in with Google
-      </button>
-      <button
-        className="btn btn--secondary"
         onClick={onDiscord}
         disabled={busy}
         style={{ justifyContent: "center" }}
       >
         Sign in with Discord
       </button>
+      {onGoogle && (
+        <button
+          className="btn btn--secondary"
+          onClick={onGoogle}
+          disabled={busy}
+          style={{ justifyContent: "center" }}
+        >
+          Sign in with Google
+        </button>
+      )}
     </div>
   );
 }

@@ -1,12 +1,12 @@
 import { LlmAdapter } from "./llm/adapter";
 import { resolveTextProvider } from "./llm/providers";
 import { resolveImageBackend } from "./llm/imageProvider";
-import { loadOpenRouterCatalog } from "./llm/openRouterCatalog";
 import { loadRoomImage, migrateLegacyRoomImage } from "./persist/imageStore";
 import { migrateLegacy, saveStorageKey, updateActiveMeta } from "./persist/saves";
 import { GameController } from "./game/controller";
 import { useStore } from "./state/store";
 import { normalizeRoster } from "./game/characters";
+import { supabaseConfigured } from "./lib/supabase";
 import type { TextBackend } from "./game/types";
 import { diag } from "./diag/log";
 
@@ -66,8 +66,12 @@ async function runBoot(): Promise<BootResult> {
   if (savedRoom) store.setRoomImage(savedRoom);
 
   const geminiKey = (import.meta.env.VITE_GEMINI_API_KEY as string | undefined)?.trim() ?? "";
-  const openRouterOk = await fetchOpenRouterStatus();
-  if (openRouterOk) void loadOpenRouterCatalog();
+  // In prod: create the OpenRouter instance now so it's ready when the session
+  // arrives. pick() gates routing on hasSession, so no 401 fires while signed out.
+  // In dev: probe the local proxy to see if it's wired (no auth needed there).
+  // Catalog load is deferred to the session-confirmed probe (useCloudSync) since
+  // the /models endpoint is also JWT-gated in prod.
+  const openRouterOk = supabaseConfigured || (await probeDevOpenRouter());
 
   // Reconcile the persisted backend with what's actually available so the
   // Settings dropdown and HUD chip stop lying. A stale/default "mock" upgrades
@@ -111,12 +115,7 @@ async function runBoot(): Promise<BootResult> {
   return { controller, llm };
 }
 
-async function fetchOpenRouterStatus(): Promise<boolean> {
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-  if (supabaseUrl) {
-    // In production the edge function holds the key; assume available if Supabase is configured.
-    return true;
-  }
+async function probeDevOpenRouter(): Promise<boolean> {
   try {
     const r = await fetch("/__openrouter/status");
     if (!r.ok) return false;

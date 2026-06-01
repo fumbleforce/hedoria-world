@@ -306,6 +306,11 @@ export interface StoreState {
   /** In-memory LLM call telemetry for Settings → LLM (session-only, not saved). */
   llmStats: LlmCallStat[];
 
+  /** True when a live Supabase session exists (transient — never persisted). */
+  hasSession: boolean;
+  /** True once the OpenRouter edge-function status probe returned { ok: true } (transient). */
+  openRouterAvailable: boolean;
+
   setBooted: (b: boolean) => void;
   patchMetrics: (patch: Partial<Metrics>) => void;
   setAudience: (a: AudienceState) => void;
@@ -402,6 +407,8 @@ export interface StoreState {
   endEventScene: () => void;
   addPendingEventSeed: (seed: PendingEventSeed) => void;
   removePendingEventSeed: (id: string) => void;
+  setHasSession: (b: boolean) => void;
+  setOpenRouterAvailable: (b: boolean) => void;
 }
 
 const MAX_EVENT_MEMORY = 14;
@@ -537,6 +544,8 @@ export const useStore = create<StoreState>()(
       eventScene: null,
       pendingEventSeeds: [],
       llmStats: [],
+      hasSession: false,
+      openRouterAvailable: false,
 
       setBooted: (booted) => set({ booted }),
       patchMetrics: (patch) =>
@@ -887,6 +896,8 @@ export const useStore = create<StoreState>()(
         set((s) => ({ pendingEventSeeds: [...s.pendingEventSeeds, seed] })),
       removePendingEventSeed: (id) =>
         set((s) => ({ pendingEventSeeds: s.pendingEventSeeds.filter((p) => p.id !== id) })),
+      setHasSession: (hasSession) => set({ hasSession }),
+      setOpenRouterAvailable: (openRouterAvailable) => set({ openRouterAvailable }),
     }),
     {
       name: "limelight-save-v3",

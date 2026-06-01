@@ -698,6 +698,16 @@ input:focus, textarea:focus, select:focus { outline: 1px solid var(--accent-2); 
 .backendChip { position: fixed; bottom: 7px; right: 12px; font-size: 0.7em; color: var(--fg-2); opacity: 0.55; }
 .accountChip { position: fixed; bottom: 4px; right: 110px; font-size: 1em; background: none; border: none; cursor: pointer; color: var(--fg-2); opacity: 0.45; padding: 0; line-height: 1; }
 .accountChip:hover { opacity: 0.9; }
+.signInCta {
+  position: fixed; bottom: 30px; right: 12px;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
+  background: var(--accent); border: none; border-radius: 8px;
+  padding: 8px 14px; color: var(--btn-on-accent);
+  font: inherit; font-weight: 700; font-size: 0.85em;
+  cursor: pointer; transition: filter 0.15s;
+}
+.signInCta:hover { filter: brightness(1.1); }
+.signInCta__note { font-size: 0.75em; font-weight: 400; opacity: 0.85; }
 
 /* ---------------------------------------------------------------- visual immersion (#12) */
 .btn--mini { padding: 3px 9px; font-size: 0.74em; }

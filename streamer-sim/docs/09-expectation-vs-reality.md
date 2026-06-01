@@ -176,9 +176,15 @@ There's no separate image-provider setting; image routing follows `textBackend`.
 Presence/room prompts say "her studio apartment" regardless of `settings.gender`.
 *(`imageProvider.ts`, `imagePresets.ts`)*
 
-### ⚪ D6 — `backendChip` can go stale
-It reads the backend once at render and doesn't subscribe, so changing the backend
-without a reload won't update it. *(`App.tsx`)*
+### ✅ D6 — `backendChip` now reactive *(fixed: auth-gated LLM overhaul)*
+`App.tsx` now uses `useStore` selectors for `textBackend` and `hasSession`, so the
+chip updates on login/logout and backend changes without a reload. Additionally,
+the old `fetchOpenRouterStatus()` that returned `true` whenever `VITE_SUPABASE_URL`
+was set (without checking auth or deployment) has been replaced: the OpenRouter
+instance is created when `supabaseConfigured`, but routing is gated on `hasSession`
+in `pick()`. The real probe (`probeOpenRouterStatus`) fires after session confirmation
+in `useCloudSync` and can toast a failure rather than silently routing to a 401.
+*(`App.tsx`, `providers.ts`, `boot.ts`, `llm/openRouterStatus.ts`, `auth/useCloudSync.ts`)*
 
 ### ✅ D7 — Live state now survives a reload *exactly* (fixed)
 `session`, the roster's `online` flags and the `audience` snapshot are all persisted, so

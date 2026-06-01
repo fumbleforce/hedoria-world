@@ -3,6 +3,7 @@ import { GeminiTextProvider } from "./geminiProvider";
 import { OpenRouterTextProvider } from "./openRouterTextProvider";
 import { MockProvider } from "./mockProvider";
 import { useStore } from "../state/store";
+import { supabaseConfigured } from "../lib/supabase";
 
 /**
  * Routes each call to Gemini / OpenRouter / Mock based on the live store
@@ -17,14 +18,15 @@ export class DelegatingTextProvider implements LlmProvider {
   ) {}
 
   private pick(): LlmProvider {
-    const backend = useStore.getState().settings.textBackend;
-    // An explicit "mock" choice is honored so the offline engine can be tested
-    // even when real keys are present. Other choices fall back to whatever is
-    // actually available rather than silently doing nothing.
+    const { settings, hasSession } = useStore.getState();
+    const backend = settings.textBackend;
+    // In prod the edge function requires a Supabase JWT; in dev the local proxy
+    // needs no auth. Only allow OpenRouter when we can actually call it.
+    const canUseOpenRouter = !supabaseConfigured || hasSession;
     if (backend === "mock") return this.mock;
     if (backend === "gemini" && this.gemini) return this.gemini;
-    if (backend === "openrouter" && this.openRouter) return this.openRouter;
-    return this.gemini ?? this.openRouter ?? this.mock;
+    if (backend === "openrouter" && this.openRouter && canUseOpenRouter) return this.openRouter;
+    return this.gemini ?? (canUseOpenRouter && this.openRouter ? this.openRouter : null) ?? this.mock;
   }
 
   get id(): string {
