@@ -22,19 +22,54 @@ controller / chatEngine / evaluator
 
 ## Provider routing (`providers.ts`)
 
-`DelegatingTextProvider.pick()` reads the **live** `settings.textBackend` each call:
+`DelegatingTextProvider.pick()` reads the **live** `settings.textBackend` and
+`hasSession` each call:
 
-| `textBackend` | Resolves to |
-|---------------|-------------|
-| `mock` | Mock (honored even when keys exist) |
-| `gemini` | Gemini if constructed |
-| `openrouter` | OpenRouter if constructed |
-| (chosen provider unavailable) | `gemini ?? openRouter ?? mock` |
+| `textBackend` | `supabaseConfigured` | `hasSession` | Resolves to |
+|---------------|----------------------|--------------|-------------|
+| `mock` | any | any | Mock |
+| `gemini` | any | any | Gemini (direct key, no auth gate) |
+| `openrouter` | `false` (dev) | any | OpenRouter (local proxy, no auth needed) |
+| `openrouter` | `true` (prod) | `true` | OpenRouter (JWT injected per-request) |
+| `openrouter` | `true` (prod) | `false` | fallback (gemini → mock) |
+| fallback | any | — | `gemini ?? (openRouter if canUse) ?? mock` |
 
-`resolveTextProvider(geminiKey, openRouterOk)` builds the available providers; if
-neither real provider exists it returns the Mock directly. At boot, a stale/default
-`mock` setting is upgraded to a real provider when keys exist (see
-[07](./07-persistence.md)).
+`canUseOpenRouter = !supabaseConfigured || hasSession` — in dev the local proxy
+needs no auth; in prod the edge function requires a live JWT.
+
+`resolveTextProvider(geminiKey, openRouterOk)` builds the available provider
+instances. In prod, `openRouterOk = supabaseConfigured` so the `OpenRouterTextProvider`
+instance is always constructed (its lazy JWT fetch fires per-request). In dev,
+`openRouterOk = probeDevOpenRouter()`. If neither real provider is constructed,
+returns Mock directly.
+
+At boot, a stale/default `mock` setting is upgraded to the best available backend
+(see [07](./07-persistence.md)). `pick()` keeps routing safe until `hasSession`
+resolves — no 401 is ever fired before the session is confirmed.
+
+### Auth-gated session sync (`useCloudSync.ts`)
+
+`useCloudSync` extends its existing save-sync duties with a fourth trigger:
+**session change → store sync + edge-function probe**.
+
+1. `setHasSession(!!session)` written to the store (transient) on every auth
+   state change.
+2. On **sign-in** (`supabaseConfigured` and session present):
+   - Flip `textBackend` from `"mock"` to `"openrouter"` if it hasn't been already.
+   - Call `probeOpenRouterStatus(session)` (`src/llm/openRouterStatus.ts`).
+3. On **sign-out** (or initial load without a session):
+   - Revert `textBackend` `"openrouter"` → `"mock"`.
+   - `setOpenRouterAvailable(false)`.
+
+`probeOpenRouterStatus` calls `GET {SUPABASE_URL}/functions/v1/openrouter-proxy/status`
+with the Bearer JWT and interprets the response:
+
+| Response | Action |
+|----------|--------|
+| `{ ok: true }` | `setOpenRouterAvailable(true)` + load model catalog |
+| `{ ok: false }` | toast "missing its API key" → revert to mock |
+| 401 | toast "sign-in not accepted" → revert to mock |
+| 404 / network | toast "not deployed yet" → revert to mock |
 
 > **The main game paths don't actually rely on the Mock provider's output.** Chat,
 > evaluation, DMs, etc. check `adapter.isMock` and run dedicated **local engines**
@@ -198,7 +233,19 @@ fast-tier chat calls.
 | `consoleLevel` | `debug` | diagnostics verbosity |
 
 Env: `VITE_GEMINI_API_KEY` (Gemini), `OPENROUTER_API_KEY` (read server-side by the
-Vite proxy, not VITE-prefixed).
+Vite proxy or the edge function, not VITE-prefixed). `VITE_SUPABASE_URL` /
+`VITE_SUPABASE_ANON_KEY` gate the `supabaseConfigured` flag that selects the prod
+routing path.
+
+### Transient store fields
+
+| Field | Type | Default | Meaning |
+|-------|------|---------|---------|
+| `hasSession` | `boolean` | `false` | Live JWT exists right now |
+| `openRouterAvailable` | `boolean` | `false` | Status probe returned `{ ok: true }` |
+
+Both are **not** in `partialize` — they are intentionally transient and reset on
+every page load.
 
 ## Dev logging (`vite.config.ts`)
 

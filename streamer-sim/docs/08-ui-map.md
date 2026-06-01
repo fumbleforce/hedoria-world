@@ -76,9 +76,18 @@ minmax(280px,340px)`, capped at 1340px. Until `boot()` resolves, a
 ## Floating bits
 
 - **toast** — transient status messages (bottom).
-- **backendChip** — bottom-right; shows `"offline engine"` when on Mock, else the
-  backend name. It reads the setting once at render, so it can go stale if you change
-  the backend without reloading.
+- **backendChip** — bottom-right; reactive selector (`textBackend` + `hasSession`).
+  Shows `"openrouter"` only when `textBackend === "openrouter"` and the session is
+  live (or Supabase isn't configured, i.e., dev mode). Otherwise `"offline engine"`.
+  Flips instantly on login/logout without a reload.
+- **Login affordance** — bottom-right overlay:
+  - *Supabase configured + not loading + no user:* prominent **"Sign in with Discord"**
+    button (`.signInCta`) with a `"AI responses require signing in"` sub-label.
+  - *Otherwise (signed in, Supabase not configured, or still loading):* compact `☁`
+    account chip (`.accountChip`) that opens `AuthModal`.
+- **AuthModal** — Discord-only by default; Google sign-in is behind a
+  `const SHOW_GOOGLE = false` flag in `AuthModal.tsx` (code kept, button hidden).
+  Logged-out copy includes "AI chat & narration require signing in."
 
 ## Feedback layer (where the +/− bubbles come from)
 
