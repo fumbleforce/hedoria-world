@@ -141,7 +141,10 @@ async function fetchFresh(callerId: string, accessToken?: string): Promise<OpenR
     const url = supabaseConfigured
       ? `${SUPABASE_URL}/functions/v1/openrouter-proxy/models`
       : DEV_PROXY_PATH;
-    const headers: Record<string, string> = { "X-Request-Id": `or-models-${callerId}` };
+    // The dev proxy logs X-Request-Id; the edge function's CORS allow-list does
+    // not include it, so only send it in dev to avoid a preflight rejection.
+    const headers: Record<string, string> = {};
+    if (!supabaseConfigured) headers["X-Request-Id"] = `or-models-${callerId}`;
     if (supabaseConfigured && accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
     const response = await fetch(url, { headers });
     if (!response.ok) {

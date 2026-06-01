@@ -19,7 +19,7 @@ async function fetchTier(userId: string): Promise<SubscriptionTier> {
     .from("profiles")
     .select("subscription_tier")
     .eq("id", userId)
-    .single();
+    .maybeSingle();
   return (data?.subscription_tier as SubscriptionTier | undefined) ?? "free";
 }
 

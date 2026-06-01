@@ -53,7 +53,9 @@ interface DiagConfig {
 
 const config: DiagConfig = {
   consoleLevel: "debug",
-  toServer: true,
+  // The /__diag-log sink only exists in the Vite dev server. In prod it 405s on
+  // every call and spams the console, so mirror to the server in dev only.
+  toServer: import.meta.env.DEV,
   muted: new Set(),
 };
 

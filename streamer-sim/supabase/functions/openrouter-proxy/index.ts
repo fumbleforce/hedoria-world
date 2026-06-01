@@ -22,7 +22,7 @@ import { getUserApiKey, provisioningConfigured } from "../_shared/openrouter.ts"
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-request-id",
 };
 
 const OPENROUTER_CHAT = "https://openrouter.ai/api/v1/chat/completions";
