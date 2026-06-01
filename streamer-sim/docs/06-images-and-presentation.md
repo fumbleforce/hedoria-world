@@ -27,7 +27,7 @@ fixed 1:1.
 | `generateRoom()` | room | Sets the studio background; also added to the gallery. |
 | `generateCharacter()` | portrait + body | Body is generated from the portrait (image-to-image) so the face/hair match; the body renders the currently equipped clothing via the `{{outfit}}` placeholder. Changing the character clears presence renders. |
 | `generateCharacterBodyOnly()` | body | Regenerates only the T-pose body template — reuses the existing portrait as a likeness reference and the current equipped clothing. Gallery "regen" on a body image calls this instead of redoing the portrait. |
-| `generatePresence(zone)` | presence | The character placed in a specific zone; uses the body as a reference. |
+| `generatePresence(zone)` | presence | The character placed in a specific zone at **eye level**. References: body T-pose (likeness) + the zone's **perspective backdrop** (`ensureZoneBackdrop`, same pipeline as live cam footage). Prompt asks the model to place the character inside that room image. Cache key does not include the backdrop id — use **Redo here** after room/backdrop changes. |
 | `generateScene()` | scene | A "stream cam" moment; pushed into the narrator feed. References: the streamer's body T-pose (likeness) + the **room art** (`roomImage`, for apartment layout/style) + — during an in-person **visit** — the guest's own full-body T-pose. The guest body is generated on demand by `ensureCharacterBody()` (using their portrait as a likeness reference when one exists), stored under a `cbody:<id>` KV key, and reused thereafter; it falls back to the portrait, then a text description. The prompt names each reference. |
 | `generateCamFootage(zone?)` | scene | Live **cam shot** from the active camera tier + zone (StreamView **📹 Refresh feed**). Includes equipped look in the prompt. When live, an LLM step (`camVisual`) turns recent story + the active **activity** into a `doing` pose line; `camFootagePrompt` also receives the activity label/hint. With an active action or activity, framing widens to show full-body movement instead of the idle waist-up seated shot. Bathroom/bed angles require no-limits content tier. The result id is stored as `streamFootageId` and becomes the live **Stream view** feed. `meta: { zone, cameraTier }`. |
 | `generatePortrait(charId)` | (KV only) | A **viewer** avatar (hardcoded semi-real style); stored in a global KV key, not the gallery. |
@@ -46,7 +46,8 @@ reflects the current activity and recent beats. While live, use Refresh feed —
 Narrator **Visualize scene** (that button is offline-only). Stepping off-camera dims the
 feed with an overlay; clicking the feed enlarges it in the lightbox.
 
-Presence/scene reuse the body T-pose as a reference image for consistency; scenes also
+Presence/scene reuse the body T-pose as a reference image for consistency; **presence**
+also attaches the per-zone perspective backdrop; scenes also
 attach the room art (and, during a visit, the guest's own generated T-pose body) as
 extra references. A single global `imageBusy` lock serializes scene generation; the
 on-demand guest-body render uses the separate `portraitBusyId` lock (a second request

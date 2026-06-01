@@ -1069,7 +1069,11 @@ export const useStore = create<StoreState>()(
         const roster = p.roster ? normalizeRoster(p.roster) : current.roster;
         const rawMetrics = (p.metrics ?? {}) as Partial<Metrics> & { mood?: number };
         const { mood: _legacyMood, ...restMetrics } = rawMetrics;
-        const rawSettings = (p.settings ?? {}) as Partial<Settings> & { niche?: NicheId };
+        const rawSettings = (p.settings ?? {}) as Partial<Settings> & {
+          niche?: NicheId;
+          /** Removed from Settings — strip on load. */
+          outfit?: OutfitId;
+        };
         const { niche: legacyNiche, outfit: _legacyOutfit, ...restSettings } = rawSettings;
         const settings = { ...current.settings, ...restSettings };
         const streamNicheDraft = sanitizeNicheForTier(

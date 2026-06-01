@@ -92,7 +92,7 @@ const ANIME_CEL: ImagePromptSet = {
     "Face: {{faceDescription}}. Body: {{bodyDescription}}.",
     "Keep {{poss}} appearance consistent with the reference image.",
     "Natural slice-of-life pose, bright cheerful anime interior lighting,",
-    "no text, no watermark, no UI. Square composition, slight high angle like a life-sim.",
+    "no text, no watermark, no UI. Square composition, eye-level / standing-height view; the character standing or seated naturally in the space.",
     "{{style}}",
   ].join(" "),
   scenePrompt: [
@@ -148,7 +148,7 @@ const GRAPHIC_NOVEL: ImagePromptSet = {
     "Face: {{faceDescription}}. Body: {{bodyDescription}}.",
     "Keep {{poss}} appearance consistent with the reference image.",
     "Natural pose, dramatic comic-panel lighting with strong shadows,",
-    "no text, no watermark, no UI. Square composition, slight high angle.",
+    "no text, no watermark, no UI. Square composition, eye-level / standing-height view; the character standing or seated naturally in the space.",
     "{{style}}",
   ].join(" "),
   scenePrompt: [
@@ -204,7 +204,7 @@ const SEMI_REAL: ImagePromptSet = {
     "Face: {{faceDescription}}. Body: {{bodyDescription}}.",
     "Keep {{poss}} appearance consistent with the reference image.",
     "Natural candid pose, realistic interior with balanced natural window light,",
-    "no text, no watermark, no UI. Square composition, slight high angle like a life-sim.",
+    "no text, no watermark, no UI. Square composition, eye-level / standing-height view; the character standing or seated naturally in the space.",
     "{{style}}",
   ].join(" "),
   scenePrompt: [
@@ -259,8 +259,8 @@ const RETRO_SIM: ImagePromptSet = {
     "The spot: {{zoneDesc}}",
     "Face: {{faceDescription}}. Body: {{bodyDescription}}.",
     "Keep {{poss}} appearance consistent with the reference image.",
-    "Playful life-sim pose, bright isometric room, saturated cheerful colors,",
-    "no text, no watermark, no UI. Square isometric composition.",
+    "Playful life-sim pose, bright cheerful interior, saturated cheerful colors,",
+    "no text, no watermark, no UI. Square composition, eye-level / standing-height view; the character standing or seated naturally in the space.",
     "{{style}}",
   ].join(" "),
   scenePrompt: [
@@ -315,8 +315,8 @@ const PIXEL_ART: ImagePromptSet = {
     "The spot: {{zoneDesc}}",
     "Face: {{faceDescription}}. Body: {{bodyDescription}}.",
     "Keep {{poss}} appearance consistent with the reference image.",
-    "Natural pixel-sprite pose, cozy top-down room lighting,",
-    "no text, no watermark, no UI. Square composition, slight high angle like a top-down RPG.",
+    "Natural pixel-sprite pose, cozy interior lighting,",
+    "no text, no watermark, no UI. Square composition, eye-level / standing-height view; the character standing or seated naturally in the space.",
     "{{style}}",
   ].join(" "),
   scenePrompt: [
@@ -372,7 +372,7 @@ const STORYBOOK: ImagePromptSet = {
     "Face: {{faceDescription}}. Body: {{bodyDescription}}.",
     "Keep {{poss}} appearance consistent with the reference image.",
     "Natural gentle pose, warm painted interior light, dreamy storybook mood,",
-    "no text, no watermark, no UI. Square composition, slight high angle.",
+    "no text, no watermark, no UI. Square composition, eye-level / standing-height view; the character standing or seated naturally in the space.",
     "{{style}}",
   ].join(" "),
   scenePrompt: [
@@ -428,7 +428,7 @@ const SYNTHWAVE: ImagePromptSet = {
     "Face: {{faceDescription}}. Body: {{bodyDescription}}.",
     "Keep {{poss}} appearance consistent with the reference image.",
     "Natural pose, neon-lit retro-futurist interior, glowing magenta-cyan accents,",
-    "no text, no watermark, no UI. Square composition, slight high angle.",
+    "no text, no watermark, no UI. Square composition, eye-level / standing-height view; the character standing or seated naturally in the space.",
     "{{style}}",
   ].join(" "),
   scenePrompt: [
@@ -484,7 +484,7 @@ const CLAYMATION: ImagePromptSet = {
     "Face: {{faceDescription}}. Body: {{bodyDescription}}.",
     "Keep {{poss}} appearance consistent with the reference image.",
     "Natural sculpted pose, soft miniature-set lighting, tactile clay textures,",
-    "no text, no watermark, no UI. Square composition, slight high angle.",
+    "no text, no watermark, no UI. Square composition, eye-level / standing-height view; the character standing or seated naturally in the space.",
     "{{style}}",
   ].join(" "),
   scenePrompt: [
@@ -540,7 +540,7 @@ const PAPERCRAFT: ImagePromptSet = {
     "Face: {{faceDescription}}. Body: {{bodyDescription}}.",
     "Keep {{poss}} appearance consistent with the reference image.",
     "Natural pose, soft paper-layer shadows, bright crafty diorama lighting,",
-    "no text, no watermark, no UI. Square composition, slight high angle.",
+    "no text, no watermark, no UI. Square composition, eye-level / standing-height view; the character standing or seated naturally in the space.",
     "{{style}}",
   ].join(" "),
   scenePrompt: [

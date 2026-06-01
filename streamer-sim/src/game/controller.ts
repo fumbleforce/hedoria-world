@@ -641,20 +641,29 @@ export class GameController {
     const zone = ZONES[zoneId];
     if (!zone) return;
     const ref = await this.bodyRef();
+    const backdrop = await this.ensureZoneBackdrop(zoneId);
+    const refs: string[] = [];
+    if (ref) refs.push(ref.url);
+    if (backdrop) refs.push(backdrop.url);
+    let prompt = fillImagePrompt(
+      effectiveImagePrompt(s.settings, "presencePrompt"),
+      imagePromptVars(s.character, {
+        name: s.settings.streamerName,
+        gender: (s.settings.gender ?? "").trim(),
+        zone: zone.label,
+        zoneDesc: zone.description,
+        style: this.imageStyle(),
+      }, "full"),
+    );
+    if (backdrop) {
+      prompt +=
+        " Use the provided room perspective image for this spot — same layout, furniture, and style. Place the character naturally within that space.";
+    }
     const rec = await this.genImage({
       kind: "presence",
-      prompt: fillImagePrompt(
-        effectiveImagePrompt(s.settings, "presencePrompt"),
-        imagePromptVars(s.character, {
-          name: s.settings.streamerName,
-          gender: (s.settings.gender ?? "").trim(),
-          zone: zone.label,
-          zoneDesc: zone.description,
-          style: this.imageStyle(),
-        }, "full"),
-      ),
+      prompt,
       label: `${s.settings.streamerName} — ${zone.label}`,
-      refs: ref ? [ref.url] : undefined,
+      refs: refs.length ? refs : undefined,
       sourceImageId: ref?.id,
       meta: { zone: zoneId },
       busyLabel: `Visualizing ${zone.label}`,

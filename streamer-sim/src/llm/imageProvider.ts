@@ -188,7 +188,7 @@ export const DEFAULT_PRESENCE_PROMPT = [
   "Face: {{faceDescription}}. Body: {{bodyDescription}}.",
   "Keep {{poss}} appearance consistent with the reference image.",
   "Natural pose appropriate for that spot, full scene, warm cozy night lighting,",
-  "no text, no watermark, no UI. Square composition, slight high angle like a life-sim.",
+  "no text, no watermark, no UI. Square composition, eye-level / standing-height view; the character standing or seated naturally in the space.",
   "{{style}}",
 ].join(" ");
 
