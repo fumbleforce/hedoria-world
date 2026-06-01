@@ -74,7 +74,7 @@ describe("resolveAction — economy", () => {
     });
     // whales tipFactor 5, sat 90 → (35/45)*5*5*tipConstant*1, gated by readiness.
     expect(res.earned).toBeGreaterThan(0);
-    expect(BALANCE.economy.tipConstant).toBe(0.07);
+    expect(BALANCE.economy.tipConstant).toBe(0.11);
   });
 
   it("earns nothing offline", () => {

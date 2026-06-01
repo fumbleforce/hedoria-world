@@ -81,9 +81,9 @@ export const BALANCE = {
   },
 
   economy: {
-    tipConstant: 0.07, // was 0.12
+    tipConstant: 0.11, // was 0.07 — early passive tips were rounding to ~$0/beat
     /** Early tips scale by min(1, followers / ramp) so a tiny audience earns little. */
-    monetizationRampFollowers: 150,
+    monetizationRampFollowers: 80,
     followerGrowth: 0.16, // was 0.18
     reachBase: 0.4,
     reachPerFollower: 1 / 500,
@@ -266,16 +266,21 @@ export const BALANCE = {
 
   /** Live chat volume — hype is the main engagement driver; viewers add a nudge. */
   chat: {
-    actionMin: 1,
+    actionMin: 2,
     actionMax: 12,
     /** Burst ≈ (hype/100)^exp × scale + viewers/div (then clamped). */
     actionHypeExp: 1.5,
-    actionHypeScale: 9,
-    actionViewerDiv: 20,
+    actionHypeScale: 10,
+    actionViewerDiv: 14,
     /** Continue burst = action burst × mult (clamped separately). */
-    continueMult: 0.5,
-    continueMin: 1,
-    continueMax: 7,
+    continueMult: 0.75,
+    continueMin: 2,
+    continueMax: 8,
+    /** Guaranteed-delivery floor: if the LLM returns fewer lines than the ask,
+     * top up with neutral filler to ≈ count×frac (min, but never above count)
+     * so beats never feel dead. */
+    deliverFloorFrac: 0.7,
+    deliverFloorMin: 3,
     /** Ambient filler between beats — off when hype is below this. */
     ambientMinHype: 12,
     ambientMinTicks: 0,
@@ -355,12 +360,12 @@ type BalancePatch = {
 const DIFFICULTY_PATCHES: Record<Exclude<DifficultyLevel, "normal">, BalancePatch> = {
   easy: {
     economy: {
-      tipConstant: 0.09,
+      tipConstant: 0.14,
       followerGrowth: 0.2,
       passiveFollowerRate: 0.016,
       rentBase: 16,
       utilityAmount: 14,
-      monetizationRampFollowers: 120,
+      monetizationRampFollowers: 65,
     },
     subs: { subDailyRate: 0.0026, subChurnRate: 0.008 },
     needs: {
@@ -375,12 +380,12 @@ const DIFFICULTY_PATCHES: Record<Exclude<DifficultyLevel, "normal">, BalancePatc
   },
   hard: {
     economy: {
-      tipConstant: 0.055,
+      tipConstant: 0.085,
       followerGrowth: 0.12,
       passiveFollowerRate: 0.009,
       rentBase: 24,
       utilityAmount: 22,
-      monetizationRampFollowers: 180,
+      monetizationRampFollowers: 100,
     },
     subs: { subDailyRate: 0.0015, subChurnRate: 0.013 },
     needs: {

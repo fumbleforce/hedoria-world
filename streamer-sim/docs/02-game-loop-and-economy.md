@@ -80,13 +80,15 @@ this stream went live), `earnings`, `newFollowers`, `peak`. Reset on every `goLi
 |----------|-------|
 | `WAKE_TIME` | 540 min = **9:00 am** (new save + after sleep) |
 | `STREAM_START` | 1200 min = **8:00 pm** (legacy pacing helper only) |
-| `NIGHT_END` | 1560 min = **2:00 am** — auto end stream if still live |
+| `NIGHT_END` | 1560 min = **2:00 am** (legacy pacing helper only — no longer ends streams) |
 
 Time **always advances** on every action (live or offline). Going live does **not**
-reset the clock — you can stream in the morning, afternoon, or evening.
+reset the clock — you can stream in the morning, afternoon, or evening. A live stream
+ends only on **energy ≤ 0** or manually — there is no hard clock cap (the old 2:00 am
+auto-end was removed; energy already paces stream length).
 
-**Time cost per action** (`TIME_COST`): trivial 10, light 15, medium 30, heavy 45,
-continue 15 (minutes). A night runs ~6h, so this keeps it to roughly a dozen beats.
+**Time cost per action** (`TIME_COST`): trivial 15, light 20, medium 40, heavy 60,
+continue 25 (minutes). Beats advance the clock quickly so a session reads as hours.
 Event scenes are the exception — they advance only `BALANCE.events.beatMinutes`
 (2 min) per beat so a charged moment can breathe.
 
@@ -142,9 +144,8 @@ session, clears all `online` flags, sets `audience = initialAudience()`, records
 `streamStartClock = clock` (current time), `isLive = true`. Does **not** jump to
 8:00 pm.
 
-**`endStream`** — triggered manually, or when `energy ≤ 0`, or `clock ≥ NIGHT_END`
-(~2:00 am on the extended clock). Sets `isLive = false`, clears presence. **Does not
-advance the day.**
+**`endStream`** — triggered manually or when `energy ≤ 0`. Sets `isLive = false`,
+clears presence. **Does not advance the day.**
 
 **`sleep`** (must be offline) — the day/rent step; sets `clock = WAKE_TIME` (9:00 am)
 on the new day.
@@ -160,11 +161,11 @@ early-game escape hatch.
 ### Tips (live actions, in `resolver.ts`)
 For each segment with `satisfaction > 55` and `population > 0`:
 ```
-tip += ((sat − 55) / 45) × tipFactor × population × tipConstant(0.07) × mult.income
+tip += ((sat − 55) / 45) × tipFactor × population × tipConstant(0.11) × mult.income
 ```
 Then the total is scaled by **readiness × monetizationRamp × novelty**:
 ```
-monetizationRamp = min(1, followers / 150)   // a tiny new audience barely tips
+monetizationRamp = min(1, followers / 80)   // a tiny new audience barely tips
 ```
 Segment `tipFactor`: hype 0.8, lonely 1.1, simps 1.6, trolls 0.2, cozy 0.9,
 **whales 5.0**, stalkers 1.2. Whales/subs are the meaningful early lever.
@@ -209,6 +210,16 @@ audience + comfort first, then escalation pays.
 A message from a **named character** also grants a tiny **+0.05 affinity** through
 the ledger (soft-capped per day — see [03](./03-social-systems.md)) and increments
 their `messageCount`. Tips route through `recordTip`/`bumpAffinity`.
+
+**Code-owned chat tips (`maybeTipPing`, `chatEngine.ts`).** LLM-mode bursts almost
+never propose donations on their own, so after each live action/continue burst the
+controller (`maybeChatTip`) rolls a code-owned tip: probability
+`clamp(0.05 + hype/100×0.12 + min(0.1, whalePop×0.04), 0, 0.3)`, fires only when a
+generous segment (whales / simps / lonely) is present. A whale (or `donator`)
+attribution tips **$20–100**; anyone else **$3–15**. The line is a normal `donation`
+message, so it flows through the same `recordTip` pipeline (cash, session earnings,
+per-character `tipped`, affinity, milestones) and **bypasses** `monetizationRamp` —
+this, plus subs, is the real early-game cash lever.
 
 ### Coded lifestyle costs
 | Action | Cash | Other | Minutes |

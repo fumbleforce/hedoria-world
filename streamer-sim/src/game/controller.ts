@@ -36,7 +36,7 @@ import { combinedLook, hasCharacterLook, imagePromptVars } from "./characterVisu
 import type { ChatMessage, ContentTier, DmLine, EventChoice, GameEvent, Metrics, PendingEventSeed, ViewerRequest } from "./types";
 import { judgeRequestFulfillment } from "./requestJudge";
 import type { PlayerAction, ActionOption, ActionVerdict } from "./actions";
-import { generateChatBurst, audienceSummary, chatBurstCount, chatAmbientPlan, growthPing } from "./chatEngine";
+import { generateChatBurst, audienceSummary, chatBurstCount, chatAmbientPlan, growthPing, maybeTipPing } from "./chatEngine";
 import { evaluateAction } from "./evaluator";
 import { resolveAction, totalViewers } from "./resolver";
 import { occasionForDay } from "./calendar";
@@ -160,7 +160,6 @@ import {
   formatClock,
   clockAfterSleep,
   sleepDurationMinutes,
-  streamTooLate,
   streamElapsed,
   type TimeWeight,
 } from "./time";
@@ -1597,6 +1596,7 @@ export class GameController {
           );
           this.s.pushChat(msgs);
           this.applyChatEffects(msgs);
+          this.maybeChatTip();
         }
         if (s.activity && s.session.isLive) {
           await this.narrateActivityBeat();
@@ -1869,6 +1869,7 @@ export class GameController {
           const msgs = await generateChatBurst(this.llm, this.chatCtx(reactTo, count));
           this.s.pushChat(msgs);
           this.applyChatEffects(msgs);
+          this.maybeChatTip();
           const spicyCount = msgs.filter((m) => m.kind === "flirty" || m.kind === "creepy").length;
           const hornyGain = hornyBuild(verdict, spicyCount, s.settings.contentTier);
           if (hornyGain > 0) {
@@ -2017,7 +2018,6 @@ export class GameController {
     const s = this.s;
     this.beatsSinceLastEvent += 1;
     if (s.metrics.energy <= 0) return this.endStream("ran out of energy");
-    if (streamTooLate(s.clock)) return this.endStream("it got late");
 
     this.presenceTick();
 
@@ -2538,6 +2538,20 @@ export class GameController {
       s.logEvent(`⭐ ${label} reached level ${lvl} — ${note}.`);
       s.setToast(`⭐ ${label} Lv ${lvl}! ${note}.`);
     }
+  }
+
+  /**
+   * Code-owned chance for a live chat tip to land this beat. LLM bursts rarely
+   * propose donations themselves, so without this tips effectively never appear;
+   * the money flows through the normal donation → recordTip pipeline.
+   */
+  private maybeChatTip(): void {
+    const s = this.s;
+    if (!s.session.isLive || !this.isOnCamera()) return;
+    const tip = maybeTipPing(s.roster, this.onlineIds(), s.audience, s.metrics.hype);
+    if (!tip) return;
+    s.pushChat([tip]);
+    this.applyChatEffects([tip]);
   }
 
   private applyChatEffects(msgs: ChatMessage[]): void {

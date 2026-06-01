@@ -17,11 +17,11 @@ export const NIGHT_END = 26 * 60; // 2:00 am (26:00)
  * to a dozen-ish beats instead of a minute-by-minute crawl.
  */
 export const TIME_COST = {
-  trivial: 10, // a quick line to chat
-  light: 15, // banter, react to one thing — "just talking"
-  medium: 30, // a story, a segment — "doing some action"
-  heavy: 45, // a full bit, a game round
-  continue: 15, // "just let it ride"
+  trivial: 15, // a quick line to chat
+  light: 20, // banter, react to one thing — "just talking"
+  medium: 40, // a story, a segment — "doing some action"
+  heavy: 60, // a full bit, a game round
+  continue: 25, // "just let it ride"
 } as const;
 
 export type TimeWeight = keyof typeof TIME_COST;

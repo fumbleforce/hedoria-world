@@ -135,7 +135,7 @@ export function initialAudience(): AudienceState {
     simps: { population: 0, satisfaction: 50 },
     trolls: { population: 1, satisfaction: 40 },
     cozy: { population: 4, satisfaction: 65 },
-    whales: { population: 0, satisfaction: 50 },
+    whales: { population: 1, satisfaction: 55 },
     stalkers: { population: 0, satisfaction: 50 },
   };
 }

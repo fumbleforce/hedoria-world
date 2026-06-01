@@ -275,7 +275,7 @@ function cloneAudience(a: AudienceState): AudienceState {
 function buildSummary(earned: number, follows: number, verdict: ActionVerdict): string {
   const bits: string[] = [];
   if (follows > 0) bits.push(`+${follows} followers`);
-  if (earned > 0.5) bits.push(`$${earned.toFixed(0)} in tips`);
+  if (earned >= 0.25) bits.push(`$${earned.toFixed(earned < 1 ? 2 : 0)} in tips`);
   if (verdict.setsBoundary) bits.push("boundary set");
   return bits.join(" · ");
 }

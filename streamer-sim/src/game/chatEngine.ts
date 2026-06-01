@@ -103,7 +103,7 @@ export async function generateChatBurst(
   adapter: LlmAdapter,
   ctx: ChatContext,
 ): Promise<ChatMessage[]> {
-  if (adapter.isMock) return mockBurst(ctx);
+  if (adapter.isMock) return padToFloor(mockBurst(ctx), ctx);
   const intensity = tierIntensity(ctx.settings.contentTier);
   try {
     const parsed = await completeJsonWithRepair(
@@ -115,7 +115,7 @@ export async function generateChatBurst(
       },
       "chat",
     );
-    if (parsed && parsed.length > 0) return parsed;
+    if (parsed && parsed.length > 0) return padToFloor(parsed, ctx);
     diag.warn("chat", "LLM chat empty/unparseable after repair; using neutral filler");
   } catch (err) {
     diag.warn("chat", "LLM chat failed; using neutral filler", {
@@ -126,6 +126,77 @@ export async function generateChatBurst(
   // as scripted and (worse) get fed back as "voice" and parroted. On a genuine
   // model failure, fall back to innocuous neutral filler only.
   return fallbackBurst(ctx);
+}
+
+/**
+ * Guarantee a minimum number of lines per burst. Cheap models often under-deliver
+ * the requested count, leaving beats feeling dead; if the model returned fewer
+ * than ≈ count×deliverFloorFrac (never more than the ask), top up with the same
+ * innocuous neutral filler used on failure — never canned characterful dialogue.
+ */
+function padToFloor(msgs: ChatMessage[], ctx: ChatContext): ChatMessage[] {
+  const c = BALANCE.chat;
+  const floor = clamp(Math.round(ctx.count * c.deliverFloorFrac), c.deliverFloorMin, Math.max(1, ctx.count));
+  if (msgs.length >= floor) return msgs;
+  const onlineChars = ctx.online.map((id) => ctx.roster[id]).filter(Boolean);
+  const out = [...msgs];
+  while (out.length < floor) {
+    const who = onlineChars.length && chance(0.5) ? pick(onlineChars) : null;
+    out.push({
+      id: uid("msg"),
+      user: who ? who.handle : anonHandle(),
+      text: pick(NEUTRAL_FILLER),
+      kind: "normal",
+      characterId: who?.id,
+      scripted: true,
+      ts: Date.now(),
+    });
+  }
+  return out;
+}
+
+/**
+ * Code-owned chat tip. LLM-mode bursts almost never propose donations on their
+ * own, so tips effectively never landed; this injects a probabilistic tip from
+ * an online generous viewer (whale > simp/lonely), scaled by hype and how many
+ * generous heads are present. Returns null when no tip fires this beat.
+ */
+export function maybeTipPing(
+  roster: Roster,
+  onlineIds: string[],
+  audience: AudienceState,
+  hype: number,
+): ChatMessage | null {
+  const whalePop = Math.max(0, audience.whales.population);
+  const generousPop = whalePop + Math.max(0, audience.simps.population) + Math.max(0, audience.lonely.population);
+  if (generousPop <= 0) return null;
+  const h = clamp(hype, 0, 100) / 100;
+  const p = clamp(0.05 + h * 0.12 + Math.min(0.1, whalePop * 0.04), 0, 0.3);
+  if (!chance(p)) return null;
+  const online = onlineIds.map((id) => roster[id]).filter(Boolean);
+  const whaleChar = online.find(
+    (c) => ARCHETYPE_BY_ID[c.archetypeId]?.segment === "whales" || c.archetypeId === "donator",
+  );
+  const isWhale = !!whaleChar || (whalePop > 0 && chance(0.5));
+  const who = whaleChar ?? (online.length ? pick(online) : null);
+  const amount = isWhale ? pick([20, 35, 50, 75, 100]) : pick([3, 5, 10, 15]);
+  const text = pick([
+    "thank you for the stream 💸",
+    "keep it up!",
+    "you earned this",
+    "small something 💕",
+    "for the vibes",
+  ]);
+  return {
+    id: uid("msg"),
+    user: who ? who.handle : anonHandle(),
+    text: `tipped $${amount} — ${text}`,
+    kind: "donation",
+    amount,
+    characterId: who?.id,
+    scripted: true,
+    ts: Date.now(),
+  };
 }
 
 /** Ultra-generic, non-characterful filler for LLM-mode failures. Never scripted dialogue. */

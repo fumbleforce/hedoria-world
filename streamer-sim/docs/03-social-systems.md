@@ -155,10 +155,14 @@ simps 30% flirty, trolls 50% troll, hype 50% hype, mods 40% mod; whales/donators
 tip of $50–150 / $3–20).
 
 **Chat volume** (controller + `chatEngine.ts`): burst size is hype-driven via
-`chatBurstCount(hype, viewers, mode)` using `BALANCE.chat` — low hype yields
-1–2 messages, high hype up to 12. Viewers add a small nudge on top. Continue
-uses `continueMult`; ambient uses `chatAmbientPlan` (0 ticks below hype 12,
-up to 8 ticks at full hype, faster gap when hyped, 1–3 messages per tick).
+`chatBurstCount(hype, viewers, mode)` using `BALANCE.chat` — base
+`(hype/100)^1.5 × 10 + viewers/14`, clamped 2–12. Viewers add a small nudge on top.
+Continue uses `continueMult` (**0.75**, clamped 2–8); ambient uses `chatAmbientPlan`
+(0 ticks below hype 12, up to 8 ticks at full hype, faster gap when hyped, 1–3
+messages per tick). A **delivery floor** (`padToFloor`) tops a short LLM/mock burst
+up to ≈ `count × deliverFloorFrac (0.7)` (min `deliverFloorMin` 3, never above the
+requested count) with neutral filler, so beats never feel dead when the model
+under-delivers the requested count.
 
 ## Relationships & milestones (`relationships.ts`)
 
