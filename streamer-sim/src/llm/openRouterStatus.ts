@@ -33,7 +33,7 @@ export async function probeOpenRouterStatus(session: Session): Promise<void> {
     const j = (await r.json()) as { ok?: boolean };
     if (j.ok === true) {
       store.setOpenRouterAvailable(true);
-      void loadOpenRouterCatalog();
+      void loadOpenRouterCatalog(session.access_token);
     } else {
       store.setToast("AI backend is missing its API key — playing on the offline engine.");
       store.setSettings({ textBackend: "mock" });

@@ -1,14 +1,18 @@
 /**
- * Live OpenRouter model catalog. Fetched once via the dev-server proxy at
- * `/__openrouter/models` and reused for the lifetime of the page.
+ * Live OpenRouter model catalog. Fetched once and reused for the lifetime of
+ * the page. In prod (supabaseConfigured) the catalog comes from the edge
+ * function `/models` endpoint (JWT required). In dev it uses the Vite proxy
+ * at `/__openrouter/models`.
  *
  * Cached in localStorage (24h) as a fallback when offline. Concurrent callers
  * are deduped via the in-memory `inflight` promise.
  */
 
 import { diag } from "../diag/log";
+import { supabaseConfigured } from "../lib/supabase";
 
-const PROXY_PATH = "/__openrouter/models";
+const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL as string | undefined) ?? "";
+const DEV_PROXY_PATH = "/__openrouter/models";
 // v2: bumped when the upstream query changed to include image-only models.
 const LS_KEY = "limelight.openRouterModelCatalog.v2";
 const LS_TTL_MS = 24 * 60 * 60 * 1000;
@@ -110,7 +114,7 @@ function writeLsCache(catalog: OpenRouterCatalog): void {
 let inflight: Promise<OpenRouterCatalog | null> | null = null;
 let resolved: OpenRouterCatalog | null = null;
 
-export function loadOpenRouterCatalog(): Promise<OpenRouterCatalog | null> {
+export function loadOpenRouterCatalog(accessToken?: string): Promise<OpenRouterCatalog | null> {
   const callerId = `cat-${++catalogRequestSeq}`;
   if (resolved) return Promise.resolve(resolved);
   if (inflight) return inflight;
@@ -127,16 +131,19 @@ export function loadOpenRouterCatalog(): Promise<OpenRouterCatalog | null> {
   }
 
   diag.info("llm", "openrouter catalog cold fetch starting", { callerId });
-  inflight = fetchFresh(callerId);
+  inflight = fetchFresh(callerId, accessToken);
   return inflight;
 }
 
-async function fetchFresh(callerId: string): Promise<OpenRouterCatalog | null> {
+async function fetchFresh(callerId: string, accessToken?: string): Promise<OpenRouterCatalog | null> {
   const startedAt = performance.now();
   try {
-    const response = await fetch(PROXY_PATH, {
-      headers: { "X-Request-Id": `or-models-${callerId}` },
-    });
+    const url = supabaseConfigured
+      ? `${SUPABASE_URL}/functions/v1/openrouter-proxy/models`
+      : DEV_PROXY_PATH;
+    const headers: Record<string, string> = { "X-Request-Id": `or-models-${callerId}` };
+    if (supabaseConfigured && accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+    const response = await fetch(url, { headers });
     if (!response.ok) {
       diag.error("llm", `openrouter catalog HTTP ${response.status}`, { callerId });
       return null;
@@ -172,7 +179,7 @@ export function getCachedOpenRouterCatalog(): OpenRouterCatalog | null {
 }
 
 /** Drop the in-memory + localStorage cache and fetch a fresh catalog. */
-export function refreshOpenRouterCatalog(): Promise<OpenRouterCatalog | null> {
+export function refreshOpenRouterCatalog(accessToken?: string): Promise<OpenRouterCatalog | null> {
   resolved = null;
   inflight = null;
   try {
@@ -180,7 +187,7 @@ export function refreshOpenRouterCatalog(): Promise<OpenRouterCatalog | null> {
   } catch {
     /* ignore */
   }
-  inflight = fetchFresh(`refresh-${++catalogRequestSeq}`);
+  inflight = fetchFresh(`refresh-${++catalogRequestSeq}`, accessToken);
   return inflight;
 }
 

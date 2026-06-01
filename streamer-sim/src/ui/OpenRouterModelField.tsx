@@ -12,6 +12,7 @@ import {
   type OpenRouterCatalog,
   type OpenRouterModelEntry,
 } from "../llm/openRouterCatalog";
+import { supabase, supabaseConfigured } from "../lib/supabase";
 
 const AUTO_ROUTER: OpenRouterModelEntry = {
   id: "openrouter/auto",
@@ -84,11 +85,19 @@ export function OpenRouterModelField({ kind, label, value, onChange }: Props) {
   useEffect(() => {
     let cancelled = false;
     setError(null);
-    loadOpenRouterCatalog()
+    const load = async () => {
+      let token: string | undefined;
+      if (supabaseConfigured) {
+        const { data } = await supabase.auth.getSession();
+        token = data.session?.access_token;
+      }
+      return loadOpenRouterCatalog(token);
+    };
+    load()
       .then((c) => {
         if (cancelled) return;
         if (!c) {
-          setError("Could not load OpenRouter catalog (is the dev server running?)");
+          setError("Could not load OpenRouter catalog — check your connection.");
           setCustom(true);
           return;
         }
@@ -106,9 +115,14 @@ export function OpenRouterModelField({ kind, label, value, onChange }: Props) {
     setRefreshing(true);
     setError(null);
     try {
-      const c = await refreshOpenRouterCatalog();
+      let token: string | undefined;
+      if (supabaseConfigured) {
+        const { data } = await supabase.auth.getSession();
+        token = data.session?.access_token;
+      }
+      const c = await refreshOpenRouterCatalog(token);
       if (c) setCatalog(c);
-      else setError("Refresh failed — is the dev server running?");
+      else setError("Refresh failed — check your connection or try again.");
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
