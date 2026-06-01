@@ -15,12 +15,15 @@ The sections below describe **what the code does today**. Any field listed as "n
 persisted" that affects player-visible or sim behavior is **policy debt** until moved
 into `partialize` or restored in `boot` / `resumeLive()`.
 
-## Two-tier model
+## Three-tier model
 
 - **localStorage** — the save-slot index, per-slot game state (small JSON), and slot
-  metadata.
+  metadata. Primary store; always used.
 - **IndexedDB** (`limelight-media`, v2) — large image blobs (data URLs): room
   backgrounds, viewer portraits, style-preset previews, and the gallery.
+- **Supabase** (`public.saves`) — optional cloud backup. Mirrors the Zustand persist
+  blob (`state_json: jsonb`) one row per user+slot. Requires `VITE_SUPABASE_URL` /
+  `VITE_SUPABASE_ANON_KEY` and an authenticated user. See `src/persist/cloudSave.ts`.
 
 ## Save slots (`saves.ts`)
 
@@ -104,6 +107,26 @@ and hashes with `cyrb53`. Identical inputs dedupe to the same stored image. `put
 stamps the active `slotId`; `getImage`/`getByCacheKey`/`listImages` filter to the
 active slot. `useStoredImage(id)` reads the in-memory cache or lazy-loads from
 IndexedDB.
+
+## Cloud save layer (`src/persist/cloudSave.ts`)
+
+Thin Supabase wrappers. All functions are no-ops when `supabaseConfigured` is false.
+
+| Function | Description |
+|----------|-------------|
+| `pushSave(user, slotMeta, stateJson)` | Upsert a slot's Zustand blob to `public.saves` |
+| `pullSave(user, slotId)` | Fetch `state_json` for a slot (returns `null` if absent) |
+| `listCloudSaves(user)` | List all slots for a user, sorted by `updated_at` |
+
+**Auth state** is managed by `src/auth/useAuth.ts` (React hook) and rendered via
+`src/ui/AuthModal.tsx` (cloud ☁ button in the bottom-right corner). Supports Google
+and Discord OAuth via Supabase Auth. Subscription tier (`free | pro`) is fetched from
+`public.profiles` on login.
+
+**Payments** — `src/lib/lemonSqueezy.ts` opens the LemonSqueezy checkout with the
+Supabase `user_id` embedded as `checkout[custom][user_id]`. The edge function
+`supabase/functions/lemon-webhook` verifies the HMAC-SHA256 signature and updates
+`profiles.subscription_status` / `subscription_tier` on subscription events.
 
 ## Boot sequence (`boot.ts`)
 

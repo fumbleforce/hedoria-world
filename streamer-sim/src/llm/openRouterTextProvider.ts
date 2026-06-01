@@ -1,7 +1,14 @@
 import type { LlmProvider, LlmRequest, LlmResponse } from "./types";
 import { useStore } from "../state/store";
+import { supabase, supabaseConfigured } from "../lib/supabase";
 
-const PROXY = "/__openrouter/chat";
+// Dev: Vite middleware proxy (keeps API key server-side during local dev).
+// Prod: Supabase edge function (requires a valid auth JWT).
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const PROXY = SUPABASE_URL
+  ? `${SUPABASE_URL}/functions/v1/openrouter-proxy`
+  : "/__openrouter/chat";
+
 const DEFAULT_MODEL = "google/gemini-2.5-flash";
 const TIMEOUT_MS = 120_000;
 // Generous default so replies finish their thought instead of being clipped by
@@ -48,9 +55,17 @@ export class OpenRouterTextProvider implements LlmProvider {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
     try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      // In production inject the Supabase JWT so the edge function can verify the caller.
+      if (supabaseConfigured) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          headers["Authorization"] = `Bearer ${session.access_token}`;
+        }
+      }
       const response = await fetch(PROXY, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify(buildBody(this.model(request.kind), request)),
         signal: controller.signal,
       });
