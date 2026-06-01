@@ -110,7 +110,7 @@ describe("cameras", () => {
     expect(p).toMatch(/sitting in the gaming chair/i);
     expect(p).toMatch(/waist-up/i);
     // Female gender → she/her pronouns.
-    expect(p).toMatch(/young woman/i);
+    expect(p).toMatch(/woman in her late 20s/i);
     expect(p).toMatch(/behind her/i);
   });
 
@@ -126,10 +126,10 @@ describe("cameras", () => {
       style: "cozy neon",
       hasBackdropRef: true,
     });
-    expect(p).toMatch(/young man/i);
+    expect(p).toMatch(/man in his late 20s/i);
     expect(p).toMatch(/\bHe is\b/);
     expect(p).toMatch(/behind him/i);
-    expect(p).not.toMatch(/young woman/i);
+    expect(p).not.toMatch(/woman in her late 20s/i);
     expect(p).not.toMatch(/\bshe\b/i);
   });
 

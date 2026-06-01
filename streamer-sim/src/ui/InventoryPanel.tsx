@@ -3,7 +3,7 @@ import type { GameController } from "../game/controller";
 import { UPGRADES, formatMultipliersSummary, formatUpgradeEffects, multipliersFor } from "../game/shop";
 import { CAMERA_SHOP, formatCameraTier, cameraDisplayLabel } from "../game/cameras";
 import { isClothingItem, ITEM_CATEGORIES, ITEM_CATEGORY_LABEL } from "../game/items";
-import { canRemoveClothingSlot, clothingSlotLabel } from "../game/wardrobe";
+import { canRemoveClothingSlot, clothingSlotLabel, underwearVisibleAtTier } from "../game/wardrobe";
 import { UPGRADE_CATEGORIES, UPGRADE_CATEGORY_LABEL } from "../game/shop";
 
 /** Owned upgrades, cameras, and inventory items. */
@@ -62,7 +62,14 @@ export function InventoryPanel({ controller }: { controller: GameController }) {
         {inventory.length > 0 && (
           <>
             {itemCats.map((cat) => {
-              const items = inventory.filter((i) => i.category === cat);
+              const items = inventory
+                .filter((i) => i.category === cat)
+                .filter(
+                  (item) =>
+                    !isClothingItem(item)
+                    || item.slot !== "underwear"
+                    || underwearVisibleAtTier(contentTier),
+                );
               if (!items.length) return null;
               return (
                 <div key={cat} className="shop__group">

@@ -492,7 +492,7 @@ function CharacterTab({ controller }: { controller: GameController }) {
         <textarea
           rows={3}
           value={bodyDesc}
-          placeholder="e.g. early 20s, shoulder-length pink hair, petite build, cute energy…"
+          placeholder="e.g. late 20s, shoulder-length pink hair, normal build, cute energy…"
           onChange={(e) => editBodyDesc(e.target.value)}
         />
       </label>

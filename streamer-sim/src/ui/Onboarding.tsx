@@ -300,7 +300,7 @@ function CharacterStep({ controller }: { controller: GameController }) {
           <textarea
             rows={3}
             value={character.bodyDescription}
-            placeholder="e.g. early 20s, shoulder-length pink hair, petite build…"
+            placeholder="e.g. late 20s, shoulder-length pink hair, normal build…"
             onChange={(e) => setCharacter({ bodyDescription: e.target.value })}
           />
         </label>

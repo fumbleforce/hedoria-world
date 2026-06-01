@@ -166,7 +166,7 @@ const initialSession = (): StreamSession => ({
 const initialSettings = (): Settings => ({
   streamerName: "Abby",
   streamerPersona:
-    "A bubbly variety streamer in her early 20s trying to make rent and go full-time. Quick-witted, a little shy, warms up to chat.",
+    "A bubbly variety streamer in her late 20s trying to make rent and go full-time. Quick-witted, a little shy, warms up to chat.",
   gender: "female",
   theme: "deck",
   contentTier: "cheeky",

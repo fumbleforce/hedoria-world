@@ -1,5 +1,31 @@
 import type { CharacterVisual } from "./types";
 import { genderTerms } from "./cameras";
+import { genderMode } from "./gender";
+
+/** Default age band used in starter personas, presets, and offline character templates. */
+export const DEFAULT_STREAMER_AGE = "late 20s";
+
+export function streamerAgeInPersona(gender: string): string {
+  switch (genderMode(gender)) {
+    case "male":
+      return "in his late 20s";
+    case "female":
+      return "in her late 20s";
+    default:
+      return "in their late 20s";
+  }
+}
+
+export function streamerAgeBodyOpener(gender: string): string {
+  switch (genderMode(gender)) {
+    case "male":
+      return "Late 20s man";
+    case "female":
+      return "Late 20s woman";
+    default:
+      return "Late 20s nonbinary streamer";
+  }
+}
 
 /** Drop a trailing period/whitespace so a template's own punctuation doesn't double up. */
 function trimTrailingPeriod(text: string): string {
@@ -10,7 +36,7 @@ export const DEFAULT_FACE_DESCRIPTION =
   "Warm brown eyes, light freckles across her nose, soft natural makeup, warm approachable smile.";
 
 export const DEFAULT_BODY_DESCRIPTION =
-  "Early 20s woman, shoulder-length soft pink hair, petite build, cute bubbly streamer energy.";
+  "Late 20s woman, shoulder-length soft pink hair, normal build, cute bubbly streamer energy.";
 
 export function defaultCharacterVisual(): CharacterVisual {
   return {

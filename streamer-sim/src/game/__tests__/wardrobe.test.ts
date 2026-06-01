@@ -8,6 +8,7 @@ import {
   starterClothingForGender,
   isLegacyStarterWardrobe,
   describeEquippedLook,
+  underwearVisibleAtTier,
 } from "../wardrobe";
 import { genderMode } from "../gender";
 
@@ -51,11 +52,34 @@ describe("wardrobe", () => {
     );
   });
 
+  it("describeEquippedLook omits underwear at cheeky and below", () => {
+    const set = starterClothingForOutfit("casual");
+    expect(underwearVisibleAtTier("cheeky")).toBe(false);
+    expect(underwearVisibleAtTier("risque")).toBe(true);
+    expect(describeEquippedLook(set.equipped, set.items, { contentTier: "cheeky" })).toBe(
+      "top: Everyday Tee, bottom: Blue Jeans",
+    );
+    expect(describeEquippedLook(set.equipped, set.items, { contentTier: "risque" })).toMatch(
+      /underwear: Cotton Bra & Briefs/,
+    );
+  });
+
   it("starterClothingFor applies outfit vibe with gender-appropriate underwear", () => {
     const boldMale = starterClothingFor("bold", "male");
-    expect(boldMale.items.map((i) => i.name)).toContain("Cotton Boxer Briefs");
-    expect(boldMale.items.map((i) => i.name)).toContain("Cropped Tank");
+    const names = boldMale.items.map((i) => i.name);
+    expect(names).toContain("Black Boxer Briefs");
+    expect(names).toContain("Cropped Tank");
+    expect(names).toContain("Slim Black Jeans");
+    expect(names).not.toContain("Lace Lingerie Set");
+    expect(names).not.toContain("Faux-Leather Mini");
     expect(dominantOutfitVibe(boldMale.equipped, boldMale.items)).toBe("bold");
+  });
+
+  it("male starter sets avoid female-coded garments across vibes", () => {
+    for (const outfit of ["casual", "cozy", "cute", "bold"] as const) {
+      const names = starterClothingFor(outfit, "male").items.map((i) => i.name);
+      expect(names.some((n) => /bra|lingerie|skirt|mini/i.test(n))).toBe(false);
+    }
   });
 
   it("dominantOutfitVibe follows equipped item vibes", () => {

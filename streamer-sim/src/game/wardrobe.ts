@@ -2,7 +2,7 @@ import type { SegmentId } from "./segments";
 import { OUTFITS, type OutfitId, type VibeId } from "./outfits";
 import type { Item } from "./items";
 import { isClothingItem, makeClothingItem } from "./items";
-import { isNoLimits } from "./content";
+import { isNoLimits, tierIntensity } from "./content";
 import type { ContentTier } from "./types";
 import { genderMode, type GenderPreset } from "./gender";
 
@@ -57,6 +57,11 @@ const SLOT_LABEL: Record<ClothingSlot, string> = {
 
 export function clothingSlotLabel(slot: ClothingSlot): string {
   return SLOT_LABEL[slot];
+}
+
+/** Underwear appears in shop, inventory, wardrobe, and outfit text at Risqué+. */
+export function underwearVisibleAtTier(tier: ContentTier): boolean {
+  return tierIntensity(tier) >= tierIntensity("risque");
 }
 
 /** Map vibe tags to segment appeal using the legacy outfit table. */
@@ -171,6 +176,64 @@ const STARTER_GENDER_SETS: Record<GenderPreset, StarterPiece[]> = {
   ],
 };
 
+/** Concrete three-piece starter sets (underwear + top + bottom) per vibe and gender. */
+const STARTER_SETS_BY_GENDER: Record<GenderPreset, Record<OutfitId, StarterPiece[]>> = {
+  female: {
+    casual: STARTER_GENDER_SETS.female,
+    cozy: [
+      { name: "Soft Cotton Set", description: "Worn-in, comfy underwear.", slot: "underwear", vibes: { cozy: 0.5 } },
+      { name: "Oversized Hoodie", description: "Soft, warm, and very streamable.", slot: "top", vibes: { cozy: 1 } },
+      { name: "Lounge Shorts", description: "The comfiest thing you own.", slot: "bottom", vibes: { cozy: 0.5 } },
+    ],
+    cute: [
+      { name: "Frilly Lingerie Set", description: "A cute matching bra and panties.", slot: "underwear", vibes: { cute: 0.5 } },
+      { name: "Frilly Crop Top", description: "Photogenic and playful.", slot: "top", vibes: { cute: 1 } },
+      { name: "Pleated Mini Skirt", description: "Spins nicely on cam.", slot: "bottom", vibes: { cute: 0.5 } },
+    ],
+    bold: [
+      { name: "Lace Lingerie Set", description: "Daring lace underwear.", slot: "underwear", vibes: { bold: 0.5 } },
+      { name: "Cropped Tank", description: "Shows a little, says a lot.", slot: "top", vibes: { bold: 1 } },
+      { name: "Faux-Leather Mini", description: "Bold silhouette, bold energy.", slot: "bottom", vibes: { bold: 0.5 } },
+    ],
+  },
+  male: {
+    casual: STARTER_GENDER_SETS.male,
+    cozy: [
+      { name: "Soft Cotton Boxers", description: "Worn-in, comfy underwear.", slot: "underwear", vibes: { cozy: 0.5 } },
+      { name: "Oversized Hoodie", description: "Soft, warm, and very streamable.", slot: "top", vibes: { cozy: 1 } },
+      { name: "Lounge Shorts", description: "The comfiest thing you own.", slot: "bottom", vibes: { cozy: 0.5 } },
+    ],
+    cute: [
+      { name: "Cotton Boxer Briefs", description: "Plain, comfortable everyday underwear.", slot: "underwear", vibes: { cute: 0.5 } },
+      { name: "Fitted Henley", description: "Clean lines, approachable on cam.", slot: "top", vibes: { cute: 1 } },
+      { name: "Slim Chinos", description: "Neat and photogenic without trying too hard.", slot: "bottom", vibes: { cute: 0.5 } },
+    ],
+    bold: [
+      { name: "Black Boxer Briefs", description: "Sleek everyday base layer.", slot: "underwear", vibes: { bold: 0.5 } },
+      { name: "Cropped Tank", description: "Shows a little, says a lot.", slot: "top", vibes: { bold: 1 } },
+      { name: "Slim Black Jeans", description: "Bold silhouette, bold energy.", slot: "bottom", vibes: { bold: 0.5 } },
+    ],
+  },
+  custom: {
+    casual: STARTER_GENDER_SETS.custom,
+    cozy: [
+      { name: "Neutral Boxer Briefs", description: "Worn-in, comfy underwear.", slot: "underwear", vibes: { cozy: 0.5 } },
+      { name: "Oversized Hoodie", description: "Soft, warm, and very streamable.", slot: "top", vibes: { cozy: 1 } },
+      { name: "Lounge Shorts", description: "The comfiest thing you own.", slot: "bottom", vibes: { cozy: 0.5 } },
+    ],
+    cute: [
+      { name: "Neutral Boxer Briefs", description: "Comfortable unisex underwear.", slot: "underwear", vibes: { cute: 0.5 } },
+      { name: "Oversized Tee", description: "Relaxed fit, easy on cam.", slot: "top", vibes: { cute: 1 } },
+      { name: "Cargo Joggers", description: "Easy movement, neutral silhouette.", slot: "bottom", vibes: { cute: 0.5 } },
+    ],
+    bold: [
+      { name: "Neutral Boxer Briefs", description: "Comfortable unisex underwear.", slot: "underwear", vibes: { bold: 0.5 } },
+      { name: "Cropped Tank", description: "Shows a little, says a lot.", slot: "top", vibes: { bold: 1 } },
+      { name: "Cargo Joggers", description: "Easy movement, neutral silhouette.", slot: "bottom", vibes: { bold: 0.5 } },
+    ],
+  },
+};
+
 function buildStarterSet(
   pieces: StarterPiece[],
   tagStarter = false,
@@ -192,7 +255,7 @@ function buildStarterSet(
   return { items, equipped };
 }
 
-/** Starter three-piece set for a vibe, with gender-appropriate underwear names. */
+/** Starter three-piece set for a vibe, fully keyed to gender. */
 export function starterClothingFor(
   outfit: OutfitId,
   gender: string,
@@ -200,17 +263,9 @@ export function starterClothingFor(
   items: import("./items").ClothingItem[];
   equipped: Partial<Record<ClothingSlot, string>>;
 } {
-  const pieces = [...(STARTER_SETS[outfit] ?? STARTER_SETS.casual)];
   const mode = genderMode(gender);
-  if (mode !== "female") {
-    const genderUnderwear = (STARTER_GENDER_SETS[mode] ?? STARTER_GENDER_SETS.female).find(
-      (p) => p.slot === "underwear",
-    );
-    const idx = pieces.findIndex((p) => p.slot === "underwear");
-    if (genderUnderwear && idx >= 0) {
-      pieces[idx] = { ...genderUnderwear, vibes: { ...pieces[idx].vibes } };
-    }
-  }
+  const byGender = STARTER_SETS_BY_GENDER[mode] ?? STARTER_SETS_BY_GENDER.female;
+  const pieces = [...(byGender[outfit] ?? byGender.casual)];
   return buildStarterSet(pieces, true);
 }
 
@@ -225,30 +280,6 @@ export function starterClothingForGender(gender: string): {
 export function isStarterWardrobeItem(item: Item): boolean {
   return item.meta?.[STARTER_WARDROBE_META] === "1";
 }
-
-/** Concrete three-piece starter sets (underwear + top + bottom) per vibe. */
-const STARTER_SETS: Record<OutfitId, StarterPiece[]> = {
-  casual: [
-    { name: "Cotton Bra & Briefs", description: "Plain, comfortable everyday underwear.", slot: "underwear", vibes: { casual: 0.5 } },
-    { name: "Everyday Tee", description: "Simple, comfortable, nothing fancy.", slot: "top", vibes: { casual: 1 } },
-    { name: "Blue Jeans", description: "Reliable default.", slot: "bottom", vibes: { casual: 0.5 } },
-  ],
-  cozy: [
-    { name: "Soft Cotton Set", description: "Worn-in, comfy underwear.", slot: "underwear", vibes: { cozy: 0.5 } },
-    { name: "Oversized Hoodie", description: "Soft, warm, and very streamable.", slot: "top", vibes: { cozy: 1 } },
-    { name: "Lounge Shorts", description: "The comfiest thing you own.", slot: "bottom", vibes: { cozy: 0.5 } },
-  ],
-  cute: [
-    { name: "Frilly Lingerie Set", description: "A cute matching bra and panties.", slot: "underwear", vibes: { cute: 0.5 } },
-    { name: "Frilly Crop Top", description: "Photogenic and playful.", slot: "top", vibes: { cute: 1 } },
-    { name: "Pleated Mini Skirt", description: "Spins nicely on cam.", slot: "bottom", vibes: { cute: 0.5 } },
-  ],
-  bold: [
-    { name: "Lace Lingerie Set", description: "Daring lace underwear.", slot: "underwear", vibes: { bold: 0.5 } },
-    { name: "Cropped Tank", description: "Shows a little, says a lot.", slot: "top", vibes: { bold: 1 } },
-    { name: "Faux-Leather Mini", description: "Bold silhouette, bold energy.", slot: "bottom", vibes: { bold: 0.5 } },
-  ],
-};
 
 /** @deprecated Prefer `starterClothingFor(outfit, gender)` — female underwear names. */
 export function starterClothingForOutfit(outfit: OutfitId): {
@@ -291,13 +322,15 @@ function hasVisibleOuterLayers(
 export function describeEquippedLook(
   equipped: Partial<Record<ClothingSlot, string>>,
   inventory: readonly Item[],
-  opts?: { hideCoveredUnderwear?: boolean },
+  opts?: { hideCoveredUnderwear?: boolean; contentTier?: ContentTier },
 ): string {
   const byId = new Map(inventory.map((i) => [i.id, i]));
-  const coreSlots =
-    opts?.hideCoveredUnderwear && hasVisibleOuterLayers(equipped, byId)
-      ? CORE_OUTFIT_SLOTS.filter((slot) => slot !== "underwear")
-      : CORE_OUTFIT_SLOTS;
+  const hideUnderwear =
+    (opts?.contentTier != null && !underwearVisibleAtTier(opts.contentTier))
+    || !!(opts?.hideCoveredUnderwear && hasVisibleOuterLayers(equipped, byId));
+  const coreSlots = hideUnderwear
+    ? CORE_OUTFIT_SLOTS.filter((slot) => slot !== "underwear")
+    : CORE_OUTFIT_SLOTS;
   const parts = coreSlots.map((slot) => outfitSlotDescription(slot, equipped, byId));
   for (const slot of CLOTHING_SLOTS) {
     if (CORE_OUTFIT_SLOTS.includes(slot)) continue;

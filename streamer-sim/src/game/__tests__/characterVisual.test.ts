@@ -27,8 +27,8 @@ describe("characterVisual", () => {
   it("combinedLook joins face and body", () => {
     const c = normalizeCharacterVisual({
       faceDescription: "Freckles, warm smile.",
-      bodyDescription: "Petite, pink hair.",
+      bodyDescription: "Normal, pink hair.",
     });
-    expect(combinedLook(c)).toBe("Freckles, warm smile. Petite, pink hair.");
+    expect(combinedLook(c)).toBe("Freckles, warm smile. Normal, pink hair.");
   });
 });

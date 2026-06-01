@@ -26,7 +26,7 @@ import {
 } from "../persist/imageStore";
 import { diag } from "../diag/log";
 import { useStore, type ActionMenu, setFeedbackContext, clearFeedbackContext } from "../state/store";
-import { combinedLook, hasCharacterLook, imagePromptVars } from "./characterVisual";
+import { combinedLook, DEFAULT_STREAMER_AGE, hasCharacterLook, imagePromptVars, streamerAgeInPersona } from "./characterVisual";
 import type { ChatMessage, ContentTier, DmLine, EventChoice, GameEvent, Metrics, PendingEventSeed, ViewerRequest } from "./types";
 import { judgeRequestFulfillment } from "./requestJudge";
 import type { PlayerAction, ActionOption, ActionVerdict } from "./actions";
@@ -141,6 +141,7 @@ import {
   canRemoveClothingSlot,
   clothingSlotLabel,
   describeEquippedLook,
+  underwearVisibleAtTier,
   dominantOutfitVibe,
   wardrobeAppeal,
   type ClothingSlot,
@@ -489,8 +490,8 @@ export class GameController {
       "You invent concise, vivid character concepts for a streamer life-sim.",
       "Given a name and an optional vibe hint, write a believable streamer persona",
       "and two short visual descriptions for image generation. Keep it grounded and",
-      "PG in this step (the player sets content intensity separately). Reply with",
-      "ONLY a JSON object, no prose or markdown.",
+      "PG in this step (the player sets content intensity separately). Default age: late 20s.",
+      "Reply with ONLY a JSON object, no prose or markdown.",
     ].join(" ");
     const user = [
       `Name: ${who}`,
@@ -499,7 +500,7 @@ export class GameController {
       "Return JSON shaped exactly like:",
       '{ "persona": "2-3 sentence first-impression bio of who they are as a streamer",',
       '  "faceDescription": "one sentence: eyes, makeup, expression",',
-      '  "bodyDescription": "one sentence: age range, hair, build, overall energy" }',
+      '  "bodyDescription": "one sentence: late-20s age range, hair, build, overall energy" }',
     ].join("\n");
     try {
       const out = await completeJsonWithRepair(
@@ -561,11 +562,11 @@ export class GameController {
     ]);
     const eyes = pick(["warm brown", "sharp green", "calm hazel", "bright blue", "dark expressive"]);
     const hair = pick(["shoulder-length pink", "long wavy chestnut", "teal undercut", "short tousled dark", "sleek black"]);
-    const build = pick(["petite", "average", "athletic", "tall and lanky", "soft and curvy"]);
+    const build = pick(["normal", "average", "athletic", "tall and lanky", "soft and curvy"]);
     return {
-      persona: `${name} is a ${vibe} streamer in their early 20s, ${traits}. They're ${goal}.`,
+      persona: `${name} is a ${vibe} streamer ${streamerAgeInPersona("custom")}, ${traits}. They're ${goal}.`,
       faceDescription: `${eyes.charAt(0).toUpperCase()}${eyes.slice(1)} eyes, soft natural makeup, an easy expressive smile.`,
-      bodyDescription: `Early 20s, ${hair} hair, ${build} build, ${vibe} streamer energy.`,
+      bodyDescription: `${DEFAULT_STREAMER_AGE}, ${hair} hair, ${build} build, ${vibe} streamer energy.`,
     };
   }
 
@@ -599,7 +600,10 @@ export class GameController {
           name,
           style,
           gender,
-          outfit: describeEquippedLook(s.equippedClothing, s.inventory, { hideCoveredUnderwear: true }),
+          outfit: describeEquippedLook(s.equippedClothing, s.inventory, {
+            hideCoveredUnderwear: true,
+            contentTier: s.settings.contentTier,
+          }),
           ...(portraitRef ? { match: "Match the face and hair of the reference portrait exactly." } : {}),
         }, "body"),
       ),
@@ -673,11 +677,13 @@ export class GameController {
    */
   async finishOnboarding(onPhase?: (label: string) => void): Promise<void> {
     onPhase?.("Packing your starter kit…");
+    const s = this.s;
+    const vibe = dominantOutfitVibe(s.equippedClothing, s.inventory);
+    s.setStarterWardrobe(vibe, s.settings.gender ?? "female");
     await this.generateStarterKit();
     this.s.setStreamNicheDraft(this.s.brand.defaultNiche);
     onPhase?.("Writing your opening scene…");
     await this.narrateOpeningBeat();
-    const s = this.s;
     if (hasCharacterLook(s.character) && this.imageBackend) {
       onPhase?.("Painting the moment…");
       await this.generateScene(true);
@@ -1360,7 +1366,10 @@ export class GameController {
       onScreenZoneLabel: ZONES[onScreenId]?.label ?? "the studio",
       playerZoneLabel: ZONES[s.zone]?.label ?? "the studio",
       playerOnCamera: this.isOnCamera(),
-      equippedLook: describeEquippedLook(s.equippedClothing, s.inventory, { hideCoveredUnderwear: true }),
+      equippedLook: describeEquippedLook(s.equippedClothing, s.inventory, {
+        hideCoveredUnderwear: true,
+        contentTier: s.settings.contentTier,
+      }),
       nicheLabel: NICHES[this.activeNiche()]?.label,
       activity: act
         ? { label: act.label, narrationHint: act.narrationHint, chatHint: act.chatHint, category: act.category }
@@ -5013,7 +5022,10 @@ export class GameController {
 
   openWardrobeMenu(): void {
     const s = this.s;
-    const clothing = s.inventory.filter(isClothingItem);
+    const showUnderwear = underwearVisibleAtTier(s.settings.contentTier);
+    const clothing = s.inventory.filter(isClothingItem).filter(
+      (item) => showUnderwear || item.slot !== "underwear",
+    );
     if (!clothing.length) {
       s.setToast("No clothing in inventory — hit the shop for new pieces.");
       return;
@@ -5028,6 +5040,7 @@ export class GameController {
       });
     }
     for (const slot of CLOTHING_SLOTS) {
+      if (slot === "underwear" && !showUnderwear) continue;
       if (s.equippedClothing[slot] && canRemoveClothingSlot(slot, s.settings.contentTier)) {
         const item = s.inventory.find((i) => i.id === s.equippedClothing[slot]);
         options.push({
@@ -5039,7 +5052,9 @@ export class GameController {
     }
     s.setActionMenu({
       title: "Wardrobe",
-      subtitle: describeEquippedLook(s.equippedClothing, s.inventory),
+      subtitle: describeEquippedLook(s.equippedClothing, s.inventory, {
+        contentTier: s.settings.contentTier,
+      }),
       options,
       allowFreeform: false,
     });
@@ -5049,6 +5064,9 @@ export class GameController {
     const s = this.s;
     const item = s.inventory.find((i) => i.id === itemId);
     if (!item || !isClothingItem(item)) return;
+    if (item.slot === "underwear" && !underwearVisibleAtTier(s.settings.contentTier)) {
+      return s.setToast("Underwear isn't available at this content level.");
+    }
     if (item.slot === "full") {
       for (const slot of CLOTHING_SLOTS) s.equipClothing(slot, null);
     } else if (s.equippedClothing.full) {
@@ -5561,7 +5579,10 @@ export class GameController {
     // Ensure the eye-level room backdrop exists first, then reference it for the shot.
     const backdrop = await this.ensureZoneBackdrop(zoneId);
     const ref = await this.bodyRef();
-    const look = describeEquippedLook(s.equippedClothing, s.inventory, { hideCoveredUnderwear: true });
+    const look = describeEquippedLook(s.equippedClothing, s.inventory, {
+      hideCoveredUnderwear: true,
+      contentTier: s.settings.contentTier,
+    });
     const char = s.character;
     // References: her body template (likeness) + the room backdrop plate (space).
     const refs: string[] = [];

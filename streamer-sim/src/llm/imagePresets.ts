@@ -599,7 +599,7 @@ export function isCustomArtStyle(presetId: ImageStylePresetId | undefined): bool
 /** Fixed subject for custom-style preview — same framing as the baked preset thumbnails. */
 export function customStylePreviewPrompt(styleText: string): string {
   return [
-    "Upper-body character art of a friendly young woman video-game streamer with headphones,",
+    "Upper-body character art of a friendly woman in her late 20s, a video-game streamer with headphones,",
     "sitting at a glowing streaming desk with dual monitors and a webcam in a cozy studio apartment.",
     "Looking toward the camera with a warm expression.",
     "No text, no watermark, no UI. Square composition.",

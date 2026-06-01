@@ -47,11 +47,11 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     name: "Abby",
     gender: "female",
     persona:
-      "A bubbly variety streamer in her early 20s trying to make rent and go full-time. Quick-witted, a little shy, warms up to chat.",
+      "A bubbly variety streamer in her late 20s trying to make rent and go full-time. Quick-witted, a little shy, warms up to chat.",
     faceDescription:
       "Warm brown eyes, light freckles across her nose, soft natural makeup, warm approachable smile.",
     bodyDescription:
-      "Early 20s woman, shoulder-length soft pink hair, petite build, cute bubbly streamer energy.",
+      "Late 20s woman, shoulder-length soft pink hair, normal build, cute bubbly streamer energy.",
     outfit: "cute",
     talent: "singer",
   },
@@ -62,11 +62,11 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     name: "Mina",
     gender: "female",
     persona:
-      "A gentle, soft-spoken cozy streamer in her mid-20s. Late-night lo-fi vibes, candles, and heartfelt conversations. Reads every message and remembers the regulars.",
+      "A gentle, soft-spoken cozy streamer in her late 20s. Late-night lo-fi vibes, candles, and heartfelt conversations. Reads every message and remembers the regulars.",
     faceDescription:
       "Calm hazel eyes, minimal makeup, a few faint freckles, a soft thoughtful half-smile.",
     bodyDescription:
-      "Mid-20s woman, long wavy chestnut hair often in a loose bun, average build, calm cozy streamer energy.",
+      "Late 20s woman, long wavy chestnut hair often in a loose bun, average build, calm cozy streamer energy.",
     outfit: "cozy",
     talent: "guitarist",
   },
@@ -77,11 +77,11 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     name: "Rae",
     gender: "female",
     persona:
-      "A loud, competitive gaming streamer in her early 20s. Trash-talks in good fun, meme-fluent, thrives on hype and clutch moments. Equal parts skill and chaos.",
+      "A loud, competitive gaming streamer in her late 20s. Trash-talks in good fun, meme-fluent, thrives on hype and clutch moments. Equal parts skill and chaos.",
     faceDescription:
       "Sharp green eyes with winged eyeliner, animated expressive brows, a wide competitive grin.",
     bodyDescription:
-      "Early 20s woman, dyed teal undercut, athletic build.",
+      "Late 20s woman, dyed teal undercut, athletic build.",
     outfit: "casual",
     talent: "dancer",
   },
@@ -92,11 +92,11 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     name: "Jun",
     gender: "male",
     persona:
-      "A charismatic just-chatting streamer in his mid-20s with talk-show host energy. Storytime, hot takes, and good-faith debates. Confident, curious, quick on his feet.",
+      "A charismatic just-chatting streamer in his late 20s with talk-show host energy. Storytime, hot takes, and good-faith debates. Confident, curious, quick on his feet.",
     faceDescription:
       "Dark friendly eyes, a neat short beard, easy confident smile, expressive eyebrows.",
     bodyDescription:
-      "Mid-20s man, short dark tousled hair, lean build.",
+      "Late 20s man, short dark tousled hair, lean build.",
     outfit: "casual",
     talent: "comedian",
   },
@@ -107,11 +107,11 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     name: "Marcus",
     gender: "male",
     persona:
-      "A competitive FPS streamer in his early 20s who grinds ranked but keeps chat laughing. Calls every play, roasts himself when he whiffs, and hypes the squad.",
+      "A competitive FPS streamer in his late 20s who grinds ranked but keeps chat laughing. Calls every play, roasts himself when he whiffs, and hypes the squad.",
     faceDescription:
       "Intense brown eyes, strong jaw, light stubble, focused grin that breaks into a goofy laugh.",
     bodyDescription:
-      "Early 20s man, short fade haircut, athletic build.",
+      "Late 20s man, short fade haircut, athletic build.",
     outfit: "casual",
     talent: "dancer",
   },
@@ -122,11 +122,11 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     name: "Eli",
     gender: "male",
     persona:
-      "A soft-spoken cozy streamer in his mid-20s who paints, listens to lo-fi, and keeps the room calm. Remembers names, validates feelings, never rushes the vibe.",
+      "A soft-spoken cozy streamer in his late 20s who paints, listens to lo-fi, and keeps the room calm. Remembers names, validates feelings, never rushes the vibe.",
     faceDescription:
       "Warm gray-blue eyes, soft features, faint smile, a few paint smudges on his cheek sometimes.",
     bodyDescription:
-      "Mid-20s man, wavy sandy blond hair in a low bun, slim build.",
+      "Late 20s man, wavy sandy blond hair in a low bun, slim build.",
     outfit: "cozy",
     talent: "artist",
   },
@@ -152,11 +152,11 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     name: "Owen",
     gender: "male",
     persona:
-      "A warm variety streamer in his early 30s with dad-friend energy. Tries new games, ranks snacks, gives surprisingly good life advice, and laughs at his own jokes.",
+      "A warm variety streamer in his late 20s with dad-friend energy. Tries new games, ranks snacks, gives surprisingly good life advice, and laughs at his own jokes.",
     faceDescription:
       "Kind green eyes, laugh lines, relaxed half-beard, approachable open smile.",
     bodyDescription:
-      "Early 30s man, receding brown hair, dad-bod build.",
+      "Late 20s man, receding brown hair, dad-bod build.",
     outfit: "casual",
     talent: "comedian",
   },
@@ -167,11 +167,11 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     name: "Kai",
     gender: "male",
     persona:
-      "A mellow gaming streamer in his mid-20s obsessed with speedruns and clean routes. Explains strats calmly, celebrates PBs quietly, and never yells at RNG.",
+      "A mellow gaming streamer in his late 20s obsessed with speedruns and clean routes. Explains strats calmly, celebrates PBs quietly, and never yells at RNG.",
     faceDescription:
       "Dark calm eyes behind thin rectangular glasses, relaxed expression, small knowing smirk.",
     bodyDescription:
-      "Mid-20s man, black hair in a middle part, slim build.",
+      "Late 20s man, black hair in a middle part, slim build.",
     outfit: "cozy",
     talent: "analyst",
   },
@@ -182,11 +182,11 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     name: "Alex",
     gender: "nonbinary",
     persona:
-      "A charismatic nonbinary streamer in their mid-20s with talk-show host energy. Hosts debates, reads donations with flair, and keeps the room inclusive.",
+      "A charismatic nonbinary streamer in their late 20s with talk-show host energy. Hosts debates, reads donations with flair, and keeps the room inclusive.",
     faceDescription:
       "Expressive amber eyes, sharp cheekbones, subtle eyeliner, confident half-smile.",
     bodyDescription:
-      "Mid-20s nonbinary streamer, platinum buzz cut, lean build.",
+      "Late 20s nonbinary streamer, platinum buzz cut, lean build.",
     outfit: "bold",
     talent: "comedian",
   },
@@ -197,11 +197,11 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     name: "Sam",
     gender: "nonbinary",
     persona:
-      "A playful nonbinary variety streamer in their early 20s who streams art, cosplay progress, and odd creative challenges. Chaotic good, meme-literate, fiercely kind to regulars.",
+      "A playful nonbinary variety streamer in their late 20s who streams art, cosplay progress, and odd creative challenges. Chaotic good, meme-literate, fiercely kind to regulars.",
     faceDescription:
       "Bright hazel eyes, freckles, asymmetrical undercut with a teal streak, mischievous grin.",
     bodyDescription:
-      "Early 20s nonbinary streamer, medium height, asymmetrical undercut with a teal streak.",
+      "Late 20s nonbinary streamer, medium height, asymmetrical undercut with a teal streak.",
     outfit: "cute",
     talent: "artist",
   },
@@ -212,11 +212,11 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     name: "Violet",
     gender: "female",
     persona:
-      "A confident, camera-savvy streamer in her mid-20s who leans into bold, flirty banter. Knows exactly how to work a crowd, teases the regulars, and isn't easily flustered.",
+      "A confident, camera-savvy streamer in her late 20s who leans into bold, flirty banter. Knows exactly how to work a crowd, teases the regulars, and isn't easily flustered.",
     faceDescription:
       "Striking violet-contact eyes, bold red lip, sharp confident smirk, glamorous makeup.",
     bodyDescription:
-      "Mid-20s woman, long sleek dark hair with violet tips, curvy hourglass figure.",
+      "Late 20s woman, long sleek dark hair with violet tips, curvy hourglass figure.",
     outfit: "bold",
     talent: "singer",
   },

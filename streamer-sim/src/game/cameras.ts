@@ -408,7 +408,7 @@ function stripBroadcastWords(text: string): string {
 
 /** Subject noun + pronouns derived from the free-text player gender. */
 export interface GenderTerms {
-  /** "young woman" / "young man" / "young person". */
+  /** "woman in her late 20s" / "man in his late 20s" / "person in their late 20s". */
   subject: string;
   /** she / he / they. */
   subj: string;
@@ -424,12 +424,12 @@ export interface GenderTerms {
 export function genderTerms(gender: string | undefined): GenderTerms {
   const g = (gender ?? "").toLowerCase();
   if (/\b(female|woman|women|girl|she|her|feminine)\b/.test(g)) {
-    return { subject: "young woman", subj: "she", obj: "her", poss: "her", plural: false };
+    return { subject: "woman in her late 20s", subj: "she", obj: "her", poss: "her", plural: false };
   }
   if (/\b(male|man|men|boy|guy|he|him|his|masculine)\b/.test(g)) {
-    return { subject: "young man", subj: "he", obj: "him", poss: "his", plural: false };
+    return { subject: "man in his late 20s", subj: "he", obj: "him", poss: "his", plural: false };
   }
-  return { subject: "young person", subj: "they", obj: "them", poss: "their", plural: true };
+  return { subject: "person in their late 20s", subj: "they", obj: "them", poss: "their", plural: true };
 }
 
 function cap(word: string): string {

@@ -12,7 +12,7 @@ import {
   type ClothingGenderFilter,
   type ClothingSlotFilter,
 } from "../game/items";
-import { CLOTHING_SLOTS, clothingSlotLabel, type ClothingSlot } from "../game/wardrobe";
+import { CLOTHING_SLOTS, clothingSlotLabel, underwearVisibleAtTier, type ClothingSlot } from "../game/wardrobe";
 import { useStoredImage } from "../persist/useStoredImage";
 import type { Upgrade } from "../game/types";
 
@@ -26,7 +26,7 @@ const GENDER_FILTERS: { id: ClothingGenderFilter; label: string }[] = [
   { id: "unisex", label: "Unisex" },
 ];
 
-const SLOT_FILTERS: { id: ClothingSlotFilter; label: string }[] = [
+const SLOT_FILTERS_BASE: { id: ClothingSlotFilter; label: string }[] = [
   { id: "all", label: "All slots" },
   ...CLOTHING_SLOTS.map((slot) => ({ id: slot as ClothingSlotFilter, label: clothingSlotLabel(slot) })),
 ];
@@ -118,6 +118,9 @@ export function ShopPanel({ controller }: { controller: GameController }) {
   const [slotFilter, setSlotFilter] = useState<ClothingSlotFilter>("all");
   if (!open) return null;
 
+  const slotFilters = SLOT_FILTERS_BASE.filter(
+    (f) => f.id !== "underwear" || underwearVisibleAtTier(contentTier),
+  );
   const cats = UPGRADE_CATEGORIES;
   const library = purchasableActivities().filter((a) => activityVisible(a, contentTier, cameras));
   const hasPortable = cameras.some((c) => c.portable);
@@ -193,7 +196,7 @@ export function ShopPanel({ controller }: { controller: GameController }) {
             <div className="shop__filterRow">
               <span className="shop__filterLabel">Slot</span>
               <div className="shop__filterTabs shop__filterTabs--wrap">
-                {SLOT_FILTERS.map((f) => (
+                {slotFilters.map((f) => (
                   <button
                     key={f.id}
                     type="button"
