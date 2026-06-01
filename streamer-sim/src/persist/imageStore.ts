@@ -32,6 +32,8 @@ export interface StoredImage {
   /** If templated from another image (the T-pose body), its id. */
   sourceImageId?: string;
   createdAt: number;
+  /** Supabase Storage path set after the image is uploaded to cloud. */
+  cloudPath?: string;
 }
 
 const DB_NAME = "limelight-media";
@@ -230,6 +232,41 @@ export async function listImages(): Promise<StoredImage[]> {
   });
   db.close();
   return all;
+}
+
+/** List all images for an explicit slot ID. Use this for background sync tasks. */
+export async function listImagesForSlot(slotId: string): Promise<StoredImage[]> {
+  const db = await open();
+  const all = await new Promise<StoredImage[]>((resolve, reject) => {
+    const tx = db.transaction(IMAGES, "readonly");
+    const req = tx.objectStore(IMAGES).getAll();
+    req.onsuccess = () =>
+      resolve(
+        ((req.result as StoredImage[] | undefined) ?? [])
+          .filter((r) => r.slotId === slotId)
+          .sort((a, b) => b.createdAt - a.createdAt),
+      );
+    req.onerror = () => reject(req.error);
+  });
+  db.close();
+  return all;
+}
+
+/** Stamp a cloud storage path onto an existing image record. */
+export async function patchImageCloudPath(id: string, cloudPath: string): Promise<void> {
+  const db = await open();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(IMAGES, "readwrite");
+    const store = tx.objectStore(IMAGES);
+    const req = store.get(id);
+    req.onsuccess = () => {
+      const rec = req.result as StoredImage | undefined;
+      if (rec) store.put({ ...rec, cloudPath });
+    };
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
 }
 
 export async function deleteImage(id: string): Promise<void> {

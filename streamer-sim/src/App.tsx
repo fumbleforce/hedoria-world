@@ -3,6 +3,7 @@ import { boot, type BootResult } from "./boot";
 import { useStore } from "./state/store";
 import { AuthModal } from "./ui/AuthModal";
 import { supabaseConfigured } from "./lib/supabase";
+import { useCloudSync } from "./auth/useCloudSync";
 import { StudioRoom } from "./render/StudioRoom";
 import { MetricsHud } from "./ui/MetricsHud";
 import { ChatPanel } from "./ui/ChatPanel";
@@ -27,6 +28,7 @@ export function App() {
   const [services, setServices] = useState<BootResult | null>(null);
   const [showAuth, setShowAuth] = useState(false);
   const toast = useStore((s) => s.toast);
+  useCloudSync();
 
   useEffect(() => {
     void boot().then(setServices);

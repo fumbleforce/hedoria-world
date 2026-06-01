@@ -95,6 +95,21 @@ export function getActiveSlot(): SaveSlotMeta {
   return index.slots.find((s) => s.id === index.activeId) ?? index.slots[0];
 }
 
+/**
+ * Read the current slot metadata and its Zustand persist blob from localStorage.
+ * Used by cloud sync to get a snapshot without going through React state.
+ */
+export function getActiveSaveSnapshot(): { meta: SaveSlotMeta; state: Record<string, unknown> } | null {
+  try {
+    const meta = getActiveSlot();
+    const raw = localStorage.getItem(saveStorageKey(meta.id));
+    const state = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
+    return { meta, state };
+  } catch {
+    return null;
+  }
+}
+
 export function listSlots(): SaveSlotMeta[] {
   return loadIndex().slots;
 }

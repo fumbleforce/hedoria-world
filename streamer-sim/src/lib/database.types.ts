@@ -1,5 +1,5 @@
 /**
- * Minimal hand-written types for the Supabase schema in migrations/001_initial.sql.
+ * Minimal hand-written types for the Supabase schema.
  * Replace with generated types (`supabase gen types typescript`) for a production build.
  */
 
@@ -27,6 +27,21 @@ type SaveRow = {
   updated_at: string;
 };
 
+type ImageMetaRow = {
+  id: string;
+  user_id: string;
+  slot_id: string;
+  cache_key: string;
+  kind: string;
+  label: string;
+  prompt: string;
+  character_name: string;
+  meta: Record<string, string> | null;
+  source_image_id: string | null;
+  cloud_path: string;
+  created_at: number;
+};
+
 export interface Database {
   public: {
     Tables: {
@@ -40,6 +55,12 @@ export interface Database {
         Row: SaveRow;
         Insert: Omit<SaveRow, "id" | "created_at"> & { id?: string; created_at?: string };
         Update: Partial<SaveRow>;
+        Relationships: [];
+      };
+      image_meta: {
+        Row: ImageMetaRow;
+        Insert: ImageMetaRow;
+        Update: Partial<ImageMetaRow>;
         Relationships: [];
       };
     };
