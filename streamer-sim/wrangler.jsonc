@@ -1,0 +1,15 @@
+{
+  // Cloudflare Workers static-assets config for the Limelight SPA.
+  // Deployed via Workers Builds: `npx wrangler deploy` (prod) /
+  // `npx wrangler versions upload` (preview). Root directory is streamer-sim,
+  // so paths here are relative to that.
+  "name": "limelight",
+  "compatibility_date": "2026-06-01",
+  "assets": {
+    // Vite build output.
+    "directory": "./dist",
+    // Serve index.html (200) for any path that isn't a built asset, so client
+    // -side routing works. Replaces the Pages-era public/_redirects approach.
+    "not_found_handling": "single-page-application"
+  }
+}
