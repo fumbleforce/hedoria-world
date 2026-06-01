@@ -123,6 +123,7 @@ export function ActionBar({ controller }: { controller: GameController }) {
             )}
             <button className="btn" onClick={() => useStore.getState().openSettings("gallery")} title="Gallery">🖼</button>
             <button className="btn" onClick={() => useStore.getState().setInventoryOpen(true)} title="Inventory">🎒</button>
+            <button className="btn" onClick={() => useStore.getState().setAccountOpen(true)} title="Saves &amp; Account">💾</button>
             <button className="btn" onClick={() => useStore.getState().openSettings()} title="Settings">⚙</button>
             <button className="btn btn--danger" disabled={resolving} onClick={() => void controller.endVisit()} title="Wrap up the visit">🚪 See them out</button>
           </>
@@ -132,6 +133,7 @@ export function ActionBar({ controller }: { controller: GameController }) {
               <button className="btn" disabled={resolving} onClick={() => void controller.generateScene()} title="Visualize this moment">📸 Visualize</button>
             )}
             <button className="btn" onClick={() => useStore.getState().openSettings("gallery")} title="Gallery">🖼</button>
+            <button className="btn" onClick={() => useStore.getState().setAccountOpen(true)} title="Saves &amp; Account">💾</button>
             <button className="btn" onClick={() => useStore.getState().openSettings()} title="Settings">⚙</button>
             <button className="btn btn--danger" disabled={resolving} onClick={() => void controller.endEventScene()} title="Bring this moment to a close">✓ See it through</button>
           </>
@@ -166,6 +168,7 @@ export function ActionBar({ controller }: { controller: GameController }) {
             <button className="btn" onClick={() => useStore.getState().setInventoryOpen(true)} title="Inventory">🎒</button>
             <button className="btn" onClick={() => useStore.getState().openSettings("character")} title="Character appearance">🎭</button>
             <button className="btn" onClick={() => useStore.getState().openSettings("gallery")} title="Gallery">🖼</button>
+            <button className="btn" onClick={() => useStore.getState().setAccountOpen(true)} title="Saves &amp; Account">💾</button>
             <button className="btn" onClick={() => useStore.getState().openSettings()} title="Settings">⚙</button>
             <button className="btn btn--danger" disabled={resolving} onClick={() => controller.endStream()}>⏹ End</button>
           </>
@@ -179,6 +182,7 @@ export function ActionBar({ controller }: { controller: GameController }) {
             </button>
             <button className="btn" onClick={() => useStore.getState().openSettings("character")} title="Character appearance">🎭</button>
             <button className="btn" onClick={() => useStore.getState().openSettings("gallery")} title="Gallery">🖼</button>
+            <button className="btn" onClick={() => useStore.getState().setAccountOpen(true)} title="Saves &amp; Account">💾</button>
             <button className="btn" onClick={() => useStore.getState().openSettings()} title="Settings">⚙</button>
           </>
         )}
