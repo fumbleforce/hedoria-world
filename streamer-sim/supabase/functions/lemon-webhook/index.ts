@@ -20,6 +20,7 @@
  */
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { limitForTier, provisioningConfigured, updateKeyLimit } from "../_shared/openrouter.ts";
 
 const SIGNING_SECRET = Deno.env.get("LEMONSQUEEZY_WEBHOOK_SECRET") ?? "";
 
@@ -124,6 +125,24 @@ Deno.serve(async (req: Request) => {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });
+  }
+
+  // Re-cap the user's OpenRouter runtime key to match the new tier. Best-effort:
+  // a key only exists once they've used the LLM, and we never fail billing sync
+  // on this. The proxy mints with the correct tier limit on first use anyway.
+  if (provisioningConfigured) {
+    try {
+      const { data: keyRow } = await supabase
+        .from("user_openrouter_keys")
+        .select("key_hash")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (keyRow?.key_hash) {
+        await updateKeyLimit(keyRow.key_hash, limitForTier(entitlement.tier));
+      }
+    } catch (e) {
+      console.error("lemon-webhook: OpenRouter key re-cap failed", e);
+    }
   }
 
   console.log(`lemon-webhook: ${event.meta.event_name} → user ${userId} → ${entitlement.subscriptionStatus}`);
