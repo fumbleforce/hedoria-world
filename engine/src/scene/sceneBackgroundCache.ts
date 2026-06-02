@@ -183,6 +183,7 @@ export class SceneBackgroundCache {
     });
 
     const result = await this.imageProvider.generate({
+      kind: "scene-background",
       prompt,
       width: this.width,
       height: this.height,

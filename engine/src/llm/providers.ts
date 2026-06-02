@@ -1,4 +1,10 @@
-import type { LlmProvider, LlmRequest, LlmResponse } from "./types";
+import type {
+  LlmCallKind,
+  LlmCallOptions,
+  LlmProvider,
+  LlmRequest,
+  LlmResponse,
+} from "./types";
 import {
   defaultGeminiTextModel,
   normalizeGeminiTextModel,
@@ -102,6 +108,35 @@ class HttpJsonProvider implements LlmProvider {
  * NOT safe for a public deployment. For production, route through a proxy
  * and use {@link HttpJsonProvider} instead.
  */
+type GeminiPart = {
+  text?: string;
+  functionCall?: { name?: string; args?: Record<string, unknown> };
+};
+
+function collectPartsIntoResponse(parts: GeminiPart[]): LlmResponse {
+  // Split Gemini's interleaved parts into prose text and structured
+  // function calls. A single candidate may look like:
+  //   parts: [{text:"You walk west."}, {functionCall:{name:"move_region",args:{...}}}]
+  // We preserve order in `toolCalls[]` so the narrator dispatcher applies
+  // them in the same sequence the model intended.
+  const textChunks: string[] = [];
+  const toolCalls: Array<{ name: string; arguments: Record<string, unknown> }> = [];
+  for (const part of parts) {
+    if (part.functionCall && typeof part.functionCall.name === "string") {
+      toolCalls.push({
+        name: part.functionCall.name,
+        arguments: (part.functionCall.args ?? {}) as Record<string, unknown>,
+      });
+    } else if (typeof part.text === "string" && part.text.length > 0) {
+      textChunks.push(part.text);
+    }
+  }
+  return {
+    text: textChunks.join(""),
+    toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+  };
+}
+
 class GeminiTextProvider implements LlmProvider {
   readonly id: string;
   private readonly apiKey: string;
@@ -114,7 +149,10 @@ class GeminiTextProvider implements LlmProvider {
     this.model = model;
   }
 
-  async complete(request: LlmRequest): Promise<LlmResponse> {
+  async complete(
+    request: LlmRequest,
+    options?: LlmCallOptions,
+  ): Promise<LlmResponse> {
     const now = Date.now();
     if (this.cooldownUntil > now) {
       throw new RateLimitedError(
@@ -125,9 +163,14 @@ class GeminiTextProvider implements LlmProvider {
       );
     }
 
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
-      this.model,
-    )}:generateContent?key=${encodeURIComponent(this.apiKey)}`;
+    const stream = options?.stream === true;
+    const endpoint = stream
+      ? `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
+          this.model,
+        )}:streamGenerateContent?alt=sse&key=${encodeURIComponent(this.apiKey)}`
+      : `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
+          this.model,
+        )}:generateContent?key=${encodeURIComponent(this.apiKey)}`;
 
     const contents = request.messages.map((m) => ({
       role: m.role === "assistant" ? "model" : "user",
@@ -141,25 +184,16 @@ class GeminiTextProvider implements LlmProvider {
     if (request.jsonMode) {
       body.generationConfig = { responseMimeType: "application/json" };
     }
-    // Bridge our ToolSpec[] to Gemini's functionDeclarations[] so the model
-    // can emit real structured function calls. Without this, Gemini sees
-    // tools only as text in the system prompt and either ignores them or
-    // (worse) emits Python-style `move_region(...)` strings into the text
-    // body, which then leaks into the narration panel.
     if (request.tools && request.tools.length > 0) {
       body.tools = [
         {
           functionDeclarations: request.tools.map((t) => ({
             name: t.name,
             description: t.description,
-            // Gemini expects a JSON-Schema-shaped `parameters` block, which
-            // is exactly what our `inputSchema` already is.
             parameters: t.inputSchema,
           })),
         },
       ];
-      // Encourage but don't require function calls so the model can still
-      // emit pure narration when no tool is appropriate.
       body.toolConfig = { functionCallingConfig: { mode: "AUTO" } };
     }
 
@@ -167,6 +201,7 @@ class GeminiTextProvider implements LlmProvider {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
+      signal: options?.signal,
     });
     if (!response.ok) {
       const text = await response.text().catch(() => "");
@@ -177,8 +212,6 @@ class GeminiTextProvider implements LlmProvider {
           Math.max(DEFAULT_COOLDOWN_MS, hinted ?? DEFAULT_COOLDOWN_MS),
         );
         this.cooldownUntil = Date.now() + cooldown;
-        // One concise warning instead of dumping the full body — the adapter
-        // catches the throw and the cache falls back to the procedural spec.
         console.warn(
           `[gemini] 429 quota exhausted on ${this.model}; cooling down for ${Math.round(
             cooldown / 1000,
@@ -193,40 +226,68 @@ class GeminiTextProvider implements LlmProvider {
         `Gemini text API ${response.status}: ${text.slice(0, 300)}`,
       );
     }
+
+    if (stream) {
+      if (!response.body) {
+        throw new Error("Gemini: missing response body for streaming");
+      }
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      const allParts: GeminiPart[] = [];
+      const emittedToolCalls = new Set<number>();
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith("data:")) continue;
+          const dataStr = trimmed.slice(5).trim();
+          if (!dataStr) continue;
+          let json: unknown;
+          try {
+            json = JSON.parse(dataStr);
+          } catch {
+            continue;
+          }
+          const parts =
+            (json as { candidates?: Array<{ content?: { parts?: GeminiPart[] } }> })
+              .candidates?.[0]?.content?.parts ?? [];
+          for (const part of parts) {
+            allParts.push(part);
+            if (typeof part.text === "string" && part.text.length > 0) {
+              options?.onDelta?.({ kind: "text", text: part.text });
+            }
+            if (part.functionCall && typeof part.functionCall.name === "string") {
+              const idx = allParts.length - 1;
+              if (!emittedToolCalls.has(idx)) {
+                emittedToolCalls.add(idx);
+                options?.onDelta?.({
+                  kind: "tool-call",
+                  call: {
+                    name: part.functionCall.name,
+                    arguments: (part.functionCall.args ?? {}) as Record<
+                      string,
+                      unknown
+                    >,
+                  },
+                });
+              }
+            }
+          }
+        }
+      }
+      return collectPartsIntoResponse(allParts);
+    }
+
     const json = (await response.json()) as {
-      candidates?: Array<{
-        content?: {
-          parts?: Array<{
-            text?: string;
-            functionCall?: { name?: string; args?: Record<string, unknown> };
-          }>;
-        };
-      }>;
+      candidates?: Array<{ content?: { parts?: GeminiPart[] } }>;
     };
     const parts = json.candidates?.[0]?.content?.parts ?? [];
-
-    // Split the parts stream into prose text and structured function calls.
-    // Gemini interleaves them in the order the model produced, so a single
-    // candidate may look like:
-    //   parts: [{text:"You walk west."}, {functionCall:{name:"move_region",args:{...}}}]
-    // We preserve order in `toolCalls[]` so the narrator dispatcher applies
-    // them in the same sequence the model intended.
-    const textChunks: string[] = [];
-    const toolCalls: Array<{ name: string; arguments: Record<string, unknown> }> = [];
-    for (const part of parts) {
-      if (part.functionCall && typeof part.functionCall.name === "string") {
-        toolCalls.push({
-          name: part.functionCall.name,
-          arguments: (part.functionCall.args ?? {}) as Record<string, unknown>,
-        });
-      } else if (typeof part.text === "string" && part.text.length > 0) {
-        textChunks.push(part.text);
-      }
-    }
-    return {
-      text: textChunks.join(""),
-      toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
-    };
+    return collectPartsIntoResponse(parts);
   }
 }
 
@@ -244,24 +305,40 @@ export class StoreBackedGeminiTextProvider implements LlmProvider {
   }
 
   get id(): string {
-    return this.current().id;
+    return this.current("chat").id;
   }
 
-  async complete(request: LlmRequest): Promise<LlmResponse> {
-    return this.current().complete(request);
+  async complete(request: LlmRequest, options?: LlmCallOptions): Promise<LlmResponse> {
+    const kind = options?.kind ?? "other";
+    return this.current(kind).complete(request, options);
   }
 
-  private current(): GeminiTextProvider {
+  private current(kind: LlmCallKind): GeminiTextProvider {
     const store = useStore.getState();
-    const model = normalizeGeminiTextModel(store.geminiTextModel);
-    const effectiveModel = model || defaultGeminiTextModel();
-    if (effectiveModel !== store.geminiTextModel) {
-      store.setGeminiTextModel(effectiveModel);
-    }
-    let provider = this.providersByModel.get(effectiveModel);
+    const selection = store.textModelRegistry[kind] ?? store.textModelRegistry.other;
+    // Resolve precedence: an explicit per-kind model id wins; otherwise
+    // we use the top-level Gemini chat model. We do NOT auto-write the
+    // chosen id back into `geminiTextModel` — that previously caused a
+    // per-kind override to silently rename the user's primary model
+    // selection (and even to bleed an OpenRouter slug into the Gemini
+    // slot).
+    //
+    // We also defend against shape mismatch at call time: a slug
+    // containing `/` cannot be a Gemini model id, so we silently fall
+    // back to the top-level model rather than shipping a bad request.
+    const isGeminiShape = (m: string) => m.length > 0 && !m.includes("/");
+    const candidate = selection.model.trim();
+    const topLevel = store.geminiTextModel.trim();
+    const raw = isGeminiShape(candidate)
+      ? candidate
+      : isGeminiShape(topLevel)
+        ? topLevel
+        : defaultGeminiTextModel();
+    const model = normalizeGeminiTextModel(raw) || defaultGeminiTextModel();
+    let provider = this.providersByModel.get(model);
     if (!provider) {
-      provider = new GeminiTextProvider(this.apiKey, effectiveModel);
-      this.providersByModel.set(effectiveModel, provider);
+      provider = new GeminiTextProvider(this.apiKey, model);
+      this.providersByModel.set(model, provider);
     }
     return provider;
   }
@@ -295,22 +372,26 @@ export class DelegatingTextLlmProvider implements LlmProvider {
     return `gemini:${model}`;
   }
 
-  async complete(request: LlmRequest): Promise<LlmResponse> {
+  async complete(request: LlmRequest, options?: LlmCallOptions): Promise<LlmResponse> {
     const s = useStore.getState();
-    if (s.textLlmBackend === "openrouter") {
+    const kind = options?.kind ?? "other";
+    const selection = s.textModelRegistry[kind] ?? s.textModelRegistry.other;
+    const backend =
+      selection.backend === "default" ? s.textLlmBackend : selection.backend;
+    if (backend === "openrouter") {
       if (!this.openRouter) {
         throw new Error(
           "OpenRouter text is not available. Set OPENROUTER_API_KEY in engine/.env.local and run the Vite dev server.",
         );
       }
-      return this.openRouter.complete(request);
+      return this.openRouter.complete(request, options);
     }
     if (!this.gemini) {
       throw new Error(
         "Gemini text is not available. Set VITE_GEMINI_API_KEY in engine/.env.local.",
       );
     }
-    return this.gemini.complete(request);
+    return this.gemini.complete(request, options);
   }
 }
 

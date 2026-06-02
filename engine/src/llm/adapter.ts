@@ -19,6 +19,8 @@ let textLlmActivitySeq = 0;
 /** Player-facing label for the HUD activity strip (never shown for `chat` — that uses `pendingNarrations`). */
 function labelForNonChatLlmKind(kind: LlmCallKind): string {
   switch (kind) {
+    case "action-eval":
+      return "Text model · action evaluate";
     case "scene-classify":
       return "Text model · map / tile layout";
     case "skill-check":
@@ -53,7 +55,18 @@ const LlmResponseSchema = z.object({
  * responses (which inline tool calls as pseudo-syntax in `text`) are
  * forced to miss and re-fetch.
  */
-const LLM_CACHE_VERSION = "v2";
+// Bumped from v2 → v3 when the narrator pipeline (scene prompt,
+// dialogue rules, `say` schema) was overhauled. Old cached responses
+// were produced under the previous contract and would re-inject buggy
+// behavior (missing tool calls, prose-dialogue) into the current build.
+const LLM_CACHE_VERSION = "v3";
+
+// Kinds whose output is meant to vary every call — caching them just
+// re-plays the same narration verbatim and defeats the whole point of a
+// living narrator. We still cache deterministic kinds (action-eval,
+// scene-classify, image keys, etc.) where the cost savings matter and
+// the output is supposed to be stable for a given prompt.
+const NON_CACHEABLE_KINDS: ReadonlySet<LlmCallKind> = new Set(["chat"]);
 
 function hashPrompt(input: string): string {
   let hash = 0;
@@ -96,6 +109,7 @@ function logLlmCall(payload: {
   model: string;
   promptHash: string;
   cached: boolean;
+  turnId?: string;
   request: LlmRequest;
   response: LlmResponse;
   durationMs: number;
@@ -129,7 +143,10 @@ export class LlmAdapter {
     const startedAt = performance.now();
     const promptLength = promptBlob.length;
 
-    const cached = await findTranscriptByPromptHash(this.saveId, promptHash);
+    const cacheable = !NON_CACHEABLE_KINDS.has(kind);
+    const cached = cacheable
+      ? await findTranscriptByPromptHash(this.saveId, promptHash)
+      : null;
     if (cached) {
       const parsed = LlmResponseSchema.safeParse(JSON.parse(cached.response) as unknown);
       if (parsed.success) {
@@ -162,10 +179,25 @@ export class LlmAdapter {
             model: cached.model,
             promptHash,
             cached: true,
+            turnId: options?.turnId,
             request,
             response: parsed.data,
             durationMs,
           });
+          if (options?.stream && options.onDelta) {
+            const chunkSize = 4;
+            for (let i = 0; i < parsed.data.text.length; i += chunkSize) {
+              options.onDelta({
+                kind: "text",
+                text: parsed.data.text.slice(i, i + chunkSize),
+              });
+              await Promise.resolve();
+            }
+            for (const call of parsed.data.toolCalls ?? []) {
+              options.onDelta({ kind: "tool-call", call });
+            }
+            options.onDelta({ kind: "done", final: parsed.data });
+          }
           return parsed.data;
         }
       }
@@ -189,13 +221,17 @@ export class LlmAdapter {
         .setBackgroundActivity(activityId, labelForNonChatLlmKind(kind));
     }
     try {
-      const raw = await this.provider.complete(request);
+      const raw = await this.provider.complete(request, options);
       const parsed = LlmResponseSchema.parse(raw);
+      if (options?.stream && options.onDelta) {
+        options.onDelta({ kind: "done", final: parsed });
+      }
       const durationMs = performance.now() - startedAt;
-      const cacheThis =
+      const sceneClassifyOk =
         kind !== "scene-classify" ||
         !request.jsonMode ||
         isValidSceneClassifyGridPayload(parsed.text);
+      const cacheThis = cacheable && sceneClassifyOk;
       if (cacheThis) {
         await putTranscript({
           saveId: this.saveId,
@@ -206,13 +242,16 @@ export class LlmAdapter {
           response: JSON.stringify(parsed),
           generatedAt: Date.now(),
         });
-      } else {
+      } else if (cacheable && !sceneClassifyOk) {
         diag.warn("llm", `text-llm response not cached (invalid scene-classify JSON)`, {
           kind,
           promptHash,
           model: providerId,
         });
       }
+      // When kind is in NON_CACHEABLE_KINDS we intentionally skip the
+      // cache and do NOT warn — that's the configured behavior, not a
+      // failure.
       diag.info("llm", `text-llm response (${Math.round(durationMs)}ms)`, {
         model: providerId,
         kind,
@@ -226,6 +265,7 @@ export class LlmAdapter {
         model: providerId,
         promptHash,
         cached: false,
+        turnId: options?.turnId,
         request,
         response: parsed,
         durationMs,

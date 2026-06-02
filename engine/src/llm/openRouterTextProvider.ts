@@ -1,4 +1,11 @@
-import type { LlmProvider, LlmRequest, LlmResponse, ToolSpec } from "./types";
+import type {
+  LlmCallKind,
+  LlmCallOptions,
+  LlmProvider,
+  LlmRequest,
+  LlmResponse,
+  ToolSpec,
+} from "./types";
 import { diag } from "../diag/log";
 import { DEFAULT_OPENROUTER_TEXT_MODEL } from "./openRouterDefaults";
 import {
@@ -33,7 +40,11 @@ function toOpenAiTools(tools: ToolSpec[]): Array<{
   }));
 }
 
-function buildChatPayload(model: string, request: LlmRequest): Record<string, unknown> {
+function buildChatPayload(
+  model: string,
+  request: LlmRequest,
+  stream: boolean,
+): Record<string, unknown> {
   const messages: Array<{ role: string; content: string }> = [];
   if (request.system.trim()) {
     messages.push({ role: "system", content: request.system });
@@ -45,7 +56,7 @@ function buildChatPayload(model: string, request: LlmRequest): Record<string, un
   const body: Record<string, unknown> = {
     model,
     messages,
-    stream: false,
+    stream,
   };
 
   if (request.tools && request.tools.length > 0) {
@@ -125,8 +136,9 @@ class OpenRouterTextProvider implements LlmProvider {
     this.id = `openrouter:${model}`;
   }
 
-  async complete(request: LlmRequest): Promise<LlmResponse> {
-    const payload = buildChatPayload(this.model, request);
+  async complete(request: LlmRequest, options?: LlmCallOptions): Promise<LlmResponse> {
+    const stream = options?.stream === true;
+    const payload = buildChatPayload(this.model, request, stream);
     const payloadJson = JSON.stringify(payload);
     const reqId = `or-text-${++openRouterTextRequestSeq}`;
     const startedAt = performance.now();
@@ -142,6 +154,9 @@ class OpenRouterTextProvider implements LlmProvider {
     });
 
     const controller = new AbortController();
+    if (options?.signal) {
+      options.signal.addEventListener("abort", () => controller.abort(), { once: true });
+    }
     const timer = setTimeout(() => controller.abort(), TEXT_REQUEST_TIMEOUT_MS);
     let response: Response;
     try {
@@ -185,6 +200,81 @@ class OpenRouterTextProvider implements LlmProvider {
       status: response.status,
       headerMs,
     });
+
+    if (stream) {
+      if (!response.body) {
+        throw new Error("OpenRouter: missing response body for streaming");
+      }
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      const textChunks: string[] = [];
+      const toolArgByIndex = new Map<number, { name: string; args: string }>();
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith("data:")) continue;
+          const data = trimmed.slice(5).trim();
+          if (!data || data === "[DONE]") continue;
+          let json: unknown;
+          try {
+            json = JSON.parse(data);
+          } catch {
+            continue;
+          }
+          const delta = (json as {
+            choices?: Array<{
+              delta?: {
+                content?: string;
+                tool_calls?: Array<{
+                  index?: number;
+                  function?: { name?: string; arguments?: string };
+                }>;
+              };
+            }>;
+          }).choices?.[0]?.delta;
+          if (!delta) continue;
+          if (typeof delta.content === "string" && delta.content.length > 0) {
+            textChunks.push(delta.content);
+            options?.onDelta?.({ kind: "text", text: delta.content });
+          }
+          for (const call of delta.tool_calls ?? []) {
+            const idx = call.index ?? 0;
+            const entry = toolArgByIndex.get(idx) ?? { name: "", args: "" };
+            if (call.function?.name) entry.name = call.function.name;
+            if (call.function?.arguments) entry.args += call.function.arguments;
+            toolArgByIndex.set(idx, entry);
+          }
+        }
+      }
+      const toolCalls: Array<{ name: string; arguments: Record<string, unknown> }> = [];
+      for (const [, entry] of toolArgByIndex) {
+        if (!entry.name) continue;
+        let args: Record<string, unknown> = {};
+        if (entry.args.trim()) {
+          try {
+            const parsed = JSON.parse(entry.args) as unknown;
+            if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+              args = parsed as Record<string, unknown>;
+            }
+          } catch {
+            args = {};
+          }
+        }
+        const call = { name: entry.name, arguments: args };
+        toolCalls.push(call);
+        options?.onDelta?.({ kind: "tool-call", call });
+      }
+      return {
+        text: textChunks.join(""),
+        toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+      };
+    }
 
     const rawText = await response.text();
     const totalMs = Math.round(performance.now() - startedAt);
@@ -241,21 +331,35 @@ export class StoreBackedOpenRouterTextProvider implements LlmProvider {
   private readonly providersByModel = new Map<string, OpenRouterTextProvider>();
 
   get id(): string {
-    return this.current().id;
+    return this.current("chat").id;
   }
 
-  async complete(request: LlmRequest): Promise<LlmResponse> {
-    return this.current().complete(request);
+  async complete(request: LlmRequest, options?: LlmCallOptions): Promise<LlmResponse> {
+    const kind = options?.kind ?? "other";
+    return this.current(kind).complete(request, options);
   }
 
-  private current(): OpenRouterTextProvider {
+  private current(kind: LlmCallKind): OpenRouterTextProvider {
     const store = useStore.getState();
-    const trimmed =
-      store.openRouterTextModel.trim() || DEFAULT_OPENROUTER_TEXT_MODEL;
-    const model = normalizeOpenRouterTextModelId(trimmed);
-    if (model !== trimmed) {
-      store.setOpenRouterTextModel(model);
-    }
+    const selection = store.textModelRegistry[kind] ?? store.textModelRegistry.other;
+    // Resolve precedence: explicit per-kind id > top-level OR chat model
+    // > hard default. We do NOT auto-overwrite `openRouterTextModel` here
+    // — that previously rewrote the user's primary chat selection from a
+    // per-kind override.
+    //
+    // Shape-check at call time: an OpenRouter id is always
+    // `provider/model`. A bare slug (no `/`) is almost certainly a
+    // Gemini model id that bled into this slot; fall back instead of
+    // shipping it.
+    const isOrShape = (m: string) => m.includes("/");
+    const candidate = selection.model.trim();
+    const topLevel = store.openRouterTextModel.trim();
+    const raw = isOrShape(candidate)
+      ? candidate
+      : isOrShape(topLevel)
+        ? topLevel
+        : DEFAULT_OPENROUTER_TEXT_MODEL;
+    const model = normalizeOpenRouterTextModelId(raw);
     let provider = this.providersByModel.get(model);
     if (!provider) {
       provider = new OpenRouterTextProvider(model);

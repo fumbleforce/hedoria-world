@@ -509,8 +509,22 @@ function openRouterProxyEndpoint(): Plugin {
           try {
             body = await readBody(req);
             const model = pickModelFromBody(body);
+            // Was this a streaming chat completion? OpenRouter returns
+            // SSE iff the request body asked for it. If yes, we must
+            // forward the upstream body to the client as bytes arrive
+            // — `await upstream.text()` would buffer the entire stream
+            // and the browser would see one big chunk after the model
+            // finished, which is exactly the "streaming doesn't work"
+            // symptom the engine has been hitting.
+            let wantsStream = false;
+            try {
+              const parsed = JSON.parse(body) as { stream?: unknown };
+              wantsStream = parsed.stream === true;
+            } catch {
+              // Non-JSON bodies can't ask for streaming.
+            }
             console.log(
-              `[openrouter] ${reqId} → POST chat model=${model} body=${body.length}B`,
+              `[openrouter] ${reqId} → POST chat model=${model} body=${body.length}B stream=${wantsStream}`,
             );
             const upstream = await fetch(OPENROUTER_UPSTREAM, {
               method: "POST",
@@ -524,6 +538,47 @@ function openRouterProxyEndpoint(): Plugin {
               signal: upstreamCtl.signal,
             });
             const headerMs = Date.now() - startedAt;
+            const upstreamCt = upstream.headers.get("content-type") ?? "application/json";
+            const isSse = upstreamCt.includes("text/event-stream");
+
+            if (isSse && upstream.body && upstream.ok) {
+              if (!res.writableEnded) {
+                res.statusCode = upstream.status;
+                res.setHeader("Content-Type", upstreamCt);
+                // Disable any reverse-proxy / Vite buffering and tell the
+                // browser to keep the connection open. `flushHeaders` is
+                // what actually pushes the response head to the client
+                // before the first byte of body arrives — without it
+                // Node may hold the headers until the socket is closed,
+                // and `fetch().getReader()` on the client wouldn't fire
+                // until everything was buffered server-side anyway.
+                res.setHeader("Cache-Control", "no-cache, no-transform");
+                res.setHeader("Connection", "keep-alive");
+                res.setHeader("X-Accel-Buffering", "no");
+                if (typeof (res as { flushHeaders?: () => void }).flushHeaders === "function") {
+                  (res as { flushHeaders: () => void }).flushHeaders();
+                }
+              }
+              let bytesPiped = 0;
+              const reader = upstream.body.getReader();
+              try {
+                while (true) {
+                  const { value, done } = await reader.read();
+                  if (done) break;
+                  if (!value || res.writableEnded) break;
+                  bytesPiped += value.byteLength;
+                  res.write(Buffer.from(value));
+                }
+              } finally {
+                if (!res.writableEnded) res.end();
+              }
+              const totalMs = Date.now() - startedAt;
+              console.log(
+                `[openrouter] ${reqId} ← ${upstream.status} chat model=${model} headers=${headerMs}ms total=${totalMs}ms piped=${bytesPiped}B (SSE)`,
+              );
+              return;
+            }
+
             const text = await upstream.text();
             const totalMs = Date.now() - startedAt;
             console.log(
@@ -535,10 +590,7 @@ function openRouterProxyEndpoint(): Plugin {
             }
             if (!res.writableEnded) {
               res.statusCode = upstream.status;
-              res.setHeader(
-                "Content-Type",
-                upstream.headers.get("content-type") ?? "application/json",
-              );
+              res.setHeader("Content-Type", upstreamCt);
               res.end(text);
             }
           } catch (error) {

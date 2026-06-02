@@ -87,7 +87,10 @@ function vectorFromArgs(direction?: string, dx?: number, dy?: number): [number, 
 const NoArgs = z.object({}).strict();
 
 const NarrateSchema = z.object({ text: z.string().min(1) });
-const SaySchema = z.object({ text: z.string().min(1) });
+const SaySchema = z.object({
+  npcId: z.string().optional(),
+  text: z.string().min(1),
+});
 
 const MoveDirSchema = z
   .object({
@@ -117,6 +120,41 @@ const SpawnGroupSchema = z.object({
   summary: z.string().optional(),
 });
 const GroupRefSchema = z.object({ groupId: z.string().min(1) });
+
+/**
+ * Resolve a loose group reference into an actual engagement-group id.
+ *
+ * The LLM regularly hands us the NPC's display name ("Saska Vorin"),
+ * the NPC id ("world-npc-saska-vorin"), or sometimes a partial / fuzzy
+ * match instead of the group's own id. Rather than fail those calls and
+ * leave the player stuck in a dialogue they can't close, we walk every
+ * group and try a sequence of progressively looser matches.
+ *
+ * Returns the resolved group id on success, or `undefined` if nothing
+ * plausibly matches.
+ */
+function resolveGroupId(
+  candidate: string,
+  groups: Record<string, { id: string; name: string; npcIds: string[] }>,
+): string | undefined {
+  if (!candidate) return undefined;
+  if (groups[candidate]) return candidate;
+  const needle = candidate.trim().toLowerCase();
+  // Exact NPC id or NPC name in the group's npc list.
+  for (const g of Object.values(groups)) {
+    if (g.id.toLowerCase() === needle) return g.id;
+    if (g.name.trim().toLowerCase() === needle) return g.id;
+    if (g.npcIds.includes(candidate)) return g.id;
+    if (g.npcIds.some((id) => id.toLowerCase() === needle)) return g.id;
+  }
+  // Loose contains-match against name (helps when the LLM strips
+  // honorifics or formats the name slightly differently).
+  for (const g of Object.values(groups)) {
+    const n = g.name.trim().toLowerCase();
+    if (n && (n.includes(needle) || needle.includes(n))) return g.id;
+  }
+  return undefined;
+}
 const PlayerPartyNpcSchema = z.object({ npcId: z.string().min(1) });
 const LockSchema = z.object({
   groupId: z.string().min(1),
@@ -179,6 +217,39 @@ const GiveCurrencySchema = z.object({
   gold: z.number().int().optional(),
   silver: z.number().int().optional(),
   copper: z.number().int().optional(),
+});
+const ApplyConditionSchema = z.object({
+  id: z.string().optional(),
+  label: z.string().min(1),
+  severity: z.string().optional(),
+  effects: z.array(z.string()).optional(),
+  notes: z.string().optional(),
+  expiresAt: z.number().optional(),
+});
+const ClearConditionSchema = z.object({
+  id: z.string().min(1),
+});
+const RememberFactSchema = z.object({
+  id: z.string().optional(),
+  text: z.string().min(1),
+  scope: z
+    .object({
+      kind: z
+        .enum(["global", "region", "location", "scene", "npc", "quest"])
+        .optional(),
+      regionId: z.string().optional(),
+      locationId: z.string().optional(),
+      x: z.number().int().optional(),
+      y: z.number().int().optional(),
+      npcId: z.string().optional(),
+      questId: z.string().optional(),
+    })
+    .optional(),
+  importance: z.enum(["minor", "normal", "critical"]).optional(),
+  expiresAt: z.number().optional(),
+});
+const ForgetFactSchema = z.object({
+  id: z.string().min(1),
 });
 
 // ---------------- helpers
@@ -285,15 +356,101 @@ export class Narrator {
       return ok();
     });
 
-    handlers.set("say", (raw) => {
+    handlers.set("say", (raw, state, ctx) => {
       const args = SaySchema.parse(raw);
-      useStore.getState().appendDialogue({ role: "npc", text: args.text });
+
+      // Build the list of NPC ids that are CURRENTLY ENGAGED. These are
+      // the only valid speakers this turn — anyone else is a bystander
+      // (must engage them first) or invented (hallucination).
+      const engagedIds: string[] = [];
+      for (const g of Object.values(state.engagement.groups)) {
+        if (g.state !== "engaged" && g.state !== "locked") continue;
+        for (const id of g.npcIds) engagedIds.push(id);
+      }
+
+      const requested = args.npcId?.trim() || undefined;
+      let npcId: string | undefined = requested;
+
+      if (requested) {
+        let isEngaged = engagedIds.includes(requested);
+        const isAuthored = Boolean(ctx.world.world.npcs[requested]);
+        // Salvage 1: the LLM handed us a display NAME instead of an id
+        // (e.g. "Goran of the Three Wagons" rather than
+        // "world-npc-goran-three-wagons"). Try to map the name back to
+        // an engaged NPC id before rejecting the line.
+        if (!isEngaged) {
+          const needle = requested.toLowerCase();
+          const byName = engagedIds.find((id) => {
+            const n = ctx.world.world.npcs[id]?.name?.trim().toLowerCase();
+            return n === needle || (n && (needle.includes(n) || n.includes(needle)));
+          });
+          if (byName) {
+            diag.warn("narrator", "say matched npc by display name", {
+              requested,
+              resolved: byName,
+            });
+            npcId = byName;
+            isEngaged = true;
+          }
+        }
+        if (!isEngaged) {
+          // The LLM tried to attribute speech to a non-engaged NPC. If
+          // there's exactly one engaged NPC, silently reroute to them
+          // (covers id typos like "world-npc-old-mirek" vs the real
+          // engaged id). Otherwise reject the line so we don't pollute
+          // the dialogue log with phantom speakers.
+          if (engagedIds.length === 1) {
+            diag.warn("narrator", "say redirected to focal NPC", {
+              requested,
+              focal: engagedIds[0],
+              authored: isAuthored,
+            });
+            npcId = engagedIds[0];
+          } else if (engagedIds.length === 0) {
+            diag.warn("narrator", "say dropped — no NPC engaged", {
+              requested,
+              authored: isAuthored,
+            });
+            return fail(
+              `Cannot say as ${requested} — no NPC is currently engaged. Call \`engage\` first.`,
+            );
+          } else {
+            diag.warn("narrator", "say dropped — npcId not in engaged set", {
+              requested,
+              engagedIds,
+            });
+            return fail(
+              `Cannot say as ${requested} — not in engaged set [${engagedIds.join(", ")}]. Pick one of those ids.`,
+            );
+          }
+        }
+      } else if (engagedIds.length === 1) {
+        // Convenience: missing npcId with exactly one engaged NPC →
+        // attribute to them.
+        npcId = engagedIds[0];
+      }
+      // If we still have no npcId here, it means there are multiple
+      // engaged NPCs and the call omitted `npcId`. We let the line
+      // through but log so the LLM gets feedback to be more specific.
+      if (!npcId) {
+        diag.warn("narrator", "say emitted without npcId in ambiguous scene", {
+          engagedIds,
+        });
+      }
+
+      useStore.getState().appendDialogue({
+        role: "npc",
+        text: args.text,
+        npcId,
+      });
       return ok();
     });
 
     handlers.set("end_dialogue", (raw) => {
       NoArgs.partial().parse(raw);
-      useStore.getState().clearDialogue();
+      const store = useStore.getState();
+      store.clearDialogue();
+      store.setActiveDialogueGroup(null);
       return ok();
     });
 
@@ -419,6 +576,17 @@ export class Narrator {
     });
 
     handlers.set("leave_location", (raw, state) => {
+      // `leave_location` only makes sense from `location` mode (you
+      // exit the location grid up to the region grid). From `scene`
+      // mode the right tool is `leave_tile` (drop the scene back to
+      // the location grid). From `region` mode there is no location
+      // to leave. Rejecting at the dispatcher prevents a stray tool
+      // call from cascading the player into a phantom mode.
+      if (!ensureMode(state, "location")) {
+        return fail(
+          `leave_location is only valid in location mode (current: ${state.mode}); use leave_tile from a scene.`,
+        );
+      }
       // Optional `direction`: if the player exits via one of the four
       // cardinal exit tiles, step the region position one cell in that
       // direction so the world position reflects which side of the
@@ -502,6 +670,13 @@ export class Narrator {
     });
 
     handlers.set("leave_tile", (raw, state) => {
+      // `leave_tile` is the scene → location transition. Not valid
+      // from region (no scene to exit) or location (already there).
+      if (!ensureMode(state, "scene")) {
+        return fail(
+          `leave_tile is only valid in scene mode (current: ${state.mode}); use leave_location to exit the location grid.`,
+        );
+      }
       NoArgs.partial().parse(raw);
       if (state.engagement.lockReason) {
         return fail(`You can't leave: ${state.engagement.lockReason}`);
@@ -509,6 +684,15 @@ export class Narrator {
       const store = useStore.getState();
       store.setCurrentSceneTile(null);
       store.setEngagement({ groups: {}, lockReason: undefined });
+      // Guard against limbo: if the location grid was cleared (e.g. by
+      // a stray `leave_location` earlier in the same turn) we have
+      // nothing to drop back into, so bounce all the way to region
+      // mode rather than parking the player in a phantom location
+      // view with no grid loaded.
+      if (!state.currentLocationId || !state.locationGrid) {
+        store.setMode("region");
+        return ok(undefined, { mode: "region", recoveredFromLimbo: true });
+      }
       store.setMode("location");
       return ok(undefined, { mode: "location" });
     });
@@ -584,43 +768,55 @@ export class Narrator {
 
     handlers.set("engage", (raw, state) => {
       const args = GroupRefSchema.parse(raw);
-      const group = state.engagement.groups[args.groupId];
-      if (!group) return fail(`No group ${args.groupId}`);
-      useStore.getState().setEngagementGroup({ ...group, state: "engaged" });
+      const groupId = resolveGroupId(args.groupId, state.engagement.groups);
+      if (!groupId) return fail(`No group ${args.groupId}`);
+      const group = state.engagement.groups[groupId];
+      const store = useStore.getState();
+      store.setEngagementGroup({ ...group, state: "engaged" });
+      store.setActiveDialogueGroup(groupId);
       return ok();
     });
 
     handlers.set("disengage", (raw, state) => {
       const args = GroupRefSchema.parse(raw);
-      const group = state.engagement.groups[args.groupId];
-      if (!group) return fail(`No group ${args.groupId}`);
+      const groupId = resolveGroupId(args.groupId, state.engagement.groups);
+      if (!groupId) return fail(`No group ${args.groupId}`);
+      const group = state.engagement.groups[groupId];
       if (state.engagement.lockReason) {
         return fail(`Locked: ${state.engagement.lockReason}`);
       }
       if (group.state === "locked") {
         return fail(`${group.name} is holding you in place.`);
       }
-      useStore.getState().setEngagementGroup({ ...group, state: "idle" });
+      const store = useStore.getState();
+      store.setEngagementGroup({ ...group, state: "idle" });
+      if (state.activeDialogueGroupId === groupId) {
+        store.setActiveDialogueGroup(null);
+      }
       return ok();
     });
 
     handlers.set("lock_engagement", (raw, state) => {
       const args = LockSchema.parse(raw);
-      const group = state.engagement.groups[args.groupId];
-      if (!group) return fail(`No group ${args.groupId}`);
+      const groupId = resolveGroupId(args.groupId, state.engagement.groups);
+      if (!groupId) return fail(`No group ${args.groupId}`);
+      const group = state.engagement.groups[groupId];
       const store = useStore.getState();
       store.setEngagementGroup({ ...group, state: "locked" });
       store.setLockReason(args.reason);
+      store.setActiveDialogueGroup(groupId);
       return ok();
     });
 
     handlers.set("unlock_engagement", (raw, state) => {
       const args = GroupRefSchema.parse(raw);
-      const group = state.engagement.groups[args.groupId];
-      if (!group) return fail(`No group ${args.groupId}`);
+      const groupId = resolveGroupId(args.groupId, state.engagement.groups);
+      if (!groupId) return fail(`No group ${args.groupId}`);
+      const group = state.engagement.groups[groupId];
       const store = useStore.getState();
       store.setEngagementGroup({ ...group, state: "engaged" });
       store.setLockReason(undefined);
+      store.setActiveDialogueGroup(groupId);
       return ok();
     });
 
@@ -628,11 +824,13 @@ export class Narrator {
 
     handlers.set("start_combat", (raw, state) => {
       const args = StartCombatSchema.parse(raw);
-      const group = state.engagement.groups[args.groupId];
-      if (!group) return fail(`No group ${args.groupId}`);
+      const groupId = resolveGroupId(args.groupId, state.engagement.groups);
+      if (!groupId) return fail(`No group ${args.groupId}`);
+      const group = state.engagement.groups[groupId];
       const store = useStore.getState();
       store.setEngagementGroup({ ...group, state: "locked" });
       store.setLockReason(args.reason ?? `Combat with ${group.name}`);
+      store.setActiveDialogueGroup(groupId);
       store.setCombat({
         turn: 0,
         actors: [],
@@ -646,6 +844,7 @@ export class Narrator {
       const store = useStore.getState();
       store.setCombat(null);
       store.setLockReason(undefined);
+      store.setActiveDialogueGroup(null);
       if (args.summary) store.appendNarration(args.summary);
       return ok();
     });
@@ -738,6 +937,114 @@ export class Narrator {
     handlers.set("give_currency", (raw) => {
       const args = GiveCurrencySchema.parse(raw);
       useStore.getState().adjustCurrency(args);
+      return ok();
+    });
+
+    handlers.set("apply_condition", (raw) => {
+      const args = ApplyConditionSchema.parse(raw);
+      const id =
+        args.id && args.id.trim()
+          ? args.id.trim()
+          : `cond-${Math.random().toString(36).slice(2, 10)}`;
+      useStore.getState().applyCondition({
+        id,
+        label: args.label,
+        severity: args.severity ?? "normal",
+        effects: args.effects ?? [],
+        notes: args.notes,
+        appliedAt: Date.now(),
+        expiresAt: args.expiresAt,
+      });
+      return ok(undefined, { conditionId: id });
+    });
+
+    handlers.set("clear_condition", (raw) => {
+      const args = ClearConditionSchema.parse(raw);
+      useStore.getState().clearCondition(args.id);
+      return ok();
+    });
+
+    handlers.set("remember_fact", (raw, state, ctx) => {
+      const args = RememberFactSchema.parse(raw);
+      const scopeKind = args.scope?.kind ?? "global";
+      // Validate scope ids against the indexed world where we can. An
+      // unknown id is a hallucination — store it as global instead of
+      // letting it pollute scoped memory with a dead reference.
+      let scope:
+        | { kind: "global" }
+        | { kind: "region"; regionId: string }
+        | { kind: "location"; locationId: string }
+        | { kind: "scene"; locationId: string; x: number; y: number }
+        | { kind: "npc"; npcId: string }
+        | { kind: "quest"; questId: string };
+      if (scopeKind === "region") {
+        const regionId = args.scope?.regionId ?? state.currentRegionId;
+        if (!regionId || !ctx.world.regionsById[regionId]) {
+          return fail(
+            `remember_fact: unknown regionId "${regionId}". Omit scope to store as global, or use a real region id.`,
+          );
+        }
+        scope = { kind: "region", regionId };
+      } else if (scopeKind === "location") {
+        const locationId = args.scope?.locationId ?? state.currentLocationId ?? "";
+        if (!locationId || !ctx.world.locations[locationId]) {
+          return fail(
+            `remember_fact: unknown locationId "${locationId}". Omit scope to store as global, or use a real location id.`,
+          );
+        }
+        scope = { kind: "location", locationId };
+      } else if (scopeKind === "scene") {
+        const locationId = args.scope?.locationId ?? state.currentLocationId ?? "";
+        if (!locationId || !ctx.world.locations[locationId]) {
+          return fail(
+            `remember_fact: unknown locationId "${locationId}" for scene scope.`,
+          );
+        }
+        scope = {
+          kind: "scene",
+          locationId,
+          x: args.scope?.x ?? state.currentSceneTile?.x ?? 0,
+          y: args.scope?.y ?? state.currentSceneTile?.y ?? 0,
+        };
+      } else if (scopeKind === "npc") {
+        const npcId = args.scope?.npcId ?? "";
+        if (!npcId || !ctx.world.world.npcs[npcId]) {
+          return fail(
+            `remember_fact: unknown npcId "${npcId}". Use a real authored NPC id.`,
+          );
+        }
+        scope = { kind: "npc", npcId };
+      } else if (scopeKind === "quest") {
+        const questId = args.scope?.questId ?? "";
+        if (!questId || !ctx.world.world.quests[questId]) {
+          return fail(
+            `remember_fact: unknown questId "${questId}".`,
+          );
+        }
+        scope = { kind: "quest", questId };
+      } else {
+        scope = { kind: "global" };
+      }
+      const id =
+        args.id && args.id.trim()
+          ? args.id.trim()
+          : `fact-${Math.random().toString(36).slice(2, 10)}`;
+      const now = Date.now();
+      useStore.getState().rememberFact({
+        id,
+        text: args.text,
+        scope,
+        importance: args.importance ?? "normal",
+        createdAt: now,
+        updatedAt: now,
+        expiresAt: args.expiresAt,
+      });
+      return ok(undefined, { factId: id });
+    });
+
+    handlers.set("forget_fact", (raw) => {
+      const args = ForgetFactSchema.parse(raw);
+      useStore.getState().forgetFact(args.id);
       return ok();
     });
 

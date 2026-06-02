@@ -1,3 +1,257 @@
+.dialogueOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  display: grid;
+  place-items: center;
+  background: rgba(8, 10, 16, 0.72);
+  backdrop-filter: blur(6px);
+}
+
+.dialogueOverlay__panel {
+  width: min(980px, 92vw);
+  height: min(82vh, 820px);
+  background: rgba(16, 18, 26, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  display: grid;
+  grid-template-rows: auto auto 1fr auto auto;
+  gap: 12px;
+  padding: 14px;
+}
+
+.dialogueOverlay__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dialogueOverlay__portraits {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.dialogueOverlay__portraitCard {
+  margin: 0;
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  color: var(--fg-2);
+}
+
+.dialogueOverlay__portraitCard img,
+.dialogueOverlay__portraitFallback {
+  width: 76px;
+  height: 76px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.dialogueOverlay__portraitFallback {
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.dialogueOverlay__log {
+  margin: 0;
+  padding: 10px;
+  list-style: none;
+  overflow: auto;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.dialogueOverlay__line {
+  margin: 0 0 10px;
+  line-height: 1.45;
+}
+
+.dialogueOverlay__line--player {
+  color: #c6e1ff;
+}
+
+.dialogueOverlay__line--npc {
+  color: #ffe2b7;
+}
+
+.dialogueOverlay__line--system,
+.dialogueOverlay__line--pending {
+  color: #c5c8d3;
+}
+
+.dialogueOverlay__line--narration {
+  color: #d6d9e2;
+  font-style: italic;
+}
+
+.dialogueOverlay__line--narration strong {
+  font-style: normal;
+  opacity: 0.7;
+}
+
+.dialogueOverlay__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dialogueOverlay__summary {
+  margin: 4px 0 0;
+  font-size: 0.78em;
+  color: var(--fg-2);
+  text-align: center;
+  line-height: 1.35;
+  max-width: 220px;
+}
+
+.dialogueOverlay__conditions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 0;
+  margin: 4px 0 0;
+  list-style: none;
+  justify-content: center;
+  max-width: 240px;
+}
+
+.dialogueOverlay__conditionPill {
+  font-size: 0.72em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(214, 92, 92, 0.18);
+  color: #ffd0d0;
+  border: 1px solid rgba(214, 92, 92, 0.35);
+  white-space: nowrap;
+}
+
+.dialogueOverlay__prompt {
+  display: block;
+}
+
+.perKindRow {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  align-items: center;
+  gap: 8px 12px;
+  row-gap: 6px;
+}
+
+.perKindRow__controls {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 8px;
+}
+
+.perKindRow__backend {
+  min-width: 160px;
+}
+
+.perKindRow__model {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.perKindRow__custom {
+  grid-column: 2;
+}
+
+.perKindRow__detail {
+  grid-column: 2;
+}
+
+.modelDetail {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 8px;
+  background: var(--bg-2, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--fg-2, #aaa);
+}
+
+.modelDetail__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.modelDetail__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px 1px 5px;
+  border-radius: 999px;
+  background: var(--bg-3, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+  white-space: nowrap;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  color: var(--fg-1, #ddd);
+}
+
+.modelDetail__badge--warn {
+  background: rgba(231, 173, 64, 0.12);
+  border-color: rgba(231, 173, 64, 0.4);
+  color: #e7ad40;
+}
+
+.modelDetail__badgeIcon {
+  display: inline-block;
+  line-height: 1;
+  font-size: 11px;
+  filter: saturate(0.85);
+}
+
+.modelDetail__badgeText {
+  font-size: 10px;
+}
+
+.modelDetail__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: var(--fg-3, #888);
+  font-variant-numeric: tabular-nums;
+}
+
+.modelDetail__desc {
+  margin: 2px 0 0;
+  color: var(--fg-3, #888);
+  font-size: 11px;
+}
+
+.dialogueOverlay__prompt .actionPrompt {
+  /* The global ActionPrompt is `position: absolute` and centred to the
+   * canvas; inside the overlay we want it to flow inline so it sits at
+   * the bottom of the panel like a normal form row. */
+  position: static;
+  transform: none;
+  left: auto;
+  bottom: auto;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
+.narrationPanel__entry--pending .narrationPanel__text::after {
+  content: "▋";
+  animation: narrationCaretBlink 0.9s steps(1, end) infinite;
+}
+
+@keyframes narrationCaretBlink {
+  50% {
+    opacity: 0;
+  }
+}
 :root {
   color-scheme: dark;
 
@@ -935,9 +1189,9 @@ input:focus {
    * itself is transparent so highlight states (here/adjacent/anchor)
    * can paint a stronger colour on top without ever needing to fight
    * a competing default. */
-  border: 2px solid transparent;
+  border: 0px solid transparent;
   border-color: rgba(255, 255, 255, 0.03);
-  border-radius: 9px;
+  border-radius: 0px;
   padding: 0;
   overflow: hidden;
   cursor: pointer;

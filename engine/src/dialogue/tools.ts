@@ -1,4 +1,6 @@
 import type { ToolSpec } from "../llm/types";
+import type { PlayerIntent } from "./playerIntent";
+import type { ActionOutcome } from "../state/store";
 
 /**
  * Catalogue of every tool the LLM is allowed to invoke. The tool-call
@@ -19,10 +21,22 @@ export const DIALOGUE_TOOLS: ToolSpec[] = [
   // ---------------- 1. NPC dialogue (unchanged from the deprecated 3D engine)
   {
     name: "say",
-    description: "Speak as the NPC",
+    description:
+      "Speak as a specific NPC. Use this for every NPC line in dialogue — it is REQUIRED whenever the player addresses an engaged NPC, asks them a question, or trades remarks with them. Never write NPC speech in the assistant content channel; that channel is narration only.",
     inputSchema: {
       type: "object",
-      properties: { text: { type: "string" } },
+      properties: {
+        npcId: {
+          type: "string",
+          description:
+            "Stable id of the speaker, e.g. `world-npc-saska-vorin`. Use the id from the engaged group's `npcs` list. For anonymous/procedural party crowds you may pass the group id; for unscripted single strangers you may omit.",
+        },
+        text: {
+          type: "string",
+          description:
+            "The NPC's spoken line, first-person, in their voice. Do not include the speaker's name in the text itself — the engine prefixes it from npcId.",
+        },
+      },
       required: ["text"],
     },
   },
@@ -121,6 +135,60 @@ export const DIALOGUE_TOOLS: ToolSpec[] = [
       type: "object",
       properties: { mood: { type: "string" } },
       required: ["mood"],
+    },
+  },
+  {
+    name: "apply_condition",
+    description: "Apply or update a player condition used by future action evaluation",
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: { type: "string" },
+        label: { type: "string" },
+        severity: { type: "string" },
+        effects: { type: "array", items: { type: "string" } },
+        notes: { type: "string" },
+        expiresAt: { type: "number" },
+      },
+      required: ["label"],
+    },
+  },
+  {
+    name: "clear_condition",
+    description: "Remove a previously applied player condition by id",
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: { type: "string" },
+      },
+      required: ["id"],
+    },
+  },
+  {
+    name: "remember_fact",
+    description: "Store a durable story fact the evaluator should consider in future turns",
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: { type: "string" },
+        text: { type: "string" },
+        scope: { type: "object" },
+        importance: { type: "string", enum: ["minor", "normal", "critical"] },
+        expiresAt: { type: "number" },
+      },
+      required: ["text"],
+    },
+  },
+  {
+    name: "forget_fact",
+    description: "Forget a durable story fact by id",
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: { type: "string" },
+        reason: { type: "string" },
+      },
+      required: ["id"],
     },
   },
 
@@ -467,3 +535,168 @@ export const DIALOGUE_TOOLS: ToolSpec[] = [
     },
   },
 ];
+
+const TOOL_BY_NAME = new Map(DIALOGUE_TOOLS.map((t) => [t.name, t] as const));
+const pick = (names: string[]): ToolSpec[] =>
+  names
+    .map((name) => TOOL_BY_NAME.get(name))
+    .filter((tool): tool is ToolSpec => Boolean(tool));
+
+export const META_TOOLS = pick(["narrate", "say", "remember_fact", "forget_fact"]);
+export const CONDITION_TOOLS = pick(["apply_condition", "clear_condition"]);
+export const MOVEMENT_TOOLS = pick([
+  "move_region",
+  "travel_region",
+  "move_location",
+  "enter_location",
+  "leave_location",
+  "enter_tile",
+  "leave_tile",
+]);
+
+const MOVEMENT_TOOL_NAMES = new Set(MOVEMENT_TOOLS.map((t) => t.name));
+export function isMovementTool(name: string): boolean {
+  return MOVEMENT_TOOL_NAMES.has(name);
+}
+
+/**
+ * Hard, programmatic mode → movement-tool allowlist. The available
+ * transitions are 100% deterministic at any moment — they depend
+ * exclusively on what mode we're currently in:
+ *
+ *   region  → move/travel on the region grid; enter_location to drop
+ *             into a named location grid. There is nothing to "leave"
+ *             from here.
+ *   location → walk the location grid, enter a tile (→ scene), or
+ *              leave_location back up to the region grid. `leave_tile`
+ *              is meaningless (we aren't in a tile yet).
+ *   scene   → leave_tile is the only valid transition (back to the
+ *             location grid). `leave_location`, region/location moves,
+ *             enter_location etc. would skip levels.
+ *
+ * This is enforced TWICE on purpose: the LLM never sees a wrong-mode
+ * tool in the catalog (so it can't choose it), and if a stale catalog
+ * or a hand-crafted call slips through, the dispatcher's `ensureMode`
+ * check in narrator.ts still rejects it.
+ */
+const MOVEMENT_BY_MODE: Record<"region" | "location" | "scene", string[]> = {
+  region: ["move_region", "travel_region", "enter_location"],
+  location: ["move_location", "enter_tile", "leave_location"],
+  scene: ["leave_tile"],
+};
+
+/**
+ * For structured (non-freetext) movement intents we additionally narrow
+ * to the SINGLE canonical tool — even though the mode allowlist would
+ * already exclude the wrong-level tools, the LLM doesn't need to be
+ * tempted by `enter_location` when the user clicked "move_region". The
+ * scoped table below is the intersection of (a) what makes sense for
+ * this specific click and (b) what's legal in the current mode.
+ */
+const SCOPED_MOVEMENT_BY_INTENT: Record<string, string[]> = {
+  "region.move": ["move_region"],
+  "region.travelTo": ["travel_region"],
+  "region.enterLocation": ["enter_location"],
+  "location.move": ["move_location"],
+  "location.enterTile": ["enter_tile"],
+  "location.leave": ["leave_location"],
+  "scene.leaveTile": ["leave_tile"],
+};
+export const ENGAGEMENT_TOOLS = pick([
+  "spawn_group",
+  "spawn_party",
+  "dismiss_party",
+  "engage",
+  "disengage",
+  "lock_engagement",
+  "unlock_engagement",
+  "start_combat",
+  "end_combat",
+  "end_dialogue",
+]);
+export const PARTY_TOOLS = pick(["add_to_player_party", "remove_from_player_party"]);
+export const QUEST_TOOLS = pick([
+  "offer_quest",
+  "accept_quest",
+  "update_quest_progress",
+  "complete_quest",
+  "fail_quest",
+  "update_quest_objective",
+]);
+export const INVENTORY_TOOLS = pick([
+  "give_item",
+  "give_currency",
+  "open_shop",
+  "close_shop",
+  "shop_buy",
+  "shop_sell",
+  "equip",
+  "unequip",
+]);
+
+export function toolsForTurn(
+  intent: PlayerIntent,
+  outcome: ActionOutcome,
+  mode: "region" | "location" | "scene",
+): ToolSpec[] {
+  const base = [...META_TOOLS, ...CONDITION_TOOLS];
+  const add = (arr: ToolSpec[]) => {
+    for (const tool of arr) {
+      if (!base.some((t) => t.name === tool.name)) base.push(tool);
+    }
+  };
+  const canonical = outcome.interpretation.canonicalIntent;
+  const applyByIntent = (kind: string, scoped: boolean) => {
+    const scopedMovement = SCOPED_MOVEMENT_BY_INTENT[kind];
+    if (scopedMovement) {
+      // Structured movement click: only expose THIS movement tool.
+      // Don't tempt the model into a sibling like `leave_location`
+      // when the user actually clicked "leave scene tile".
+      if (scoped) {
+        add(pick(scopedMovement));
+      } else {
+        add(MOVEMENT_TOOLS);
+      }
+      return;
+    }
+    if (kind === "scene.button") {
+      add(ENGAGEMENT_TOOLS);
+      add(INVENTORY_TOOLS);
+      add(QUEST_TOOLS);
+      return;
+    }
+    if (kind === "freetext") {
+      // Freetext is interpretive — the model picks among many possible
+      // mechanical effects, including movement at either scale, so give
+      // it the broad catalogue.
+      add(MOVEMENT_TOOLS);
+      add(ENGAGEMENT_TOOLS);
+      add(QUEST_TOOLS);
+      add(PARTY_TOOLS);
+      return;
+    }
+  };
+
+  if (intent.kind === "freetext" && canonical && outcome.interpretation.confidence === "high") {
+    // Semantic interpretation of free prose resolved to a specific
+    // canonical click; treat the model as if the user had clicked it,
+    // and apply the same tight scoping.
+    applyByIntent(canonical.kind, true);
+  } else {
+    applyByIntent(intent.kind, intent.kind !== "freetext");
+  }
+  if (mode === "scene") {
+    add(ENGAGEMENT_TOOLS);
+    add(PARTY_TOOLS);
+  }
+
+  // Programmatic safety gate: strip any movement tool that isn't
+  // legal in the current mode, no matter how it got into `base`. This
+  // is the layer the user is asking for — even if a future code path
+  // accidentally adds `leave_location` while we're in scene mode, the
+  // LLM literally never sees it.
+  const allowedMovement = new Set(MOVEMENT_BY_MODE[mode]);
+  return base.filter(
+    (t) => !MOVEMENT_TOOL_NAMES.has(t.name) || allowedMovement.has(t.name),
+  );
+}

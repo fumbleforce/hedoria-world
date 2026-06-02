@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useStore } from "../state/store";
+import type { IndexedWorld } from "../world/indexer";
 
 /**
  * The persistent narration rail on the left side of the screen. It
@@ -13,10 +14,19 @@ import { useStore } from "../state/store";
  * arrive through the map / scene UIs, route through `WorldNarrator`,
  * and land here as side-effect entries.
  */
-export function NarrationPanel() {
+export function NarrationPanel({ world }: { world: IndexedWorld }) {
   const storyLog = useStore((s) => s.storyLog);
   const pending = useStore((s) => s.pendingNarrations);
+  const pendingNarrationText = useStore((s) => s.pendingNarrationText);
   const listRef = useRef<HTMLOListElement | null>(null);
+
+  // Resolve an npcId to a friendly display name so speaker labels read
+  // "Saska Vorin" instead of "world-npc-saska-vorin".
+  const speakerLabel = (npcId: string | undefined): string => {
+    if (!npcId) return "NPC";
+    const npc = world.world.npcs[npcId];
+    return npc?.name?.trim() || npcId;
+  };
 
   // Pin to the bottom whenever a new entry arrives. We do this in an
   // effect (not inline during render) so the layout has had a chance to
@@ -52,12 +62,17 @@ export function NarrationPanel() {
             >
               {entry.kind === "say" ? (
                 <strong className="narrationPanel__speaker">
-                  {entry.npcId ?? "NPC"}
+                  {speakerLabel(entry.npcId)}
                 </strong>
               ) : null}
               <span className="narrationPanel__text">{entry.text}</span>
             </li>
           ))}
+          {pendingNarrationText ? (
+            <li className="narrationPanel__entry narrationPanel__entry--pending">
+              <span className="narrationPanel__text">{pendingNarrationText}</span>
+            </li>
+          ) : null}
         </ol>
       )}
     </aside>

@@ -12,6 +12,8 @@ export type ImageRequest = {
   prompt: string;
   width?: number;
   height?: number;
+  /** Semantic purpose for per-kind model routing. */
+  kind?: ImageCallKind;
   /** Provider-agnostic hint passed through to the backend. */
   variant?: string;
   /** Optional conditioning image (blueprint/layout guide). */
@@ -20,6 +22,15 @@ export type ImageRequest = {
     mime: string;
   };
 };
+
+export type ImageCallKind =
+  | "player-portrait"
+  | "npc-portrait"
+  | "scene-background"
+  | "tile"
+  | "mosaic"
+  | "mosaic-blueprint"
+  | "other";
 
 export type ImageResponse = {
   bytes: Uint8Array;
@@ -477,16 +488,24 @@ export class StoreBackedGeminiImageProvider implements ImageProvider {
   }
 
   get id(): string {
-    return this.current().id;
+    return this.current("other").id;
   }
 
   async generate(request: ImageRequest): Promise<ImageResponse> {
-    return this.current().generate(request);
+    return this.current(request.kind ?? "other").generate(request);
   }
 
-  private current(): GeminiImageProvider {
-    const model =
-      useStore.getState().geminiImageModel.trim() || defaultGeminiImageModel();
+  private current(kind: ImageCallKind): GeminiImageProvider {
+    const store = useStore.getState();
+    const selection = store.imageModelRegistry[kind] ?? store.imageModelRegistry.other;
+    const isGeminiShape = (m: string) => m.length > 0 && !m.includes("/");
+    const candidate = selection.model.trim();
+    const topLevel = store.geminiImageModel.trim();
+    const model = isGeminiShape(candidate)
+      ? candidate
+      : isGeminiShape(topLevel)
+        ? topLevel
+        : defaultGeminiImageModel();
     let provider = this.providersByModel.get(model);
     if (!provider) {
       provider = new GeminiImageProvider(this.apiKey, model);

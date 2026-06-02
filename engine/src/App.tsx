@@ -15,6 +15,7 @@ import { SettingsPanel } from "./ui/SettingsPanel";
 import { SideRailCharacterLedger } from "./ui/SideRailCharacterLedger";
 import { LocaleContextPanel } from "./ui/LocaleContextPanel";
 import { BootLlmPicker } from "./ui/BootLlmPicker";
+import { DialogueOverlay } from "./ui/DialogueOverlay";
 
 /**
  * Top-level mode router + HUD. The map is the only thing that occupies the
@@ -36,9 +37,8 @@ export function App() {
   const [showCharacter, setShowCharacter] = useState(false);
   const [showDb, setShowDb] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [regionTileSelection, setRegionTileSelection] = useState<RegionTileSelection | null>(
-    null,
-  );
+  const [regionTileSelection, setRegionTileSelection] =
+    useState<RegionTileSelection | null>(null);
 
   const mode = useStore((s) => s.mode);
   const currentRegionId = useStore((s) => s.currentRegionId);
@@ -63,6 +63,40 @@ export function App() {
       setRegionTileSelection(null);
     }
   }, [mode]);
+
+  // Limbo recovery: if a tool sequence somehow left us in `scene` or
+  // `location` mode without the corresponding ids/grids loaded, snap
+  // back to region mode rather than rendering an empty location view.
+  // This is the safety net for the `leave_location` + `leave_tile`
+  // race that previously stranded the player after clicking "Leave".
+  const locationGridLoaded = useStore((s) => Boolean(s.locationGrid));
+  const sceneTileLoaded = useStore((s) => Boolean(s.currentSceneTile));
+  useEffect(() => {
+    if ((mode === "location" || mode === "scene") && !currentLocationId) {
+      console.warn(
+        "[app] recovering from limbo: mode=" +
+          mode +
+          " but no location loaded; snapping to region",
+      );
+      useStore.getState().setMode("region");
+      useStore.getState().setCurrentSceneTile(null);
+      useStore.getState().setLocationGrid(null);
+      return;
+    }
+    if (mode === "location" && !locationGridLoaded) {
+      console.warn(
+        "[app] recovering from limbo: location mode without grid; snapping to region",
+      );
+      useStore.getState().setMode("region");
+      return;
+    }
+    if (mode === "scene" && !sceneTileLoaded) {
+      console.warn(
+        "[app] recovering from limbo: scene mode without tile; falling back to location",
+      );
+      useStore.getState().setMode(locationGridLoaded ? "location" : "region");
+    }
+  }, [mode, currentLocationId, locationGridLoaded, sceneTileLoaded]);
 
   // Switching authored worlds rewires everything (config hash, save row,
   // tile cache). Persist the choice and reload so boot runs fresh.
@@ -89,7 +123,10 @@ export function App() {
     return (
       <div className="app">
         <div className="bootScreen">
-          <div className="bootScreen__card" style={{ minWidth: 360, maxWidth: 520 }}>
+          <div
+            className="bootScreen__card"
+            style={{ minWidth: 360, maxWidth: 520 }}
+          >
             <span className="bootScreen__title">LLMRPG</span>
             <div style={{ color: "var(--danger)", marginBottom: 12 }}>
               Boot failed
@@ -183,8 +220,8 @@ export function App() {
                 opacity: 0.85,
               }}
             >
-              Each world needs at least one entry in <code>regions</code> in
-              its pack config.
+              Each world needs at least one entry in <code>regions</code> in its
+              pack config.
             </p>
           </div>
         </div>
@@ -196,7 +233,10 @@ export function App() {
     return (
       <div className="app">
         <div className="bootScreen">
-          <div className="bootScreen__card" style={{ minWidth: 360, maxWidth: 480 }}>
+          <div
+            className="bootScreen__card"
+            style={{ minWidth: 360, maxWidth: 480 }}
+          >
             <span className="bootScreen__title">LLMRPG</span>
             <div style={{ marginBottom: 8 }}>booting…</div>
             <p
@@ -207,9 +247,8 @@ export function App() {
                 marginBottom: 6,
               }}
             >
-              If boot is hanging on an LLM call, switch to a different
-              backend or model below and reload. Selections persist across
-              the reload.
+              If boot is hanging on an LLM call, switch to a different backend
+              or model below and reload. Selections persist across the reload.
             </p>
             <BootLlmPicker />
             <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
@@ -247,11 +286,6 @@ export function App() {
     ? (world.regionsById[currentRegionId]?.name ?? currentRegionId)
     : "—";
 
-  const bottomHint =
-    mode === "scene"
-      ? "Type an action below or use a group button · narration appears in the log"
-      : null;
-
   return (
     <div className="app">
       <div className="app__canvas">
@@ -278,7 +312,7 @@ export function App() {
         ) : null}
       </div>
 
-      <NarrationPanel />
+      <NarrationPanel world={world} />
 
       <BackgroundActivityStrip />
       <ActionPrompt worldNarrator={worldNarrator} />
@@ -417,7 +451,7 @@ export function App() {
         />
       </aside>
 
-      {bottomHint ? <div className="bottomHint">{bottomHint}</div> : null}
+      <DialogueOverlay world={world} worldNarrator={worldNarrator} />
 
       {shop ? <ShopPanel narrator={narrator} world={world} /> : null}
       {showInventory ? (

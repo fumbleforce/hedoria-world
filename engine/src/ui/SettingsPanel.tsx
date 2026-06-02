@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useStore, type LlmBackend } from "../state/store";
 import type { LlmAdapter } from "../llm/adapter";
 import {
@@ -6,6 +6,8 @@ import {
   normalizeGeminiTextModel,
   textModelSelectOptions,
 } from "../llm/geminiModelOptions";
+import type { LlmCallKind } from "../llm/types";
+import type { ImageCallKind } from "../llm/imageAdapter";
 import type { IndexedWorld } from "../world/indexer";
 import type { TileFiller } from "../grid/tileFiller";
 import type { TileImageCache } from "../grid/tileImageCache";
@@ -15,6 +17,32 @@ import {
   prewarmGridImages,
 } from "../dialogue/narrator";
 import { OpenRouterModelField } from "./OpenRouterModelField";
+import { PerKindModelRow } from "./PerKindModelRow";
+import {
+  loadOpenRouterCatalog,
+  type OpenRouterCatalog,
+} from "../llm/openRouterCatalog";
+
+const TEXT_KINDS: Array<{ kind: LlmCallKind; label: string }> = [
+  { kind: "chat", label: "Narrator chat" },
+  { kind: "action-eval", label: "Action evaluator" },
+  { kind: "scene-classify", label: "Scene classify" },
+  { kind: "skill-check", label: "Skill check" },
+  { kind: "expansion", label: "Expansion" },
+  { kind: "quest-verify", label: "Quest verify" },
+  { kind: "death-recovery", label: "Death recovery" },
+  { kind: "other", label: "Other text" },
+];
+
+const IMAGE_KINDS: Array<{ kind: ImageCallKind; label: string }> = [
+  { kind: "player-portrait", label: "Player portrait" },
+  { kind: "npc-portrait", label: "NPC portrait" },
+  { kind: "scene-background", label: "Scene background" },
+  { kind: "tile", label: "Tile image" },
+  { kind: "mosaic", label: "Mosaic image" },
+  { kind: "mosaic-blueprint", label: "Mosaic blueprint" },
+  { kind: "other", label: "Other image" },
+];
 
 type Props = {
   onClose: () => void;
@@ -53,10 +81,14 @@ export function SettingsPanel({
   const imageLlmBackend = useStore((s) => s.imageLlmBackend);
   const openRouterTextModel = useStore((s) => s.openRouterTextModel);
   const openRouterImageModel = useStore((s) => s.openRouterImageModel);
+  const textModelRegistry = useStore((s) => s.textModelRegistry);
+  const imageModelRegistry = useStore((s) => s.imageModelRegistry);
   const setTextLlmBackend = useStore((s) => s.setTextLlmBackend);
   const setImageLlmBackend = useStore((s) => s.setImageLlmBackend);
   const setOpenRouterTextModel = useStore((s) => s.setOpenRouterTextModel);
   const setOpenRouterImageModel = useStore((s) => s.setOpenRouterImageModel);
+  const setTextModelForKind = useStore((s) => s.setTextModelForKind);
+  const setImageModelForKind = useStore((s) => s.setImageModelForKind);
 
   const activeGrid = mode === "region" ? regionGrid : locationGrid;
   const normalizedGeminiTextModel = normalizeGeminiTextModel(geminiTextModel);
@@ -66,6 +98,21 @@ export function SettingsPanel({
       setGeminiTextModel(normalizedGeminiTextModel);
     }
   }, [geminiTextModel, normalizedGeminiTextModel, setGeminiTextModel]);
+
+  // Load the OpenRouter catalog once for ALL per-kind rows that resolve
+  // to OpenRouter. Each row reads from the same parent-level state so we
+  // don't fan out a dozen identical proxy fetches when the panel opens.
+  const [openRouterCatalog, setOpenRouterCatalog] =
+    useState<OpenRouterCatalog | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void loadOpenRouterCatalog().then((c) => {
+      if (!cancelled && c) setOpenRouterCatalog(c);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const onToggleTileImageMode = () => {
     const next = tileImageMode === "mosaic" ? "per-tile" : "mosaic";
@@ -328,6 +375,47 @@ export function SettingsPanel({
               />
             </>
           )}
+        </section>
+
+        <section className="settingsPanel__section">
+          <h3 className="settingsPanel__heading">Text models by call kind</h3>
+          <p className="settingsPanel__hint">
+            Override backend/model per text call type. "Default" follows the
+            top-level text backend selector and uses its chat model.
+          </p>
+          {TEXT_KINDS.map(({ kind, label }) => (
+            <PerKindModelRow
+              key={kind}
+              label={label}
+              kind="text"
+              topLevelBackend={textLlmBackend}
+              selection={textModelRegistry[kind] ?? textModelRegistry.other}
+              topLevelGeminiModel={normalizedGeminiTextModel}
+              topLevelOpenRouterModel={openRouterTextModel}
+              openRouterCatalog={openRouterCatalog}
+              onChange={(next) => setTextModelForKind(kind, next)}
+            />
+          ))}
+        </section>
+
+        <section className="settingsPanel__section">
+          <h3 className="settingsPanel__heading">Image models by call kind</h3>
+          <p className="settingsPanel__hint">
+            Override backend/model per image generation purpose.
+          </p>
+          {IMAGE_KINDS.map(({ kind, label }) => (
+            <PerKindModelRow
+              key={kind}
+              label={label}
+              kind="image"
+              topLevelBackend={imageLlmBackend}
+              selection={imageModelRegistry[kind] ?? imageModelRegistry.other}
+              topLevelGeminiModel={geminiImageModel}
+              topLevelOpenRouterModel={openRouterImageModel}
+              openRouterCatalog={openRouterCatalog}
+              onChange={(next) => setImageModelForKind(kind, next)}
+            />
+          ))}
         </section>
       </div>
     </div>

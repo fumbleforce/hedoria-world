@@ -303,6 +303,7 @@ async function generatePortrait(
   });
   const startedAt = performance.now();
   const result = await provider.generate({
+    kind: "player-portrait",
     prompt,
     width: 512,
     height: 512,

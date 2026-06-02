@@ -272,7 +272,7 @@ export class TileFiller {
       "tile-grid",
       scope === "location"
         ? `location-v4::${ownerId}`
-        : `region-v3::${ownerId}`,
+        : `region-v4::${ownerId}`,
     );
     diag.info("tile-grid", `cleared cached grid for ${scope} ${ownerId}`, {
       scope,
@@ -286,13 +286,14 @@ export class TileFiller {
     scope: "region" | "location",
     ownerId: string,
   ): Promise<TileGrid | null> {
-    // Region: "v3" — projection of authored (x,y) into the grid.
+    // Region: "v4" — classifier prompt no longer leaks named location names
+    // into anchor context; old cached region grids should regenerate.
     // Location: "v4" — dynamic grid size + engine-reserved sub-area cells
     // (replaces fixed 5×5 location grids from earlier builds).
     const cacheKey =
       scope === "location"
         ? `location-v4::${ownerId}`
-        : `region-v3::${ownerId}`;
+        : `region-v4::${ownerId}`;
     const row = await getSceneSpecRow(this.saveId, "tile-grid", cacheKey);
     if (!row) return null;
     const parsed = TileGridSchema.safeParse(row.spec);
@@ -318,7 +319,7 @@ export class TileFiller {
       ids:
         grid.scope === "location"
           ? `location-v4::${grid.ownerId}`
-          : `region-v3::${grid.ownerId}`,
+          : `region-v4::${grid.ownerId}`,
       spec: grid,
       source: "llm",
       generatedAt: Date.now(),
@@ -700,7 +701,7 @@ function userPromptForRegion(args: {
         args.anchorBriefs[a.id] ??
         buildAnchorBrief(args.regionProse || "", a.loc.basicInfo || "");
       lines.push(
-        `  - (${a.gx},${a.gy}) → "${a.loc.name || a.id}" | visual: ${brief.visualBrief} | regional: ${brief.regionalContext}${brief.sourceExcerpt ? ` | fallback: ${brief.sourceExcerpt}` : ""}`,
+        `  - (${a.gx},${a.gy}) → reserved settlement footprint | visual: ${brief.visualBrief} | regional: ${brief.regionalContext}${brief.sourceExcerpt ? ` | fallback: ${brief.sourceExcerpt}` : ""}`,
       );
     }
     lines.push("");

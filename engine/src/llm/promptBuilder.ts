@@ -76,13 +76,16 @@ export function buildSystemPrompt(args: {
       if (raw === undefined || raw === null) continue;
       const body = flattenInstructionBlock(raw);
       if (!body) continue;
-      sections.push(`## World guidance: ${block}\n\n${body}`);
+      // Append the pack's authored guidance directly, without a header
+      // exposing the internal key name. The pack content already has
+      // its own headings; we let it speak for itself.
+      sections.push(body);
     }
 
     if (meta.appendNarratorStyle) {
       const ns = world.narratorStyle?.trim();
       if (ns) {
-        sections.push(`## Narrator Style\n\n${ns}`);
+        sections.push(ns);
       }
     }
   }

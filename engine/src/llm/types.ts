@@ -13,17 +13,13 @@ export type ToolSpec = {
  */
 export type LlmCallKind =
   | "chat"
+  | "action-eval"
   | "scene-classify"
   | "skill-check"
   | "expansion"
   | "death-recovery"
   | "quest-verify"
   | "other";
-
-export type LlmCallOptions = {
-  /** Categorical tag for log filtering. Defaults to "other". */
-  kind?: LlmCallKind;
-};
 
 export type LlmRequest = {
   system: string;
@@ -37,7 +33,28 @@ export type LlmResponse = {
   toolCalls?: Array<{ name: string; arguments: Record<string, unknown> }>;
 };
 
+export type LlmStreamDelta =
+  | { kind: "text"; text: string }
+  | {
+      kind: "tool-call";
+      call: { name: string; arguments: Record<string, unknown> };
+    }
+  | { kind: "done"; final: LlmResponse };
+
+export type LlmCallOptions = {
+  /** Categorical tag for log filtering and model selection. Defaults to "other". */
+  kind?: LlmCallKind;
+  /** Enable token/chunk streaming where the provider supports it. */
+  stream?: boolean;
+  /** Streaming callback for text/tool deltas and final assembled response. */
+  onDelta?: (delta: LlmStreamDelta) => void;
+  /** Optional abort signal forwarded to provider calls. */
+  signal?: AbortSignal;
+  /** Optional correlation id for multi-call turn tracing. */
+  turnId?: string;
+};
+
 export interface LlmProvider {
   readonly id: string;
-  complete(request: LlmRequest): Promise<LlmResponse>;
+  complete(request: LlmRequest, options?: LlmCallOptions): Promise<LlmResponse>;
 }

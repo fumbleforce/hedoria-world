@@ -69,7 +69,7 @@ export type TileImageCacheOptions = {
   initialMode?: TileImageMode;
 };
 
-const DEFAULT_STYLE = "tiled fantasy RPG";
+const DEFAULT_STYLE = "vivid, detailed, jrpg-style tiled fantasy RPG";
 const DEFAULT_SIZE = 256;
 const DEFAULT_MOSAIC_SLICE_SIZE = 128;
 
@@ -619,6 +619,7 @@ export class TileImageCache {
         // #endregion
         const blueprintReqStartedAt = performance.now();
         result = await this.imageProvider.generate({
+          kind: "mosaic-blueprint",
           prompt: blueprintPrompt,
           width: requestW,
           height: requestH,
@@ -670,6 +671,7 @@ export class TileImageCache {
           },
         );
         result = await this.imageProvider.generate({
+          kind: "mosaic",
           prompt,
           width: requestW,
           height: requestH,
@@ -837,6 +839,7 @@ export class TileImageCache {
       prompt,
     });
     const result = await this.imageProvider.generate({
+      kind: "tile",
       prompt,
       width: this.size,
       height: this.size,

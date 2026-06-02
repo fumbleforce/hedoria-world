@@ -203,7 +203,8 @@ A ${subject}, in this art style: ${style}.
 Hard rules — the finished image must satisfy ALL of these:
  - ENVIRONMENT ONLY. No text, no captions, no labels, no place names, no numbers, no letters, no symbols, no signs with readable writing.
  - TILE-READABLE GAME MAP. The image must read as a tiled game map: each tile-sized area has a clear dominant motif that is distinguishable from neighboring tiles at gameplay zoom.
- - NO VISIBLE GRID LINES. Do not draw explicit borders, but DO keep tile-sized motif separation clear. Avoid watercolor-style wash that blurs multiple cells into one undifferentiated painting.
+ - NO VISIBLE GRID LINES.
+ - NO TEXT, NO LABELS. 
  - NO MAP CHROME. No compass rose, no scale bar, no legend, no key, no border decoration, no inset, no arrows.
  - North is at the top of the image, south at the bottom; west is on the left, east on the right.
 

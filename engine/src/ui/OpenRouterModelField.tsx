@@ -1,8 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  acceptsImageInput,
+  emitsImageOutput,
+  formatContextLength,
+  formatOptionLabel,
+  formatPricing,
+  isReasoningModel,
   loadOpenRouterCatalog,
   selectImageModels,
   selectTextModels,
+  supportsJsonMode,
+  supportsTools,
   type OpenRouterCatalog,
   type OpenRouterModelEntry,
 } from "../llm/openRouterCatalog";
@@ -12,8 +20,13 @@ const CUSTOM_VALUE = "__custom__";
 const AUTO_ROUTER: OpenRouterModelEntry = {
   id: "openrouter/auto",
   name: "OpenRouter · Auto Router (picks per request)",
+  description: "Routes each request to the cheapest model that can handle it.",
   outputModalities: ["text"],
   inputModalities: ["text"],
+  supportedParameters: [],
+  contextLength: 0,
+  pricePromptUsd: null,
+  pricePromptCompletionUsd: null,
 };
 
 type Kind = "text" | "image";
@@ -23,11 +36,6 @@ type Props = {
   value: string;
   onChange: (modelId: string) => void;
 };
-
-function formatLabel(entry: OpenRouterModelEntry): string {
-  if (entry.name && entry.name !== entry.id) return `${entry.name} — ${entry.id}`;
-  return entry.id;
-}
 
 /**
  * Live model picker backed by the OpenRouter catalog. Falls back to a free-text
@@ -77,6 +85,11 @@ export function OpenRouterModelField({ kind, value, onChange }: Props) {
     ? CUSTOM_VALUE
     : value;
 
+  const selectedEntry = useMemo(
+    () => options.find((o) => o.id === value) ?? null,
+    [options, value],
+  );
+
   return (
     <>
       <label className="settingsPanel__field">
@@ -94,12 +107,13 @@ export function OpenRouterModelField({ kind, value, onChange }: Props) {
         >
           {options.map((entry) => (
             <option key={entry.id} value={entry.id}>
-              {formatLabel(entry)}
+              {formatOptionLabel(entry)}
             </option>
           ))}
           <option value={CUSTOM_VALUE}>Custom model id…</option>
         </select>
       </label>
+      {selectedEntry ? <ModelDetailRow entry={selectedEntry} /> : null}
       {selectValue === CUSTOM_VALUE ? (
         <label className="settingsPanel__field">
           <span className="settingsPanel__label">Custom id</span>
@@ -123,5 +137,73 @@ export function OpenRouterModelField({ kind, value, onChange }: Props) {
         <p className="settingsPanel__hint">Loading OpenRouter catalog…</p>
       ) : null}
     </>
+  );
+}
+
+/**
+ * Compact "what does this model actually do" badge strip + description
+ * that appears below the dropdown once a real catalog entry is in
+ * focus. We use it both in this stand-alone field and in the per-kind
+ * row, so the visual language stays consistent across all model
+ * pickers.
+ */
+export function ModelDetailRow({ entry }: { entry: OpenRouterModelEntry }) {
+  const badges: Array<{ icon: string; label: string; tone?: "warn" | "info" }> =
+    [];
+  if (isReasoningModel(entry)) {
+    badges.push({
+      icon: "🧠",
+      label: "Thinking model — streams reasoning before visible prose",
+      tone: "warn",
+    });
+  }
+  if (acceptsImageInput(entry)) {
+    badges.push({ icon: "🖼", label: "Image input" });
+  }
+  if (emitsImageOutput(entry)) {
+    badges.push({ icon: "🎨", label: "Image output" });
+  }
+  if (supportsTools(entry)) {
+    badges.push({ icon: "🛠", label: "Tool calls" });
+  }
+  if (supportsJsonMode(entry)) {
+    badges.push({ icon: "{ }", label: "JSON mode" });
+  }
+  const ctx = formatContextLength(entry);
+  const price = formatPricing(entry);
+
+  return (
+    <div className="modelDetail">
+      {badges.length > 0 ? (
+        <div className="modelDetail__badges">
+          {badges.map((b) => (
+            <span
+              key={b.label}
+              className={
+                "modelDetail__badge" +
+                (b.tone === "warn" ? " modelDetail__badge--warn" : "")
+              }
+              title={b.label}
+            >
+              <span className="modelDetail__badgeIcon" aria-hidden>
+                {b.icon}
+              </span>
+              <span className="modelDetail__badgeText">{b.label}</span>
+            </span>
+          ))}
+        </div>
+      ) : null}
+      <div className="modelDetail__meta">
+        {ctx ? <span>{ctx}</span> : null}
+        {price ? <span>{price}</span> : null}
+      </div>
+      {entry.description ? (
+        <p className="modelDetail__desc" title={entry.description}>
+          {entry.description.length > 220
+            ? entry.description.slice(0, 217).trimEnd() + "…"
+            : entry.description}
+        </p>
+      ) : null}
+    </div>
   );
 }

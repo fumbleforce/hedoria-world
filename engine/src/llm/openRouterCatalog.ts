@@ -17,15 +17,43 @@
 import { diag } from "../diag/log";
 
 const PROXY_PATH = "/__openrouter/models";
-const LS_KEY = "engine.openRouterModelCatalog";
+// Bumped to v2 when we extended the entry shape with pricing, context
+// length, description, supported_parameters. Older v1 caches lack
+// those fields and would render as "unknown $/ctx" everywhere; force a
+// refetch by reading from a new key.
+const LS_KEY = "engine.openRouterModelCatalog.v2";
+const LS_KEY_LEGACY_V1 = "engine.openRouterModelCatalog";
 const LS_TTL_MS = 24 * 60 * 60 * 1000;
 let catalogRequestSeq = 0;
 
 export type OpenRouterModelEntry = {
   id: string;
   name: string;
+  /** Short marketing description from upstream. May be empty. */
+  description: string;
   outputModalities: string[];
   inputModalities: string[];
+  /**
+   * OpenRouter exposes a `supported_parameters` array per model. We
+   * keep the raw list (e.g. ["tools","tool_choice","reasoning",
+   * "include_reasoning","response_format","stream"]) so callers can do
+   * shape-checks without re-fetching.
+   *
+   * The most interesting flags for the picker:
+   *  - `reasoning` / `include_reasoning` → this is a "thinking" model.
+   *  - `tools` / `tool_choice` → usable for narrator function calls.
+   *  - `response_format` → can be forced into json mode.
+   */
+  supportedParameters: string[];
+  /** Upstream context window in tokens (e.g. 128_000). 0 = unknown. */
+  contextLength: number;
+  /**
+   * Per-token prices in USD as upstream-quoted decimal strings (e.g.
+   * "0.0000005"). Stored as strings so callers can choose how to
+   * format. `null` means unknown.
+   */
+  pricePromptUsd: string | null;
+  pricePromptCompletionUsd: string | null;
 };
 
 export type OpenRouterCatalog = {
@@ -38,11 +66,36 @@ type UpstreamArchitecture = {
   input_modalities?: string[];
 };
 
+type UpstreamPricing = {
+  prompt?: string;
+  completion?: string;
+};
+
 type UpstreamModel = {
   id?: string;
   name?: string;
+  description?: string;
   architecture?: UpstreamArchitecture;
+  context_length?: number;
+  pricing?: UpstreamPricing;
+  supported_parameters?: string[];
+  /**
+   * Older endpoint versions sometimes reported supported parameters
+   * under `top_provider.supported_parameters` instead of at the root
+   * level. We tolerate both.
+   */
+  top_provider?: { supported_parameters?: string[] };
 };
+
+function pickStringArray(...candidates: Array<unknown>): string[] {
+  for (const c of candidates) {
+    if (Array.isArray(c)) {
+      const out = c.filter((x): x is string => typeof x === "string");
+      if (out.length > 0) return out;
+    }
+  }
+  return [];
+}
 
 function normalizeUpstream(raw: unknown): OpenRouterModelEntry[] {
   const root = raw as { data?: UpstreamModel[] };
@@ -54,6 +107,8 @@ function normalizeUpstream(raw: unknown): OpenRouterModelEntry[] {
     out.push({
       id,
       name: typeof m.name === "string" && m.name.trim() ? m.name.trim() : id,
+      description:
+        typeof m.description === "string" ? m.description.trim() : "",
       outputModalities: Array.isArray(m.architecture?.output_modalities)
         ? m.architecture.output_modalities.filter(
             (x): x is string => typeof x === "string",
@@ -64,6 +119,18 @@ function normalizeUpstream(raw: unknown): OpenRouterModelEntry[] {
             (x): x is string => typeof x === "string",
           )
         : [],
+      supportedParameters: pickStringArray(
+        m.supported_parameters,
+        m.top_provider?.supported_parameters,
+      ),
+      contextLength:
+        typeof m.context_length === "number" && Number.isFinite(m.context_length)
+          ? m.context_length
+          : 0,
+      pricePromptUsd:
+        typeof m.pricing?.prompt === "string" ? m.pricing.prompt : null,
+      pricePromptCompletionUsd:
+        typeof m.pricing?.completion === "string" ? m.pricing.completion : null,
     });
   }
   return out;
@@ -71,6 +138,9 @@ function normalizeUpstream(raw: unknown): OpenRouterModelEntry[] {
 
 function readLsCache(): OpenRouterCatalog | null {
   try {
+    // Sweep the legacy v1 entry so we don't leave a stale 200KB blob
+    // sitting in localStorage forever.
+    globalThis.localStorage?.removeItem(LS_KEY_LEGACY_V1);
     const raw = globalThis.localStorage?.getItem(LS_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<OpenRouterCatalog>;
@@ -195,4 +265,125 @@ export function selectImageModels(catalog: OpenRouterCatalog): OpenRouterModelEn
 
 function compareById(a: OpenRouterModelEntry, b: OpenRouterModelEntry): number {
   return a.id.localeCompare(b.id);
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Capability helpers used by the model picker UI.
+// ────────────────────────────────────────────────────────────────────
+
+const REASONING_SUPPORTED_PARAMS = new Set([
+  "reasoning",
+  "include_reasoning",
+  "thinking",
+]);
+
+/**
+ * Whether this entry is a "thinking" model — one that emits a chain
+ * of internal reasoning before its visible output. Detected via
+ * `supported_parameters` first (authoritative for OpenRouter) and
+ * with a defensive id-suffix fallback for any catalog rows that
+ * predate the supported-parameters expansion.
+ */
+export function isReasoningModel(entry: OpenRouterModelEntry): boolean {
+  for (const p of entry.supportedParameters) {
+    if (REASONING_SUPPORTED_PARAMS.has(p)) return true;
+  }
+  const id = entry.id.toLowerCase();
+  return (
+    id.includes(":thinking") ||
+    id.includes("-thinking") ||
+    id.endsWith("-reasoner") ||
+    id.includes("-reasoning")
+  );
+}
+
+/** Whether the model can natively accept images on the input side. */
+export function acceptsImageInput(entry: OpenRouterModelEntry): boolean {
+  return entry.inputModalities.includes("image");
+}
+
+/** Whether the model emits images. */
+export function emitsImageOutput(entry: OpenRouterModelEntry): boolean {
+  return entry.outputModalities.includes("image");
+}
+
+/** Whether the model can be driven with OpenAI-style tool calls. */
+export function supportsTools(entry: OpenRouterModelEntry): boolean {
+  return (
+    entry.supportedParameters.includes("tools") ||
+    entry.supportedParameters.includes("tool_choice")
+  );
+}
+
+/** Whether the model can be forced into JSON-only output. */
+export function supportsJsonMode(entry: OpenRouterModelEntry): boolean {
+  return entry.supportedParameters.includes("response_format");
+}
+
+/** Render the context window as "128k", "1M", etc. Empty string if 0. */
+export function formatContextLength(entry: OpenRouterModelEntry): string {
+  const n = entry.contextLength;
+  if (!n || n <= 0) return "";
+  if (n >= 1_000_000) {
+    const m = n / 1_000_000;
+    return `${m % 1 === 0 ? m.toFixed(0) : m.toFixed(1)}M ctx`;
+  }
+  if (n >= 1_000) {
+    const k = n / 1_000;
+    return `${k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)}k ctx`;
+  }
+  return `${n} ctx`;
+}
+
+/**
+ * Format the per-1M-token input/output price as a compact "$P/$C/M".
+ * Returns empty when both are unknown or zero (free models).
+ */
+export function formatPricing(entry: OpenRouterModelEntry): string {
+  const fmt = (raw: string | null): string | null => {
+    if (raw == null) return null;
+    const n = Number(raw);
+    if (!Number.isFinite(n)) return null;
+    if (n === 0) return "free";
+    // Upstream prices are per-token; humans think in $/1M tokens.
+    const per1M = n * 1_000_000;
+    if (per1M >= 100) return `$${per1M.toFixed(0)}`;
+    if (per1M >= 10) return `$${per1M.toFixed(1)}`;
+    return `$${per1M.toFixed(2)}`;
+  };
+  const inp = fmt(entry.pricePromptUsd);
+  const out = fmt(entry.pricePromptCompletionUsd);
+  if (!inp && !out) return "";
+  if (inp && out && inp === "free" && out === "free") return "free";
+  return `${inp ?? "?"} / ${out ?? "?"} per 1M`;
+}
+
+/**
+ * Compose a compact text label suitable for a native `<option>`. Browsers
+ * cannot render real icons inside `<option>` elements, so we lean on
+ * emoji glyphs as the lingua franca:
+ *
+ *   🧠 reasoning / thinking model
+ *   🖼 accepts image input
+ *   🛠 tools (function calls)
+ *   { } json-mode (response_format)
+ *
+ * Followed by friendly name, id, context window, and pricing.
+ */
+export function formatOptionLabel(entry: OpenRouterModelEntry): string {
+  const badges: string[] = [];
+  if (isReasoningModel(entry)) badges.push("🧠");
+  if (acceptsImageInput(entry)) badges.push("🖼");
+  if (supportsTools(entry)) badges.push("🛠");
+  if (supportsJsonMode(entry)) badges.push("{}");
+  const trailing: string[] = [];
+  const ctx = formatContextLength(entry);
+  if (ctx) trailing.push(ctx);
+  const price = formatPricing(entry);
+  if (price) trailing.push(price);
+  const main =
+    entry.name && entry.name !== entry.id
+      ? `${entry.name} — ${entry.id}`
+      : entry.id;
+  return `${badges.length > 0 ? badges.join(" ") + " " : ""}${main}${trailing.length > 0 ? "  ·  " + trailing.join(" · ") : ""}`;
 }

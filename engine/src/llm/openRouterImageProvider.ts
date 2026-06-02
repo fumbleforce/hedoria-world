@@ -1,5 +1,6 @@
 import {
   aspectRatioTokenForPixelSize,
+  type ImageCallKind,
   ImageTimeoutError,
   StoreBackedGeminiImageProvider,
   type ImageProvider,
@@ -349,21 +350,25 @@ export class StoreBackedOpenRouterImageProvider implements ImageProvider {
   private readonly providersByModel = new Map<string, OpenRouterImageProvider>();
 
   get id(): string {
-    return this.current().id;
+    return this.current("other").id;
   }
 
   async generate(request: ImageRequest): Promise<ImageResponse> {
-    return this.current().generate(request);
+    return this.current(request.kind ?? "other").generate(request);
   }
 
-  private current(): OpenRouterImageProvider {
+  private current(kind: ImageCallKind): OpenRouterImageProvider {
     const store = useStore.getState();
-    const trimmed =
-      store.openRouterImageModel.trim() || DEFAULT_OPENROUTER_IMAGE_MODEL;
-    const model = normalizeOpenRouterImageModelId(trimmed);
-    if (model !== trimmed) {
-      store.setOpenRouterImageModel(model);
-    }
+    const selection = store.imageModelRegistry[kind] ?? store.imageModelRegistry.other;
+    const isOrShape = (m: string) => m.includes("/");
+    const candidate = selection.model.trim();
+    const topLevel = store.openRouterImageModel.trim();
+    const raw = isOrShape(candidate)
+      ? candidate
+      : isOrShape(topLevel)
+        ? topLevel
+        : DEFAULT_OPENROUTER_IMAGE_MODEL;
+    const model = normalizeOpenRouterImageModelId(raw);
     let provider = this.providersByModel.get(model);
     if (!provider) {
       provider = new OpenRouterImageProvider(model);
@@ -402,7 +407,11 @@ export class DelegatingImageProvider implements ImageProvider {
 
   async generate(request: ImageRequest): Promise<ImageResponse> {
     const s = useStore.getState();
-    if (s.imageLlmBackend === "openrouter") {
+    const selection =
+      s.imageModelRegistry[request.kind ?? "other"] ?? s.imageModelRegistry.other;
+    const backend =
+      selection.backend === "default" ? s.imageLlmBackend : selection.backend;
+    if (backend === "openrouter") {
       if (!this.openRouter) {
         throw new Error(
           "OpenRouter image is not available. Set OPENROUTER_API_KEY in engine/.env.local and run the Vite dev server.",

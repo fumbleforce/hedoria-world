@@ -12,6 +12,8 @@ import {
   DEFAULT_OPENROUTER_IMAGE_MODEL,
   DEFAULT_OPENROUTER_TEXT_MODEL,
 } from "../llm/openRouterDefaults";
+import type { LlmCallKind } from "../llm/types";
+import type { ImageCallKind } from "../llm/imageAdapter";
 
 /**
  * The single Zustand store for the engine. The store contains the
@@ -26,6 +28,15 @@ export type Mode = "region" | "location" | "scene";
 
 /** Which HTTP API handles text or image LLM calls (per store; no reload). */
 export type LlmBackend = "gemini" | "openrouter";
+export type BackendPreference = LlmBackend | "default";
+
+export type ModelSelection = {
+  backend: BackendPreference;
+  model: string;
+};
+
+export type TextModelRegistry = Record<LlmCallKind, ModelSelection>;
+export type ImageModelRegistry = Record<ImageCallKind, ModelSelection>;
 
 export type EngagementState = "idle" | "engaged" | "locked";
 
@@ -65,6 +76,83 @@ export type DialogueMessage = {
   text: string;
   /** Optional NPC id if the line was spoken by a specific NPC. */
   npcId?: string;
+};
+
+export type PlayerCondition = {
+  id: string;
+  label: string;
+  severity: string;
+  effects: string[];
+  appliedAt: number;
+  expiresAt?: number;
+  notes?: string;
+};
+
+export type StoryFactScope =
+  | { kind: "global" }
+  | { kind: "region"; regionId: string }
+  | { kind: "location"; locationId: string }
+  | { kind: "scene"; locationId: string; x: number; y: number }
+  | { kind: "npc"; npcId: string }
+  | { kind: "quest"; questId: string };
+
+export type StoryFact = {
+  id: string;
+  text: string;
+  scope: StoryFactScope;
+  importance: "minor" | "normal" | "critical";
+  createdAt: number;
+  updatedAt: number;
+  expiresAt?: number;
+};
+
+export type CanonicalIntentCandidate =
+  | { kind: "region.move"; dx: number; dy: number }
+  | { kind: "region.travelTo"; x: number; y: number; locationId?: string }
+  | { kind: "region.enterLocation"; locationId: string }
+  | { kind: "location.move"; dx: number; dy: number }
+  | { kind: "location.enterTile"; x: number; y: number }
+  | { kind: "location.leave"; direction?: "north" | "south" | "east" | "west" }
+  | { kind: "scene.leaveTile" }
+  | { kind: "scene.button"; verb: string; groupId?: string };
+
+export type ActionOutcome = {
+  interpretation: {
+    summary: string;
+    confidence: "low" | "medium" | "high";
+    canonicalIntent?: CanonicalIntentCandidate;
+  };
+  verdict: "trivial_success" | "success" | "partial" | "failure" | "refused";
+  reason: string;
+  blockingConditionIds: string[];
+  appliesConditions: Array<{
+    id?: string;
+    label: string;
+    severity?: string;
+    effects?: string[];
+    notes?: string;
+    expiresAt?: number;
+  }>;
+  interrupt: {
+    kind: "encounter" | "ambush" | "event" | "none";
+    timing: "before_action" | "after_action" | "replaces_action";
+    requiresDialogue: boolean;
+    hint?: string;
+  };
+};
+
+export type TurnResolution = {
+  turnId: string;
+  startedAt: number;
+  completedAt: number;
+  rawIntentKind: string;
+  rawIntentText: string;
+  interpretation: ActionOutcome["interpretation"];
+  outcome: ActionOutcome;
+  narrativeText: string;
+  toolCalls: Array<{ name: string; arguments: Record<string, unknown> }>;
+  toolResults: Array<{ name: string; ok: boolean; message?: string }>;
+  committedStoryEntryIds: string[];
 };
 
 /**
@@ -191,6 +279,8 @@ export type StoreState = {
   /** OpenRouter model slugs (e.g. google/gemini-2.5-flash). */
   openRouterTextModel: string;
   openRouterImageModel: string;
+  textModelRegistry: TextModelRegistry;
+  imageModelRegistry: ImageModelRegistry;
 
   // ---------------- mode + position
   mode: Mode;
@@ -241,6 +331,17 @@ export type StoreState = {
 
   // ---------------- dialogue + narration
   dialogue: DialogueMessage[];
+  activeDialogueGroupId?: string;
+  /**
+   * `storyLog.length` at the moment the current dialogue group became
+   * active. Lets the dialogue overlay render the full conversation
+   * (player intents, narrator prose, NPC `say` lines) by slicing the
+   * unified `storyLog` from this index forward, instead of relying on
+   * the lossy `dialogue` array which only captures NPC speech.
+   */
+  activeDialogueStartIndex?: number;
+  playerConditions: PlayerCondition[];
+  storyFacts: Record<string, StoryFact>;
   narrationLog: string[];
   /**
    * Unified chronological log of every player intent + narration + NPC
@@ -257,6 +358,9 @@ export type StoreState = {
    * `WorldNarrator`.
    */
   pendingNarrations: number;
+  pendingNarrationId: string | null;
+  pendingNarrationText: string;
+  turnResolutions: TurnResolution[];
 
   // ---------------- quests
   activeQuestIds: string[];
@@ -281,6 +385,8 @@ export type StoreState = {
   setImageLlmBackend: (backend: LlmBackend) => void;
   setOpenRouterTextModel: (modelId: string) => void;
   setOpenRouterImageModel: (modelId: string) => void;
+  setTextModelForKind: (kind: LlmCallKind, selection: ModelSelection) => void;
+  setImageModelForKind: (kind: ImageCallKind, selection: ModelSelection) => void;
 
   setCurrentRegionId: (regionId: string) => void;
   setRegionPos: (pos: [number, number]) => void;
@@ -300,6 +406,7 @@ export type StoreState = {
   setEngagementGroup: (group: EngagementGroup) => void;
   removeEngagementGroup: (groupId: string) => void;
   setLockReason: (reason: string | undefined) => void;
+  setActiveDialogueGroup: (groupId: string | null) => void;
 
   setCombat: (combat: CombatState | null) => void;
 
@@ -322,6 +429,11 @@ export type StoreState = {
   appendDialogue: (msg: DialogueMessage) => void;
   appendNarration: (line: string) => void;
   clearDialogue: () => void;
+  applyCondition: (condition: PlayerCondition) => void;
+  clearCondition: (conditionId: string) => void;
+  tickConditions: (now?: number) => void;
+  rememberFact: (fact: StoryFact) => void;
+  forgetFact: (factId: string) => void;
 
   /**
    * The canonical writer for the narration panel. Existing
@@ -332,6 +444,13 @@ export type StoreState = {
   appendStory: (entry: Omit<StoryEntry, "id" | "ts">) => void;
 
   setPendingNarrations: (delta: number) => void;
+  beginPendingNarration: (id: string) => void;
+  appendPendingNarration: (chunk: string) => void;
+  /** Replace the in-flight streamed narration text in-place (used to scrub inline tool-call syntax before commit). */
+  replacePendingNarration: (text: string) => void;
+  commitPendingNarration: (opts?: { asError?: boolean; suffix?: string }) => void;
+  clearPendingNarration: () => void;
+  addTurnResolution: (resolution: TurnResolution) => void;
 
   addActiveQuest: (questId: string) => void;
   removeActiveQuest: (questId: string) => void;
@@ -407,10 +526,29 @@ function writePersistedPackId(packId: string | null): void {
 const GEMINI_TEXT_MODEL_LS_KEY = "engine.geminiTextModel";
 const GEMINI_IMAGE_MODEL_LS_KEY = "engine.geminiImageModel";
 
+/**
+ * Gemini model ids are simple slugs (`gemini-2.5-flash`); OpenRouter
+ * ids are always `provider/model`. If a `/` shows up in the persisted
+ * Gemini field it can only be the residue of an earlier bug where a
+ * per-kind override wrote an OpenRouter slug back into this slot — and
+ * we'd hand it straight to Gemini and 400 out. Reject the value on
+ * read and fall back to the default model.
+ */
+function looksLikeOpenRouterSlug(modelId: string): boolean {
+  return modelId.includes("/");
+}
+
 function readPersistedGeminiTextModel(): string {
   try {
     const raw = globalThis.localStorage?.getItem(GEMINI_TEXT_MODEL_LS_KEY)?.trim();
-    if (raw) return normalizeGeminiTextModel(raw);
+    if (raw && !looksLikeOpenRouterSlug(raw)) {
+      return normalizeGeminiTextModel(raw);
+    }
+    if (raw && looksLikeOpenRouterSlug(raw)) {
+      // Heal a previously-corrupted slot so we don't re-read the bad
+      // value on every boot.
+      globalThis.localStorage?.removeItem(GEMINI_TEXT_MODEL_LS_KEY);
+    }
   } catch {
     // ignore
   }
@@ -420,7 +558,10 @@ function readPersistedGeminiTextModel(): string {
 function readPersistedGeminiImageModel(): string {
   try {
     const raw = globalThis.localStorage?.getItem(GEMINI_IMAGE_MODEL_LS_KEY)?.trim();
-    if (raw) return raw;
+    if (raw && !looksLikeOpenRouterSlug(raw)) return raw;
+    if (raw && looksLikeOpenRouterSlug(raw)) {
+      globalThis.localStorage?.removeItem(GEMINI_IMAGE_MODEL_LS_KEY);
+    }
   } catch {
     // ignore
   }
@@ -447,6 +588,8 @@ const TEXT_LLM_BACKEND_LS_KEY = "engine.textLlmBackend";
 const IMAGE_LLM_BACKEND_LS_KEY = "engine.imageLlmBackend";
 const OPENROUTER_TEXT_MODEL_LS_KEY = "engine.openRouterTextModel";
 const OPENROUTER_IMAGE_MODEL_LS_KEY = "engine.openRouterImageModel";
+const TEXT_MODEL_REGISTRY_LS_KEY = "engine.textModelRegistry";
+const IMAGE_MODEL_REGISTRY_LS_KEY = "engine.imageModelRegistry";
 
 function readPersistedLlmBackend(
   key: string,
@@ -472,7 +615,10 @@ function writePersistedLlmBackend(key: string, backend: LlmBackend): void {
 function readPersistedOpenRouterTextModel(): string {
   try {
     const raw = globalThis.localStorage?.getItem(OPENROUTER_TEXT_MODEL_LS_KEY)?.trim();
-    if (raw) return raw;
+    if (raw && looksLikeOpenRouterSlug(raw)) return raw;
+    if (raw && !looksLikeOpenRouterSlug(raw)) {
+      globalThis.localStorage?.removeItem(OPENROUTER_TEXT_MODEL_LS_KEY);
+    }
   } catch {
     // ignore
   }
@@ -482,7 +628,10 @@ function readPersistedOpenRouterTextModel(): string {
 function readPersistedOpenRouterImageModel(): string {
   try {
     const raw = globalThis.localStorage?.getItem(OPENROUTER_IMAGE_MODEL_LS_KEY)?.trim();
-    if (raw) return raw;
+    if (raw && looksLikeOpenRouterSlug(raw)) return raw;
+    if (raw && !looksLikeOpenRouterSlug(raw)) {
+      globalThis.localStorage?.removeItem(OPENROUTER_IMAGE_MODEL_LS_KEY);
+    }
   } catch {
     // ignore
   }
@@ -500,6 +649,159 @@ function writePersistedOpenRouterTextModel(modelId: string): void {
 function writePersistedOpenRouterImageModel(modelId: string): void {
   try {
     globalThis.localStorage?.setItem(OPENROUTER_IMAGE_MODEL_LS_KEY, modelId);
+  } catch {
+    // ignore
+  }
+}
+
+const TEXT_MODEL_KINDS: LlmCallKind[] = [
+  "chat",
+  "action-eval",
+  "scene-classify",
+  "skill-check",
+  "expansion",
+  "death-recovery",
+  "quest-verify",
+  "other",
+];
+
+const IMAGE_MODEL_KINDS: ImageCallKind[] = [
+  "player-portrait",
+  "npc-portrait",
+  "scene-background",
+  "tile",
+  "mosaic",
+  "mosaic-blueprint",
+  "other",
+];
+
+/**
+ * Seed every kind with `{ backend: "default", model: "" }`. An empty
+ * `model` is the canonical "use the backend's current chat/image model"
+ * signal — the provider routers fall back to `geminiTextModel` /
+ * `openRouterTextModel` (and the image equivalents) at call time. This
+ * way the per-kind registry never carries a stale or backend-mismatched
+ * model id, which previously meant flipping a row's backend to "Gemini"
+ * while it still held an OpenRouter slug like `openai/gpt-4o-mini` would
+ * send that slug to Gemini and 400 out. Users who want a different
+ * per-kind model pick it explicitly in Settings.
+ */
+function defaultTextModelRegistry(): TextModelRegistry {
+  const out = {} as TextModelRegistry;
+  for (const kind of TEXT_MODEL_KINDS) {
+    out[kind] = { backend: "default", model: "" };
+  }
+  return out;
+}
+
+function defaultImageModelRegistry(): ImageModelRegistry {
+  const out = {} as ImageModelRegistry;
+  for (const kind of IMAGE_MODEL_KINDS) {
+    out[kind] = { backend: "default", model: "" };
+  }
+  return out;
+}
+
+/**
+ * Slugs known to be deprecated and unusable on any backend. These end
+ * up here when an earlier version of the UI seeded a row with the now-
+ * retired `openai/gpt-4o-mini` default.
+ */
+const DEPRECATED_PERSISTED_MODEL_IDS = new Set<string>([
+  "openai/gpt-4o-mini",
+]);
+
+/**
+ * Drop a stored model id that doesn't match the row's backend shape.
+ * Gemini ids are bare slugs (`gemini-2.5-flash`); OpenRouter ids are
+ * always `provider/model`. If a row says `backend: "gemini"` but the
+ * model id contains a slash, it was carried over from an OpenRouter
+ * row (the old free-text UI made this easy) — keeping it would send
+ * an OpenRouter slug to Gemini and 400 out. The inverse is also true
+ * for `backend: "openrouter"`. When the shape doesn't match we clear
+ * the model so the row falls back to the backend's chat/image model.
+ */
+function sanitizeStoredModelId(
+  model: string,
+  backend: BackendPreference,
+): string {
+  if (!model) return "";
+  const trimmed = model.trim();
+  if (!trimmed) return "";
+  if (DEPRECATED_PERSISTED_MODEL_IDS.has(trimmed)) return "";
+  const hasSlash = trimmed.includes("/");
+  if (backend === "gemini" && hasSlash) return "";
+  if (backend === "openrouter" && !hasSlash) return "";
+  return trimmed;
+}
+
+function readPersistedTextModelRegistry(): TextModelRegistry {
+  const fallback = defaultTextModelRegistry();
+  try {
+    const raw = globalThis.localStorage?.getItem(TEXT_MODEL_REGISTRY_LS_KEY);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw) as Partial<TextModelRegistry>;
+    for (const kind of TEXT_MODEL_KINDS) {
+      const sel = parsed[kind];
+      if (!sel) continue;
+      const backend = sel.backend;
+      if (backend !== "gemini" && backend !== "openrouter" && backend !== "default") {
+        continue;
+      }
+      const model =
+        typeof sel.model === "string"
+          ? sanitizeStoredModelId(sel.model, backend)
+          : "";
+      fallback[kind] = { backend, model };
+    }
+  } catch {
+    // ignore
+  }
+  return fallback;
+}
+
+function writePersistedTextModelRegistry(registry: TextModelRegistry): void {
+  try {
+    globalThis.localStorage?.setItem(
+      TEXT_MODEL_REGISTRY_LS_KEY,
+      JSON.stringify(registry),
+    );
+  } catch {
+    // ignore
+  }
+}
+
+function readPersistedImageModelRegistry(): ImageModelRegistry {
+  const fallback = defaultImageModelRegistry();
+  try {
+    const raw = globalThis.localStorage?.getItem(IMAGE_MODEL_REGISTRY_LS_KEY);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw) as Partial<ImageModelRegistry>;
+    for (const kind of IMAGE_MODEL_KINDS) {
+      const sel = parsed[kind];
+      if (!sel) continue;
+      const backend = sel.backend;
+      if (backend !== "gemini" && backend !== "openrouter" && backend !== "default") {
+        continue;
+      }
+      const model =
+        typeof sel.model === "string"
+          ? sanitizeStoredModelId(sel.model, backend)
+          : "";
+      fallback[kind] = { backend, model };
+    }
+  } catch {
+    // ignore
+  }
+  return fallback;
+}
+
+function writePersistedImageModelRegistry(registry: ImageModelRegistry): void {
+  try {
+    globalThis.localStorage?.setItem(
+      IMAGE_MODEL_REGISTRY_LS_KEY,
+      JSON.stringify(registry),
+    );
   } catch {
     // ignore
   }
@@ -546,6 +848,88 @@ function writePersistedCharacter(character: Character | null): void {
     }
   } catch {
     // ignore: localStorage may be unavailable or full
+  }
+}
+
+const PLAYER_CONDITIONS_LS_KEY = "engine.playerConditions";
+const STORY_FACTS_LS_KEY = "engine.storyFacts";
+
+function readPersistedPlayerConditions(): PlayerCondition[] {
+  try {
+    const raw = globalThis.localStorage?.getItem(PLAYER_CONDITIONS_LS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    const out: PlayerCondition[] = [];
+    for (const item of parsed) {
+      if (
+        item &&
+        typeof item === "object" &&
+        typeof (item as PlayerCondition).id === "string" &&
+        typeof (item as PlayerCondition).label === "string"
+      ) {
+        const c = item as PlayerCondition;
+        out.push({
+          id: c.id,
+          label: c.label,
+          severity: typeof c.severity === "string" ? c.severity : "normal",
+          effects: Array.isArray(c.effects)
+            ? c.effects.filter((e): e is string => typeof e === "string")
+            : [],
+          appliedAt: typeof c.appliedAt === "number" ? c.appliedAt : Date.now(),
+          expiresAt: typeof c.expiresAt === "number" ? c.expiresAt : undefined,
+          notes: typeof c.notes === "string" ? c.notes : undefined,
+        });
+      }
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
+function writePersistedPlayerConditions(conditions: PlayerCondition[]): void {
+  try {
+    globalThis.localStorage?.setItem(
+      PLAYER_CONDITIONS_LS_KEY,
+      JSON.stringify(conditions),
+    );
+  } catch {
+    // ignore
+  }
+}
+
+function readPersistedStoryFacts(): Record<string, StoryFact> {
+  try {
+    const raw = globalThis.localStorage?.getItem(STORY_FACTS_LS_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return {};
+    }
+    const out: Record<string, StoryFact> = {};
+    for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
+      if (
+        v &&
+        typeof v === "object" &&
+        typeof (v as StoryFact).id === "string" &&
+        typeof (v as StoryFact).text === "string" &&
+        (v as StoryFact).scope
+      ) {
+        out[k] = v as StoryFact;
+      }
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+function writePersistedStoryFacts(facts: Record<string, StoryFact>): void {
+  try {
+    globalThis.localStorage?.setItem(STORY_FACTS_LS_KEY, JSON.stringify(facts));
+  } catch {
+    // ignore
   }
 }
 
@@ -605,6 +989,8 @@ export const useStore = create<StoreState>((set) => ({
   imageLlmBackend: readPersistedLlmBackend(IMAGE_LLM_BACKEND_LS_KEY, "gemini"),
   openRouterTextModel: readPersistedOpenRouterTextModel(),
   openRouterImageModel: readPersistedOpenRouterImageModel(),
+  textModelRegistry: readPersistedTextModelRegistry(),
+  imageModelRegistry: readPersistedImageModelRegistry(),
 
   mode: "region",
   currentRegionId: "",
@@ -630,9 +1016,16 @@ export const useStore = create<StoreState>((set) => ({
   playerPartyNpcIds: [],
 
   dialogue: [],
+  activeDialogueGroupId: undefined,
+  activeDialogueStartIndex: undefined,
+  playerConditions: readPersistedPlayerConditions(),
+  storyFacts: readPersistedStoryFacts(),
   narrationLog: [],
   storyLog: [],
   pendingNarrations: 0,
+  pendingNarrationId: null,
+  pendingNarrationText: "",
+  turnResolutions: [],
 
   activeQuestIds: [],
   questProgress: {},
@@ -678,6 +1071,30 @@ export const useStore = create<StoreState>((set) => ({
     writePersistedOpenRouterImageModel(trimmed);
     set({ openRouterImageModel: trimmed });
   },
+  setTextModelForKind: (kind, selection) =>
+    set((state) => {
+      const next: TextModelRegistry = {
+        ...state.textModelRegistry,
+        [kind]: {
+          backend: selection.backend,
+          model: selection.model,
+        },
+      };
+      writePersistedTextModelRegistry(next);
+      return { textModelRegistry: next };
+    }),
+  setImageModelForKind: (kind, selection) =>
+    set((state) => {
+      const next: ImageModelRegistry = {
+        ...state.imageModelRegistry,
+        [kind]: {
+          backend: selection.backend,
+          model: selection.model,
+        },
+      };
+      writePersistedImageModelRegistry(next);
+      return { imageModelRegistry: next };
+    }),
 
   setCurrentRegionId: (currentRegionId) => set({ currentRegionId }),
   setRegionPos: (regionPos) => set({ regionPos }),
@@ -707,7 +1124,15 @@ export const useStore = create<StoreState>((set) => ({
     set({ tileImageMode });
   },
 
-  setEngagement: (engagement) => set({ engagement }),
+  setEngagement: (engagement) =>
+    set((state) => {
+      const active =
+        state.activeDialogueGroupId &&
+        engagement.groups[state.activeDialogueGroupId]
+          ? state.activeDialogueGroupId
+          : undefined;
+      return { engagement, activeDialogueGroupId: active };
+    }),
   setEngagementGroup: (group) =>
     set((state) => ({
       engagement: {
@@ -719,10 +1144,51 @@ export const useStore = create<StoreState>((set) => ({
     set((state) => {
       const groups = { ...state.engagement.groups };
       delete groups[groupId];
-      return { engagement: { ...state.engagement, groups } };
+      return {
+        engagement: { ...state.engagement, groups },
+        activeDialogueGroupId:
+          state.activeDialogueGroupId === groupId
+            ? undefined
+            : state.activeDialogueGroupId,
+      };
     }),
   setLockReason: (reason) =>
     set((state) => ({ engagement: { ...state.engagement, lockReason: reason } })),
+  setActiveDialogueGroup: (groupId) =>
+    set((state) => {
+      if (!groupId) {
+        return {
+          activeDialogueGroupId: undefined,
+          activeDialogueStartIndex: undefined,
+        };
+      }
+      // Only snapshot the story-log cursor when the active group
+      // CHANGES. If the same group is being re-set (e.g. an engage
+      // followed by lock_engagement), keep the existing start index so
+      // the overlay's view of the conversation doesn't reset mid-turn.
+      if (state.activeDialogueGroupId === groupId) {
+        return { activeDialogueGroupId: groupId };
+      }
+      // Backtrack over the immediate trailing player intent so the
+      // overlay opens with the click that started the conversation
+      // ("You approach Saska Vorin.") instead of the NPC's first line
+      // appearing in mid-air. We only walk back across `player` and
+      // `narration` entries to avoid pulling in older NPC chatter from
+      // a previous engagement.
+      let startIdx = state.storyLog.length;
+      for (let i = state.storyLog.length - 1; i >= 0; i -= 1) {
+        const k = state.storyLog[i].kind;
+        if (k === "player" || k === "narration") {
+          startIdx = i;
+        } else {
+          break;
+        }
+      }
+      return {
+        activeDialogueGroupId: groupId,
+        activeDialogueStartIndex: startIdx,
+      };
+    }),
 
   setCombat: (combat) => set({ combat }),
 
@@ -817,7 +1283,47 @@ export const useStore = create<StoreState>((set) => ({
         storyLog: [...state.storyLog, story],
       };
     }),
-  clearDialogue: () => set({ dialogue: [] }),
+  clearDialogue: () =>
+    set({
+      dialogue: [],
+      activeDialogueGroupId: undefined,
+      activeDialogueStartIndex: undefined,
+    }),
+  applyCondition: (condition) =>
+    set((state) => {
+      const next = state.playerConditions.filter((c) => c.id !== condition.id);
+      next.push(condition);
+      writePersistedPlayerConditions(next);
+      return { playerConditions: next };
+    }),
+  clearCondition: (conditionId) =>
+    set((state) => {
+      const next = state.playerConditions.filter((c) => c.id !== conditionId);
+      writePersistedPlayerConditions(next);
+      return { playerConditions: next };
+    }),
+  tickConditions: (now = Date.now()) =>
+    set((state) => {
+      const next = state.playerConditions.filter(
+        (c) => !c.expiresAt || c.expiresAt > now,
+      );
+      if (next.length === state.playerConditions.length) return state;
+      writePersistedPlayerConditions(next);
+      return { playerConditions: next };
+    }),
+  rememberFact: (fact) =>
+    set((state) => {
+      const next = { ...state.storyFacts, [fact.id]: fact };
+      writePersistedStoryFacts(next);
+      return { storyFacts: next };
+    }),
+  forgetFact: (factId) =>
+    set((state) => {
+      const next = { ...state.storyFacts };
+      delete next[factId];
+      writePersistedStoryFacts(next);
+      return { storyFacts: next };
+    }),
 
   appendStory: (entry) =>
     set((state) => ({
@@ -833,6 +1339,39 @@ export const useStore = create<StoreState>((set) => ({
       // make the pending counter negative and stick the "responding…"
       // pill in a permanently-on state.
       pendingNarrations: Math.max(0, state.pendingNarrations + delta),
+    })),
+  beginPendingNarration: (id) => set({ pendingNarrationId: id, pendingNarrationText: "" }),
+  appendPendingNarration: (chunk) =>
+    set((state) => ({
+      pendingNarrationText: state.pendingNarrationText + chunk,
+    })),
+  replacePendingNarration: (text) =>
+    set({ pendingNarrationText: text }),
+  commitPendingNarration: (opts) =>
+    set((state) => {
+      const text = state.pendingNarrationText.trim();
+      if (!text) {
+        return { pendingNarrationId: null, pendingNarrationText: "" };
+      }
+      const suffix = opts?.suffix ?? "";
+      const finalText = `${text}${suffix}`;
+      const story: StoryEntry = {
+        id: nextStoryId(),
+        ts: Date.now(),
+        kind: opts?.asError ? "error" : "narration",
+        text: finalText,
+      };
+      return {
+        narrationLog: [...state.narrationLog, finalText],
+        storyLog: [...state.storyLog, story],
+        pendingNarrationId: null,
+        pendingNarrationText: "",
+      };
+    }),
+  clearPendingNarration: () => set({ pendingNarrationId: null, pendingNarrationText: "" }),
+  addTurnResolution: (resolution) =>
+    set((state) => ({
+      turnResolutions: [...state.turnResolutions.slice(-49), resolution],
     })),
 
   addActiveQuest: (questId) =>
