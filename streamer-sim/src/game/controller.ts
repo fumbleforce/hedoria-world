@@ -1335,6 +1335,7 @@ export class GameController {
         this.applyChatEffects(msgs.slice(0, plan.perTick));
         this.syncViewers();
       }
+      this.maybeChatTip();
       pushed += 1;
       if (pushed < plan.ticks) this.ambientTimer = setTimeout(() => void step(), plan.gapMs);
     };
@@ -1568,7 +1569,6 @@ export class GameController {
           );
           this.s.pushChat(msgs);
           this.applyChatEffects(msgs);
-          this.maybeChatTip();
         }
         if (s.activity && s.session.isLive) {
           await this.narrateActivityBeat();
@@ -1841,7 +1841,6 @@ export class GameController {
           const msgs = await generateChatBurst(this.llm, this.chatCtx(reactTo, count));
           this.s.pushChat(msgs);
           this.applyChatEffects(msgs);
-          this.maybeChatTip();
           const spicyCount = msgs.filter((m) => m.kind === "flirty" || m.kind === "creepy").length;
           const hornyGain = hornyBuild(verdict, spicyCount, s.settings.contentTier);
           if (hornyGain > 0) {
@@ -1992,6 +1991,7 @@ export class GameController {
     if (s.metrics.energy <= 0) return this.endStream("ran out of energy");
 
     this.presenceTick();
+    this.maybeChatTip();
 
     const growth = growthProjection(s.metrics, s.audience, s.metrics.currentViewers, this.balance());
     if (growth.passiveFollowersPerBeat > 0) {
@@ -2519,7 +2519,9 @@ export class GameController {
    */
   private maybeChatTip(): void {
     const s = this.s;
-    if (!s.session.isLive || !this.isOnCamera()) return;
+    // Tips are viewer donations — they land whenever you're live, even if
+    // you've stepped off the active camera angle for a beat.
+    if (!s.session.isLive) return;
     const tip = maybeTipPing(s.roster, this.onlineIds(), s.audience, s.metrics.hype);
     if (!tip) return;
     s.pushChat([tip]);
@@ -3450,6 +3452,7 @@ export class GameController {
           this.applyChatEffects(msgs);
           this.syncViewers();
         }
+        this.maybeChatTip();
       }
       // Time drifts during a scene, but far slower than a normal turn so the
       // moment can breathe without burning the whole night.

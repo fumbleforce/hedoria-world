@@ -171,7 +171,7 @@ export function maybeTipPing(
   const generousPop = whalePop + Math.max(0, audience.simps.population) + Math.max(0, audience.lonely.population);
   if (generousPop <= 0) return null;
   const h = clamp(hype, 0, 100) / 100;
-  const p = clamp(0.05 + h * 0.12 + Math.min(0.1, whalePop * 0.04), 0, 0.3);
+  const p = clamp(0.08 + h * 0.14 + Math.min(0.12, whalePop * 0.05), 0, 0.35);
   if (!chance(p)) return null;
   const online = onlineIds.map((id) => roster[id]).filter(Boolean);
   const whaleChar = online.find(
